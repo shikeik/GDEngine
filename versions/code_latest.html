@@ -1102,23 +1102,17 @@ function loop() {
 document.getElementById('btn-start').onclick = async () => {
     AudioSys.init();
     const docEl = document.documentElement;
-    
-    // Try Fullscreen
     if(docEl.requestFullscreen) await docEl.requestFullscreen();
     else if(docEl.webkitRequestFullscreen) await docEl.webkitRequestFullscreen();
     
-    // Try Lock Orientation
     if(screen.orientation && screen.orientation.lock) {
-        try { await screen.orientation.lock('landscape'); } catch(e){ console.log('Lock failed, using CSS fallback'); }
+        try { await screen.orientation.lock('landscape'); } catch(e){ console.log('Lock failed'); }
     }
     
-    // Check orientation and apply CSS fix if needed
     checkOrientation();
     window.addEventListener('resize', checkOrientation);
     
     document.getElementById('start-overlay').style.display = 'none';
-    
-    // Show controls on touch devices (simple check)
     if('ontouchstart' in window || navigator.maxTouchPoints > 0) {
         document.getElementById('controls-layer').style.display = 'block';
     }
@@ -1127,7 +1121,6 @@ document.getElementById('btn-start').onclick = async () => {
 };
 
 function checkOrientation() {
-    // If height > width, we are in portrait. Force rotate.
     if(window.innerHeight > window.innerWidth) {
         container.classList.add('force-landscape');
     } else {
@@ -1135,7 +1128,7 @@ function checkOrientation() {
     }
 }
 
-// --- v16 New Joystick Logic ---
+// --- v16 Fixed Joystick Logic ---
 const stickBase = document.getElementById('stick-base');
 const stickThumb = document.getElementById('stick-thumb');
 const lines = document.querySelectorAll('.joy-line');
@@ -1161,87 +1154,77 @@ const resetStick = (e) => {
             stickTouchId = null;
             input.x = 0; input.y = 0;
             stickThumb.style.transform = `translate(0px, 0px)`;
-            // 清除高亮
             lines.forEach(l => l.classList.remove('active'));
             slots.forEach(s => s.classList.remove('active'));
         }
     }
 };
 stickBase.addEventListener('touchend', resetStick);
+stickBase.addEventListener('touchcancel', resetStick);
 
 function updateStick(touch) {
     const rect = stickBase.getBoundingClientRect();
     const cx = rect.left + rect.width/2;
     const cy = rect.top + rect.height/2;
     
+    // 原始视口差值
     let dx = touch.clientX - cx;
     let dy = touch.clientY - cy;
+    
+    // [修复] 强制横屏时的坐标系修正
+    // 如果 rotate(90deg)，视觉上的 X 轴其实是物理屏幕的 Y 轴
+    // 视觉上: 右(X+) -> 物理: 下(Y+)
+    // 视觉上: 下(Y+) -> 物理: 左(X-)
+    // 映射: visualX = physicalY, visualY = -physicalX
+    if(container.classList.contains('force-landscape')) {
+        let temp = dx; 
+        dx = dy; 
+        dy = -temp;
+    }
     
     // 1. 距离限制
     const maxDist = 60;
     const dist = Math.sqrt(dx*dx + dy*dy);
     const scale = Math.min(dist, maxDist);
-    const angleRad = Math.atan2(dy, dx); // 物理屏幕角度
+    const angleRad = Math.atan2(dy, dx); 
     
     const tx = Math.cos(angleRad) * scale;
     const ty = Math.sin(angleRad) * scale;
     stickThumb.style.transform = `translate(${tx}px, ${ty}px)`;
     
-    // 2. 逻辑映射 (标准坐标系: Y向上为正, X向右为正)
-    // 屏幕坐标系 Y向下。所以 MathY = -ScreenY
+    // 2. 逻辑映射 (标准坐标系: 0=Right, 90=Up)
+    // 屏幕坐标系 Y向下。为了符合数学直觉，我们将 Y 取反
     let mathAngle = Math.atan2(-dy, dx) * (180/Math.PI); 
-    if(mathAngle < 0) mathAngle += 360; // 0-360 CCW
+    if(mathAngle < 0) mathAngle += 360; 
     
     input.angle = mathAngle;
     input.x = tx / maxDist;
-    input.y = -ty / maxDist; // input.y > 0 表示向上推
+    input.y = -ty / maxDist; // Up is positive
     
-    // 3. 视觉高亮 (Sector Calculation)
-    // 0°(Right) is index 0. 45° is index 1...
+    // 3. 视觉高亮
     // 偏移 22.5度以居中扇区
     let sector = Math.round(mathAngle / 45) % 8;
     
     lines.forEach(l => l.classList.remove('active'));
     slots.forEach(s => s.classList.remove('active'));
     
-    // 仅当推杆有一定力度时才点亮
     if(dist > 20) {
         lines[sector].classList.add('active');
         slots[sector].classList.add('active');
     }
 }
 
-// Fix Stick for Rotation (Overwrite listener logic slightly)
-stickTrack.removeEventListener('touchmove', null); // Clear old
-stickTrack.addEventListener('touchmove', e => {
+// --- v16 Fixed Gesture Logic ---
+const gesturePad = document.getElementById('gesture-pad');
+let gStart = {x:0, y:0, time:0};
+
+// [修复] 补回 touchstart
+gesturePad.addEventListener('touchstart', e => {
     e.preventDefault();
-    for(let i=0; i<e.changedTouches.length; i++) {
-        if(e.changedTouches[i].identifier === stickTouchId) {
-            let t = e.changedTouches[i];
-            let rect = stickTrack.getBoundingClientRect();
-            let isRot = container.classList.contains('force-landscape');
-            let delta = 0;
-            
-            if(isRot) {
-                // Visual Left/Right is Physical Top/Bottom (or Bottom/Top)
-                // Rotate 90deg: Top is Left.
-                let cy = rect.top + rect.height/2;
-                delta = t.clientY - cy; 
-            } else {
-                let cx = rect.left + rect.width/2;
-                delta = t.clientX - cx;
-            }
-            
-            let max = 60;
-            delta = Math.max(-max, Math.min(max, delta));
-            input.x = delta / max;
-            stickThumb.style.transform = `translateX(${delta}px)`;
-        }
-    }
+    let t = e.changedTouches[0];
+    gStart = {x: t.clientX, y: t.clientY, time: Date.now()};
 }, {passive:false});
 
-
-// --- v16 Gesture Logic ---
 gesturePad.addEventListener('touchend', e => {
     e.preventDefault();
     let t = e.changedTouches[0];
@@ -1249,7 +1232,7 @@ gesturePad.addEventListener('touchend', e => {
     let dy = t.clientY - gStart.y;
     let dt = Date.now() - gStart.time;
     
-    // 横屏修正 (如果使用了 CSS 强制旋转)
+    // [修复] 横屏手势修正
     if(container.classList.contains('force-landscape')) {
         let temp = dx; dx = dy; dy = -temp; 
     }
@@ -1278,12 +1261,15 @@ gesturePad.addEventListener('touchend', e => {
 window.addEventListener('keydown', e => {
     if(e.key==='a') input.x = -1;
     if(e.key==='d') input.x = 1;
+    if(e.key==='s') input.y = -1; // Keyboard support for down
     if(e.key==='w') input.jump = true;
     if(e.key==='j') input.attack = true;
     if(e.key==='k') input.ult = true;
+    if(e.key==='l') input.dash = 2; // Keyboard Dash
 });
 window.addEventListener('keyup', e => {
     if(e.key==='a' || e.key==='d') input.x = 0;
+    if(e.key==='s') input.y = 0;
 });
 
 </script>
