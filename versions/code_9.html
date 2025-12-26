@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>像素斗士：终极增强版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #0a0a1a;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(to bottom, #0a0a1a 0%, #1a1a2e 50%, #0a0a1a 100%);
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 游戏界面 */
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .player-hud {
+            width: 45%;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid;
+            border-radius: 8px;
+            padding: 10px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .player-1 .player-hud { border-color: #00ffaa; }
+        .player-2 .player-hud { border-color: #ff5555; }
+        
+        .player-name {
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        
+        .health-container, .special-container {
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .health-bar {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
+        .player-1 .health-bar { background: linear-gradient(to right, #00ff88, #00aa55); }
+        .player-2 .health-bar { background: linear-gradient(to right, #ff5555, #aa0000); }
+        
+        .special-bar {
+            height: 100%;
+            background: linear-gradient(to right, #00d2ff, #0088ff);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .combo-display {
+            position: absolute;
+            top: 100px;
+            font-size: 36px;
+            font-weight: bold;
+            color: #ffcc00;
+            text-shadow: 0 0 10px #ff9900;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        
+        /* 开始界面 */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a1a 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .title {
+            font-size: 64px;
+            color: #00f2ff;
+            text-shadow: 0 0 20px #00f2ff, 0 0 40px #00f2ff;
+            margin-bottom: 20px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        
+        .subtitle {
+            color: #aaa;
+            font-size: 18px;
+            margin-bottom: 40px;
+            text-align: center;
+            max-width: 80%;
+        }
+        
+        .button {
+            background: rgba(0, 242, 255, 0.2);
+            border: 2px solid #00f2ff;
+            color: white;
+            padding: 15px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .button:hover {
+            background: rgba(0, 242, 255, 0.4);
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.6);
+            transform: scale(1.05);
+        }
+        
+        /* 控制界面 */
+        #controls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.1s;
+            backdrop-filter: blur(4px);
+        }
+        
+        .control-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+        
+        #attack-btn {
+            background: rgba(255, 50, 50, 0.3);
+            border-color: #ff5555;
+            font-size: 30px;
+        }
+        
+        #special-btn {
+            background: rgba(0, 210, 255, 0.3);
+            border-color: #00d2ff;
+            font-size: 20px;
+        }
+        
+        /* 胜利界面 */
+        #victory-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        
+        .victory-text {
+            font-size: 72px;
+            color: #ffcc00;
+            text-shadow: 0 0 30px #ff9900;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .winner-text {
+            font-size: 24px;
+            color: white;
+            margin-bottom: 40px;
+        }
+        
+        /* 调试信息 */
+        #debug {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #00ff00;
+            font-size: 12px;
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            border-radius: 3px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- HUD界面 -->
+        <div id="hud">
+            <div class="player-1">
+                <div class="player-hud">
+                    <div class="player-name">玩家 1</div>
+                    <div class="health-container">
+                        <div id="p1-health" class="health-bar" style="width: 100%"></div>
+                    </div>
+                    <div class="special-container">
+                        <div id="p1-special" class="special-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="player-2">
+                <div class="player-hud">
+                    <div class="player-name">玩家 2</div>
+                    <div class="health-container">
+                        <div id="p2-health" class="health-bar" style="width: 100%"></div>
+                    </div>
+                    <div class="special-container">
+                        <div id="p2-special" class="special-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 连击显示 -->
+        <div id="p1-combo" class="combo-display" style="left: 10%"></div>
+        <div id="p2-combo" class="combo-display" style="right: 10%"></div>
+        
+        <!-- 开始界面 -->
+        <div id="start-screen">
+            <div class="title">像素斗士</div>
+            <div class="subtitle">终极增强版 - 全屏大招 | 智能AI | 连击系统 | 像素特效</div>
+            <button id="start-btn" class="button">开始战斗</button>
+            <button id="how-to-btn" class="button">游戏说明</button>
+            <div style="margin-top: 30px; color: #666; font-size: 14px;">
+                使用虚拟按键控制移动和攻击
+            </div>
+        </div>
+        
+        <!-- 胜利界面 -->
+        <div id="victory-screen">
+            <div class="victory-text" id="victory-text">胜利!</div>
+            <div class="winner-text" id="winner-text">玩家 1 获得胜利</div>
+            <button id="restart-btn" class="button">再战一场</button>
+            <button id="menu-btn" class="button">返回主菜单</button>
+        </div>
+        
+        <!-- 控制界面 -->
+        <div id="controls">
+            <div class="control-group">
+                <div id="left-btn" class="control-btn">←</div>
+                <div id="right-btn" class="control-btn">→</div>
+                <div id="jump-btn" class="control-btn">↑</div>
+            </div>
+            
+            <div class="control-group">
+                <div id="block-btn" class="control-btn">🛡️</div>
+                <div id="special-btn" class="control-btn">⚡</div>
+                <div id="attack-btn" class="control-btn">👊</div>
+            </div>
+        </div>
+        
+        <!-- 调试信息 -->
+        <div id="debug"></div>
+    </div>
+    
+    <!-- 音频元素 -->
+    <audio id="attack-sound" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAZGF0YQ..."></audio>
+    <audio id="hit-sound"></audio>
+    <audio id="special-sound"></audio>
+    <audio id="victory-sound"></audio>
+    
+    <script>
+        // 游戏主类
+        class PixelFighter {
+            constructor() {
+                this.canvas = document.getElementById('game-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.gameState = 'menu'; // menu, playing, paused, gameover
+                this.gameTime = 0;
+                this.particles = [];
+                this.effects = [];
+                this.players = [];
+                this.aiPlayers = [];
+                
+                // 初始化游戏
+                this.init();
+            }
+            
+            init() {
+                // 设置画布大小
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
+                // 初始化玩家
+                this.players = [
+                    this.createPlayer(1, 100, 300, '#00ffaa'),
+                    this.createPlayer(2, 700, 300, '#ff5555', true)
+                ];
+                
+                // 启动游戏循环
+                this.gameLoop();
+                
+                // 绑定事件
+                this.bindEvents();
+            }
+            
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.groundY = this.canvas.height - 100;
+            }
+            
+            createPlayer(id, x, y, color, isAI = false) {
+                return {
+                    id,
+                    x, y,
+                    width: 40,
+                    height: 80,
+                    color,
+                    isAI,
+                    
+                    // 状态
+                    health: 100,
+                    maxHealth: 100,
+                    special: 0,
+                    maxSpecial: 100,
+                    
+                    // 物理属性
+                    velocityX: 0,
+                    velocityY: 0,
+                    direction: isAI ? -1 : 1,
+                    grounded: false,
+                    
+                    // 战斗属性
+                    comboCount: 0,
+                    comboTimeout: 0,
+                    hitStun: 0,
+                    blockStun: 0,
+                    invincible: 0,
+                    
+                    // 状态
+                    state: 'idle', // idle, walk, jump, attack, block, hit, special, dead
+                    stateTimer: 0,
+                    
+                    // 攻击属性
+                    attackType: null,
+                    attackHitbox: null,
+                    
+                    // AI属性
+                    aiState: 'patrol',
+                    aiTimer: 0,
+                    aiTarget: null
+                };
+            }
+            
+            updatePlayer(player, deltaTime) {
+                // 更新状态计时器
+                player.stateTimer += deltaTime;
+                
+                // 更新无敌时间
+                if (player.invincible > 0) {
+                    player.invincible -= deltaTime;
+                }
+                
+                // 更新硬直时间
+                if (player.hitStun > 0) {
+                    player.hitStun -= deltaTime;
+                    if (player.hitStun <= 0) {
+                        player.state = 'idle';
+                    }
+                }
+                
+                // 更新格挡硬直
+                if (player.blockStun > 0) {
+                    player.blockStun -= deltaTime;
+                }
+                
+                // 更新连击超时
+                if (player.comboTimeout > 0) {
+                    player.comboTimeout -= deltaTime;
+                    if (player.comboTimeout <= 0) {
+                        player.comboCount = 0;
+                        this.updateComboDisplay(player);
+                    }
+                }
+                
+                // 死亡状态不更新
+                if (player.state === 'dead') {
+                    return;
+                }
+                
+                // 应用重力
+                if (!player.grounded) {
+                    player.velocityY += 0.5;
+                }
+                
+                // 更新位置
+                player.x += player.velocityX;
+                player.y += player.velocityY;
+                
+                // 地面碰撞
+                if (player.y >= this.groundY - player.height) {
+                    player.y = this.groundY - player.height;
+                    player.velocityY = 0;
+                    player.grounded = true;
+                    
+                    if (player.state === 'jump') {
+                        player.state = 'idle';
+                    }
+                } else {
+                    player.grounded = false;
+                }
+                
+                // 边界碰撞
+                if (player.x < 10) player.x = 10;
+                if (player.x > this.canvas.width - player.width - 10) {
+                    player.x = this.canvas.width - player.width - 10;
+                }
+                
+                // 阻力
+                if (player.grounded) {
+                    player.velocityX *= 0.8;
+                }
+                
+                // AI逻辑
+                if (player.isAI && player.state !== 'hit' && player.state !== 'special') {
+                    this.updateAI(player, deltaTime);
+                }
+                
+                // 自动结束攻击状态
+                if (player.state === 'attack' && player.stateTimer > 0.3) {
+                    player.state = 'idle';
+                    player.attackType = null;
+                    player.attackHitbox = null;
+                }
+                
+                // 自动结束特殊攻击状态
+                if (player.state === 'special' && player.stateTimer > 1.0) {
+                    player.state = 'idle';
+                }
+                
+                // 更新攻击命中框
+                this.updateAttackHitbox(player);
+            }
+            
+            updateAI(player, deltaTime) {
+                player.aiTimer += deltaTime;
+                
+                // 寻找目标
+                const target = this.players.find(p => !p.isAI);
+                if (!target) return;
+                
+                player.aiTarget = target;
+                
+                // 计算距离
+                const distance = Math.abs(player.x - target.x);
+                
+                // AI状态机
+                switch (player.aiState) {
+                    case 'patrol':
+                        // 随机移动
+                        if (player.aiTimer > 1.0) {
+                            player.aiTimer = 0;
+                            player.aiState = Math.random() < 0.5 ? 'approach' : 'retreat';
+                        }
+                        break;
+                        
+                    case 'approach':
+                        // 接近目标
+                        player.direction = player.x < target.x ? 1 : -1;
+                        player.velocityX = player.direction * 3;
+                        player.state = 'walk';
+                        
+                        // 如果足够接近，攻击
+                        if (distance < 100) {
+                            if (Math.random() < 0.1) {
+                                this.attack(player);
+                            } else if (player.special >= 100 && Math.random() < 0.05) {
+                                this.specialAttack(player);
+                            }
+                        }
+                        
+                        // 随机改变状态
+                        if (player.aiTimer > 2.0 || distance < 50) {
+                            player.aiTimer = 0;
+                            player.aiState = Math.random() < 0.3 ? 'patrol' : 'approach';
+                        }
+                        break;
+                        
+                    case 'retreat':
+                        // 远离目标
+                        player.direction = player.x < target.x ? -1 : 1;
+                        player.velocityX = player.direction * 2;
+                        player.state = 'walk';
+                        
+                        // 如果太远，停止后退
+                        if (distance > 200) {
+                            player.aiTimer = 0;
+                            player.aiState = 'patrol';
+                        }
+                        break;
+                        
+                    case 'attack':
+                        // 攻击状态
+                        if (player.aiTimer > 0.5) {
+                            player.aiTimer = 0;
+                            player.aiState = 'approach';
+                        }
+                        break;
+                }
+                
+                // 随机跳跃
+                if (player.grounded && Math.random() < 0.01) {
+                    player.velocityY = -15;
+                    player.state = 'jump';
+                }
+                
+                // 随机格挡
+                if (distance < 80 && Math.random() < 0.05) {
+                    player.state = 'block';
+                    setTimeout(() => {
+                        if (player.state === 'block') {
+                            player.state = 'idle';
+                        }
+                    }, 500);
+                }
+            }
+            
+            updateAttackHitbox(player) {
+                if (player.attackType) {
+                    const hitboxWidth = player.attackType === 'heavy' ? 80 : 60;
+                    const hitboxHeight = 40;
+                    
+                    player.attackHitbox = {
+                        x: player.x + (player.direction > 0 ? player.width : -hitboxWidth),
+                        y: player.y + player.height / 2 - hitboxHeight / 2,
+                        width: hitboxWidth,
+                        height: hitboxHeight
+                    };
+                } else {
+                    player.attackHitbox = null;
+                }
+            }
+            
+            attack(player) {
+                if (player.state === 'hit' || player.state === 'dead' || player.state === 'special') {
+                    return;
+                }
+                
+                player.state = 'attack';
+                player.stateTimer = 0;
+                player.attackType = Math.random() < 0.7 ? 'light' : 'heavy';
+                
+                // 连击系统
+                if (player.comboTimeout > 0) {
+                    player.comboCount++;
+                } else {
+                    player.comboCount = 1;
+                }
+                player.comboTimeout = 1.0; // 1秒内再次攻击可连击
+                
+                // 更新连击显示
+                this.updateComboDisplay(player);
+                
+                // 攻击特效
+                this.createEffect(
+                    player.x + player.width / 2 + player.direction * 40,
+                    player.y + player.height / 2,
+                    'attack',
+                    player.color
+                );
+                
+                // 攻击音效
+                this.playSound('attack');
+                
+                // 检查攻击命中
+                this.checkAttackHit(player);
+            }
+            
+            specialAttack(player) {
+                if (player.special < 100 || player.state === 'hit' || player.state === 'dead') {
+                    return;
+                }
+                
+                player.special = 0;
+                player.state = 'special';
+                player.stateTimer = 0;
+                player.invincible = 1.0; // 大招期间无敌
+                
+                // 更新特殊条显示
+                this.updateSpecialDisplay(player);
+                
+                // 大招特效
+                this.createScreenShake(20, 0.5);
+                this.createEffect(
+                    player.x + player.width / 2,
+                    player.y + player.height / 2,
+                    'special',
+                    '#00d2ff'
+                );
+                
+                // 全屏攻击
+                const target = this.players.find(p => p !== player);
+                if (target && target.state !== 'special') {
+                    this.damagePlayer(target, 30);
+                    
+                    // 击飞效果
+                    target.velocityX = (target.x < player.x ? -1 : 1) * 20;
+                    target.velocityY = -10;
+                    target.state = 'hit';
+                    target.hitStun = 0.5;
+                    
+                    // 连击数增加
+                    player.comboCount += 3;
+                    player.comboTimeout = 1.0;
+                    this.updateComboDisplay(player);
+                }
+                
+                // 特殊攻击音效
+                this.playSound('special');
+            }
+            
+            checkAttackHit(attacker) {
+                if (!attacker.attackHitbox) return;
+                
+                for (const target of this.players) {
+                    if (target === attacker || target.state === 'dead') continue;
+                    
+                    // 检查碰撞
+                    if (this.checkCollision(attacker.attackHitbox, target)) {
+                        // 检查目标是否格挡
+                        if (target.state === 'block' && 
+                            Math.sign(target.direction) === Math.sign(attacker.x - target.x)) {
+                            // 格挡成功
+                            target.blockStun = 0.2;
+                            this.createEffect(
+                                target.x + target.width / 2,
+                                target.y + target.height / 2,
+                                'block',
+                                '#ffff00'
+                            );
+                            
+                            // 少量伤害
+                            this.damagePlayer(target, 2);
+                            
+                            // 为攻击者增加少量特殊值
+                            attacker.special = Math.min(attacker.maxSpecial, attacker.special + 10);
+                            this.updateSpecialDisplay(attacker);
+                        } else {
+                            // 正常命中
+                            const damage = attacker.attackType === 'heavy' ? 15 : 10;
+                            this.damagePlayer(target, damage);
+                            
+                            // 击退效果
+                            target.velocityX = (target.x < attacker.x ? -1 : 1) * 10;
+                            target.velocityY = -5;
+                            target.state = 'hit';
+                            target.hitStun = 0.3;
+                            
+                            // 为攻击者增加特殊值
+                            attacker.special = Math.min(attacker.maxSpecial, attacker.special + 20);
+                            this.updateSpecialDisplay(attacker);
+                            
+                            // 命中特效
+                            this.createEffect(
+                                target.x + target.width / 2,
+                                target.y + target.height / 2,
+                                'hit',
+                                '#ff5555'
+                            );
+                        }
+                        
+                        // 命中音效
+                        this.playSound('hit');
+                        break;
+                    }
+                }
+            }
+            
+            damagePlayer(player, damage) {
+                if (player.invincible > 0) return;
+                
+                player.health = Math.max(0, player.health - damage);
+                this.updateHealthDisplay(player);
+                
+                // 检查是否死亡
+                if (player.health <= 0) {
+                    player.state = 'dead';
+                    this.checkGameOver();
+                }
+            }
+            
+            checkCollision(rect, player) {
+                return rect.x < player.x + player.width &&
+                       rect.x + rect.width > player.x &&
+                       rect.y < player.y + player.height &&
+                       rect.y + rect.height > player.y;
+            }
+            
+            createEffect(x, y, type, color) {
+                this.effects.push({
+                    x, y, type, color,
+                    life: 1.0,
+                    size: type === 'special' ? 50 : 20,
+                    particles: []
+                });
+                
+                // 创建粒子
+                if (type === 'hit' || type === 'special') {
+                    for (let i = 0; i < 20; i++) {
+                        this.particles.push({
+                            x, y,
+                            velocityX: (Math.random() - 0.5) * 10,
+                            velocityY: (Math.random() - 0.5) * 10,
+                            color: type === 'special' ? '#00d2ff' : '#ff5555',
+                            life: 1.0,
+                            size: Math.random() * 4 + 2
+                        });
+                    }
+                }
+            }
+            
+            createScreenShake(intensity, duration) {
+                this.screenShake = {
+                    intensity,
+                    duration,
+                    timer: 0
+                };
+            }
+            
+            updateEffects(deltaTime) {
+                // 更新特效
+                for (let i = this.effects.length - 1; i >= 0; i--) {
+                    const effect = this.effects[i];
+                    effect.life -= deltaTime;
+                    
+                    if (effect.life <= 0) {
+                        this.effects.splice(i, 1);
+                    }
+                }
+                
+                // 更新粒子
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const particle = this.particles[i];
+                    particle.x += particle.velocityX;
+                    particle.y += particle.velocityY;
+                    particle.velocityY += 0.2; // 重力
+                    particle.life -= 0.02;
+                    
+                    if (particle.life <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+                
+                // 更新屏幕震动
+                if (this.screenShake) {
+                    this.screenShake.timer += deltaTime;
+                    if (this.screenShake.timer >= this.screenShake.duration) {
+                        this.screenShake = null;
+                    }
+                }
+            }
+            
+            updateComboDisplay(player) {
+                const comboElement = document.getElementById(`p${player.id}-combo`);
+                if (player.comboCount > 1) {
+                    comboElement.textContent = `${player.comboCount} HIT COMBO!`;
+                    comboElement.style.opacity = '1';
+                    comboElement.style.transform = 'scale(1.5)';
+                    
+                    // 重置动画
+                    setTimeout(() => {
+                        comboElement.style.transform = 'scale(1)';
+                    }, 100);
+                    
+                    // 淡出
+                    setTimeout(() => {
+                        comboElement.style.opacity = '0';
+                    }, 1000);
+                } else {
+                    comboElement.style.opacity = '0';
+                }
+            }
+            
+            updateHealthDisplay(player) {
+                const healthElement = document.getElementById(`p${player.id}-health`);
+                const percentage = (player.health / player.maxHealth) * 100;
+                healthElement.style.width = `${percentage}%`;
+            }
+            
+            updateSpecialDisplay(player) {
+                const specialElement = document.getElementById(`p${player.id}-special`);
+                const percentage = (player.special / player.maxSpecial) * 100;
+                specialElement.style.width = `${percentage}%`;
+            }
+            
+            checkGameOver() {
+                const alivePlayers = this.players.filter(p => p.health > 0);
+                
+                if (alivePlayers.length === 1) {
+                    // 游戏结束
+                    this.gameState = 'gameover';
+                    
+                    // 显示胜利界面
+                    const victoryScreen = document.getElementById('victory-screen');
+                    const victoryText = document.getElementById('victory-text');
+                    const winnerText = document.getElementById('winner-text');
+                    
+                    const winner = alivePlayers[0];
+                    victoryText.textContent = '胜利!';
+                    victoryText.style.color = winner.id === 1 ? '#00ffaa' : '#ff5555';
+                    winnerText.textContent = winner.isAI ? 'AI 获得胜利' : '玩家 1 获得胜利';
+                    
+                    victoryScreen.style.display = 'flex';
+                    
+                    // 播放胜利音效
+                    this.playSound('victory');
+                }
+            }
+            
+            playSound(type) {
+                // 在实际游戏中，这里会播放真正的音效
+                // 为了演示，我们只输出日志
+                console.log(`播放音效: ${type}`);
+            }
+            
+            drawPlayer(player) {
+                this.ctx.save();
+                
+                // 屏幕震动偏移
+                let offsetX = 0, offsetY = 0;
+                if (this.screenShake) {
+                    const intensity = this.screenShake.intensity * 
+                        (1 - this.screenShake.timer / this.screenShake.duration);
+                    offsetX = (Math.random() - 0.5) * intensity;
+                    offsetY = (Math.random() - 0.5) * intensity;
+                }
+                
+                this.ctx.translate(offsetX, offsetY);
+                
+                // 设置绘制位置
+                const x = player.x;
+                const y = player.y;
+                const width = player.width;
+                const height = player.height;
+                
+                // 绘制影子
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                this.ctx.fillRect(x + 5, this.groundY - 5, width - 10, 10);
+                
+                // 无敌闪烁效果
+                if (player.invincible > 0 && Math.floor(player.invincible * 10) % 2 === 0) {
+                    this.ctx.globalAlpha = 0.7;
+                }
+                
+                // 根据状态调整颜色
+                let color = player.color;
+                if (player.state === 'hit') {
+                    color = '#ffffff';
+                } else if (player.state === 'block') {
+                    color = '#ffff00';
+                } else if (player.state === 'special') {
+                    color = '#00d2ff';
+                }
+                
+                // 绘制身体
+                this.ctx.fillStyle = color;
+                this.ctx.fillRect(x, y, width, height);
+                
+                // 绘制轮廓
+                this.ctx.strokeStyle = '#ffffff';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(x, y, width, height);
+                
+                // 绘制面部特征
+                this.ctx.fillStyle = '#000000';
+                
+                // 眼睛
+                const eyeX = player.direction > 0 ? x + 25 : x + 15;
+                this.ctx.fillRect(eyeX, y + 20, 8, 8);
+                
+                // 嘴巴
+                if (player.state === 'dead') {
+                    this.ctx.fillRect(x + 15, y + 40, 20, 5);
+                } else if (player.state === 'attack') {
+                    this.ctx.fillRect(x + 15, y + 40, 20, 3);
+                } else {
+                    this.ctx.fillRect(x + 18, y + 40, 10, 3);
+                }
+                
+                // 绘制攻击范围
+                if (player.attackHitbox) {
+                    this.ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                    this.ctx.fillRect(
+                        player.attackHitbox.x,
+                        player.attackHitbox.y,
+                        player.attackHitbox.width,
+                        player.attackHitbox.height
+                    );
+                }
+                
+                // 绘制特殊攻击特效
+                if (player.state === 'special') {
+                    const pulse = Math.sin(this.gameTime * 10) * 10;
+                    
+                    this.ctx.strokeStyle = '#00d2ff';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.beginPath();
+                    this.ctx.arc(
+                        x + width / 2,
+                        y + height / 2,
+                        50 + pulse,
+                        0,
+                        Math.PI * 2
+                    );
+                    this.ctx.stroke();
+                    
+                    // 能量线
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (i / 8) * Math.PI * 2;
+                        const length = 100 + Math.sin(this.gameTime * 5 + i) * 20;
+                        
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x + width / 2, y + height / 2);
+                        this.ctx.lineTo(
+                            x + width / 2 + Math.cos(angle) * length,
+                            y + height / 2 + Math.sin(angle) * length
+                        );
+                        this.ctx.stroke();
+                    }
+                }
+                
+                this.ctx.restore();
+            }
+            
+            drawEffects() {
+                // 绘制粒子
+                for (const particle of this.particles) {
+                    this.ctx.save();
+                    this.ctx.globalAlpha = particle.life;
+                    this.ctx.fillStyle = particle.color;
+                    this.ctx.fillRect(
+                        particle.x - particle.size / 2,
+                        particle.y - particle.size / 2,
+                        particle.size,
+                        particle.size
+                    );
+                    this.ctx.restore();
+                }
+                
+                // 绘制特效
+                for (const effect of this.effects) {
+                    this.ctx.save();
+                    this.ctx.globalAlpha = effect.life;
+                    this.ctx.fillStyle = effect.color;
+                    
+                    if (effect.type === 'attack') {
+                        // 攻击特效
+                        this.ctx.beginPath();
+                        this.ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    } else if (effect.type === 'hit') {
+                        // 命中特效
+                        for (let i = 0; i < 6; i++) {
+                            const angle = (i / 6) * Math.PI * 2;
+                            const length = 20 * (1 - effect.life);
+                            
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(effect.x, effect.y);
+                            this.ctx.lineTo(
+                                effect.x + Math.cos(angle) * length,
+                                effect.y + Math.sin(angle) * length
+                            );
+                            this.ctx.lineWidth = 3;
+                            this.ctx.stroke();
+                        }
+                    } else if (effect.type === 'special') {
+                        // 特殊攻击特效
+                        const pulse = Math.sin(this.gameTime * 10) * 10;
+                        
+                        this.ctx.strokeStyle = effect.color;
+                        this.ctx.lineWidth = 2;
+                        this.ctx.beginPath();
+                        this.ctx.arc(effect.x, effect.y, effect.size + pulse, 0, Math.PI * 2);
+                        this.ctx.stroke();
+                    }
+                    
+                    this.ctx.restore();
+                }
+            }
+            
+            drawBackground() {
+                // 绘制渐变背景
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                gradient.addColorStop(0, '#0a0a1a');
+                gradient.addColorStop(0.5, '#1a1a2e');
+                gradient.addColorStop(1, '#0a0a1a');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制网格线
+                this.ctx.strokeStyle = 'rgba(0, 210, 255, 0.1)';
+                this.ctx.lineWidth = 1;
+                
+                for (let x = 0; x < this.canvas.width; x += 50) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, 0);
+                    this.ctx.lineTo(x, this.canvas.height);
+                    this.ctx.stroke();
+                }
+                
+                // 绘制地面
+                this.ctx.fillStyle = '#111122';
+                this.ctx.fillRect(0, this.groundY, this.canvas.width, 100);
+                
+                // 地面高光
+                const groundGradient = this.ctx.createLinearGradient(0, this.groundY, 0, this.groundY + 10);
+                groundGradient.addColorStop(0, 'rgba(0, 210, 255, 0.5)');
+                groundGradient.addColorStop(1, 'transparent');
+                this.ctx.fillStyle = groundGradient;
+                this.ctx.fillRect(0, this.groundY, this.canvas.width, 10);
+            }
+            
+            draw() {
+                // 清空画布
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制背景
+                this.drawBackground();
+                
+                // 绘制玩家
+                for (const player of this.players) {
+                    this.drawPlayer(player);
+                }
+                
+                // 绘制特效
+                this.drawEffects();
+                
+                // 绘制调试信息
+                if (document.getElementById('debug').style.display === 'block') {
+                    this.ctx.fillStyle = '#00ff00';
+                    this.ctx.font = '12px monospace';
+                    this.ctx.fillText(`游戏时间: ${this.gameTime.toFixed(2)}`, 10, 20);
+                    this.ctx.fillText(`玩家1状态: ${this.players[0].state}`, 10, 40);
+                    this.ctx.fillText(`玩家2状态: ${this.players[1].state}`, 10, 60);
+                }
+            }
+            
+            gameLoop() {
+                const now = performance.now();
+                const deltaTime = (now - (this.lastTime || now)) / 1000;
+                this.lastTime = now;
+                
+                if (this.gameState === 'playing') {
+                    this.gameTime += deltaTime;
+                    
+                    // 更新玩家
+                    for (const player of this.players) {
+                        this.updatePlayer(player, deltaTime);
+                        
+                        // 自动恢复特殊值
+                        if (player.state !== 'special' && player.special < player.maxSpecial) {
+                            player.special = Math.min(player.maxSpecial, player.special + deltaTime * 5);
+                            this.updateSpecialDisplay(player);
+                        }
+                    }
+                    
+                    // 更新特效
+                    this.updateEffects(deltaTime);
+                }
+                
+                // 绘制
+                this.draw();
+                
+                // 继续循环
+                requestAnimationFrame(() => this.gameLoop());
+            }
+            
+            bindEvents() {
+                // 开始按钮
+                document.getElementById('start-btn').addEventListener('click', () => {
+                    this.startGame();
+                });
+                
+                // 重新开始按钮
+                document.getElementById('restart-btn').addEventListener('click', () => {
+                    this.restartGame();
+                });
+                
+                // 返回菜单按钮
+                document.getElementById('menu-btn').addEventListener('click', () => {
+                    this.showMenu();
+                });
+                
+                // 控制按钮
+                const controlButtons = {
+                    'left-btn': () => this.movePlayer(1, 'left', true),
+                    'right-btn': () => this.movePlayer(1, 'right', true),
+                    'jump-btn': () => this.jumpPlayer(1),
+                    'attack-btn': () => this.attack(this.players[0]),
+                    'special-btn': () => this.specialAttack(this.players[0]),
+                    'block-btn': () => this.blockPlayer(1)
+                };
+                
+                for (const [id, action] of Object.entries(controlButtons)) {
+                    const button = document.getElementById(id);
+                    
+                    // 触摸事件
+                    button.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        action();
+                    });
+                    
+                    // 鼠标事件
+                    button.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        action();
+                    });
+                    
+                    // 移动控制释放
+                    if (id === 'left-btn' || id === 'right-btn') {
+                        button.addEventListener('touchend', () => this.stopPlayer(1));
+                        button.addEventListener('touchcancel', () => this.stopPlayer(1));
+                        button.addEventListener('mouseup', () => this.stopPlayer(1));
+                        button.addEventListener('mouseleave', () => this.stopPlayer(1));
+                    }
+                }
+                
+                // 键盘控制
+                document.addEventListener('keydown', (e) => {
+                    if (this.gameState !== 'playing') return;
+                    
+                    switch(e.key) {
+                        case 'ArrowLeft':
+                            this.movePlayer(1, 'left', false);
+                            break;
+                        case 'ArrowRight':
+                            this.movePlayer(1, 'right', false);
+                            break;
+                        case 'ArrowUp':
+                            this.jumpPlayer(1);
+                            break;
+                        case ' ':
+                            this.attack(this.players[0]);
+                            break;
+                        case 's':
+                            this.specialAttack(this.players[0]);
+                            break;
+                        case 'b':
+                            this.blockPlayer(1);
+                            break;
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                        this.stopPlayer(1);
+                    }
+                });
+            }
+            
+            startGame() {
+                this.gameState = 'playing';
+                document.getElementById('start-screen').style.display = 'none';
+                
+                // 重置玩家
+                this.players = [
+                    this.createPlayer(1, 100, 300, '#00ffaa'),
+                    this.createPlayer(2, 700, 300, '#ff5555', true)
+                ];
+                
+                // 更新显示
+                this.updateHealthDisplay(this.players[0]);
+                this.updateHealthDisplay(this.players[1]);
+                this.updateSpecialDisplay(this.players[0]);
+                this.updateSpecialDisplay(this.players[1]);
+            }
+            
+            restartGame() {
+                this.gameState = 'playing';
+                document.getElementById('victory-screen').style.display = 'none';
+                this.startGame();
+            }
+            
+            showMenu() {
+                this.gameState = 'menu';
+                document.getElementById('victory-screen').style.display = 'none';
+                document.getElementById('start-screen').style.display = 'flex';
+            }
+            
+            movePlayer(playerId, direction, isButton) {
+                if (this.gameState !== 'playing') return;
+                
+                const player = this.players.find(p => p.id === playerId);
+                if (!player || player.state === 'hit' || player.state === 'dead') return;
+                
+                if (direction === 'left') {
+                    player.velocityX = -5;
+                    player.direction = -1;
+                } else {
+                    player.velocityX = 5;
+                    player.direction = 1;
+                }
+                
+                if (player.state === 'idle' || player.state === 'walk') {
+                    player.state = 'walk';
+                }
+            }
+            
+            stopPlayer(playerId) {
+                const player = this.players.find(p => p.id === playerId);
+                if (player && (player.state === 'walk' || player.state === 'idle')) {
+                    player.velocityX = 0;
+                    player.state = 'idle';
+                }
+            }
+            
+            jumpPlayer(playerId) {
+                if (this.gameState !== 'playing') return;
+                
+                const player = this.players.find(p => p.id === playerId);
+                if (!player || !player.grounded || player.state === 'hit' || player.state === 'dead') return;
+                
+                player.velocityY = -15;
+                player.state = 'jump';
+            }
+            
+            blockPlayer(playerId) {
+                if (this.gameState !== 'playing') return;
+                
+                const player = this.players.find(p => p.id === playerId);
+                if (!player || player.state === 'hit' || player.state === 'dead') return;
+                
+                player.state = 'block';
+                
+                // 自动结束格挡
+                setTimeout(() => {
+                    if (player.state === 'block') {
+                        player.state = 'idle';
+                    }
+                }, 500);
+            }
+        }
+        
+        // 启动游戏
+        window.addEventListener('load', () => {
+            const game = new PixelFighter();
+            
+            // 全局访问（用于调试）
+            window.game = game;
+        });
+    </script>
+</body>
+</html>

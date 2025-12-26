@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>格斗天才Ver2.0</title>
+    <style>
+        body { 
+            margin: 0; background: #111; overflow: hidden; font-family: 'Segoe UI', sans-serif; 
+            touch-action: none; user-select: none; -webkit-user-select: none;
+        }
+        
+        #game-container {
+            position: relative; width: 100vw; height: 100vh;
+            display: flex; justify-content: center; align-items: center; background: #222;
+        }
+
+        canvas { background: #333; border-top: 2px solid #00d2ff; border-bottom: 2px solid #00d2ff; }
+
+        /* UI层 */
+        #ui-layer { position: absolute; top: 10px; width: 95%; display: flex; justify-content: space-between; z-index: 10; pointer-events: none; }
+        .bar-container { width: 40%; height: 20px; background: #555; border: 2px solid #fff; transform: skewX(-20deg); overflow: hidden; }
+        .hp-bar { height: 100%; transition: width 0.2s; }
+        #p1-bar { background: #00ff00; width: 100%; float: right; } /* 玩家血条从右往左减 */
+        #p2-bar { background: #ff0000; width: 100%; float: left; }
+
+        /* 结算弹窗 */
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 50;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        #overlay h1 { color: #fff; font-size: 40px; margin-bottom: 20px; text-shadow: 0 0 10px #00d2ff; }
+        .btn-style {
+            padding: 15px 40px; font-size: 24px; background: #00d2ff; color: #000; border: none;
+            border-radius: 5px; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px #00d2ff;
+        }
+        .btn-style:active { transform: scale(0.95); background: #fff; }
+
+        /* 虚拟手柄 */
+        .controls {
+            position: absolute; bottom: 20px; width: 100%; height: 140px; pointer-events: none;
+            display: flex; justify-content: space-between; padding: 0 30px; box-sizing: border-box; z-index: 20;
+        }
+        .btn-group { display: flex; gap: 20px; pointer-events: auto; align-items: flex-end; }
+        .d-pad { width: 70px; height: 70px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-size: 30px; }
+        .act-btn { width: 80px; height: 80px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 30px; font-weight: bold; border: 2px solid white; }
+        #btn-atk { background: rgba(255, 50, 50, 0.4); }
+        #btn-jump { background: rgba(50, 50, 255, 0.4); }
+        .pressed { background: rgba(255,255,255,0.4) !important; transform: scale(0.9); }
+
+        /* 旋转提示 */
+        #rotate-tip {
+            display: none; position: absolute; top:0; left:0; width:100%; height:100%;
+            background: #000; color: #00d2ff; z-index: 100;
+            flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        @media screen and (orientation: portrait) { #rotate-tip { display: flex; } }
+    </style>
+</head>
+<body>
+
+    <div id="rotate-tip">
+        <h1>📱 请横屏游玩</h1>
+        <p>Turn Device Landscape</p>
+    </div>
+
+    <div id="game-container">
+        <!-- 结算/开始 界面 -->
+        <div id="overlay">
+            <h1 id="msg-title">READY?</h1>
+            <button id="start-btn" class="btn-style">🔥 进入全屏开战</button>
+        </div>
+
+        <!-- 血条UI -->
+        <div id="ui-layer">
+            <div class="bar-container" style="border-color: #00ff00"><div id="p1-bar" class="hp-bar"></div></div>
+            <div style="color:white; font-weight:bold; font-size:24px;">VS</div>
+            <div class="bar-container" style="border-color: #ff0000"><div id="p2-bar" class="hp-bar"></div></div>
+        </div>
+        
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="controls">
+            <div class="btn-group">
+                <div class="d-pad" id="btn-left">⬅️</div>
+                <div class="d-pad" id="btn-right">➡️</div>
+            </div>
+            <div class="btn-group">
+                <div class="act-btn" id="btn-atk">🥊</div>
+                <div class="act-btn" id="btn-jump">🚀</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('overlay');
+        const title = document.getElementById('msg-title');
+        const startBtn = document.getElementById('start-btn');
+        
+        // 游戏状态
+        let gameRunning = false;
+        let p1, p2;
+        const keys = { l: false, r: false };
+
+        // 核心类
+        class Fighter {
+            constructor(x, color, isAi = false) {
+                this.startX = x; this.color = color; this.isAi = isAi;
+                this.reset();
+            }
+
+            reset() {
+                this.x = this.startX; this.y = 200; 
+                this.w = 50; this.h = 100;
+                this.dy = 0; this.health = 100;
+                this.isAttacking = false;
+                this.dir = this.isAi ? -1 : 1; // 1:右, -1:左
+                this.speed = 5;
+                this.dead = false;
+            }
+
+            update(target) {
+                if (this.dead) return;
+
+                // 重力
+                this.y += this.dy;
+                if (this.y + this.h + this.dy >= canvas.height - 20) {
+                    this.dy = 0; this.y = canvas.height - 20 - this.h;
+                } else { this.dy += 0.8; }
+
+                // 玩家移动与朝向逻辑
+                if (!this.isAi) {
+                    if (keys.r && this.x < canvas.width - this.w) { this.x += this.speed; this.dir = 1; }
+                    if (keys.l && this.x > 0) { this.x -= this.speed; this.dir = -1; }
+                } 
+                // AI 逻辑
+                else {
+                    let dist = Math.abs(this.x - target.x);
+                    // 简单的AI朝向判断
+                    this.dir = target.x > this.x ? 1 : -1;
+                    
+                    if (dist > 60) this.x += 3 * this.dir; // 追击
+                    else if (dist < 100 && Math.random() < 0.04) this.attack(target); // 攻击
+                    if (target.y < this.y - 50 && this.dy === 0 && Math.random() < 0.05) this.dy = -15; // 跳跃
+                }
+
+                this.draw();
+            }
+
+            draw() {
+                ctx.save();
+                // 身体
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.w, this.h);
+                
+                // 眼睛 (指示朝向)
+                ctx.fillStyle = 'white';
+                let eyeX = this.dir === 1 ? this.x + 30 : this.x + 10;
+                ctx.fillRect(eyeX, this.y + 20, 10, 10);
+
+                // 攻击特效
+                if (this.isAttacking) {
+                    ctx.fillStyle = 'yellow';
+                    // 根据朝向计算攻击判定框
+                    let atkX = this.dir === 1 ? this.x + this.w : this.x - 60;
+                    ctx.fillRect(atkX, this.y + 35, 60, 30);
+                }
+                ctx.restore();
+            }
+
+            attack(target) {
+                if (this.isAttacking || this.dead) return;
+                this.isAttacking = true;
+                setTimeout(() => this.isAttacking = false, 150);
+
+                // 命中判定
+                let atkX = this.dir === 1 ? this.x + this.w : this.x - 60;
+                let atkW = 60;
+
+                // 简单的矩形碰撞
+                if (atkX < target.x + target.w && atkX + atkW > target.x &&
+                    this.y + 35 < target.y + target.h && this.y + 65 > target.y) {
+                    
+                    target.health -= 10;
+                    if(target.health <= 0) {
+                        target.health = 0;
+                        target.dead = true;
+                        endGame(this.isAi ? "YOU LOSE..." : "K.O.! YOU WIN!");
+                    }
+                    updateBars();
+                }
+            }
+        }
+
+        // 初始化
+        function init() {
+            p1 = new Fighter(100, '#00ff00');
+            p2 = new Fighter(600, '#ff0000', true);
+            updateBars();
+            animate();
+        }
+
+        function updateBars() {
+            document.getElementById('p1-bar').style.width = p1.health + '%';
+            document.getElementById('p2-bar').style.width = p2.health + '%';
+        }
+
+        function endGame(msg) {
+            gameRunning = false;
+            title.innerText = msg;
+            startBtn.innerText = "🔄 再来一局";
+            overlay.style.display = 'flex';
+        }
+
+        function resetGame() {
+            p1.reset();
+            p2.reset();
+            updateBars();
+            overlay.style.display = 'none';
+            gameRunning = true;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 响应式画布
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 地面
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+
+            if (p1 && p2) {
+                p1.update(p2);
+                p2.update(p1);
+            }
+        }
+
+        // --- 触控逻辑优化 ---
+        function bindTouch(id, actionDown, actionUp) {
+            const btn = document.getElementById(id);
+            const start = (e) => { e.preventDefault(); btn.classList.add('pressed'); actionDown(); };
+            const end = (e) => { e.preventDefault(); btn.classList.remove('pressed'); actionUp(); };
+            
+            btn.addEventListener('touchstart', start, {passive: false});
+            btn.addEventListener('touchend', end, {passive: false});
+            btn.addEventListener('mousedown', start);
+            btn.addEventListener('mouseup', end);
+        }
+
+        bindTouch('btn-left', () => keys.l = true, () => keys.l = false);
+        bindTouch('btn-right', () => keys.r = true, () => keys.r = false);
+        bindTouch('btn-jump', () => { if(p1.dy === 0) p1.dy = -18; }, () => {});
+        bindTouch('btn-atk', () => p1.attack(p2), () => {});
+
+        // --- 全屏与重开逻辑 ---
+        startBtn.addEventListener('click', async () => {
+            // 尝试全屏
+            if (!document.fullscreenElement) {
+                try {
+                    await document.documentElement.requestFullscreen();
+                    // 尝试锁定横屏 (安卓Chrome有效，iOS Safari通常会忽略或需要WebAPP配置)
+                    if (screen.orientation && screen.orientation.lock) {
+                        await screen.orientation.lock("landscape");
+                    }
+                } catch(e) { console.log("全屏/旋转被浏览器拦截:", e); }
+            }
+            resetGame();
+        });
+
+        init();
+
+    </script>
+</body>
+</html>

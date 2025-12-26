@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>天才格斗：究极赔罪版</title>
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; user-select: none; -webkit-user-select: none; }
+        #game-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%); }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* HUD */
+        #hud { position: absolute; top: 10px; width: 94%; left: 3%; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }
+        .char-hud { width: 45%; display: flex; flex-direction: column; gap: 5px; position: relative; }
+        .bar-frame { height: 12px; background: rgba(0,0,0,0.8); border: 1px solid #555; transform: skewX(-20deg); position: relative; overflow: hidden; }
+        .hp-fill { height: 100%; width: 100%; transition: width 0.1s; }
+        .mp-fill { height: 100%; width: 0%; background: #00d2ff; box-shadow: 0 0 10px #00d2ff; transition: width 0.1s; }
+        #p1-hp { background: linear-gradient(90deg, #00ff88, #00aa55); float: right; }
+        #p2-hp { background: linear-gradient(90deg, #ff5555, #aa0000); float: left; }
+        #p1-mp-frame { width: 80%; align-self: flex-end; height: 8px; border-color: #00d2ff; }
+
+        .combo-text { position: absolute; top: 60px; font-weight: 900; font-style: italic; font-size: 40px; opacity: 0; transition: transform 0.1s; text-shadow: 2px 2px 0px #000; z-index: 15; }
+        #p1-combo { left: 5%; color: #00ff88; text-align: left; }
+        #p2-combo { right: 5%; color: #ff5555; text-align: right; }
+        .combo-pop { animation: popScale 0.2s; opacity: 1 !important; }
+        @keyframes popScale { 0% { transform: scale(1); } 50% { transform: scale(1.5); } 100% { transform: scale(1); } }
+
+        .dmg-text { position: absolute; color: #fff; font-weight: 900; font-size: 28px; text-shadow: 0 0 5px red; animation: floatUp 0.8s forwards; pointer-events: none; z-index: 12; }
+        .miss-text { color: #aaa !important; text-shadow: none !important; font-size: 20px !important; }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-60px) scale(1.2); } }
+
+        /* 结算界面：确保 z-index 最高 */
+        #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #title-text { color:#fff; font-size: 40px; margin-bottom:10px; text-shadow:0 0 20px #00f2ff; font-weight: bold; font-style: italic; }
+        #sub-text { color:#aaa; margin-bottom: 30px; font-size: 18px; }
+        #start-btn { padding: 15px 50px; font-size: 22px; font-weight: bold; color: #00f2ff; background: transparent; border: 2px solid #00f2ff; border-radius: 30px; box-shadow: 0 0 20px rgba(0,242,255,0.3); animation: pulse 1.5s infinite; cursor: pointer; }
+        @keyframes pulse { 0% { box-shadow: 0 0 20px rgba(0,242,255,0.3); } 50% { box-shadow: 0 0 40px rgba(0,242,255,0.6); } 100% { box-shadow: 0 0 20px rgba(0,242,255,0.3); } }
+
+        /* 虚拟按键 */
+        .controls { position: absolute; bottom: 20px; width: 100%; padding: 0 30px; display: flex; justify-content: space-between; box-sizing: border-box; pointer-events: none; z-index: 20; }
+        .c-group { display: flex; gap: 15px; pointer-events: auto; align-items: flex-end; }
+        .btn { width: 65px; height: 65px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; user-select: none; }
+        .btn.pressed { background: rgba(255,255,255,0.4); transform: scale(0.92); border-color: #fff; }
+        #btn-atk { width: 80px; height: 80px; background: rgba(255, 50, 50, 0.2); border-color: #ff3333; font-size: 36px; }
+        #btn-ult { width: 60px; height: 60px; background: rgba(0, 210, 255, 0.4); border-color: #00d2ff; font-size: 20px; margin-bottom: 20px; display: none; }
+        #btn-dash { font-size: 16px; background: rgba(255,255,0,0.1); }
+        .ult-ready { display: flex !important; animation: shake 0.5s infinite; box-shadow: 0 0 20px #00d2ff; border: 3px solid #fff !important; }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, 1px); } }
+
+        /* 全屏闪光特效 */
+        #flash-layer { position: absolute; top:0; left:0; width:100%; height:100%; background: white; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.1s; mix-blend-mode: difference; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="flash-layer"></div>
+        
+        <div id="overlay">
+            <div id="title-text">CYBER DOJO</div>
+            <div id="sub-text">究极修复版：全屏大招 & 绝对无敌</div>
+            <button id="start-btn">⚡ 启动全屏对战</button>
+        </div>
+
+        <div id="hud">
+            <div class="char-hud">
+                <div class="bar-frame" style="height:15px"><div id="p1-hp" class="hp-fill"></div></div>
+                <div class="bar-frame" id="p1-mp-frame"><div id="p1-mp" class="mp-fill"></div></div>
+                <div id="p1-combo" class="combo-text"></div>
+            </div>
+            <div class="char-hud">
+                <div class="bar-frame" style="height:15px"><div id="p2-hp" class="hp-fill"></div></div>
+                <div id="p2-combo" class="combo-text"></div>
+            </div>
+        </div>
+
+        <canvas id="canvas"></canvas>
+
+        <div class="controls">
+            <div class="c-group">
+                <div class="btn" id="left">⬅️</div>
+                <div class="btn" id="right">➡️</div>
+            </div>
+            <div class="c-group" style="align-items: flex-end;">
+                <div class="btn" id="btn-ult">⚡</div>
+                <div class="btn" id="btn-dash">💨</div>
+                <div class="btn" id="btn-atk">👊</div>
+                <div class="btn" id="btn-jump">🚀</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('overlay');
+        const startBtn = document.getElementById('start-btn');
+        const titleText = document.getElementById('title-text');
+        const subText = document.getElementById('sub-text');
+        const btnUlt = document.getElementById('btn-ult');
+        const flashLayer = document.getElementById('flash-layer');
+
+        let shake = 0;
+        let particles = [];
+        let gameActive = false;
+        let p1, p2;
+        const keys = { l: false, r: false };
+
+        class Particle {
+            constructor(x, y, color, speed) {
+                this.x = x; this.y = y; this.color = color;
+                this.vx = (Math.random() - 0.5) * speed;
+                this.vy = (Math.random() - 0.5) * speed;
+                this.life = 1.0;
+            }
+            update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
+            draw() {
+                ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, 4, 4); ctx.globalAlpha = 1;
+            }
+        }
+
+        class Fighter {
+            constructor(x, color, isAi) {
+                this.startPos = x; this.baseColor = color; this.isAi = isAi;
+                this.reset();
+            }
+            reset() {
+                this.x = this.startPos; this.y = 200; 
+                this.w = 40; this.h = 90; 
+                this.vx = 0; this.vy = 0;
+                this.maxHp = 300; this.hp = this.maxHp; this.mp = 0;
+                this.dir = this.isAi ? -1 : 1;
+                this.combo = 0; this.hitStreak = 0; this.lastHitTime = 0; this.lastAtkTime = 0;
+                this.isDash = false; this.state = 'idle';
+                this.animTimer = 0;
+                this.dead = false; // 明确的死亡标记
+            }
+            
+            update(target) {
+                if(this.state === 'dead') {
+                    this.draw(); return;
+                }
+
+                this.animTimer++;
+                
+                // 连击重置
+                if(Date.now() - this.lastHitTime > 2000 && this.hitStreak > 0) {
+                    this.hitStreak = 0; updateComboUI();
+                }
+
+                // 物理
+                this.y += this.vy; this.x += this.vx;
+                if(!this.isDash) this.vx *= 0.8; else this.vx *= 0.9;
+                
+                let ground = canvas.height - 100;
+                if(this.y + this.h >= ground) { 
+                    this.y = ground - this.h; this.vy = 0; 
+                    if(this.state === 'jump') this.state = 'idle';
+                } else { this.vy += 0.9; }
+
+                if(this.x < 10) this.x = 10; 
+                if(this.x > canvas.width - this.w - 10) this.x = canvas.width - this.w - 10;
+
+                // 逻辑
+                if(this.state !== 'hit' && this.state !== 'ult') {
+                    if(this.isAi) this.aiLogic(target); else this.playerLogic();
+                }
+                
+                if(Math.abs(this.vx) > 1 && this.state === 'idle') this.state = 'run';
+                if(Math.abs(this.vx) < 1 && this.state === 'run') this.state = 'idle';
+
+                // 大招悬空与无敌特效
+                if(this.state === 'ult') {
+                    this.vx = 0; this.vy = 0;
+                    if(Math.random() < 0.5) createParticles(this.x + 20, this.y + 40, '#00d2ff', 25);
+                }
+
+                this.draw();
+            }
+
+            playerLogic() {
+                if (keys.l) { this.vx = -5; this.dir = -1; }
+                if (keys.r) { this.vx = 5; this.dir = 1; }
+            }
+
+            aiLogic(target) {
+                let dist = Math.abs(this.x - target.x);
+                if(this.state !== 'hit') this.dir = this.x < target.x ? 1 : -1;
+                
+                if (dist > 70) this.vx = 3 * this.dir;
+                else if (Math.random() < 0.02) this.attack(target);
+                if (this.hp < this.maxHp * 0.3 && Math.random() < 0.01) this.dash();
+                
+                // AI也会放大招
+                if(this.isAi && this.mp >= 100 && Math.random() < 0.01) {
+                    this.ultimate(target);
+                }
+            }
+
+            dash() {
+                if(this.mp >= 10 || this.isAi) {
+                    if(!this.isAi) { this.mp -= 10; updateUI(); }
+                    this.isDash = true;
+                    this.vx = 15 * this.dir; this.vy = -2;
+                    for(let i=0; i<5; i++) createParticles(this.x, this.y + i*20, '#fff', 2);
+                    setTimeout(() => { this.isDash = false; }, 200);
+                }
+            }
+
+            attack(target) {
+                if(this.state === 'attack' || this.state === 'hit' || this.state === 'ult') return;
+                
+                let now = Date.now();
+                if(now - this.lastAtkTime > 600) this.combo = 0;
+                this.lastAtkTime = now;
+                this.combo = (this.combo % 3) + 1;
+
+                this.state = 'attack';
+                this.vx = 4 * this.dir; 
+
+                let damage = 10; let range = 70;
+                if(this.combo === 3) { damage = 20; range = 90; }
+
+                setTimeout(() => { if(this.state === 'attack') this.state = 'idle'; }, 200);
+
+                let visualCenter = this.x + this.w / 2;
+                let hitCheckX = this.dir === 1 ? visualCenter + range : visualCenter - range;
+                let targetCenter = target.x + target.w / 2;
+                let hitDist = Math.abs(hitCheckX - targetCenter);
+                
+                if(hitDist < (target.w / 2 + 30) &&
+                   this.y < target.y + target.h + 20 && this.y + 60 > target.y) {
+                    
+                    shake = this.combo === 3 ? 12 : 5;
+                    createParticles(hitCheckX, this.y + 30, '#ff0000', 10);
+                    this.hitStreak++; this.lastHitTime = Date.now(); updateComboUI();
+                    
+                    target.takeDamage(damage);
+                    // 增加回蓝
+                    if(!this.isAi) { this.mp = Math.min(100, this.mp + 15); updateUI(); }
+                    else if(this.isAi) { this.mp = Math.min(100, this.mp + 5); } // AI回蓝慢
+                }
+            }
+
+            ultimate(target) {
+                if(this.mp < 100) return;
+                this.mp = 0; updateUI();
+                this.state = 'ult'; 
+                shake = 30; // 剧烈震动
+                
+                // 1. 屏幕反色闪烁
+                flashLayer.style.opacity = 1;
+                setTimeout(() => flashLayer.style.opacity = 0, 100);
+
+                setTimeout(() => {
+                    // 2. 二次闪光，造成伤害
+                    ctx.fillStyle = 'rgba(255,255,255,0.8)'; 
+                    ctx.fillRect(0,0,canvas.width,canvas.height);
+                    
+                    // 3. 真·全屏攻击：移除所有距离判断，直接判定命中
+                    // 只要对方不是也在放大招（互相无敌），就扣血
+                    if(target.state !== 'ult' && target.state !== 'dead') {
+                        this.hitStreak += 15; 
+                        this.lastHitTime = Date.now(); 
+                        updateComboUI();
+                        target.takeDamage(60); // 巨额伤害
+                    } else {
+                        showDamage(target.x, target.y, "MISS"); // 对方也无敌
+                    }
+                    
+                    this.state = 'idle';
+                }, 600); // 稍微快一点释放
+            }
+
+            takeDamage(amt) {
+                // 🛡️ 究极无敌逻辑：如果是大招状态，免疫伤害
+                if(this.state === 'ult' || this.state === 'dead') {
+                    showDamage(this.x, this.y, "MISS");
+                    return;
+                }
+
+                this.hp -= amt;
+                this.state = 'hit';
+                this.vx = -8 * this.dir; 
+                showDamage(this.x, this.y, amt);
+                
+                if(this.hp <= 0 && !this.dead) {
+                    this.hp = 0; 
+                    this.state = 'dead';
+                    this.dead = true;
+                    // 确保只触发一次
+                    endGame(this.isAi ? false : true);
+                }
+                updateUI();
+                setTimeout(() => { if(this.state === 'hit') this.state = 'idle'; }, 300);
+            }
+
+            draw() {
+                ctx.save();
+                
+                let cx = this.x + this.w / 2;
+                let cy = this.y + 20;
+                let mainColor = this.state === 'hit' ? '#fff' : this.baseColor;
+                let limbColor = this.state === 'hit' ? '#fff' : '#ddd';
+                
+                if(this.state === 'ult') { mainColor = '#00f2ff'; limbColor = '#fff'; }
+
+                if(this.state === 'dead') {
+                    ctx.translate(cx, this.y + this.h);
+                    ctx.rotate(Math.PI / 2 * -this.dir); 
+                    ctx.fillStyle = '#555'; ctx.strokeStyle = '#555';
+                    ctx.font = "bold 20px Arial"; ctx.fillText("X_X", 10, -50); 
+                    ctx.fillRect(-40, -10, 80, 20); 
+                    ctx.beginPath(); ctx.arc(40, 0, 15, 0, Math.PI*2); ctx.fill(); 
+                    ctx.restore();
+                    return; 
+                }
+
+                ctx.strokeStyle = limbColor; ctx.fillStyle = mainColor;
+                ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+                let breath = Math.sin(this.animTimer * 0.1) * 2;
+                let runCycle = Math.sin(this.animTimer * 0.3) * 20;
+                let lLegAngle = 0, rLegAngle = 0, armOffset = 0;
+                
+                if(this.state === 'run') {
+                    lLegAngle = runCycle; rLegAngle = -runCycle; armOffset = runCycle;
+                } else if (this.state === 'idle') {
+                    cy += breath;
+                }
+
+                ctx.translate(cx, this.y + this.h); 
+                ctx.scale(this.dir, 1); 
+                ctx.translate(0, -this.h); 
+
+                // 绘制骨骼
+                ctx.beginPath(); ctx.moveTo(-5, 60); ctx.lineTo(-10 + rLegAngle, 90); ctx.stroke(); // Leg R
+                ctx.fillRect(-15, 30 + (this.state==='idle'?breath:0), 30, 40); // Body
+                ctx.beginPath(); ctx.arc(0, 15 + (this.state==='idle'?breath:0), 14, 0, Math.PI * 2); ctx.fill(); // Head
+                ctx.fillStyle = '#fff'; ctx.fillRect(5, 12 + (this.state==='idle'?breath:0), 10, 6); // Eye
+                
+                // Arm Back
+                ctx.strokeStyle = limbColor; ctx.beginPath(); ctx.moveTo(-10, 40 + (this.state==='idle'?breath:0));
+                ctx.lineTo(10 - (this.state==='run'?armOffset:0), 65); ctx.stroke();
+
+                // Leg Front
+                ctx.beginPath(); ctx.moveTo(5, 60); ctx.lineTo(10 + lLegAngle, 90); ctx.stroke();
+
+                // Arm Front / Atk
+                ctx.strokeStyle = mainColor; ctx.beginPath(); ctx.moveTo(10, 40 + (this.state==='idle'?breath:0)); 
+                if(this.state === 'attack') {
+                    let punchReach = this.combo === 3 ? 60 : 40; 
+                    let fistX = punchReach; let fistY = 40 + (this.state==='idle'?breath:0);
+                    ctx.lineTo(fistX, fistY); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(fistX, fistY, 12, 0, Math.PI*2); ctx.fill();
+                } else {
+                    let handX = 20 + (this.state==='run' ? armOffset : 0);
+                    let handY = 65 - (this.state==='run' ? Math.abs(armOffset)/2 : 0);
+                    ctx.lineTo(handX, handY); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(handX, handY, 6, 0, Math.PI*2); ctx.fill();
+                }
+
+                // 大招光环
+                if(this.state === 'ult') {
+                    ctx.strokeStyle = '#00d2ff'; ctx.lineWidth = 4;
+                    ctx.beginPath(); ctx.arc(0, 45, 60 + Math.random()*20, 0, Math.PI*2); ctx.stroke();
+                    // 能量爆发线
+                    ctx.beginPath(); ctx.moveTo(0, 45); ctx.lineTo(0, -200); ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // --- Utils ---
+        function createParticles(x, y, color, count) {
+            for(let i=0; i<count; i++) particles.push(new Particle(x, y, color, 8));
+        }
+
+        function showDamage(x, y, val) {
+            let el = document.createElement('div');
+            el.className = val === "MISS" ? 'dmg-text miss-text' : 'dmg-text';
+            el.style.left = x + 'px'; el.style.top = y + 'px'; el.innerText = val === "MISS" ? "MISS" : '-' + val;
+            document.getElementById('game-container').appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        function updateUI() {
+            document.getElementById('p1-hp').style.width = (p1.hp / p1.maxHp * 100) + '%';
+            document.getElementById('p2-hp').style.width = (p2.hp / p2.maxHp * 100) + '%';
+            document.getElementById('p1-mp').style.width = p1.mp + '%';
+            if(p1.mp >= 100) btnUlt.classList.add('ult-ready'); else btnUlt.classList.remove('ult-ready');
+        }
+
+        function updateComboUI() {
+            const c1 = document.getElementById('p1-combo'); const c2 = document.getElementById('p2-combo');
+            if(p1.hitStreak > 1) { c1.innerText = p1.hitStreak + " COMBO!"; c1.style.opacity = 1; c1.classList.remove('combo-pop'); void c1.offsetWidth; c1.classList.add('combo-pop'); } else { c1.style.opacity = 0; }
+            if(p2.hitStreak > 1) { c2.innerText = p2.hitStreak + " COMBO!"; c2.style.opacity = 1; c2.classList.remove('combo-pop'); void c2.offsetWidth; c2.classList.add('combo-pop'); } else { c2.style.opacity = 0; }
+        }
+
+        function endGame(playerDied) {
+            setTimeout(() => {
+                gameActive = false; // 停止逻辑更新，但loop还在跑，所以尸体会被渲染
+                if(playerDied) { titleText.innerText = "GAME OVER"; titleText.style.color = "red"; subText.innerText = "胜败乃兵家常事"; }
+                else { titleText.innerText = "VICTORY"; titleText.style.color = "#00f2ff"; subText.innerText = "完美的全屏制裁！"; }
+                startBtn.innerText = "🔄 立刻重来 (RESTART)"; 
+                overlay.style.display = 'flex'; // 强制显示遮罩
+            }, 1200);
+        }
+
+        function loop() {
+            let dx = 0, dy = 0;
+            if(shake > 0) { dx = (Math.random()-0.5) * shake; dy = (Math.random()-0.5) * shake; shake *= 0.9; if(shake < 0.5) shake = 0; }
+            
+            ctx.save(); ctx.translate(dx, dy);
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = 'rgba(0, 210, 255, 0.05)'; ctx.lineWidth = 1;
+            for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke(); }
+            
+            ctx.fillStyle = '#111'; ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+            ctx.fillStyle = '#00d2ff'; ctx.fillRect(0, canvas.height - 100, canvas.width, 2);
+
+            // 逻辑更新只有在gameActive时进行，但渲染一直进行
+            if(gameActive) {
+                p1.update(p2); p2.update(p1);
+            } else if(p1 && p2) {
+                p1.draw(); p2.draw(); // 尸体渲染
+            }
+
+            for(let i = particles.length-1; i>=0; i--) {
+                particles[i].update(); particles[i].draw();
+                if(particles[i].life <= 0) particles.splice(i, 1);
+            }
+            ctx.restore();
+            requestAnimationFrame(loop);
+        }
+
+        function initGame() {
+            p1 = new Fighter(100, '#00ffaa', false);
+            p2 = new Fighter(600, '#ff3333', true);
+            particles = [];
+            document.getElementById('p1-combo').style.opacity = 0;
+            document.getElementById('p2-combo').style.opacity = 0;
+            gameActive = true; 
+            updateUI(); 
+            // loop is already running via requestAnimationFrame
+        }
+        
+        // 启动循环
+        loop();
+
+        startBtn.onclick = async () => {
+            try { if (!document.fullscreenElement) { await document.documentElement.requestFullscreen(); if(screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } } catch(e){}
+            overlay.style.display = 'none'; initGame();
+        };
+
+        const bindBtn = (id, start, end) => {
+            const b = document.getElementById(id);
+            const down = (e) => { e.preventDefault(); b.classList.add('pressed'); start(); };
+            const up = (e) => { e.preventDefault(); b.classList.remove('pressed'); if(end) end(); };
+            b.addEventListener('touchstart', down, {passive:false}); b.addEventListener('touchend', up, {passive:false});
+            b.addEventListener('mousedown', down); b.addEventListener('mouseup', up); b.addEventListener('mouseleave', up);
+        };
+
+        bindBtn('left', () => keys.l=true, () => keys.l=false);
+        bindBtn('right', () => keys.r=true, () => keys.r=false);
+        bindBtn('btn-jump', () => { if(p1.vy === 0) p1.vy = -20; });
+        bindBtn('btn-atk', () => p1.attack(p2));
+        bindBtn('btn-dash', () => p1.dash());
+        bindBtn('btn-ult', () => p1.ultimate(p2));
+
+    </script>
+</body>
+</html>
