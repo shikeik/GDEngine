@@ -279,6 +279,90 @@ let cam = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
 // Particles
 let particles = [];
 let slashLines = []; // 大招专用乱刃
+// [v16.2 New] 全局变量
+let afterimages = [];
+
+// [v16.2 New] 核心绘图逻辑提取 (供本体和残影共用)
+function drawStickmanFigure(ctx, state, animTimer) {
+    // Legs
+    ctx.beginPath();
+    if(state === 'jump' || state === 'dash' || state === 'flash_slash') {
+        ctx.moveTo(-10, -40); ctx.lineTo(-25, -15);
+        ctx.moveTo(10, -40); ctx.lineTo(25, -25);
+    } else if (state === 'run') {
+        let cycle = Math.sin(animTimer*0.5)*15;
+        ctx.moveTo(-10, -40); ctx.lineTo(-20+cycle, 0);
+        ctx.moveTo(10, -40); ctx.lineTo(20-cycle, 0);
+    } else { // Idle
+        ctx.moveTo(-10, -40); ctx.lineTo(-20, 0);
+        ctx.moveTo(10, -40); ctx.lineTo(20, 0);
+    }
+    ctx.stroke();
+    
+    // Body
+    if(state === 'flash_slash' && animTimer < 5) {
+        // 蓄力姿态：压低重心
+        ctx.fillRect(-15, -60, 30, 30);
+    } else {
+        ctx.fillRect(-15, -80, 30, 40);
+    }
+    
+    // Head
+    ctx.beginPath(); 
+    let headY = (state === 'flash_slash' && animTimer < 5) ? -65 : -90;
+    ctx.arc(0, headY, 12, 0, Math.PI*2); 
+    ctx.fill();
+    
+    // Arms
+    ctx.beginPath();
+    if(state === 'attack') {
+        ctx.moveTo(-10, -70); ctx.lineTo(-20, -40);
+        ctx.moveTo(10, -70); ctx.lineTo(40, -70);
+    } else if (state === 'flash_slash' && animTimer < 5) {
+        // 居合蓄力手势
+        ctx.moveTo(-10, -60); ctx.lineTo(10, -50); // 手按刀柄
+        ctx.moveTo(10, -60); ctx.lineTo(30, -50);
+    } else if (state === 'ult_cast' || state === 'ult_end') {
+        ctx.moveTo(-10, -70); ctx.lineTo(-30, -50); 
+        ctx.moveTo(10, -70); ctx.lineTo(30, -50); 
+        ctx.moveTo(-35, -55); ctx.lineTo(-50, -70); // Sword
+    } else {
+        let armS = state==='run' ? Math.sin(animTimer*0.5)*15 : 0;
+        ctx.moveTo(-10, -70); ctx.lineTo(-20+armS, -30);
+        ctx.moveTo(10, -70); ctx.lineTo(20-armS, -30);
+    }
+    ctx.stroke();
+}
+
+// [v16.2 New] 残影类
+class Afterimage {
+    constructor(x, y, dir, state, animTimer, color) {
+        this.x = x; this.y = y; this.dir = dir;
+        this.state = state; this.animTimer = animTimer;
+        this.color = color;
+        this.life = 1.0;
+        this.decay = 0.1; // 消失速度
+    }
+    update() {
+        this.life -= this.decay;
+    }
+    draw(ctx) {
+        if(this.life <= 0) return;
+        ctx.save();
+        ctx.translate(this.x + 20, this.y + 90); // +20,+90是Fighter绘制时的偏移补偿(w/2, h)
+        ctx.scale(this.dir, 1);
+        
+        ctx.globalAlpha = this.life * 0.5; // 半透明
+        ctx.strokeStyle = this.color;
+        ctx.fillStyle = this.color;
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 0; // 残影无光晕，节省性能且清晰
+        
+        drawStickmanFigure(ctx, this.state, this.animTimer);
+        
+        ctx.restore();
+    }
+}
 
 class Particle {
     constructor(x, y, color, speed, size, life, type='box') {
@@ -310,31 +394,44 @@ let lightningTrails = [];
 class LightningTrail {
     constructor(x1, y1, x2, y2) {
         this.path = [];
-        this.timer = 15; // 存活帧数
-        // 生成折线路径
+        this.origPath = []; // 记录原始路径用于抖动基准
+        this.timer = 15;
+        
         let steps = 10;
         let dx = (x2-x1)/steps;
         let dy = (y2-y1)/steps;
-        this.path.push({x:x1, y:y1});
+        
+        this.origPath.push({x:x1, y:y1});
         for(let i=1; i<steps; i++) {
             let jitter = (Math.random()-0.5) * 40;
-            this.path.push({x: x1 + dx*i, y: y1 + dy*i + jitter});
+            this.origPath.push({x: x1 + dx*i, y: y1 + dy*i + jitter});
         }
-        this.path.push({x:x2, y:y2});
+        this.origPath.push({x:x2, y:y2});
+        
+        // 初始路径深拷贝
+        this.path = JSON.parse(JSON.stringify(this.origPath));
     }
     draw(ctx) {
         if(this.timer <= 0) return;
+        
+        // [v16.2] 每一帧都基于原始路径进行微小抖动
+        if(this.timer > 0) {
+            for(let i=1; i<this.path.length-1; i++) {
+                this.path[i].x = this.origPath[i].x + (Math.random()-0.5)*10;
+                this.path[i].y = this.origPath[i].y + (Math.random()-0.5)*10;
+            }
+        }
+
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(this.path[0].x, this.path[0].y);
         for(let p of this.path) ctx.lineTo(p.x, p.y);
         
-        // 爆裂阶段 (Bloom)
-        let bloom = this.timer < 5;
-        ctx.lineWidth = bloom ? 6 : 3;
+        let bloom = this.timer < 5 || this.timer % 3 === 0; // 闪烁效果
+        ctx.lineWidth = bloom ? 5 : 2;
         ctx.strokeStyle = bloom ? '#fff' : '#00eaff';
         ctx.shadowColor = '#00eaff';
-        ctx.shadowBlur = bloom ? 40 : 15;
+        ctx.shadowBlur = bloom ? 30 : 10;
         
         ctx.globalAlpha = this.timer / 15;
         ctx.stroke();
@@ -431,38 +528,37 @@ class Fighter {
 	    }
 	    
 	    // 状态机逻辑
-		if(this.state === 'dash') {
+        if(this.state === 'dash') {
             this.animTimer++;
             this.vy = 0; 
             
-            // [Fixed] 手动应用位移，因为下面 return 跳过了物理引擎
-            this.x += this.vx*8 * timeScale; 
+            this.x += this.vx * timeScale; 
             
-            // 产生残影粒子
+            // [v16.2] 生成火柴人残影 (每2帧)
             if(this.animTimer % 2 === 0) {
-                particles.push(new Particle(this.x+this.w/2, this.y+this.h/2, this.color, 0, 30, 10));
+                // particles.push(...) <-- DELETED
+                afterimages.push(new Afterimage(this.x, this.y, this.dir, this.state, this.animTimer, this.color));
             }
             if(this.animTimer > 10) { this.state = 'idle'; this.vx = 0; }
             
-            // 边界检查 (防止冲出屏幕)
             if(this.x < 0) this.x = 0;
             if(this.x > W - this.w) this.x = W - this.w;
             
-            return; // 跳过后续物理
+            return; 
         }
-	    
-	    if(this.state === 'flash_slash') {
+        
+        if(this.state === 'flash_slash') {
             this.animTimer++;
             this.vy = 0; this.vx = 0; 
             
             // Phase 1: Charge
             if(this.animTimer === 1) {
-                particles.push(new Particle(this.x+this.w/2, this.y+this.h/2, '#fff', 2, 80, 5)); 
+                // particles.push(...) <-- DELETED (现在由 Fighter.draw 处理白色高亮和横向光刃)
+                AudioSys.playTone(800, 'sine', 0.1, 0.1, 50); // 蓄力高频音
             }
             
             // Phase 2: Teleport
             if(this.animTimer === 6) {
-                // [Fixed] 使用存储的 slashStartX
                 let startX = this.slashStartX + this.w/2; 
                 let startY = this.y + this.h/2;
                 
@@ -480,11 +576,9 @@ class Fighter {
                 AudioSys.noise(0.3, 0.5); 
                 shake = 15;
                 
-                // [Fixed] 使用 slashStartX 计算正确的范围 (起点 -> 终点)
                 let minX = Math.min(this.slashStartX, this.flashTargetX);
                 let maxX = Math.max(this.slashStartX, this.flashTargetX);
                 
-                // 判定：敌人是否在路径区间内 (宽容度 Y轴 100)
                 if(enemy.x + enemy.w > minX && enemy.x < maxX && Math.abs(enemy.y - this.y) < 100) {
                     enemy.takeDamage(40, this.dir); 
                     uiCombo++; 
@@ -794,63 +888,60 @@ class Fighter {
     }
 
     draw(ctx) {
-        // Invisibility during slash phase
-        if(this.state === 'ult_slash') return;
+        if(this.state === 'ult_slash') return; // 隐身
+        if(this.state === 'flash_slash' && this.animTimer >= 6 && this.animTimer < 18) return; // 闪刀瞬移中隐身
 
         ctx.save();
         ctx.translate(this.x + this.w/2, this.y + this.h);
         ctx.scale(this.dir, 1);
         
-        // Setup Glow
-        ctx.strokeStyle = this.state==='dead' ? '#555' : this.color;
-        ctx.shadowColor = this.color;
-        ctx.shadowBlur = this.state.startsWith('ult') ? 30 : 10;
+        // Setup Style
+        let isFlashCharge = (this.state === 'flash_slash' && this.animTimer < 6);
+        
+        if(isFlashCharge) {
+            // [v16.2] 闪刀蓄力：全身亮白 + 强光晕
+            ctx.strokeStyle = '#fff';
+            ctx.shadowColor = '#fff';
+            ctx.shadowBlur = 40;
+            ctx.fillStyle = '#fff';
+        } else {
+            ctx.strokeStyle = this.state==='dead' ? '#555' : this.color;
+            ctx.shadowColor = this.color;
+            ctx.shadowBlur = this.state.startsWith('ult') ? 30 : 10;
+            ctx.fillStyle = this.color; // 用于填充头部
+        }
+        
+        if(this.state === 'hit') { ctx.strokeStyle = '#fff'; ctx.shadowBlur = 0; }
+        
         ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        
-        // Hit flash
-        if(this.state === 'hit') { ctx.strokeStyle = '#fff'; ctx.shadowBlur = 0; }
 
-        // Stickman Drawing
-        // Legs
-        ctx.beginPath();
-        if(this.state === 'jump' || this.inAir) {
-            ctx.moveTo(-10, -40); ctx.lineTo(-20, -10);
-            ctx.moveTo(10, -40); ctx.lineTo(20, -20);
-        } else if (this.state === 'run') {
-            let cycle = Math.sin(this.animTimer*0.5)*15;
-            ctx.moveTo(-10, -40); ctx.lineTo(-20+cycle, 0);
-            ctx.moveTo(10, -40); ctx.lineTo(20-cycle, 0);
-        } else { // Idle
-            ctx.moveTo(-10, -40); ctx.lineTo(-20, 0);
-            ctx.moveTo(10, -40); ctx.lineTo(20, 0);
+        // [v16.2] 调用公共绘制逻辑
+        drawStickmanFigure(ctx, this.state, this.animTimer);
+        
+        // [v16.2] 闪刀蓄力特效：横向光刃 (Line Burst)
+        if(isFlashCharge) {
+            ctx.restore(); // 暂时跳出角色变换
+            ctx.save();
+            ctx.translate(this.x + this.w/2, this.y + this.h/2); // 居中
+            
+            // 绘制横向光线
+            ctx.beginPath();
+            ctx.moveTo(-500, 0); ctx.lineTo(500, 0);
+            
+            // 随时间变细
+            let width = (6 - this.animTimer) * 2; 
+            ctx.lineWidth = width;
+            ctx.strokeStyle = '#fff';
+            ctx.shadowColor = '#00eaff';
+            ctx.shadowBlur = 20;
+            ctx.globalAlpha = (6 - this.animTimer) / 5;
+            ctx.stroke();
+            
+            ctx.restore();
+            return; // 结束绘制，避免下面的 restore 冲突
         }
-        ctx.stroke();
-        
-        // Body
-        ctx.fillRect(-15, -80, 30, 40);
-        
-        // Head
-        ctx.beginPath(); ctx.arc(0, -90, 12, 0, Math.PI*2); ctx.fill();
-        
-        // Arms
-        ctx.beginPath();
-        if(this.state === 'attack') {
-            ctx.moveTo(-10, -70); ctx.lineTo(-20, -40); // Back arm
-            ctx.moveTo(10, -70); ctx.lineTo(40, -70); // Punch
-        } else if (this.state === 'ult_cast' || this.state === 'ult_end') {
-            // Sheath stance: hand on hip
-            ctx.moveTo(-10, -70); ctx.lineTo(-30, -50); 
-            ctx.moveTo(10, -70); ctx.lineTo(30, -50); 
-            // Sword handle
-            ctx.moveTo(-35, -55); ctx.lineTo(-50, -70);
-        } else {
-            let armS = this.state==='run' ? Math.sin(this.animTimer*0.5)*15 : 0;
-            ctx.moveTo(-10, -70); ctx.lineTo(-20+armS, -30);
-            ctx.moveTo(10, -70); ctx.lineTo(20-armS, -30);
-        }
-        ctx.stroke();
         
         ctx.restore();
     }
@@ -1047,6 +1138,13 @@ function loop() {
         ctx.fillRect(cam.x - 1000, -1000, W+2000, H+2000);
     }
     
+    // [v16.2] Draw Afterimages
+    for(let i=afterimages.length-1; i>=0; i--) {
+        afterimages[i].update();
+        afterimages[i].draw(ctx);
+        if(afterimages[i].life <= 0) afterimages.splice(i, 1);
+    }
+
     // Draw Fighters
     p1.draw(ctx);
     p2.draw(ctx);
