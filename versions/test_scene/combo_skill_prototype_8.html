@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>v17.6 Prototype: Strict Sector Gestures</title>
+    <style>
+        /* --- 基础环境 --- */
+        body { margin: 0; background: #222; overflow: hidden; font-family: 'Courier New', sans-serif; user-select: none; touch-action: none; color: #fff; }
+        #game-container { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* --- UI: 顶部按钮组 --- */
+        .top-bar {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; z-index: 100;
+        }
+        .ui-btn {
+            background: rgba(0,0,0,0.6); border: 1px solid #00eaff; color: #00eaff;
+            width: 30px; height: 30px; border-radius: 4px; 
+            font-weight: bold; cursor: pointer; font-size: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 5px rgba(0,234,255,0.2);
+        }
+        .ui-btn:active { background: #00eaff; color: #000; }
+        #btn-lang { width: 40px; border-color: #fff; color: #fff; }
+
+        /* --- UI: 紧凑型指令历史 --- */
+        #ui-history {
+            position: absolute; top: 60px; left: 10px; width: 160px; bottom: 250px;
+            pointer-events: none; display: flex; flex-direction: column-reverse;
+            gap: 2px; overflow: hidden; max-height: 200px;
+        }
+        .hist-item {
+            background: rgba(0,0,0,0.8); border-left: 3px solid #555;
+            padding: 3px 6px; font-size: 11px; color: #ccc;
+            display: flex; align-items: center; justify-content: space-between;
+            animation: slideIn 0.1s forwards; flex-shrink: 0; height: 22px;
+        }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .hist-item.type-move { border-color: #00eaff; background: linear-gradient(90deg, rgba(0,234,255,0.2), transparent); color: #fff; font-weight: bold; }
+        .hist-left { display: flex; align-items: center; }
+        .icon { width: 16px; text-align: center; margin-right: 4px; font-weight: bold; }
+        .src { font-size: 9px; color: #777; }
+
+        /* --- UI: 模态窗 --- */
+        #help-modal {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9); z-index: 200;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        .help-container {
+            width: 90%; max-width: 500px; background: #1a1a1a; 
+            border: 1px solid #00eaff; box-shadow: 0 0 20px rgba(0,234,255,0.1);
+            display: flex; flex-direction: column;
+        }
+        .tabs { display: flex; border-bottom: 1px solid #333; }
+        .tab-btn {
+            flex: 1; padding: 15px; text-align: center; cursor: pointer;
+            color: #888; background: #111; font-weight: bold; font-size: 14px;
+            transition: 0.2s;
+        }
+        .tab-btn.active { color: #00eaff; background: #1a1a1a; border-bottom: 2px solid #00eaff; }
+        .tab-content { display: none; padding: 20px; min-height: 220px; }
+        .tab-content.active { display: block; animation: fadeIn 0.2s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        table { border-collapse: collapse; width: 100%; font-size: 12px; }
+        th { color: #00eaff; text-align: left; padding: 8px; border-bottom: 1px solid #333; }
+        td { padding: 8px; border-bottom: 1px solid #222; color: #ddd; }
+        .close-hint { padding: 15px; text-align: center; color: #555; cursor: pointer; border-top: 1px solid #333; font-size: 10px; }
+        .special-move { color: #ffeb3b; font-weight: bold; }
+
+        /* --- UI: Toast --- */
+        #ui-log { position: absolute; bottom: 20%; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; text-shadow: 0 0 5px #000; }
+        .log-msg { font-size: 20px; color: #ffeb3b; font-weight: 900; margin-top: 5px; opacity: 0; transition: opacity 0.5s; }
+
+        /* --- Controls --- */
+        #controls-layer { position: absolute; inset: 0; pointer-events: none; }
+        .joystick-base {
+            position: absolute; bottom: 40px; left: 40px; width: 140px; height: 140px;
+            border-radius: 50%; border: 2px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3); pointer-events: auto;
+        }
+        .joy-thumb {
+            position: absolute; top: 50%; left: 50%; width: 50px; height: 50px;
+            margin: -25px; background: rgba(0, 234, 255, 0.5); border-radius: 50%;
+            transform: translate(0,0); transition: transform 0.05s;
+        }
+        .joy-slot {
+            position: absolute; width: 6px; height: 6px; background: #666; border-radius: 50%;
+            top: 50%; left: 50%; margin: -3px; transform-origin: 0 0;
+        }
+        .joy-slot.active { background: #00eaff; box-shadow: 0 0 5px #00eaff; transform: scale(1.5); }
+        .gesture-zone {
+            position: absolute; bottom: 0; right: 0; width: 50%; height: 80%;
+            border-left: 1px dashed rgba(255,255,255,0.1); pointer-events: auto;
+        }
+        .gesture-hint { position: absolute; bottom: 10px; right: 10px; color: #555; font-size: 10px; }
+
+        /* 启动遮罩 */
+        #start-overlay {
+            position: absolute; inset: 0; background: #111; z-index: 999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        #btn-start {
+            padding: 15px 40px; font-size: 20px; font-family: 'Courier New', sans-serif; font-weight: bold;
+            background: transparent; color: #00eaff; border: 2px solid #00eaff;
+            cursor: pointer; box-shadow: 0 0 15px rgba(0,234,255,0.2);
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="canvas"></canvas>
+    
+    <!-- Top Bar -->
+    <div class="top-bar">
+        <div id="btn-help" class="ui-btn">?</div>
+        <div id="btn-lang" class="ui-btn">CN</div>
+    </div>
+
+    <div id="ui-history"></div>
+    <div id="ui-log"></div>
+    
+    <!-- Tabbed Modal -->
+    <div id="help-modal">
+        <div class="help-container">
+            <div class="tabs">
+                <div class="tab-btn active" data-tab="tab-controls" data-i18n="tab_ctrl">CONTROLS</div>
+                <div class="tab-btn" data-tab="tab-moves" data-i18n="tab_moves">MOVES LIST</div>
+            </div>
+            
+            <!-- Tab 1: Basic Controls -->
+            <div id="tab-controls" class="tab-content active">
+                <table>
+                    <tr><th data-i18n="th_action">ACTION</th><th data-i18n="th_key">KEYBOARD</th><th data-i18n="th_touch">TOUCH</th></tr>
+                    <tr><td data-i18n="act_move">Move</td><td>W A S D</td><td data-i18n="in_stick">Joystick</td></tr>
+                    <tr><td data-i18n="act_jump">Jump</td><td>K</td><td data-i18n="in_swipe_u">Swipe Up</td></tr>
+                    <tr><td data-i18n="act_atk">Attack</td><td>J</td><td data-i18n="in_tap">Tap</td></tr>
+                    <tr><td data-i18n="act_ult">Ult</td><td>O</td><td data-i18n="in_swipe_d">Swipe Down</td></tr>
+                </table>
+            </div>
+            
+            <!-- Tab 2: Moves & Combos (v17.5 3-Column) -->
+            <div id="tab-moves" class="tab-content">
+                <table>
+                    <tr>
+                        <th data-i18n="th_skill">SKILL</th>
+                        <th data-i18n="th_key">KEYBOARD</th>
+                        <th data-i18n="th_touch">TOUCH</th>
+                    </tr>
+                    <tr>
+                        <td data-i18n="skl_dash_l">Dash (Left)</td>
+                        <td data-i18n="key_dash_l">Hold A + L</td>
+                        <td data-i18n="tch_dash_l">Swipe Left</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="skl_dash_r">Dash (Right)</td>
+                        <td data-i18n="key_dash_r">Hold D + L</td>
+                        <td data-i18n="tch_dash_r">Swipe Right</td>
+                    </tr>
+                    <tr>
+                        <td data-i18n="skl_dash_a">Dash (Auto)</td>
+                        <td data-i18n="key_dash_a">Press L</td>
+                        <td data-i18n="tch_dash_a">-</td>
+                    </tr>
+                    <tr>
+                        <td class="special-move" data-i18n="skl_flash">Flash Slash</td>
+                        <td data-i18n="key_flash">Hold S + L</td>
+                        <td data-i18n="tch_flash">Stick Down + Swipe</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="close-hint" id="btn-close-help" data-i18n="btn_close">TAP ANYWHERE TO CLOSE</div>
+        </div>
+    </div>
+
+    <div id="controls-layer">
+        <div class="joystick-base" id="stick-base">
+            <div class="joy-thumb" id="stick-thumb"></div>
+        </div>
+        <div class="gesture-zone" id="gesture-pad">
+            <div class="gesture-hint" data-i18n="hint_swipe">SWIPE AREA</div>
+        </div>
+    </div>
+</div>
+
+<div id="start-overlay">
+    <h1 data-i18n="title">v17.6 SANDBOX</h1>
+    <button id="btn-start" data-i18n="btn_start">START TEST</button>
+</div>
+
+<script>
+/** 0. I18N SYSTEM **/
+const LANG_DB = {
+    'zh': {
+        // UI
+        'tab_ctrl': '操作说明', 'tab_moves': '出招表',
+        'th_action': '动作', 'th_key': '键盘', 'th_touch': '触屏', 'th_skill': '招式', 
+        'act_move': '移动', 'act_jump': '跳跃', 'act_atk': '攻击', 'act_ult': '大招',
+        'in_stick': '摇杆', 'in_swipe_u': '上滑', 'in_swipe_d': '下滑', 'in_tap': '点击',
+        'skl_dash_l': '左冲刺', 'skl_dash_r': '右冲刺', 'skl_dash_a': '冲刺 (自动)', 'skl_flash': '闪 刀',
+        // [v17.5] Split keys
+        'key_dash_l': '按住 A + L', 'tch_dash_l': '左滑',
+        'key_dash_r': '按住 D + L', 'tch_dash_r': '右滑',
+        'key_dash_a': '单按 L',     'tch_dash_a': '-',
+        'key_flash': '按住 S + L',  'tch_flash': '摇杆下 + 划屏',
+        
+        'btn_close': '点击任意处关闭', 'hint_swipe': '手势区域', 'title': 'v17.6 搓招沙盒', 'btn_start': '开始测试',
+        'CMD_MOVE_LEFT': '左移', 'CMD_MOVE_RIGHT': '右移', 'CMD_CROUCH': '下蹲',
+        'CMD_JUMP': '跳跃', 'CMD_ATK': '攻击', 'CMD_ULT': '大招',
+        'CMD_DASH_L': '左冲', 'CMD_DASH_R': '右冲', 'CMD_DASH_AUTO': '冲刺',
+        'FLASH SLASH': '闪 刀', 'DASH': '冲 刺', 'ATTACK': '攻 击', 'JUMP': '跳 跃', 'ULTIMATE': '大 招',
+        'KEY': '按键', 'STICK': '摇杆', 'GESTURE': '手势'
+    },
+    'en': {
+        // UI
+        'tab_ctrl': 'CONTROLS', 'tab_moves': 'MOVES LIST',
+        'th_action': 'ACTION', 'th_key': 'KEYBOARD', 'th_touch': 'TOUCH', 'th_skill': 'SKILL', 
+        'act_move': 'Move', 'act_jump': 'Jump', 'act_atk': 'Attack', 'act_ult': 'Ult',
+        'in_stick': 'Joystick', 'in_swipe_u': 'Swipe Up', 'in_swipe_d': 'Swipe Down', 'in_tap': 'Tap',
+        'skl_dash_l': 'Dash (Left)', 'skl_dash_r': 'Dash (Right)', 'skl_dash_a': 'Dash (Auto)', 'skl_flash': 'Flash Slash',
+        // [v17.5] Split keys
+        'key_dash_l': 'Hold A + L', 'tch_dash_l': 'Swipe Left',
+        'key_dash_r': 'Hold D + L', 'tch_dash_r': 'Swipe Right',
+        'key_dash_a': 'Press L',    'tch_dash_a': '-',
+        'key_flash': 'Hold S + L',  'tch_flash': 'Stick Down + Swipe',
+        
+        'btn_close': 'TAP ANYWHERE TO CLOSE', 'hint_swipe': 'SWIPE AREA', 'title': 'v17.6 SANDBOX', 'btn_start': 'START TEST',
+        'CMD_MOVE_LEFT': 'LEFT', 'CMD_MOVE_RIGHT': 'RIGHT', 'CMD_CROUCH': 'CROUCH',
+        'CMD_JUMP': 'JUMP', 'CMD_ATK': 'ATK', 'CMD_ULT': 'ULT',
+        'CMD_DASH_L': 'DASH L', 'CMD_DASH_R': 'DASH R', 'CMD_DASH_AUTO': 'DASH',
+        'FLASH SLASH': 'FLASH SLASH', 'DASH': 'DASH', 'ATTACK': 'ATTACK', 'JUMP': 'JUMP', 'ULTIMATE': 'ULTIMATE',
+        'KEY': 'Key', 'STICK': 'Stick', 'GESTURE': 'Gesture'
+    }
+};
+
+const I18N = {
+    lang: localStorage.getItem('app_lang') || 'zh', 
+    init() {
+        this.apply();
+        document.getElementById('btn-lang').onclick = () => {
+            this.lang = this.lang === 'zh' ? 'en' : 'zh';
+            localStorage.setItem('app_lang', this.lang);
+            this.apply();
+        };
+    },
+    apply() {
+        document.documentElement.lang = this.lang === 'zh' ? 'zh-CN' : 'en';
+        document.getElementById('btn-lang').innerText = this.lang.toUpperCase();
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            let key = el.dataset.i18n;
+            if(LANG_DB[this.lang][key]) el.innerHTML = LANG_DB[this.lang][key];
+        });
+    },
+    t(key) {
+        return LANG_DB[this.lang][key] || key;
+    }
+};
+
+/** 1. CONFIG: COMMAND MANIFEST **/
+const COMMAND_MANIFEST = [
+    { id: 'CMD_MOVE_LEFT',  type: 'STATE', icon: '⬅',  triggers: [{hw:'KEY', code:'KeyA'}, {hw:'STICK', dir:'LEFT'}] },
+    { id: 'CMD_MOVE_RIGHT', type: 'STATE', icon: '➡',  triggers: [{hw:'KEY', code:'KeyD'}, {hw:'STICK', dir:'RIGHT'}] },
+    { id: 'CMD_CROUCH',     type: 'STATE', icon: '⬇',  triggers: [{hw:'KEY', code:'KeyS'}, {hw:'STICK', dir:'DOWN'}] },
+    { id: 'CMD_JUMP',       type: 'TRIG',  icon: '⬆',  triggers: [{hw:'KEY', code:'KeyK'}, {hw:'GESTURE', id:'SWIPE_UP'}] },
+    { id: 'CMD_ATK',        type: 'TRIG',  icon: '⚔️', triggers: [{hw:'KEY', code:'KeyJ'}, {hw:'GESTURE', id:'TAP'}] },
+    { id: 'CMD_ULT',        type: 'TRIG',  icon: '⭕',  triggers: [{hw:'KEY', code:'KeyO'}, {hw:'GESTURE', id:'SWIPE_DOWN'}] },
+    { id: 'CMD_DASH_L', type: 'TRIG', icon: '⏪', triggers: [{ hw: 'GESTURE', id: 'SWIPE_LEFT' }, { hw: 'KEY', code: 'KeyL', mod: 'KeyA' }] },
+    { id: 'CMD_DASH_R', type: 'TRIG', icon: '⏩', triggers: [{ hw: 'GESTURE', id: 'SWIPE_RIGHT' }, { hw: 'KEY', code: 'KeyL', mod: 'KeyD' }] },
+    { id: 'CMD_DASH_AUTO', type: 'TRIG', icon: '🚀', triggers: [{ hw: 'KEY', code: 'KeyL', mod: null }] }
+];
+
+/** 2. INPUT SYSTEM **/
+const InputSystem = {
+    heldKeys: new Set(),
+    virtualState: { moveX: 0, crouch: false },
+    init() {
+        window.addEventListener('keydown', e => {
+            if(e.repeat) return;
+            this.heldKeys.add(e.code);
+            this.processInput('KEY', e.code);
+            this.updateVirtualState();
+        });
+        window.addEventListener('keyup', e => {
+            this.heldKeys.delete(e.code);
+            this.updateVirtualState();
+        });
+    },
+    processInput(hwType, hwId) {
+        for(let cmd of COMMAND_MANIFEST) {
+            for(let trig of cmd.triggers) {
+                if(trig.hw === hwType && (trig.code === hwId || trig.id === hwId || trig.dir === hwId)) {
+                    let modMatch = true;
+                    if(trig.hw === 'KEY') {
+                        if(trig.mod && !this.heldKeys.has(trig.mod)) modMatch = false;
+                        else if(trig.mod === null && (this.heldKeys.has('KeyA') || this.heldKeys.has('KeyD'))) modMatch = false;
+                    }
+                    if(modMatch) {
+                        this.emitCommand(cmd, hwType, hwId);
+                        return;
+                    }
+                }
+            }
+        }
+    },
+    emitCommand(cmd, sourceHw, sourceId) {
+        ComboEngine.push(cmd.id, `${sourceHw}:${sourceId.replace('Key','')}`);
+    },
+    updateVirtualState() {
+        let vx = 0; let down = false;
+        if(this.heldKeys.has('KeyA')) vx -= 1;
+        if(this.heldKeys.has('KeyD')) vx += 1;
+        if(this.heldKeys.has('KeyS')) down = true;
+        if(TouchInput.stick.x < -0.3) vx = -1;
+        if(TouchInput.stick.x > 0.3) vx = 1;
+        if(TouchInput.currentZone === 6) down = true; 
+        this.virtualState.moveX = vx;
+        this.virtualState.crouch = down;
+    }
+};
+
+/** 3. TOUCH INPUT (Snapped Trails & Sector Gestures) **/
+let gestureTrails = [];
+
+class GestureTrail {
+    constructor(x1, y1, x2, y2, isTap) {
+        this.start = {x:x1, y:y1};
+        this.life = 1.0;
+        this.isTap = isTap;
+
+        if (isTap) {
+            this.end = {x:x1, y:y1};
+        } else {
+            // [v17.5] Snapped Angle for Visuals
+            let dx = x2 - x1, dy = y2 - y1;
+            let len = Math.sqrt(dx*dx + dy*dy); if(len < 1) len = 1;
+            
+            let angle = Math.atan2(dy, dx); 
+            const step = Math.PI / 4;
+            let snappedAngle = Math.round(angle / step) * step;
+            
+            this.end = {
+                x: x1 + Math.cos(snappedAngle) * len,
+                y: y1 + Math.sin(snappedAngle) * len
+            };
+            
+            let ndx = this.end.x - this.start.x;
+            let ndy = this.end.y - this.start.y;
+            this.nx = -ndy / len; this.ny = ndx / len;
+            this.vx = (ndx / len); this.vy = (ndy / len); // Tip vector
+        }
+    }
+    
+    draw(ctx) {
+        if(this.life <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = this.life * 0.8;
+        ctx.fillStyle = '#fff'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 10;
+        ctx.beginPath();
+        
+        if (this.isTap) {
+            let size = 15;
+            ctx.moveTo(this.start.x, this.start.y - size);
+            ctx.lineTo(this.start.x + size, this.start.y);
+            ctx.lineTo(this.start.x, this.start.y + size);
+            ctx.lineTo(this.start.x - size, this.start.y);
+        } else {
+            let wStart = 2, wEnd = 15, tipLen = 30;
+            ctx.moveTo(this.start.x + this.nx*wStart, this.start.y + this.ny*wStart);
+            ctx.lineTo(this.end.x + this.nx*wEnd, this.end.y + this.ny*wEnd);
+            ctx.lineTo(this.end.x + this.vx*tipLen, this.end.y + this.vy*tipLen);
+            ctx.lineTo(this.end.x - this.nx*wEnd, this.end.y - this.ny*wEnd);
+            ctx.lineTo(this.start.x - this.nx*wStart, this.start.y - this.ny*wStart);
+        }
+        ctx.fill(); ctx.restore(); this.life -= 0.1; 
+    }
+}
+
+const TouchInput = {
+    stick: { x: 0, y: 0 },
+    currentZone: -1,
+    init() {
+        // Joystick
+        const base = document.getElementById('stick-base');
+        const thumb = document.getElementById('stick-thumb');
+        const slots = [];
+        for(let i=0; i<8; i++) {
+            let d = document.createElement('div');
+            d.className = 'joy-slot';
+            d.style.transform = `rotate(${-i*45}deg) translate(65px)`;
+            base.appendChild(d); slots.push(d);
+        }
+        const handleStick = (t) => {
+            const rect = base.getBoundingClientRect();
+            let dx = t.clientX - (rect.left + rect.width/2);
+            let dy = t.clientY - (rect.top + rect.height/2);
+            let dist = Math.sqrt(dx*dx+dy*dy);
+            let max = 40; if(dist>max) { dx *= max/dist; dy *= max/dist; }
+            thumb.style.transform = `translate(${dx}px, ${dy}px)`;
+            this.stick.x = dx/max; this.stick.y = -dy/max; 
+            
+            let newZone = -1;
+            if(dist > 10) {
+                let deg = Math.atan2(-dy, dx) * (180/Math.PI);
+                if(deg < 0) deg += 360;
+                newZone = Math.floor((deg + 22.5) / 45) % 8;
+            }
+            if(newZone !== this.currentZone) {
+                slots.forEach(s => s.classList.remove('active'));
+                if(newZone !== -1) {
+                    slots[newZone].classList.add('active');
+                    this.mapZoneToCommand(newZone);
+                }
+                this.currentZone = newZone;
+            }
+            InputSystem.updateVirtualState();
+        };
+        const resetStick = (e) => {
+            e.preventDefault(); thumb.style.transform = `translate(0,0)`;
+            this.stick.x = 0; this.stick.y = 0; this.currentZone = -1;
+            slots.forEach(s => s.classList.remove('active'));
+            InputSystem.updateVirtualState();
+        };
+        base.addEventListener('touchmove', e => { e.preventDefault(); handleStick(e.changedTouches[0]); });
+        base.addEventListener('touchstart', e => { e.preventDefault(); handleStick(e.changedTouches[0]); });
+        base.addEventListener('touchend', resetStick);
+
+        // Gesture Logic
+        const pad = document.getElementById('gesture-pad');
+        let gStart = {x:0, y:0, t:0};
+        pad.addEventListener('touchstart', e => { 
+            let t = e.changedTouches[0];
+            gStart = {x:t.clientX, y:t.clientY, t:Date.now()}; 
+        });
+        pad.addEventListener('touchend', e => {
+            let t = e.changedTouches[0];
+            let dx = t.clientX - gStart.x;
+            let dy = t.clientY - gStart.y;
+            let dt = Date.now() - gStart.t;
+            let dist = Math.sqrt(dx*dx+dy*dy);
+
+            // Visual Trail
+            if(dt < 400) {
+                let lx1 = (gStart.x - Game.offX) / Game.scale;
+                let ly1 = (gStart.y - Game.offY) / Game.scale;
+                if (dist > 20) {
+                    let lx2 = (t.clientX - Game.offX) / Game.scale;
+                    let ly2 = (t.clientY - Game.offY) / Game.scale;
+                    gestureTrails.push(new GestureTrail(lx1, ly1, lx2, ly2, false));
+                } else {
+                    gestureTrails.push(new GestureTrail(lx1, ly1, lx1, ly1, true));
+                }
+            }
+
+            if(dt > 400) return;
+            
+            // [v17.6] Strict Sector-Based Logic for Gestures
+            if(dist < 20) {
+                InputSystem.processInput('GESTURE', 'TAP');
+            } else {
+                // Calculate angle for sector mapping
+                let deg = Math.atan2(-dy, dx) * (180/Math.PI);
+                if(deg < 0) deg += 360;
+                let zone = Math.floor((deg + 22.5) / 45) % 8;
+                
+                // 0:Right, 2:Up, 4:Left, 6:Down
+                // Only trigger if strictly in cardinal sectors
+                if (zone === 2) InputSystem.processInput('GESTURE', 'SWIPE_UP');
+                if (zone === 6) InputSystem.processInput('GESTURE', 'SWIPE_DOWN'); // Strict 270 deg
+                if (zone === 0) InputSystem.processInput('GESTURE', 'SWIPE_RIGHT');
+                if (zone === 4) InputSystem.processInput('GESTURE', 'SWIPE_LEFT');
+            }
+        });
+    },
+    mapZoneToCommand(z) {
+        if(z===0) InputSystem.processInput('STICK', 'RIGHT');
+        if(z===4) InputSystem.processInput('STICK', 'LEFT');
+        if(z===6) InputSystem.processInput('STICK', 'DOWN');
+    }
+};
+
+/** 4. COMBO ENGINE **/
+const ComboEngine = {
+    buffer: [], timeout: 400, timer: null,
+    push(cmdId, source) {
+        this.buffer.push({id:cmdId, source:source});
+        let executed = this.checkMoves();
+        if (!executed) {
+            UI.addHistory(cmdId, source, 'raw');
+        }
+        if(this.buffer.length > 0) {
+            if(this.timer) clearTimeout(this.timer);
+            this.timer = setTimeout(()=> { this.buffer=[]; }, this.timeout);
+        }
+    },
+    checkMoves() {
+        let len = this.buffer.length; if(len===0) return false;
+        let last = this.buffer[len-1];
+        let prev = len>=2 ? this.buffer[len-2] : null;
+
+        if(prev && prev.id === 'CMD_CROUCH' && last.id.startsWith('CMD_DASH')) {
+            this.execute('FLASH SLASH', '⚡', last.source); return true;
+        }
+        if(last.id.startsWith('CMD_DASH')) {
+            let dir = last.id.endsWith('L') ? -1 : (last.id.endsWith('R') ? 1 : 0);
+            this.execute('DASH', '>>', last.source, {dir}); return true;
+        }
+        if(last.id === 'CMD_ATK') { this.execute('ATTACK', '⚔️', last.source); return true; }
+        if(last.id === 'CMD_JUMP') { this.execute('JUMP', '⬆', last.source); return true; }
+        if(last.id === 'CMD_ULT') { this.execute('ULTIMATE', '⭕', last.source); return true; }
+        return false;
+    },
+    execute(name, icon, src, params) {
+        UI.addHistory(name, src, 'move', icon);
+        UI.showToast(name);
+        Game.triggerAction(name, params);
+        this.buffer = [];
+    }
+};
+
+/** 5. GAME & UI **/
+const Game = {
+    logicW: 1000, logicH: 600, scale: 1, offX: 0, offY: 0,
+    player: {x:200, y:400, w:40, h:60, color:'#00eaff', vx:0, vy:0},
+    enemy: {x:700, y:400, w:40, h:60, color:'#ff0055'},
+    init() {
+        this.cvs = document.getElementById('canvas');
+        this.ctx = this.cvs.getContext('2d');
+        window.addEventListener('resize', ()=>this.fit());
+        this.fit(); this.loop();
+    },
+    fit() {
+        let winW=window.innerWidth, winH=window.innerHeight;
+        this.cvs.width=winW; this.cvs.height=winH;
+        this.scale = Math.min(winW/this.logicW, winH/this.logicH);
+        this.offX = (winW - this.logicW*this.scale)/2;
+        this.offY = (winH - this.logicH*this.scale)/2;
+        this.ctx.setTransform(1,0,0,1,0,0);
+    },
+    triggerAction(name, p) {
+        const pl = this.player;
+        if(name==='JUMP') pl.vy = -18;
+        if(name==='DASH') {
+            let d = p.dir === 0 ? (this.enemy.x>pl.x?1:-1) : p.dir;
+            pl.vx = 25*d;
+        }
+        if(name==='FLASH SLASH') {
+            pl.x = this.enemy.x - (100 * (this.enemy.x>pl.x?1:-1));
+            pl.vx = 0;
+            pl.color = '#fff'; setTimeout(()=>pl.color='#00eaff', 100);
+        }
+        if(name==='ULTIMATE') this.bgFlash = 10;
+    },
+    loop() {
+        let ctx = this.ctx, p = this.player;
+        if(InputSystem.virtualState.moveX) p.vx = InputSystem.virtualState.moveX*6;
+        else p.vx *= 0.8;
+        p.vy += 0.8; p.x += p.vx; p.y += p.vy;
+        if(p.y > 500-p.h) { p.y = 500-p.h; p.vy=0; }
+        
+        ctx.fillStyle = this.bgFlash > 0 ? '#333' : '#111'; 
+        if(this.bgFlash>0) this.bgFlash--;
+        ctx.fillRect(0,0, ctx.canvas.width, ctx.canvas.height);
+        
+        ctx.save();
+        ctx.translate(this.offX, this.offY); ctx.scale(this.scale, this.scale);
+        
+        ctx.fillStyle='#1a1a1a'; ctx.fillRect(0,0,this.logicW,this.logicH);
+        ctx.strokeStyle='#555'; ctx.beginPath(); ctx.moveTo(0,500); ctx.lineTo(1000,500); ctx.stroke();
+        
+        ctx.fillStyle=this.enemy.color; ctx.fillRect(this.enemy.x,this.enemy.y,this.enemy.w,this.enemy.h);
+        let ph = InputSystem.virtualState.crouch ? p.h/2 : p.h;
+        let py = InputSystem.virtualState.crouch ? p.y+p.h/2 : p.y;
+        ctx.fillStyle=p.color; ctx.fillRect(p.x, py, p.w, ph);
+        if(InputSystem.virtualState.crouch) { ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.strokeRect(p.x-5,py-5,p.w+10,ph+10); }
+
+        for(let i=gestureTrails.length-1; i>=0; i--) {
+            gestureTrails[i].draw(ctx);
+            if(gestureTrails[i].life <= 0) gestureTrails.splice(i,1);
+        }
+
+        ctx.restore();
+        requestAnimationFrame(()=>this.loop());
+    }
+};
+
+const UI = {
+    box: document.getElementById('ui-history'),
+    toast: document.getElementById('ui-log'),
+    addHistory(cmd, src, type, iconOvr) {
+        let div = document.createElement('div');
+        div.className = `hist-item type-${type}`;
+        let meta = COMMAND_MANIFEST.find(c=>c.id===cmd)||{icon:'?',id:cmd};
+        let name = I18N.t(cmd); 
+        if(!name || name===cmd) name = I18N.t(cmd.replace('CMD_','')); 
+        let [hw, id] = src.split(':');
+        let srcText = `${I18N.t(hw)}:${id}`;
+        div.innerHTML = `
+            <div class="hist-left"><span class="icon">${iconOvr||meta.icon}</span><span class="name">${name}</span></div>
+            <span class="src">${srcText}</span>
+        `;
+        this.box.insertBefore(div, this.box.firstChild);
+        if(this.box.children.length > 8) this.box.lastChild.remove();
+    },
+    showToast(msg) {
+        let text = I18N.t(msg);
+        this.toast.innerHTML = `<div class="log-msg">${text}</div>`;
+        setTimeout(()=>{ if(this.toast.firstChild) this.toast.firstChild.style.opacity=1; }, 10);
+        setTimeout(()=>{ if(this.toast.firstChild) this.toast.firstChild.remove(); }, 1000);
+    }
+};
+
+const modal = document.getElementById('help-modal');
+document.getElementById('btn-help').onclick = () => modal.style.display = 'flex';
+document.getElementById('btn-close-help').onclick = () => modal.style.display = 'none';
+modal.onclick = (e) => { if(e.target===modal) modal.style.display='none'; };
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    };
+});
+
+document.getElementById('btn-start').onclick = async () => {
+    try{ await document.documentElement.requestFullscreen(); await screen.orientation.lock('landscape'); }catch(e){}
+    document.getElementById('start-overlay').style.display='none';
+    I18N.init(); InputSystem.init(); TouchInput.init(); Game.init();
+};
+</script>
+</body>
+</html>
