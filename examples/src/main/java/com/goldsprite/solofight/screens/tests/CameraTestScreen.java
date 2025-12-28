@@ -4,7 +4,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -29,13 +28,15 @@ import com.kotcrab.vis.ui.widget.VisCheckBox;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSlider;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+
 import java.util.ArrayList;
 import java.util.List;
+import com.badlogic.gdx.graphics.GL20;
 
 public class CameraTestScreen extends ExampleGScreen {
 
 	private SmartCameraController smartCam;
-	private SimpleCameraController freeCam; // [v3.4] 自由相机控制器
+	private SimpleCameraController freeCam;
 	private ShapeRenderer shapeRenderer;
 	private Stage uiStage;
 	private SpriteBatch batch;
@@ -44,9 +45,10 @@ public class CameraTestScreen extends ExampleGScreen {
 	private List<Vector2> targets = new ArrayList<>();
 	private Vector2 dragTarget = null;
 
-	// 调试开关
-	private boolean ghostMode = true; 
-	private boolean drawBackground = false; // [v3.4] 默认不画底色
+	// [v3.5] 开关分离
+	private boolean ghostMode = true; // 是否不应用智能相机位置
+	private boolean freeCamControl = false; // 是否启用自由相机输入
+	private boolean drawBackground = false;
 
 	@Override
 	public String getIntroduction() { return ""; }
@@ -55,7 +57,6 @@ public class CameraTestScreen extends ExampleGScreen {
 
 	@Override
 	protected void initViewportAndCamera() {
-		// [v3.4] 视口扩大 1.4 倍 -> 1344 x 756
 		float scl = 1.4f;
 		worldCamera = new OrthographicCamera();
 		uiViewport = new ExtendViewport(960 * scl, 540 * scl); 
@@ -70,9 +71,8 @@ public class CameraTestScreen extends ExampleGScreen {
 		smartCam = new SmartCameraController(getWorldCamera());
 		smartCam.setMapBounds(-1000, -800, 2000, 1600);
 
-		// [v3.4] 初始化自由相机
 		freeCam = new SimpleCameraController(getWorldCamera());
-		freeCam.setInputEnabled(ghostMode); // 初始状态跟随 ghostMode
+		freeCam.setInputEnabled(false); // 默认关闭自由操作
 
 		targets.add(new Vector2(-200, 0));
 		targets.add(new Vector2(200, 0));
@@ -86,7 +86,6 @@ public class CameraTestScreen extends ExampleGScreen {
 		super.show();
 		getScreenManager().setOrientation(ScreenManager.Orientation.LANDSCAPE);
 	}
-
 	@Override
 	public void hide() {
 		super.hide();
@@ -94,21 +93,16 @@ public class CameraTestScreen extends ExampleGScreen {
 	}
 
 	private void initInput() {
-		// [v3.4] 注册输入处理器顺序：UI -> FreeCam -> TargetLogic
-		getImp().addProcessor(freeCam); // 自由相机优先处理滚轮/右键拖拽
+		// [v3.5] 注册顺序: UI -> FreeCam -> Target
+		getImp().addProcessor(freeCam); 
 
 		getImp().addProcessor(new InputAdapter() {
 				@Override
 				public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+					// [v3.5] 如果开启了自由相机控制，这里不处理目标逻辑
+					if (freeCamControl) return false; 
+
 					Vector2 worldPos = screenToWorldCoord(screenX, screenY);
-
-					// [v3.4] 如果是右键且在 GhostMode 下，可能是拖拽相机，不触发移除
-					// SimpleCameraController 使用右键或中键拖拽
-					if ((button == Input.Buttons.RIGHT || button == Input.Buttons.MIDDLE) && ghostMode) {
-						return false; // 交给 freeCam 处理
-					}
-
-					// 左键逻辑：选中或添加
 					if (button == Input.Buttons.LEFT) {
 						Vector2 hit = null;
 						for (Vector2 t : targets) {
@@ -150,28 +144,48 @@ public class CameraTestScreen extends ExampleGScreen {
 		panel.defaults().width(220).padBottom(5).left();
 		root.add(panel);
 
-		// 1. 幽灵模式 (自由相机)
-		VisCheckBox cbGhost = new VisCheckBox("Ghost Mode (Free Cam)", true);
+		// 1. Ghost Mode
+		VisCheckBox cbGhost = new VisCheckBox("Ghost Mode (Only Debug)", true);
 		cbGhost.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
 					ghostMode = cbGhost.isChecked();
-					freeCam.setInputEnabled(ghostMode); // 开关自由相机输入
-					if (!ghostMode) {
-						// 关闭时，瞬间应用智能相机位置，防止跳变
-						smartCam.apply();
+					if (ghostMode && !freeCamControl) {
+						// 仅当没有开启自由控制时，重置视角方便观察
+						getWorldCamera().position.set(0, 0, 0);
+						getWorldCamera().zoom = 1f;
+						getWorldCamera().update();
 					}
 				}
 			});
 		panel.add(cbGhost).row();
 
-		// [v3.4] 底色开关
+		// [v3.5] Free Cam Control (分离的开关)
+		VisCheckBox cbFree = new VisCheckBox("Free Cam Control", false);
+		cbFree.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					freeCamControl = cbFree.isChecked();
+					freeCam.setInputEnabled(freeCamControl);
+				}
+			});
+		panel.add(cbFree).row();
+
+		// [v3.5] Map Constraint
+		VisCheckBox cbMap = new VisCheckBox("Map Constraint", false);
+		cbMap.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					smartCam.mapConstraint = cbMap.isChecked();
+				}
+			});
+		panel.add(cbMap).row();
+
+		// [v3.5] Draw Bg
 		VisCheckBox cbBg = new VisCheckBox("Draw Backgrounds", false);
 		cbBg.addListener(new ChangeListener() {
 				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					drawBackground = cbBg.isChecked();
-				}
+				public void changed(ChangeEvent event, Actor actor) { drawBackground = cbBg.isChecked(); }
 			});
 		panel.add(cbBg).row();
 
@@ -237,20 +251,17 @@ public class CameraTestScreen extends ExampleGScreen {
 
 	@Override
 	public void render0(float delta) {
-		// 计算智能相机数据 (但不一定应用)
 		smartCam.update(targets, delta);
 
-		if (ghostMode) {
-			// 幽灵模式：使用自由相机控制视角
-			freeCam.update(delta); 
-		} else {
-			// 实机模式：智能相机接管
-			smartCam.apply();
+		if (freeCamControl) {
+			freeCam.update(delta); // 自由控制时，应用 FreeCam 逻辑
+		} else if (!ghostMode) {
+			smartCam.apply(); // 非幽灵模式，应用 SmartCam 逻辑
 		}
 
 		drawGrid();
 
-		// 绘制目标
+		// Targets
 		shapeRenderer.setProjectionMatrix(getWorldCamera().combined);
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 		for (Vector2 t : targets) {
@@ -260,9 +271,7 @@ public class CameraTestScreen extends ExampleGScreen {
 		}
 		shapeRenderer.end();
 
-		// 绘制调试框 (在 Ghost Mode 或你想观察的时候)
 		if (ghostMode) {
-			// [v3.4] 传入 drawBackground 开关
 			smartCam.drawDebug(shapeRenderer, batch, debugFont, drawBackground);
 		}
 
@@ -280,9 +289,11 @@ public class CameraTestScreen extends ExampleGScreen {
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
 		shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1f);
 		int size = 100;
-		// 画大一点的网格以便自由相机观察
 		for (int x = -2000; x <= 3000; x += size) shapeRenderer.line(x, -2000, x, 3000);
 		for (int y = -2000; y <= 3000; y += size) shapeRenderer.line(-2000, y, 3000, y);
+		shapeRenderer.setColor(Color.ORANGE);
+		// 画地图边界
+		shapeRenderer.rect(-1000, -800, 2000, 1600); // 必须和 SmartCam 里的设置一致
 		shapeRenderer.end();
 		Gdx.gl.glDisable(GL20.GL_BLEND);
 	}

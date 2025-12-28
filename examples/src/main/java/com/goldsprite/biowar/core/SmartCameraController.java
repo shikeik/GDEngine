@@ -21,7 +21,10 @@ public class SmartCameraController {
 	public float smoothSpeed = 5.0f;
 	public float padding = 100f;
 	public float minZoom = 0.5f;
-	public float maxZoom = 2.0f;
+	public float maxZoom = 100.0f;
+
+	// [v3.5] 地图约束开关 (默认关闭)
+	public boolean mapConstraint = false;
 
 	private Rectangle mapBounds = new Rectangle(-1000, -1000, 2000, 2000);
 
@@ -35,9 +38,9 @@ public class SmartCameraController {
 	private float shakeDecay = 1.5f;
 
 	// --- 调试数据 ---
-	private final Rectangle rawBounds = new Rectangle();
-	private final Rectangle aspectBounds = new Rectangle();
-	private final Rectangle finalBounds = new Rectangle();
+	private final Rectangle rawBounds = new Rectangle();    // 红: 原始极值
+	private final Rectangle aspectBounds = new Rectangle(); // 蓝: Raw + Aspect (无Padding)
+	private final Rectangle finalBounds = new Rectangle();  // 黄: Final Camera View
 
 	public SmartCameraController(OrthographicCamera camera) {
 		this.camera = camera;
@@ -56,6 +59,7 @@ public class SmartCameraController {
 	public void update(List<Vector2> targets, float delta) {
 		if (targets == null || targets.isEmpty()) return;
 
+		// 1. 计算 Raw Bounds (绝对包围盒)
 		float minX = Float.MAX_VALUE, maxX = -Float.MAX_VALUE;
 		float minY = Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
 
@@ -63,46 +67,46 @@ public class SmartCameraController {
 			if (t.x < minX) minX = t.x; if (t.x > maxX) maxX = t.x;
 			if (t.y < minY) minY = t.y; if (t.y > maxY) maxY = t.y;
 		}
-
 		if (maxX == minX) { minX -= 10; maxX += 10; }
 		if (maxY == minY) { minY -= 10; maxY += 10; }
-
 		rawBounds.set(minX, minY, maxX - minX, maxY - minY);
 
-		float targetW = rawBounds.width + padding * 2;
-		float targetH = rawBounds.height + padding * 2;
-
+		// 获取屏幕比例
 		float viewportW = camera.viewportWidth;
 		float viewportH = camera.viewportHeight;
 		float screenAspect = viewportW / viewportH;
-		float targetAspect = targetW / targetH;
 
-		if (targetAspect > screenAspect) targetH = targetW / screenAspect;
-		else targetW = targetH * screenAspect;
+		// 2. 计算 Aspect Bounds (蓝框: Raw 适配屏幕比例, 无Padding)
+		// [v3.5] 修正需求：Raw紧贴但符合比例
+		calculateAspectRect(rawBounds, aspectBounds, screenAspect, 0); // padding = 0
+		if (mapConstraint) applyMapConstraint(aspectBounds); // 蓝框也要受约束
 
-		float centerX = rawBounds.x + rawBounds.width / 2;
-		float centerY = rawBounds.y + rawBounds.height / 2;
+		// 3. 计算 Final Camera Target (黄框逻辑)
+		// 3.1 基础计算: Raw + Padding -> Aspect
+		Rectangle targetRect = new Rectangle(); // 临时变量
+		calculateAspectRect(rawBounds, targetRect, screenAspect, padding);
 
-		aspectBounds.set(centerX - targetW / 2, centerY - targetH / 2, targetW, targetH);
-
-		float targetZoom = Math.max(targetW / viewportW, targetH / viewportH);
+		// 3.2 计算理想 Zoom
+		float targetZoom = targetRect.width / viewportW; // 宽/宽 或 高/高 是一样的，因为已经修正过比例
 		targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
 
-		// Clamping
+		// 3.3 根据 Zoom 反推视口大小 (因为 Zoom 限制可能导致视野比 TargetRect 更小或更大)
 		float viewW = viewportW * targetZoom;
 		float viewH = viewportH * targetZoom;
 
-		float minCamX = mapBounds.x + viewW / 2;
-		float maxCamX = mapBounds.x + mapBounds.width - viewW / 2;
-		float minCamY = mapBounds.y + viewH / 2;
-		float maxCamY = mapBounds.y + mapBounds.height - viewH / 2;
+		// 3.4 确定中心点
+		float centerX = targetRect.x + targetRect.width / 2;
+		float centerY = targetRect.y + targetRect.height / 2;
 
-		if (minCamX > maxCamX) centerX = mapBounds.x + mapBounds.width / 2;
-		else centerX = MathUtils.clamp(centerX, minCamX, maxCamX);
+		// 3.5 约束中心点 (Clamping)
+		// [v3.5] 修正逻辑：确保 viewW/viewH 矩形在 mapBounds 内
+		if (mapConstraint) {
+			Vector2 clampedCenter = clampCenter(centerX, centerY, viewW, viewH);
+			centerX = clampedCenter.x;
+			centerY = clampedCenter.y;
+		}
 
-		if (minCamY > maxCamY) centerY = mapBounds.y + mapBounds.height / 2;
-		else centerY = MathUtils.clamp(centerY, minCamY, maxCamY);
-
+		// 4. 平滑 (Smoothing)
 		if (smoothEnabled) {
 			float alpha = Math.min(1.0f, delta * smoothSpeed);
 			this.position.x += (centerX - this.position.x) * alpha;
@@ -112,6 +116,7 @@ public class SmartCameraController {
 			this.position.x = centerX; this.position.y = centerY; this.zoom = targetZoom;
 		}
 
+		// 5. 震动 (Shake)
 		float shakeX = 0, shakeY = 0;
 		if (trauma > 0) {
 			float shake = trauma * trauma; 
@@ -121,9 +126,64 @@ public class SmartCameraController {
 			if (trauma < 0) trauma = 0;
 		}
 
+		// 6. 输出 Final Bounds (用于调试显示)
 		float finalW = viewportW * this.zoom;
 		float finalH = viewportH * this.zoom;
-		finalBounds.set(this.position.x - finalW / 2 + shakeX, this.position.y - finalH / 2 + shakeY, finalW, finalH);
+		finalBounds.set(
+			this.position.x - finalW / 2 + shakeX, 
+			this.position.y - finalH / 2 + shakeY, 
+			finalW, finalH
+		);
+		// 注意：FinalBounds 包含了震动偏移，这可能导致稍微超出地图，这是符合预期的(震动不应被硬切)
+	}
+
+	// 辅助：将 src 矩形扩展为符合 aspect 的 dst 矩形，并增加 pad
+	private void calculateAspectRect(Rectangle src, Rectangle dst, float aspect, float pad) {
+		float targetW = src.width + pad * 2;
+		float targetH = src.height + pad * 2;
+		float targetAspect = targetW / targetH;
+
+		if (targetAspect > aspect) targetH = targetW / aspect;
+		else targetW = targetH * aspect;
+
+		float cx = src.x + src.width / 2;
+		float cy = src.y + src.height / 2;
+		dst.set(cx - targetW / 2, cy - targetH / 2, targetW, targetH);
+	}
+
+	// 辅助：直接约束矩形在地图内 (用于 Blue Box)
+	private void applyMapConstraint(Rectangle rect) {
+		// 如果矩形比地图还大，强制居中
+		if (rect.width > mapBounds.width) {
+			rect.x = mapBounds.x + mapBounds.width/2 - rect.width/2;
+		} else {
+			if (rect.x < mapBounds.x) rect.x = mapBounds.x;
+			if (rect.x + rect.width > mapBounds.x + mapBounds.width) rect.x = mapBounds.x + mapBounds.width - rect.width;
+		}
+
+		if (rect.height > mapBounds.height) {
+			rect.y = mapBounds.y + mapBounds.height/2 - rect.height/2;
+		} else {
+			if (rect.y < mapBounds.y) rect.y = mapBounds.y;
+			if (rect.y + rect.height > mapBounds.y + mapBounds.height) rect.y = mapBounds.y + mapBounds.height - rect.height;
+		}
+	}
+
+	// 辅助：计算受约束的中心点 (用于 Camera)
+	private Vector2 tmpVec = new Vector2();
+	private Vector2 clampCenter(float cx, float cy, float vw, float vh) {
+		float minX = mapBounds.x + vw / 2;
+		float maxX = mapBounds.x + mapBounds.width - vw / 2;
+		float minY = mapBounds.y + vh / 2;
+		float maxY = mapBounds.y + mapBounds.height - vh / 2;
+
+		if (minX > maxX) cx = mapBounds.x + mapBounds.width / 2;
+		else cx = MathUtils.clamp(cx, minX, maxX);
+
+		if (minY > maxY) cy = mapBounds.y + mapBounds.height / 2;
+		else cy = MathUtils.clamp(cy, minY, maxY);
+
+		return tmpVec.set(cx, cy);
 	}
 
 	public void apply() {
@@ -133,57 +193,50 @@ public class SmartCameraController {
 		camera.update();
 	}
 
-	/**
-	 * 可视化调试 (v3.4: 支持开关填充背景)
-	 * @param drawFill 是否绘制半透明底色
-	 */
 	public void drawDebug(ShapeRenderer renderer, SpriteBatch batch, BitmapFont font, boolean drawFill) {
 		Gdx.gl.glEnable(GL20.GL_BLEND);
 		Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
 		renderer.setProjectionMatrix(camera.combined);
 
-		// 1. 填充层 (Filled) - 可开关
+		// 1. 填充层
 		if (drawFill) {
 			renderer.begin(ShapeRenderer.ShapeType.Filled);
-			// 理想视口 (Target): 亮青色
-			renderer.setColor(0f, 1f, 1f, 0.1f); 
+			renderer.setColor(0f, 1f, 1f, 0.1f); // Blue
 			renderer.rect(aspectBounds.x, aspectBounds.y, aspectBounds.width, aspectBounds.height);
-			// 最终相机 (Final): 亮黄色
-			renderer.setColor(1f, 1f, 0f, 0.15f); 
+			renderer.setColor(1f, 1f, 0f, 0.15f); // Yellow
 			renderer.rect(finalBounds.x, finalBounds.y, finalBounds.width, finalBounds.height);
 			renderer.end();
 		}
 
-		// 2. 线框层 (Line) - 始终绘制，高亮
+		// 2. 线框层
 		renderer.begin(ShapeRenderer.ShapeType.Line);
-		// 地图边界: 亮橙色
+		// Map (Orange)
 		renderer.setColor(1f, 0.6f, 0f, 1f);
 		renderer.rect(mapBounds.x, mapBounds.y, mapBounds.width, mapBounds.height);
-		// 原始包围 (Raw): 亮洋红
+		// Raw (Magenta)
 		renderer.setColor(1f, 0f, 1f, 1f);
 		renderer.rect(rawBounds.x, rawBounds.y, rawBounds.width, rawBounds.height);
-		// 理想视口: 亮青
+		// Target Aspect (Cyan) - [v3.5] Raw + Aspect
 		renderer.setColor(0f, 1f, 1f, 0.8f);
 		renderer.rect(aspectBounds.x, aspectBounds.y, aspectBounds.width, aspectBounds.height);
-		// 最终相机: 亮黄
+		// Final (Yellow)
 		renderer.setColor(1f, 1f, 0f, 1f);
 		renderer.rect(finalBounds.x, finalBounds.y, finalBounds.width, finalBounds.height);
 		renderer.end();
 
 		Gdx.gl.glDisable(GL20.GL_BLEND);
 
-		// 3. 标签层 (Text)
+		// 3. 标签
 		if (batch != null && font != null) {
 			batch.setProjectionMatrix(camera.combined);
 			batch.begin();
-			// 字体大小随缩放调整，防止缩小地图时字太小
 			float fontScale = 1.5f * camera.zoom;
 			font.getData().setScale(fontScale);
 
-			drawLabel(batch, font, "MAP BOUNDS", mapBounds, Color.ORANGE, fontScale);
+			drawLabel(batch, font, "MAP", mapBounds, Color.ORANGE, fontScale);
 			drawLabel(batch, font, "RAW", rawBounds, Color.MAGENTA, fontScale);
-			drawLabel(batch, font, "TARGET ASPECT", aspectBounds, Color.CYAN, fontScale);
+			drawLabel(batch, font, "RAW+ASPECT", aspectBounds, Color.CYAN, fontScale);
 			drawLabel(batch, font, "FINAL CAM", finalBounds, Color.YELLOW, fontScale);
 
 			batch.end();
@@ -192,7 +245,6 @@ public class SmartCameraController {
 
 	private void drawLabel(SpriteBatch batch, BitmapFont font, String text, Rectangle r, Color color, float scale) {
 		font.setColor(color);
-		// 绘制在矩形右上角，偏移量随 scale 调整
 		font.draw(batch, text, r.x + r.width - 10 * scale, r.y + r.height + 20 * scale);
 	}
 

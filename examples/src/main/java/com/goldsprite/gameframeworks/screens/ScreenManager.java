@@ -67,7 +67,7 @@ public class ScreenManager implements Disposable {
 	public void setOrientation(Orientation orientation) {
 		if (orientationChanger != null) {
 			orientationChanger.accept(orientation);
-			curScreen.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+			//curScreen.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		}
 		// 注意：实际视口 resize 会在 resize() 回调中被触发，这里不需要手动改 Viewport
 	}
