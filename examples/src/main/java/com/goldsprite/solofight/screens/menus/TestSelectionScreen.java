@@ -8,6 +8,7 @@ import java.util.Map;
 import com.goldsprite.biowar.core.screens.BloomDebugScreen;
 import com.goldsprite.solofight.screens.tests.AudioTestScreen;
 import com.goldsprite.solofight.screens.tests.CameraTestScreen;
+import com.goldsprite.solofight.screens.tests.TextTestScreen;
 
 public class TestSelectionScreen extends BaseSelectionScreen {
 
@@ -23,6 +24,7 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 		map.put("Neon Glow (辉光) 测试(原BioWar)", BloomDebugScreen.class);
 		map.put("Synth Audio (合成音效) 测试", AudioTestScreen.class);
 		map.put("SmartCamera (智能相机) 测试", CameraTestScreen.class);
+		map.put("Floating Text (飘字) 测试", TextTestScreen.class);
 		
 		map.put("物理/碰撞测试", null);
 		// 以后加别的...
