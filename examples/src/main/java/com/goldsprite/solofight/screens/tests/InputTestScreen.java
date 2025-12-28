@@ -9,13 +9,7 @@ import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.DebugUI;
 import com.goldsprite.solofight.core.NeonBatch;
-import com.goldsprite.solofight.core.input.CommandHistoryUI;
-import com.goldsprite.solofight.core.input.GestureProcessor;
-import com.goldsprite.solofight.core.input.GestureTrail;
-import com.goldsprite.solofight.core.input.InputContext;
-import com.goldsprite.solofight.core.input.InputDef;
-import com.goldsprite.solofight.core.input.ToastUI;
-import com.goldsprite.solofight.core.input.VirtualJoystick;
+import com.goldsprite.solofight.core.input.*;
 
 public class InputTestScreen extends ExampleGScreen {
 
@@ -77,6 +71,7 @@ public class InputTestScreen extends ExampleGScreen {
 		// E. 输入管线
 		getImp().addProcessor(stage);
 		getImp().addProcessor(gestureProcessor);
+		getImp().addProcessor(new KeyboardProcessor());
 
 		// F. 指令监听
 		InputContext.inst().commandListener = (cmdId, src) -> {
