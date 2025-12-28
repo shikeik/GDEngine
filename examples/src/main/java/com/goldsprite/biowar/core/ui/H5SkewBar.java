@@ -8,59 +8,126 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.goldsprite.biowar.core.NeonBatch;
 
 /**
- * 复刻 H5 样式的倾斜渐变血条
+ * 通用赛博朋克风格血条组件 (H5复刻版 v2.0)
+ * 特性：
+ * - 支持数值范围 (min/max)
+ * - 支持伤害缓冲动画 (Damage Flash)
+ * - 支持任意角度倾斜 (Skew Degrees)
+ * - 支持双向填充 (Left-to-Right / Right-to-Left)
  */
 public class H5SkewBar extends Actor {
 
-	private NeonBatch neonRenderer;
+	// --- 样式定义 ---
+	public static class BarStyle {
+		/** 满血时的起始颜色 (左/右取决于填充方向) */
+		public Color gradientStart = Color.valueOf("00eaff");
+		/** 满血时的结束颜色 */
+		public Color gradientEnd = Color.valueOf("0088aa");
+		/** 空血槽背景色 */
+		public Color backgroundColor = new Color(0.12f, 0.12f, 0.12f, 0.8f);
+		/** 边框颜色 */
+		public Color borderColor = Color.valueOf("555555");
+		/** 伤害缓冲层颜色 */
+		public Color damageColor = Color.WHITE;
 
-	// 样式属性 (默认复刻 H5: border #555, bg rgba(30,30,30,0.8))
-	private Color borderColor = Color.valueOf("555555");
-	private Color bgColor = new Color(0.12f, 0.12f, 0.12f, 0.8f); 
-	private Color colorLeft, colorRight;
+		/** 边框粗细 (像素) */
+		public float borderThickness = 2f;
 
-	private float borderThickness = 2f;
-	private float skewAngleDeg = -20f;
+		/** 倾斜角度 (度)。负数向左歪(\)，正数向右歪(/) */
+		public float skewDeg = -20f;
 
-	private float percent = 1.0f; // 0.0 ~ 1.0
+		/** 缓冲条回落速度 (每秒百分比，0.5 = 50%/秒) */
+		public float damageSpeed = 0.3f;
 
-	// 伤害缓冲动画用
-	private float damagePercent = 1.0f;
-	private Color dmgColor = Color.WHITE;
+		public BarStyle() {}
 
-	public H5SkewBar(float width, float height, Color cLeft, Color cRight) {
-		setSize(width, height);
-		this.colorLeft = cLeft;
-		this.colorRight = cRight;
-	}
-
-	public void setPercent(float p) {
-		this.percent = MathUtils.clamp(p, 0, 1);
-		// 如果是回血，瞬间跟上；如果是扣血，damagePercent 滞后
-		if (this.percent > this.damagePercent) {
-			this.damagePercent = this.percent;
+		// 复制构造
+		public BarStyle(BarStyle other) {
+			this.gradientStart = new Color(other.gradientStart);
+			this.gradientEnd = new Color(other.gradientEnd);
+			this.backgroundColor = new Color(other.backgroundColor);
+			this.borderColor = new Color(other.borderColor);
+			this.damageColor = new Color(other.damageColor);
+			this.borderThickness = other.borderThickness;
+			this.skewDeg = other.skewDeg;
+			this.damageSpeed = other.damageSpeed;
 		}
 	}
+
+	// --- 成员变量 ---
+	private NeonBatch neonRenderer;
+	private BarStyle style;
+
+	private float min, max;
+	private float value;       // 当前逻辑数值
+	private float visualValue; // 当前视觉数值 (用于伤害缓冲)
+
+	private boolean fillFromRight = false; // 是否从右向左填充 (P2模式)
+
+	/**
+	 * @param min 最小值
+	 * @param max 最大值
+	 */
+	public H5SkewBar(float min, float max, BarStyle style) {
+		this.min = min;
+		this.max = max;
+		this.value = max;
+		this.visualValue = max;
+		setStyle(style);
+		setSize(200, 20); // 默认尺寸
+	}
+
+	public void setStyle(BarStyle style) {
+		if (style == null) throw new IllegalArgumentException("Style cannot be null");
+		this.style = style;
+	}
+
+	/** 设置填充方向: true 为从右向左 (适合 P2) */
+	public void setFillFromRight(boolean fromRight) {
+		this.fillFromRight = fromRight;
+	}
+
+	/** 设置当前数值 (自动处理范围限制) */
+	public void setValue(float newValue) {
+		float oldVal = this.value;
+		this.value = MathUtils.clamp(newValue, min, max);
+
+		// 如果是回血，视觉值瞬间跟上；如果是扣血，视觉值滞后(保持原样等待 act 更新)
+		if (this.value > this.visualValue) {
+			this.visualValue = this.value;
+		}
+	}
+
+	/** 设置当前百分比 (0.0 - 1.0) */
+	public void setPercent(float percent) {
+		setValue(min + (max - min) * percent);
+	}
+
+	public float getValue() { return value; }
+	public float getPercent() { return (value - min) / (max - min); }
+	public float getVisualPercent() { return (visualValue - min) / (max - min); }
 
 	@Override
 	public void act(float delta) {
 		super.act(delta);
-		// 简单的插值动画模拟 CSS transition (缓慢扣血效果)
-		if (damagePercent > percent) {
-			damagePercent -= delta * 0.3f; // 速度可调
-			if (damagePercent < percent) damagePercent = percent;
+
+		// 伤害缓冲动画 logic
+		if (visualValue > value) {
+			// 计算每帧扣除量 (总范围 * 速度 * dt)
+			float dropAmount = (max - min) * style.damageSpeed * delta;
+			visualValue -= dropAmount;
+			if (visualValue < value) visualValue = value;
 		}
 	}
 
 	@Override
 	public void draw(Batch batch, float parentAlpha) {
-		// 1. 初始化/获取 NeonBatch 包装器
+		if (style == null) return;
+
+		// 懒加载 Renderer
 		if (neonRenderer == null || neonRenderer.getBatch() != batch) {
-			if (batch instanceof SpriteBatch) {
-				neonRenderer = new NeonBatch((SpriteBatch) batch);
-			} else {
-				return; 
-			}
+			if (batch instanceof SpriteBatch) neonRenderer = new NeonBatch((SpriteBatch) batch);
+			else return;
 		}
 
 		float x = getX();
@@ -68,52 +135,74 @@ public class H5SkewBar extends Actor {
 		float w = getWidth();
 		float h = getHeight();
 
-		// 计算 skew 偏移量: offset = h * tan(angle)
-		// CSS skewX(-20deg) 让顶部向左偏移
-		float skewOffset = h * MathUtils.tanDeg(skewAngleDeg);
+		// 1. 计算倾斜几何
+		// tan(deg) = offset / height
+		float skewOffset = h * MathUtils.tanDeg(style.skewDeg);
 
-		// 2. 绘制边框 (描边)
-		// 顶点顺序: BL, BR, TR, TL
+		// 2. 绘制边框 (Border)
+		// 顶点: BL, BR, TR, TL
 		float[] borderVerts = new float[] {
-			x, y,                      
-			x + w, y,                  
-			x + w + skewOffset, y + h, 
-			x + skewOffset, y + h      
+			x, y,
+			x + w, y,
+			x + w + skewOffset, y + h,
+			x + skewOffset, y + h
 		};
-		// 注意：drawPolygon 在 NeonBatch 中不闭合，我们需要手动指定闭合参数或者传入闭合点
-		// NeonBatch.drawPolygon 内部调用的 pathStroke(..., true, ...) 是闭合的，所以没问题
-		neonRenderer.drawPolygon(borderVerts, 4, borderThickness, borderColor, false);
+		// 使用 NeonBatch 画闭合多边形描边
+		neonRenderer.drawPolygon(borderVerts, 4, style.borderThickness, style.borderColor, false);
 
-		// 为了不让内容盖住边框，稍微收缩一点内容区域 (padding)
-		float pad = borderThickness;
-		// 简单收缩算法 (完美算法需要向量计算，这里近似处理)
-		float contentX = x + pad; 
-		float contentY = y + pad;
-		float contentW = w - pad * 2;
-		float contentH = h - pad * 2;
-		float contentSkew = contentH * MathUtils.tanDeg(skewAngleDeg);
+		// 3. 计算内容区域 (Padding)
+		float pad = style.borderThickness;
+		// 简单内缩，为了严谨视觉，垂直方向内缩 pad，水平方向需要根据斜率修正，这里简化处理
+		float cX = x + pad;
+		float cY = y + pad;
+		float cW = w - pad * 2;
+		float cH = h - pad * 2;
+		float cSkew = cH * MathUtils.tanDeg(style.skewDeg);
 
-		// 3. 绘制背景底色 (半透明黑)
-		neonRenderer.drawSkewGradientRect(contentX, contentY, contentW, contentH, contentSkew, bgColor, bgColor);
+		// 4. 绘制槽底 (Background)
+		neonRenderer.drawSkewGradientRect(cX, cY, cW, cH, cSkew, style.backgroundColor, style.backgroundColor);
 
-		// 4. 绘制白色缓冲层 (Damage Layer)
-		if (damagePercent > 0) {
-			float dmgW = contentW * damagePercent;
-			neonRenderer.drawSkewGradientRect(contentX, contentY, dmgW, contentH, contentSkew, dmgColor, dmgColor);
+		// 5. 准备绘制条形 (通用逻辑)
+		float visualP = getVisualPercent();
+		float actualP = getPercent();
+
+		// 辅助方法：根据 fillFromRight 计算绘制区的 X 坐标
+		// width: 要绘制的条的宽度
+		// return: 该条的左下角起始 X
+		float startX = fillFromRight ? (cX + cW) : cX; // 锚点
+
+		// 6. 绘制白色缓冲层 (Damage Layer)
+		if (visualP > 0) {
+			float dmgWidth = cW * visualP;
+			float drawX = fillFromRight ? (startX - dmgWidth) : startX;
+			neonRenderer.drawSkewGradientRect(drawX, cY, dmgWidth, cH, cSkew, style.damageColor, style.damageColor);
 		}
 
-		// 5. 绘制实际血条 (渐变)
-		if (percent > 0) {
-			float barW = contentW * percent;
-			// 颜色透明度跟随 Actor
-			Color c1 = tmpColor(colorLeft, parentAlpha);
-			Color c2 = tmpColor(colorRight, parentAlpha);
+		// 7. 绘制实际血量 (Health Layer)
+		if (actualP > 0) {
+			float barWidth = cW * actualP;
+			float drawX = fillFromRight ? (startX - barWidth) : startX;
 
-			neonRenderer.drawSkewGradientRect(contentX, contentY, barW, contentH, contentSkew, c1, c2);
+			// 处理渐变方向：如果从右填充，通常希望右边是 StartColor(亮)，左边是 EndColor(暗)
+			// 或者保持左暗右亮？ H5中 P2 是左红右暗红。
+			// 这里我们设定：StartColor 永远是"满血端"的颜色，EndColor 是"空血端"的颜色
+			Color cLeft, cRight;
+			if (fillFromRight) {
+				cLeft = style.gradientEnd;   // 左侧(条尾)是暗色
+				cRight = style.gradientStart;// 右侧(条头)是亮色
+			} else {
+				cLeft = style.gradientStart; // 左侧(条头)是亮色
+				cRight = style.gradientEnd;  // 右侧(条尾)是暗色
+			}
+
+			// 应用透明度
+			Color c1 = tmpColor(cLeft, parentAlpha);
+			Color c2 = tmpColor(cRight, parentAlpha);
+
+			neonRenderer.drawSkewGradientRect(drawX, cY, barWidth, cH, cSkew, c1, c2);
 		}
 	}
 
-	// 辅助：应用 Alpha
 	private Color tmpColor(Color c, float alpha) {
 		Color out = new Color(c);
 		out.a *= alpha;

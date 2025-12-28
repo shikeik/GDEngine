@@ -14,12 +14,12 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 public class HealthBarDemoScreen extends ExampleGScreen {
 
 	private Stage stage;
-	private H5SkewBar p1Bar;
-	private H5SkewBar p2Bar;
+	private H5SkewBar p1Bar; // P1: 左倾, 蓝, 左->右
+	private H5SkewBar p2Bar; // P2: 右倾, 红, 右->左
 
 	@Override
 	public String getIntroduction() {
-		return "H5 渐变血条复刻演示";
+		return "H5 渐变血条复刻 (v2.0 封装版)";
 	}
 
 	@Override
@@ -31,45 +31,52 @@ public class HealthBarDemoScreen extends ExampleGScreen {
 		root.setFillParent(true);
 		stage.addActor(root);
 
-		// --- 1. 创建 P1 血条 (Neon Blue) ---
-		Color c1Left = Color.valueOf("00eaff");
-		Color c1Right = Color.valueOf("0088aa");
-		p1Bar = new H5SkewBar(400, 30, c1Left, c1Right);
+		// --- 配置 P1 样式 (Neon Blue) ---
+		H5SkewBar.BarStyle p1Style = new H5SkewBar.BarStyle();
+		p1Style.gradientStart = Color.valueOf("00eaff"); // 亮蓝
+		p1Style.gradientEnd = Color.valueOf("0088aa");   // 暗蓝
+		p1Style.skewDeg = -20f; // 负值向左歪 (\)
 
-		// --- 2. 创建 P2 血条 (Red, 反向) ---
-		// 注意：H5里 P2 是反向的 (flex-direction: row-reverse)
-		// 在 LibGDX 里我们可以通过负的 width 或者 scaleX(-1) 来实现，
-		// 或者简单的修改 H5SkewBar 支持 skew 方向，这里简单演示正向的
-		Color c2Left = Color.valueOf("ff0055");
-		Color c2Right = Color.valueOf("aa0033");
-		p2Bar = new H5SkewBar(400, 30, c2Left, c2Right);
+		p1Bar = new H5SkewBar(0, 500, p1Style);
+		p1Bar.setSize(400, 30); // 显式设置尺寸
 
-		// 布局
-		root.add(new VisLabel("P1 Player (Neon)")).padBottom(10).row();
-		root.add(p1Bar).padBottom(40).row();
+		// --- 配置 P2 样式 (Shadow Red) ---
+		H5SkewBar.BarStyle p2Style = new H5SkewBar.BarStyle();
+		p2Style.gradientStart = Color.valueOf("ff0055"); // 亮红
+		p2Style.gradientEnd = Color.valueOf("aa0033");   // 暗红
+		p2Style.skewDeg = 20f; // 正值向右歪 (/) 对称
 
-		root.add(new VisLabel("P2 Enemy (Shadow)")).padBottom(10).row();
-		root.add(p2Bar).padBottom(40).row();
+		p2Bar = new H5SkewBar(0, 500, p2Style);
+		p2Bar.setSize(400, 30);
+		p2Bar.setFillFromRight(true); // P2 从右往左扣血
 
-		// 控制器
-		VisSlider slider = new VisSlider(0, 1, 0.01f, false);
-		slider.setValue(1.0f);
+		// --- 布局 ---
+		root.add(new VisLabel("P1 Player (HP: 500)")).padBottom(5).row();
+		root.add(p1Bar).width(400).height(30).padBottom(40).row();
+
+		root.add(new VisLabel("P2 Enemy (HP: 500)")).padBottom(5).row();
+		root.add(p2Bar).width(400).height(30).padBottom(40).row();
+
+		// --- 控制器 ---
+		VisSlider slider = new VisSlider(0, 500, 10, false);
+		slider.setValue(500);
 		slider.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
-					p1Bar.setPercent(slider.getValue());
-					p2Bar.setPercent(slider.getValue());
+					// 直接设置数值
+					p1Bar.setValue(slider.getValue());
+					p2Bar.setValue(slider.getValue());
 				}
 			});
 
-		root.add(new VisLabel("拖动滑块模拟扣血:")).padBottom(5).row();
+		root.add(new VisLabel("拖动控制血量:")).padBottom(5).row();
 		root.add(slider).width(300).padBottom(20).row();
 
-		VisTextButton btnHit = new VisTextButton("模拟受击 (-10%)");
+		VisTextButton btnHit = new VisTextButton("重击 (-150)");
 		btnHit.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
-					slider.setValue(slider.getValue() - 0.1f);
+					slider.setValue(slider.getValue() - 150);
 				}
 			});
 		root.add(btnHit);
