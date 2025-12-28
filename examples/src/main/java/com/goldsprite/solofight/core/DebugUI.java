@@ -136,64 +136,71 @@ public class DebugUI {
 
 		viewport.apply(true);
 
-		// --- 1. 准备文本内容 ---
-		// 构建 Info 字符串
+		// --- 1. 准备数据 (String Building) ---
 		StringBuilder infoBuilder = new StringBuilder();
 		infoBuilder.append(BuildConfig.PROJECT_NAME).append(": V").append(BuildConfig.DEV_VERSION).append("\n");
 		infoBuilder.append("FPS: ").append(Gdx.graphics.getFramesPerSecond()).append("\n");
-		infoBuilder.append("Heap: ").append(Gdx.app.getJavaHeap() / 1024 / 1024).append("MB\n");
-		// 追加自定义监控信息
-		infoBuilder.append(String.join("\n", debugInfos));
+		infoBuilder.append("Heap: ").append(Gdx.app.getJavaHeap() / 1024 / 1024).append("MB");
+		if(!debugInfos.isEmpty()) infoBuilder.append("\n").append(String.join("\n", debugInfos)); // 自定义监控
 		debugInfos.clear();
 
 		String logsStr = "> " + String.join("\n> ", logs);
 		String infoStr = infoBuilder.toString();
 
-		if(!showDebugUI) return;
+		if (!showDebugUI) return;
 
-		// --- 2. 计算尺寸 (Pack) ---
+		// --- 2. 计算尺寸 (Layout Packing) ---
 		infoLayout.setText(font, infoStr);
 		logLayout.setText(font, logsStr);
 
-		// --- 3. 绘制 Info 背景 (右上角) ---
-		float topY = viewport.getWorldHeight() - marginTop;
-		float rightX = viewport.getWorldWidth() - marginHori;
+		// --- 3. 统一计算坐标 (Coordinate Calculation) ---
+		float screenW = viewport.getWorldWidth();
+		// float screenH = viewport.getWorldHeight(); // 暂时用不到高度了，因为都沉底了
 
-		uiBatch.setColor(bgColor);
+		// 左下角 Log 面板位置
+		// font.draw 的 Y 是文字顶端，所以 Y = margin + height
+		float logTextX = marginHori;
+		float logTextY = marginBottom + logLayout.height;
+
+		// [新] 右下角 Info 面板位置
+		float infoTextX = screenW - marginHori - infoLayout.width;
+		float infoTextY = marginBottom + infoLayout.height;
+
+		// --- 4. 开始绘制 (Batching) ---
 		uiBatch.setProjectionMatrix(camera.combined);
 		uiBatch.begin();
 
-		// 矩形位置：X = marginLeft - padding
-		// 矩形Y：因为文字是从 topY 向下画的，所以矩形底边是 topY - height - padding
+		// >> Step A: 绘制所有背景 (减少渲染状态切换)
+		uiBatch.setColor(bgColor);
+
+		// Info 背景
 		uiBatch.draw(bgTexture,
-			rightX - infoLayout.width - padding,
-			topY - infoLayout.height - padding,
+			infoTextX - padding,
+			marginBottom - padding, // 底部固定对齐 margin
 			infoLayout.width + padding * 2,
 			infoLayout.height + padding * 2
 		);
 
-		// --- 4. 绘制 Log 背景 (左下角) ---
-		// 你的 Log 逻辑是：logY 是文字的最顶端，marginBottom 是最底端 (logY = margin + height)
-		// 所以矩形的底边就是 marginBottom
-		float logY = marginBottom + logLayout.height;
-
+		// Log 背景 (仅当有日志时)
 		if (!logs.isEmpty()) {
 			uiBatch.draw(bgTexture,
-				marginHori - padding,
-				marginBottom - padding, // 底部留白
+				logTextX - padding,
+				marginBottom - padding,
 				logLayout.width + padding * 2,
 				logLayout.height + padding * 2
 			);
 		}
 
-		// --- 5. 绘制文字 (覆盖在背景之上) ---
-		uiBatch.setColor(Color.WHITE); // 恢复白色画笔
+		// >> Step B: 绘制所有文字
+		uiBatch.setColor(Color.WHITE); // 恢复画笔颜色
 
+		// Info 文字 (黄色高亮)
 		font.setColor(Color.YELLOW);
-		font.draw(uiBatch, infoStr, viewport.getWorldWidth() - marginHori - infoLayout.width, topY);
+		font.draw(uiBatch, infoStr, infoTextX, infoTextY);
 
+		// Log 文字 (白色)
 		font.setColor(Color.WHITE);
-		font.draw(uiBatch, logsStr, marginHori, logY);
+		font.draw(uiBatch, logsStr, logTextX, logTextY);
 
 		uiBatch.end();
 	}

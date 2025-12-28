@@ -55,10 +55,6 @@ public class GdxLauncher extends Game {int k49;
 		curScreen.getViewport().apply();
 		ScreenManager.getInstance().render();
 
-		//DebugUI.info("curScreen viewport: %.1f, %.1f", curScreen.getViewport().getWorldWidth(), curScreen.getViewport().getWorldHeight());
-		//DebugUI.info("curScreen worldCam: %.1f, %.1f", curScreen.getWorldCamera().viewportWidth, curScreen.getWorldCamera().viewportHeight);
-
-
 		if(Gdx.input.isKeyJustPressed(Input.Keys.K)) {
 			DebugUI.showDebugUI = !DebugUI.showDebugUI;
 		}
