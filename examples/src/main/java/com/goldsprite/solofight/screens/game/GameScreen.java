@@ -209,126 +209,93 @@ public class GameScreen extends ExampleGScreen {
 
 	@Override
 	public void render0(float delta) {
-		// 1. 如果帮助窗口打开，暂停游戏逻辑更新，只画 UI
 		if (helpWindow.isVisible()) {
 			uiStage.act(delta);
 			uiStage.draw();
 			return;
 		}
 
-		// 2. 计算全局时间缩放 (用于结算慢动作)
+		// [关键修复] 在每一帧渲染的最开始，强制重置 Batch 颜色为纯白不透明
+		// 这能防止上一帧 UI 的淡入淡出效果污染这一帧的游戏世界渲染
+		batch.setColor(Color.WHITE);
+
 		float dt = delta * globalTimeScale;
 
 		// --- Logic Updates ---
 		gestureProcessor.update(dt);
 
-		// 大招时缓逻辑
 		boolean ultActive = p1.isUltActive || p2.isUltActive;
 		float ultScale = ultActive ? 0.05f : 1.0f;
 		float finalDt = dt * ultScale;
 
-		// 实体更新 (P1 释放大招时自己不慢)
-		if (p1.isUltActive) {
-			p1.update(dt);
-			p2.update(finalDt);
-		} else if (p2.isUltActive) {
-			p2.update(dt);
-			p1.update(finalDt);
-		} else {
-			p1.update(finalDt);
-			p2.update(finalDt);
-		}
+		if (p1.isUltActive) { p1.update(dt); p2.update(finalDt); }
+		else if (p2.isUltActive) { p2.update(dt); p1.update(finalDt); }
+		else { p1.update(finalDt); p2.update(finalDt); }
 
-		// [新增] 更新特效 (残影/电光也受时缓影响)
-		EffectManager.inst().update(finalDt);
 		ParticleManager.inst().update(finalDt);
-
-		// 粒子更新
-		ParticleManager.inst().update(finalDt);
-
-		// 胜负判定
 		checkGameResult();
 
-		// 震动衰减
 		if ((p1.state.equals("ult_slash") && p1.ultTimer % 4 == 0) || (p1.state.equals("ult_end") && p1.ultTimer == 30)) {
 			shake = p1.state.equals("ult_end") ? 20 : 5;
 		}
 		if (shake > 0) shake *= 0.9f;
 
-		// 更新 UI 数据
 		barP1.setValue(p1.hp); barP1.setPercent(p1.hp/p1.maxHp);
 		barP2.setValue(p2.hp); barP2.setPercent(p2.hp/p2.maxHp);
 
-		// --- Camera Logic ---
 		float camX = getWorldCamera().position.x;
 		float targetX = (p1.x + p2.x) / 2 + 20;
 		float targetZoom = 1.0f;
 
-		// 大招特写
 		if (p1.isUltActive && p1.state.equals("ult_slash")) {
 			targetX = p2.x + p2.w/2;
 			targetZoom = 0.7f;
 		}
 
-		// 相机跟随与缩放
 		getWorldCamera().position.x += (targetX - camX) * 5 * delta;
 		getWorldCamera().zoom += (targetZoom - getWorldCamera().zoom) * 5 * delta;
 
-		// [关键修正] 统一变量名 shakeX, shakeY，并在此处定义
 		float shakeX = (MathUtils.random()-0.5f) * shake;
 		float shakeY = (MathUtils.random()-0.5f) * shake;
 		getWorldCamera().position.add(shakeX, shakeY, 0);
 
-		// 限制相机边界
 		float viewHalfW = getWorldCamera().viewportWidth / 2 * getWorldCamera().zoom;
 		if (getWorldCamera().position.x < -200 + viewHalfW) getWorldCamera().position.x = -200 + viewHalfW;
 		if (getWorldCamera().position.x > 1200 - viewHalfW) getWorldCamera().position.x = 1200 - viewHalfW;
-		// 锁定 Y 轴并应用震动
 		getWorldCamera().position.y = getWorldCamera().viewportHeight/2 * getWorldCamera().zoom + shakeY;
 
 		getWorldCamera().update();
 
 		// --- Draw World ---
+		// 此时 batch.getColor() 已经是 WHITE，世界渲染将正常
 		batch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 
-		// 1. 视差背景
 		parallaxBG.draw(neonBatch, getWorldCamera());
 
-		// 2. 暗场遮罩
 		if (ultActive) {
 			OrthographicCamera cam = getWorldCamera();
-			// 简单粗暴画大一点覆盖全屏
 			neonBatch.drawRect(cam.position.x, cam.position.y, 10000, 10000, 0, 0, new Color(0,0,0,0.8f), true);
 		}
 
-		// 3. 地面与角色
 		neonBatch.drawLine(-500, 0, 1500, 0, 2, Color.GRAY);
 		p1.drawBody(neonBatch);
 		p2.drawBody(neonBatch);
-
-		// [新增] 绘制残影和电光 (在角色层和特效层之间)
-		EffectManager.inst().draw(neonBatch);
-
-		// 4. 粒子 (在角色之上)
 		ParticleManager.inst().draw(neonBatch);
-
-		// 5. 特效 (剑气最上层)
 		p1.drawEffects(neonBatch);
 		p2.drawEffects(neonBatch);
 
 		neonBatch.end();
 
-		// [关键修正] 恢复相机位置 (移除震动偏移，避免下一帧累加偏移导致漂移)
 		getWorldCamera().position.sub(shakeX, shakeY, 0);
 
 		// --- Draw UI ---
+		// UI 绘制可能会修改 Batch Color (例如 fadeOut)，但这只会影响本帧后续，或者下一帧
+		// 但下一帧开头我们会重置，所以安全了
 		batch.setProjectionMatrix(getViewport().getCamera().combined);
 		neonBatch.begin();
-		// UI 分隔线
 		float splitX = getViewport().getWorldWidth() * 0.5f;
 		neonBatch.drawLine(splitX, 0, splitX, getViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
-		// 手势轨迹
 		for (com.goldsprite.solofight.core.input.GestureTrail trail : gestureProcessor.getTrails()) {
 			trail.draw(neonBatch);
 		}

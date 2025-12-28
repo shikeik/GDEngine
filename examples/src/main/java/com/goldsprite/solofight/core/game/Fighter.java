@@ -8,6 +8,7 @@ import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.goldsprite.solofight.core.input.InputContext;
 
 public class Fighter {
+	// ... (现有属性) ...
 	public float x, y, vx, vy;
 	public float w = 40, h = 90;
 	public Color color;
@@ -25,9 +26,10 @@ public class Fighter {
 
 	public float ultTimer = 0;
 	public boolean isUltActive = false;
-
-	// [新增] 技能触发锁 (防止慢动作下重复触发)
 	private boolean skillTriggered = false;
+
+	// [新增] 攻击命中锁 (防止一刀触发几十次判定)
+	private boolean attackHasHit = false;
 
 	private static class SlashLine {
 		float x, y, len, angle, life, maxLife, delay;
@@ -66,9 +68,11 @@ public class Fighter {
 
 	public void update(float delta) {
 		InputContext input = InputContext.inst();
+
 		if (state.startsWith("ult")) { updateUltLogic(delta); return; }
 		if (state.equals("ult_frozen")) return;
 
+		// --- Physics & Control ---
 		if (!isAi) {
 			if (state.equals("idle") || state.equals("run") || state.equals("jump")) {
 				float moveX = input.moveX;
@@ -91,13 +95,18 @@ public class Fighter {
 
 		if (!state.equals("dash") && !state.equals("flash_slash") && vx != 0) { vx *= 0.8f; if(Math.abs(vx)<0.1f) vx=0; }
 
-		if (x < -200) x = -200; if (x > 1200 - w) x = 1200 - w;
+		if (x < -200) x = -200;
+		if (x > 1200 - w) x = 1200 - w;
 
+		// --- [修复] Attack Logic with Lock ---
 		if (state.equals("attack") && animTimer >= 2 && animTimer <= 5) {
-			float atkX = x + w/2 + (40 * dir);
-			if (enemy != null && Math.abs(enemy.x + enemy.w/2 - atkX) < 80 && Math.abs(enemy.y - y) < 50) {
-				mp = Math.min(100, mp + 15);
-				enemy.takeDamage(15, dir);
+			if (!attackHasHit && enemy != null) { // 检查锁
+				float atkX = x + w/2 + (40 * dir);
+				if (Math.abs(enemy.x + enemy.w/2 - atkX) < 80 && Math.abs(enemy.y - y) < 50) {
+					mp = Math.min(100, mp + 15);
+					enemy.takeDamage(15, dir);
+					attackHasHit = true; // 上锁
+				}
 			}
 		}
 
@@ -155,43 +164,43 @@ public class Fighter {
 	public void takeDamage(float dmg, int hitDir) {
 		if (state.equals("dead") || state.equals("flash_slash") || state.equals("ult_frozen")) return;
 		hp -= dmg; if(hp<=0) hp=0;
-		state = "hit"; vx = 8*hitDir; vy = 5; animTimer = 0; hitFlashTimer = 0.2f;
+
+		// 击退逻辑
+		state = "hit";
+		vx = 8*hitDir;
+		vy = 5;
+		animTimer = 0;
+		hitFlashTimer = 0.2f;
+
 		SynthAudio.playTone(100, SynthAudio.WaveType.SAWTOOTH, 0.2f, 0.2f, 50);
+		// 受击粒子 (因为有 attackHasHit 锁，这里只会触发一次)
 		ParticleManager.inst().burst(x + w/2, y + 40, this.color, 5, ParticleManager.Type.BOX, 10f);
 	}
 
-	private void attack() { state = "attack"; animTimer = 0; vx = 0; SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f); }
-	private void dash(int d) { if(d==0)d=dir; this.dir=d; state="dash"; animTimer=0; vx=25*d; SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f); }
+	// [修正] attack 重置锁
+	private void attack() {
+		state = "attack";
+		animTimer = 0;
+		vx = 0;
+		attackHasHit = false; // 重置锁
+		SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f);
+	}
 
+	private void dash(int d) { if(d==0)d=dir; this.dir=d; state="dash"; animTimer=0; vx=25*d; SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f); }
 	private void flashSlash() {
-		state="flash_slash"; animTimer=0; vx=0;
-		skillTriggered = false; // [新增] 重置锁
-		slashStartX=x;
+		state="flash_slash"; animTimer=0; vx=0; skillTriggered=false; slashStartX=x;
 		flashTargetX = (enemy!=null) ? enemy.x + (enemy.x>x?100:-100) : x+(300*dir);
 		SynthAudio.playTone(800, SynthAudio.WaveType.SINE, 0.1f, 0.1f, 50);
 	}
-
 	private void updateSkills(float delta) {
 		if(state.equals("attack") && animTimer>15) state="idle";
-		if(state.equals("dash")) {
-			vy=0;
-			if ((int)animTimer % 3 == 0) EffectManager.inst().addAfterimage(x, y, dir, state, animTimer, color);
-			if(animTimer>10){state="idle"; vx=0;}
-		}
-
+		if(state.equals("dash")) { vy=0; if((int)animTimer%3==0)EffectManager.inst().addAfterimage(x,y,dir,state,animTimer,color); if(animTimer>10){state="idle"; vx=0;} }
 		if(state.equals("flash_slash")) {
 			vy=0;
-			// [修正] 使用 skillTriggered 锁，确保只触发一次
-			if(animTimer >= 6 && !skillTriggered) {
-				skillTriggered = true; // 锁定
-
-				// 生成闪电
-				float startX = slashStartX + w/2;
-				float startY = y + h/2;
-				x = flashTargetX;
-				float endX = x + w/2;
+			if(animTimer>=6 && !skillTriggered) {
+				skillTriggered=true;
+				float startX = slashStartX+w/2; float startY = y+h/2; x=flashTargetX; float endX = x+w/2;
 				EffectManager.inst().addLightning(startX, startY, endX, startY);
-
 				if(enemy!=null && Math.abs(x-enemy.x)<150) enemy.takeDamage(40, dir);
 				SynthAudio.playTone(600, SynthAudio.WaveType.SAWTOOTH, 0.1f, 0.2f, 2000);
 			}
@@ -208,12 +217,9 @@ public class Fighter {
 		drawColor.set(this.color);
 		if (hitFlashTimer > 0 || (state.equals("flash_slash") && animTimer < 6)) drawColor.set(Color.WHITE);
 
-		// [修正] 横向一闪
 		if (state.equals("flash_slash") && animTimer < 6) {
-			float width = (6 - animTimer) * 400;
-			float height = (6 - animTimer) * 2;
+			float width = (6 - animTimer) * 400; float height = (6 - animTimer) * 2;
 			Color c = new Color(1, 1, 1, (6 - animTimer) / 6f);
-			// drawRect 原点是中心，所以直接传入 cx, cy+h/2 即可
 			batch.drawRect(cx, cy + h/2, width, height, 0, 0, c, true);
 			return;
 		}
@@ -227,17 +233,11 @@ public class Fighter {
 			if (sl.delay > 0) continue;
 			float alpha = sl.life / sl.maxLife;
 			Color c = new Color(1, 1, 1, alpha);
-			float halfLen = sl.len / 2;
-			float cos = MathUtils.cosDeg(sl.angle);
-			float sin = MathUtils.sinDeg(sl.angle);
+			float halfLen = sl.len / 2; float cos = MathUtils.cosDeg(sl.angle); float sin = MathUtils.sinDeg(sl.angle);
 			batch.drawLine(sl.x - cos * halfLen, sl.y - sin * halfLen, sl.x + cos * halfLen, sl.y + sin * halfLen, 3f, c);
 		}
 	}
 
-	// [修正] 身体绘制偏移修复
-	// drawRect(x, y, ...) -> x, y 是中心点
-	// 身体: 宽度30，中心在 cx. 高度40(站立)，范围40~80(脚底0). 中心y = 60.
-	// 下蹲: 高度30，范围30~60. 中心y = 45.
 	public static void drawStickmanFigureStatic(NeonBatch batch, float cx, float cy, int dir, String state, float animTimer, Color c) {
 		float lineWidth = 4f;
 		boolean isCrouch = (state.equals("flash_slash") && animTimer < 5) || (state.equals("idle") && InputContext.inst().crouch);
@@ -257,7 +257,6 @@ public class Fighter {
 			d.draw(-10, 40, -20, 0); d.draw(10, 40, 20, 0);
 		}
 
-		// 身体矩形修正：直接传中心点坐标
 		if (isCrouch) batch.drawRect(cx, cy + 45, 30, 30, 0, lineWidth, c, true);
 		else batch.drawRect(cx, cy + 60, 30, 40, 0, lineWidth, c, true);
 
