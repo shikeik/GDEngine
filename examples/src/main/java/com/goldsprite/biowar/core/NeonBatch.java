@@ -14,6 +14,9 @@ public class NeonBatch extends BaseShapeBatch {
 	// 顶点生成缓存 (避免每次 drawCircle 都 new 数组)
 	private float[] pathBuffer = new float[2048];
 
+	public NeonBatch() {
+		this(new SpriteBatch());
+	}
 	public NeonBatch(SpriteBatch batch) {
 		super(batch);
 	}

@@ -5,6 +5,7 @@ import com.goldsprite.gameframeworks.screens.basics.BaseSelectionScreen;
 import com.goldsprite.solofight.screens.tests.HealthBarDemoScreen;
 
 import java.util.Map;
+import com.goldsprite.biowar.core.screens.BloomDebugScreen;
 
 public class TestSelectionScreen extends BaseSelectionScreen {
 
@@ -17,6 +18,7 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 	protected void initScreenMapping(Map<String, Class<? extends IGScreen>> map) {
 		map.put("UI 组件测试", null);
 		map.put("H5 渐变血条演示", HealthBarDemoScreen.class);
+		map.put("Neon Glow (辉光) 测试(原BioWar)", BloomDebugScreen.class);
 
 		map.put("物理/碰撞测试", null);
 		// 以后加别的...

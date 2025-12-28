@@ -14,7 +14,7 @@ import com.goldsprite.gameframeworks.screens.basics.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.gameframeworks.screens.GScreen;
 
-public class GdxLauncher extends Game {int k8;
+public class GdxLauncher extends Game {int k26;
 	private Application.ApplicationType userType;
 	
 	public SpriteBatch batch;
