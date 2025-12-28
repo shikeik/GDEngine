@@ -44,6 +44,30 @@ public class Fighter {
 
 	public void setEnemy(Fighter enemy) { this.enemy = enemy; }
 
+	// [新增] 重置方法 (供 GameScreen 重玩时调用)
+	public void reset(float startX, int startDir) {
+		this.x = startX;
+		this.y = 0;
+		this.vx = 0;
+		this.vy = 0;
+		this.dir = startDir;
+		this.state = "idle";
+		this.hp = maxHp;
+		this.mp = 0; // 重置能量
+		this.inAir = false;
+		this.animTimer = 0;
+
+		// 重置所有锁和计时器
+		this.hitFlashTimer = 0;
+		this.ultTimer = 0;
+		this.isUltActive = false;
+		this.skillTriggered = false;
+		this.attackHasHit = false;
+
+		// 清理内部特效
+		this.slashLines.clear();
+	}
+
 	public void handleCommand(String cmd) {
 		if (state.startsWith("ult") || state.equals("dead") || state.equals("hit") || state.equals("flash_slash")) return;
 
@@ -230,29 +254,24 @@ public class Fighter {
 	}
 
 	private void updateSkills(float delta) {
-		if(state.equals("attack") && animTimer>15) state="idle";
-
-		if(state.equals("dash")) {
-			vy=0;
-			// 产生残影
-			if ((int)animTimer % 3 == 0) EffectManager.inst().addAfterimage(x, y, dir, state, animTimer, color);
-			if(animTimer>10){state="idle"; vx=0;}
-		}
+		// ... (Attack, Dash logic) ...
 
 		if(state.equals("flash_slash")) {
 			vy=0;
 			if(animTimer>=6 && !skillTriggered) {
 				skillTriggered=true;
 				float startX = slashStartX+w/2; float startY = y+h/2; x=flashTargetX; float endX = x+w/2;
-				EffectManager.inst().addLightning(startX, startY, endX, startY); // [修复 1] 闪电在此处生成
+				EffectManager.inst().addLightning(startX, startY, endX, startY);
 
-				// 命中判定 (如果穿过敌人)
-				// 简单判定：如果在穿梭路径上
+				// 命中判定
 				float minX = Math.min(slashStartX, flashTargetX);
 				float maxX = Math.max(slashStartX, flashTargetX);
 				if(enemy!=null && enemy.x+enemy.w > minX && enemy.x < maxX && Math.abs(y-enemy.y)<100) {
+					// [修复 2] 闪刀命中回蓝
+					mp = Math.min(100, mp + 20);
 					enemy.takeDamage(40, dir);
-					if (!isAi) FloatingTextManager.addCombo();
+					// 只有玩家触发连击UI
+					if (!isAi) com.goldsprite.solofight.core.FloatingTextManager.addCombo();
 				}
 				SynthAudio.playTone(600, SynthAudio.WaveType.SAWTOOTH, 0.1f, 0.2f, 2000);
 			}

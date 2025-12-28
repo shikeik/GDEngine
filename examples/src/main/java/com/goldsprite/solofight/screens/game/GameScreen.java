@@ -212,60 +212,45 @@ public class GameScreen extends ExampleGScreen {
 			uiStage.act(delta); uiStage.draw(); return;
 		}
 
-		// [修复透明度 1] 帧首重置
-		batch.setColor(Color.WHITE);
+		// --- Logic Updates ---
+		// ... (保持不变) ...
+		// ... (P1/P2 update, Effect update, Camera update...) ...
+		// 这里省略逻辑代码，只关注渲染部分的修复
+		// --------------------------------------------------
 
 		float dt = delta * globalTimeScale;
 		gestureProcessor.update(dt);
-
 		boolean ultActive = p1.isUltActive || p2.isUltActive;
 		float ultScale = ultActive ? 0.05f : 1.0f;
 		float finalDt = dt * ultScale;
-
-		// [修改] 传递 platforms
 		if (p1.isUltActive) { p1.update(dt, platforms); p2.update(finalDt, platforms); }
 		else if (p2.isUltActive) { p2.update(dt, platforms); p1.update(finalDt, platforms); }
 		else { p1.update(finalDt, platforms); p2.update(finalDt, platforms); }
-
-		EffectManager.inst().update(dt);
-		ParticleManager.inst().update(finalDt);
-		FloatingTextManager.getInstance().update(dt);
-		checkGameResult();
-
-		if ((p1.state.equals("ult_slash") && p1.ultTimer % 4 == 0) || (p1.state.equals("ult_end") && p1.ultTimer == 30)) {
-			shake = p1.state.equals("ult_end") ? 20 : 5;
-		}
-		if (shake > 0) shake *= 0.9f;
-
-		barP1.setValue(p1.hp); barP1.setPercent(p1.hp/p1.maxHp);
-		barP2.setValue(p2.hp); barP2.setPercent(p2.hp/p2.maxHp);
-
-		// Camera logic... (保持不变)
-		float camX = getWorldCamera().position.x;
-		float targetX = (p1.x + p2.x) / 2 + 20;
-		float targetZoom = 1.0f;
+		EffectManager.inst().update(dt); ParticleManager.inst().update(finalDt); FloatingTextManager.getInstance().update(dt); checkGameResult();
+		if ((p1.state.equals("ult_slash") && p1.ultTimer % 4 == 0) || (p1.state.equals("ult_end") && p1.ultTimer == 30)) { shake = p1.state.equals("ult_end") ? 20 : 5; } if (shake > 0) shake *= 0.9f;
+		barP1.setValue(p1.hp); barP1.setPercent(p1.hp/p1.maxHp); barP2.setValue(p2.hp); barP2.setPercent(p2.hp/p2.maxHp);
+		float camX = getWorldCamera().position.x; float targetX = (p1.x + p2.x) / 2 + 20; float targetZoom = 1.0f;
 		if (p1.isUltActive && p1.state.equals("ult_slash")) { targetX = p2.x + p2.w/2; targetZoom = 0.7f; }
-
-		getWorldCamera().position.x += (targetX - camX) * 5 * delta;
-		getWorldCamera().zoom += (targetZoom - getWorldCamera().zoom) * 5 * delta;
-		float shakeX = (MathUtils.random()-0.5f) * shake;
-		float shakeY = (MathUtils.random()-0.5f) * shake;
+		getWorldCamera().position.x += (targetX - camX) * 5 * delta; getWorldCamera().zoom += (targetZoom - getWorldCamera().zoom) * 5 * delta;
+		float shakeX = (MathUtils.random()-0.5f) * shake; float shakeY = (MathUtils.random()-0.5f) * shake;
 		getWorldCamera().position.add(shakeX, shakeY, 0);
 		float viewHalfW = getWorldCamera().viewportWidth / 2 * getWorldCamera().zoom;
 		if (getWorldCamera().position.x < -200 + viewHalfW) getWorldCamera().position.x = -200 + viewHalfW;
 		if (getWorldCamera().position.x > 1200 - viewHalfW) getWorldCamera().position.x = 1200 - viewHalfW;
 		getWorldCamera().position.y = getWorldCamera().viewportHeight/2 * getWorldCamera().zoom + shakeY;
 		getWorldCamera().update();
+		// --------------------------------------------------
 
 		// --- Draw World ---
+		// [修复 3] 强制重置 World 绘制颜色
+		batch.setColor(Color.WHITE);
 		batch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 
 		parallaxBG.draw(neonBatch, getWorldCamera());
 
-		// [新增] 绘制平台
+		// 绘制平台
 		for (Platform p : platforms) {
-			// 样式：实心填充 + 描边 (Neon Style)
 			neonBatch.drawRect(p.x + p.w/2, p.y + p.h/2, p.w, p.h, 0, 0, Color.valueOf("333333"), true);
 			neonBatch.drawRect(p.x + p.w/2, p.y + p.h/2, p.w, p.h, 0, 2f, Color.valueOf("00eaff"), false);
 		}
@@ -280,28 +265,41 @@ public class GameScreen extends ExampleGScreen {
 		EffectManager.inst().draw(neonBatch);
 		ParticleManager.inst().draw(neonBatch);
 		p1.drawEffects(neonBatch); p2.drawEffects(neonBatch);
+
+		// 飘字绘制前也最好重置一下，虽然 FloatingTextManager 内部可能处理了
+		batch.setColor(Color.WHITE);
 		FloatingTextManager.getInstance().renderWorld(batch);
 
 		neonBatch.end();
 		getWorldCamera().position.sub(shakeX, shakeY, 0);
 
 		// --- Draw UI ---
-		// [修复透明度 2] 强制重置 Batch 颜色，防止 FloatingTextManager 或 NeonBatch 污染 UI
+		// [修复 3] 强制重置 UI 绘制颜色 (这解决了 UI 透明/变色问题)
 		batch.setColor(Color.WHITE);
 
 		batch.setProjectionMatrix(getViewport().getCamera().combined);
 		neonBatch.begin();
+
+		// UI 分隔线
 		float splitX = getViewport().getWorldWidth() * 0.5f;
 		neonBatch.drawLine(splitX, 0, splitX, getViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
+
+		// 手势轨迹
 		for (com.goldsprite.solofight.core.input.GestureTrail trail : gestureProcessor.getTrails()) {
 			trail.draw(neonBatch);
 		}
 		neonBatch.end();
 
+		// 连击 UI
+		batch.setColor(Color.WHITE); // 防御性重置
 		batch.begin();
 		FloatingTextManager.getInstance().renderUI(batch, getViewport().getWorldWidth(), getViewport().getWorldHeight());
 		batch.end();
 
+		// Stage UI (History, Joystick, Bars)
+		// Stage 内部通常会管理 Batch，但如果外部 Batch 状态脏了，也可能受影响
+		// 所以我们在 draw 之前把 Batch 状态洗白是最好的习惯
+		batch.setColor(Color.WHITE);
 		uiStage.act(delta);
 		uiStage.draw();
 
