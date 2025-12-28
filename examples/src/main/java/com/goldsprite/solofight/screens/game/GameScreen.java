@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.FloatingTextManager;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.TextDB;
 import com.goldsprite.solofight.core.game.EffectManager;
@@ -84,6 +85,10 @@ public class GameScreen extends ExampleGScreen {
 		p1 = new Fighter(200, Color.CYAN, false);
 		p2 = new Fighter(800, Color.valueOf("ff0055"), true);
 		p1.setEnemy(p2); p2.setEnemy(p1);
+
+		// [修复 4] 初始化飘字
+		FloatingTextManager.init();
+		FloatingTextManager.resetCombo();
 
 		// [新增] 清理粒子
 		ParticleManager.inst().clear();
@@ -222,6 +227,9 @@ public class GameScreen extends ExampleGScreen {
 		float dt = delta * globalTimeScale;
 
 		// --- Logic Updates ---
+		// [修复 4] 更新飘字
+		FloatingTextManager.getInstance().update(dt);
+
 		gestureProcessor.update(dt);
 
 		boolean ultActive = p1.isUltActive || p2.isUltActive;
@@ -281,9 +289,17 @@ public class GameScreen extends ExampleGScreen {
 		neonBatch.drawLine(-500, 0, 1500, 0, 2, Color.GRAY);
 		p1.drawBody(neonBatch);
 		p2.drawBody(neonBatch);
+
 		ParticleManager.inst().draw(neonBatch);
 		p1.drawEffects(neonBatch);
 		p2.drawEffects(neonBatch);
+
+		// [修复 1 & 3] 绘制特效 (残影/电光)
+		// 之前可能漏掉了这个调用，导致残影和闪电没画出来
+		EffectManager.inst().draw(neonBatch);
+
+		// [修复 4] 绘制伤害飘字 (World Space)
+		FloatingTextManager.getInstance().renderWorld(batch); // 飘字用 SpriteBatch 画字体，不是 NeonBatch
 
 		neonBatch.end();
 
@@ -300,6 +316,11 @@ public class GameScreen extends ExampleGScreen {
 			trail.draw(neonBatch);
 		}
 		neonBatch.end();
+
+		// [修复 4] 绘制连击 UI (UI Space)
+		batch.begin(); // FloatingTextManager 需要 batch begin
+		FloatingTextManager.getInstance().renderUI(batch, getViewport().getWorldWidth(), getViewport().getWorldHeight());
+		batch.end();
 
 		uiStage.act(delta);
 		uiStage.draw();

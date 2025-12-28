@@ -70,8 +70,13 @@ public class EffectManager {
 			float alpha = life * 0.5f;
 			Color c = new Color(color);
 			c.a = alpha;
-			// 调用 Fighter 的静态绘制方法 (需要 Fighter 配合修改)
-			Fighter.drawStickmanFigureStatic(batch, x + 20, y, dir, state, animTimer, c);
+
+			// [修复] 传递 false 作为 isCrouch (残影一般不记录下蹲状态细节，或者可以扩展 Afterimage 存储 crouch 状态)
+			// 简单起见，残影的 crouch 状态根据 state 判断即可。
+			// 如果 state 是 flash_slash (前摇)，则是 crouch。
+			// 但残影是在 dash 时生成的。Dash 状态肯定不是 crouch。
+			// 所以传 false 是安全的。
+			Fighter.drawStickmanFigureStatic(batch, x + 20, y, dir, state, animTimer, c, false);
 		}
 	}
 

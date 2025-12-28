@@ -3,12 +3,12 @@ package com.goldsprite.solofight.core.game;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
+import com.goldsprite.solofight.core.FloatingTextManager; // [新增]
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.goldsprite.solofight.core.input.InputContext;
 
 public class Fighter {
-	// ... (现有属性) ...
 	public float x, y, vx, vy;
 	public float w = 40, h = 90;
 	public Color color;
@@ -27,8 +27,6 @@ public class Fighter {
 	public float ultTimer = 0;
 	public boolean isUltActive = false;
 	private boolean skillTriggered = false;
-
-	// [新增] 攻击命中锁 (防止一刀触发几十次判定)
 	private boolean attackHasHit = false;
 
 	private static class SlashLine {
@@ -39,7 +37,7 @@ public class Fighter {
 	public Fighter(float x, Color color, boolean isAi) {
 		this.x = x; this.y = 0; this.color = color; this.isAi = isAi;
 		this.dir = isAi ? -1 : 1;
-		this.mp = 100;
+		this.mp = 0; // [修复 5] 开局无能量
 	}
 
 	public void setEnemy(Fighter enemy) { this.enemy = enemy; }
@@ -68,11 +66,9 @@ public class Fighter {
 
 	public void update(float delta) {
 		InputContext input = InputContext.inst();
-
 		if (state.startsWith("ult")) { updateUltLogic(delta); return; }
 		if (state.equals("ult_frozen")) return;
 
-		// --- Physics & Control ---
 		if (!isAi) {
 			if (state.equals("idle") || state.equals("run") || state.equals("jump")) {
 				float moveX = input.moveX;
@@ -95,17 +91,19 @@ public class Fighter {
 
 		if (!state.equals("dash") && !state.equals("flash_slash") && vx != 0) { vx *= 0.8f; if(Math.abs(vx)<0.1f) vx=0; }
 
-		if (x < -200) x = -200;
-		if (x > 1200 - w) x = 1200 - w;
+		if (x < -200) x = -200; if (x > 1200 - w) x = 1200 - w;
 
-		// --- [修复] Attack Logic with Lock ---
+		// Attack Logic
 		if (state.equals("attack") && animTimer >= 2 && animTimer <= 5) {
-			if (!attackHasHit && enemy != null) { // 检查锁
+			if (!attackHasHit && enemy != null) {
 				float atkX = x + w/2 + (40 * dir);
 				if (Math.abs(enemy.x + enemy.w/2 - atkX) < 80 && Math.abs(enemy.y - y) < 50) {
 					mp = Math.min(100, mp + 15);
 					enemy.takeDamage(15, dir);
-					attackHasHit = true; // 上锁
+					attackHasHit = true;
+
+					// [修复 4] 连击 UI 增加
+					if (!isAi) FloatingTextManager.addCombo();
 				}
 			}
 		}
@@ -115,14 +113,14 @@ public class Fighter {
 		updateSkills(delta);
 	}
 
+	// ... (updateUltLogic 保持不变) ...
 	private void updateUltLogic(float delta) {
 		ultTimer += 1.0f * (60 * delta);
 		if (state.equals("ult_cast")) {
 			if (ultTimer > 40) {
 				state = "ult_slash"; ultTimer = 0;
 				if (enemy != null) {
-					float cx = enemy.x + enemy.w/2;
-					float cy = enemy.y + enemy.h/2;
+					float cx = enemy.x + enemy.w/2; float cy = enemy.y + enemy.h/2;
 					for(int i=0; i<15; i++) {
 						SlashLine sl = new SlashLine();
 						sl.x = cx + MathUtils.random(-100, 100); sl.y = cy + MathUtils.random(-100, 100);
@@ -164,44 +162,56 @@ public class Fighter {
 	public void takeDamage(float dmg, int hitDir) {
 		if (state.equals("dead") || state.equals("flash_slash") || state.equals("ult_frozen")) return;
 		hp -= dmg; if(hp<=0) hp=0;
-
-		// 击退逻辑
-		state = "hit";
-		vx = 8*hitDir;
-		vy = 5;
-		animTimer = 0;
-		hitFlashTimer = 0.2f;
-
+		state = "hit"; vx = 8*hitDir; vy = 5; animTimer = 0; hitFlashTimer = 0.2f;
 		SynthAudio.playTone(100, SynthAudio.WaveType.SAWTOOTH, 0.2f, 0.2f, 50);
-		// 受击粒子 (因为有 attackHasHit 锁，这里只会触发一次)
 		ParticleManager.inst().burst(x + w/2, y + 40, this.color, 5, ParticleManager.Type.BOX, 10f);
+
+		// [修复 4] 伤害飘字 (World Space)
+		FloatingTextManager.addDamage(x + w/2, y + h + 20, (int)dmg, dmg > 30);
 	}
 
-	// [修正] attack 重置锁
 	private void attack() {
-		state = "attack";
-		animTimer = 0;
-		vx = 0;
-		attackHasHit = false; // 重置锁
+		state = "attack"; animTimer = 0;
+		vx = 8 * dir; // [修复 7] 攻击小位移
+		attackHasHit = false;
 		SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f);
 	}
 
 	private void dash(int d) { if(d==0)d=dir; this.dir=d; state="dash"; animTimer=0; vx=25*d; SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f); }
+
 	private void flashSlash() {
 		state="flash_slash"; animTimer=0; vx=0; skillTriggered=false; slashStartX=x;
-		flashTargetX = (enemy!=null) ? enemy.x + (enemy.x>x?100:-100) : x+(300*dir);
+		// [修复 2] 固定距离穿梭，而非追踪敌人身后
+		// H5: this.flashTargetX = this.x + (350 * this.dir);
+		flashTargetX = x + (350 * dir);
 		SynthAudio.playTone(800, SynthAudio.WaveType.SINE, 0.1f, 0.1f, 50);
 	}
+
 	private void updateSkills(float delta) {
 		if(state.equals("attack") && animTimer>15) state="idle";
-		if(state.equals("dash")) { vy=0; if((int)animTimer%3==0)EffectManager.inst().addAfterimage(x,y,dir,state,animTimer,color); if(animTimer>10){state="idle"; vx=0;} }
+
+		if(state.equals("dash")) {
+			vy=0;
+			// 产生残影
+			if ((int)animTimer % 3 == 0) EffectManager.inst().addAfterimage(x, y, dir, state, animTimer, color);
+			if(animTimer>10){state="idle"; vx=0;}
+		}
+
 		if(state.equals("flash_slash")) {
 			vy=0;
 			if(animTimer>=6 && !skillTriggered) {
 				skillTriggered=true;
 				float startX = slashStartX+w/2; float startY = y+h/2; x=flashTargetX; float endX = x+w/2;
-				EffectManager.inst().addLightning(startX, startY, endX, startY);
-				if(enemy!=null && Math.abs(x-enemy.x)<150) enemy.takeDamage(40, dir);
+				EffectManager.inst().addLightning(startX, startY, endX, startY); // [修复 1] 闪电在此处生成
+
+				// 命中判定 (如果穿过敌人)
+				// 简单判定：如果在穿梭路径上
+				float minX = Math.min(slashStartX, flashTargetX);
+				float maxX = Math.max(slashStartX, flashTargetX);
+				if(enemy!=null && enemy.x+enemy.w > minX && enemy.x < maxX && Math.abs(y-enemy.y)<100) {
+					enemy.takeDamage(40, dir);
+					if (!isAi) FloatingTextManager.addCombo();
+				}
 				SynthAudio.playTone(600, SynthAudio.WaveType.SAWTOOTH, 0.1f, 0.2f, 2000);
 			}
 			if(animTimer>25) state="idle";
@@ -224,7 +234,14 @@ public class Fighter {
 			return;
 		}
 
-		drawStickmanFigureStatic(batch, cx, cy, dir, state, animTimer, drawColor);
+		// [修复 6] 下蹲状态判定剥离
+		// AI 的下蹲由 AI 逻辑控制 (目前 AI 只有 attack/run/idle，暂无下蹲，所以 false)
+		// 玩家下蹲由 InputContext 控制
+		boolean isCrouching = false;
+		if (state.equals("flash_slash") && animTimer < 5) isCrouching = true; // 技能强制下蹲
+		else if (!isAi && state.equals("idle") && InputContext.inst().crouch) isCrouching = true; // 玩家输入
+
+		drawStickmanFigureStatic(batch, cx, cy, dir, state, animTimer, drawColor, isCrouching);
 	}
 
 	public void drawEffects(NeonBatch batch) {
@@ -238,10 +255,9 @@ public class Fighter {
 		}
 	}
 
-	public static void drawStickmanFigureStatic(NeonBatch batch, float cx, float cy, int dir, String state, float animTimer, Color c) {
+	// [修改] 增加 isCrouching 参数，不再读取 InputContext
+	public static void drawStickmanFigureStatic(NeonBatch batch, float cx, float cy, int dir, String state, float animTimer, Color c, boolean isCrouch) {
 		float lineWidth = 4f;
-		boolean isCrouch = (state.equals("flash_slash") && animTimer < 5) || (state.equals("idle") && InputContext.inst().crouch);
-
 		LineDrawer d = (lx1, ly1, lx2, ly2) -> {
 			float x1 = cx + (lx1 * dir); float y1 = cy + ly1;
 			float x2 = cx + (lx2 * dir); float y2 = cy + ly2;
