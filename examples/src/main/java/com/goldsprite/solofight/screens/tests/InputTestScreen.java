@@ -1,8 +1,10 @@
 package com.goldsprite.solofight.screens.tests;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.DebugUI;
@@ -28,8 +30,13 @@ public class InputTestScreen extends ExampleGScreen {
 
 	@Override
 	public String getIntroduction() { return ""; }
+
 	@Override
-	protected void drawIntros() {}
+	protected void initViewportAndCamera() {
+		float scl = 1.4f;
+		worldCamera = new OrthographicCamera();
+		uiViewport = new ExtendViewport(960 * scl, 540 * scl);
+	}
 
 	@Override
 	public void show() {
