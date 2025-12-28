@@ -134,25 +134,28 @@ public class SmartCameraController {
 	}
 
 	/**
-	 * 可视化调试 (v3.3: 标签 + 亮色)
+	 * 可视化调试 (v3.4: 支持开关填充背景)
+	 * @param drawFill 是否绘制半透明底色
 	 */
-	public void drawDebug(ShapeRenderer renderer, SpriteBatch batch, BitmapFont font) {
+	public void drawDebug(ShapeRenderer renderer, SpriteBatch batch, BitmapFont font, boolean drawFill) {
 		Gdx.gl.glEnable(GL20.GL_BLEND);
 		Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
 
 		renderer.setProjectionMatrix(camera.combined);
 
-		// 1. 填充层 (Filled) - 透明度很低
-		renderer.begin(ShapeRenderer.ShapeType.Filled);
-		// 理想视口 (Target): 亮青色
-		renderer.setColor(0f, 1f, 1f, 0.1f); 
-		renderer.rect(aspectBounds.x, aspectBounds.y, aspectBounds.width, aspectBounds.height);
-		// 最终相机 (Final): 亮黄色
-		renderer.setColor(1f, 1f, 0f, 0.15f); 
-		renderer.rect(finalBounds.x, finalBounds.y, finalBounds.width, finalBounds.height);
-		renderer.end();
+		// 1. 填充层 (Filled) - 可开关
+		if (drawFill) {
+			renderer.begin(ShapeRenderer.ShapeType.Filled);
+			// 理想视口 (Target): 亮青色
+			renderer.setColor(0f, 1f, 1f, 0.1f); 
+			renderer.rect(aspectBounds.x, aspectBounds.y, aspectBounds.width, aspectBounds.height);
+			// 最终相机 (Final): 亮黄色
+			renderer.setColor(1f, 1f, 0f, 0.15f); 
+			renderer.rect(finalBounds.x, finalBounds.y, finalBounds.width, finalBounds.height);
+			renderer.end();
+		}
 
-		// 2. 线框层 (Line) - 完全不透明，高亮
+		// 2. 线框层 (Line) - 始终绘制，高亮
 		renderer.begin(ShapeRenderer.ShapeType.Line);
 		// 地图边界: 亮橙色
 		renderer.setColor(1f, 0.6f, 0f, 1f);
@@ -174,21 +177,23 @@ public class SmartCameraController {
 		if (batch != null && font != null) {
 			batch.setProjectionMatrix(camera.combined);
 			batch.begin();
-			font.getData().setScale(1.5f * camera.zoom); // 随缩放调整字号
+			// 字体大小随缩放调整，防止缩小地图时字太小
+			float fontScale = 1.5f * camera.zoom;
+			font.getData().setScale(fontScale);
 
-			drawLabel(batch, font, "MAP BOUNDS", mapBounds, Color.ORANGE);
-			drawLabel(batch, font, "RAW", rawBounds, Color.MAGENTA);
-			drawLabel(batch, font, "TARGET ASPECT", aspectBounds, Color.CYAN);
-			drawLabel(batch, font, "FINAL CAM", finalBounds, Color.YELLOW);
+			drawLabel(batch, font, "MAP BOUNDS", mapBounds, Color.ORANGE, fontScale);
+			drawLabel(batch, font, "RAW", rawBounds, Color.MAGENTA, fontScale);
+			drawLabel(batch, font, "TARGET ASPECT", aspectBounds, Color.CYAN, fontScale);
+			drawLabel(batch, font, "FINAL CAM", finalBounds, Color.YELLOW, fontScale);
 
 			batch.end();
 		}
 	}
 
-	private void drawLabel(SpriteBatch batch, BitmapFont font, String text, Rectangle r, Color color) {
+	private void drawLabel(SpriteBatch batch, BitmapFont font, String text, Rectangle r, Color color, float scale) {
 		font.setColor(color);
-		// 绘制在矩形右上角
-		font.draw(batch, text, r.x + r.width - 20 * camera.zoom, r.y + r.height + 20 * camera.zoom);
+		// 绘制在矩形右上角，偏移量随 scale 调整
+		font.draw(batch, text, r.x + r.width - 10 * scale, r.y + r.height + 20 * scale);
 	}
 
 	public OrthographicCamera getCamera() { return camera; }
