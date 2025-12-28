@@ -1,6 +1,7 @@
 package com.goldsprite.solofight.screens.tests;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -10,7 +11,14 @@ import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.DebugUI;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.game.Fighter;
-import com.goldsprite.solofight.core.input.*;
+import com.goldsprite.solofight.core.input.ComboEngine;
+import com.goldsprite.solofight.core.input.CommandHistoryUI;
+import com.goldsprite.solofight.core.input.GestureProcessor;
+import com.goldsprite.solofight.core.input.InputContext;
+import com.goldsprite.solofight.core.input.InputDef;
+import com.goldsprite.solofight.core.input.KeyboardProcessor;
+import com.goldsprite.solofight.core.input.ToastUI;
+import com.goldsprite.solofight.core.input.VirtualJoystick;
 import com.goldsprite.solofight.core.ui.H5SkewBar;
 
 public class CombatScreen extends ExampleGScreen {
@@ -27,8 +35,6 @@ public class CombatScreen extends ExampleGScreen {
 
 	private Fighter p1;
 	private Fighter p2;
-
-	// [新增] 屏幕震动变量
 	private float shake = 0;
 
 	@Override
@@ -43,14 +49,17 @@ public class CombatScreen extends ExampleGScreen {
 
 	@Override
 	protected void initViewportAndCamera() {
-		super.initViewportAndCamera();
+		// [修正] 不调用 super，完全自定义，避免引用共享视口
+
+		// 1. 初始化独立的世界相机 (用于游戏场景物体绘制)
+		worldCamera = new OrthographicCamera();
+
+		// 2. 初始化独立的 UI 视口和相机 (用于 UI 绘制)
+		// 目标尺寸: 960x540 * 1.4 = 1344x756
 		float scl = 1.4f;
-		if (uiViewport instanceof ExtendViewport) {
-			((ExtendViewport) uiViewport).setMinWorldWidth(960 * scl);
-			((ExtendViewport) uiViewport).setMinWorldHeight(540 * scl);
-		} else {
-			uiViewport = new ExtendViewport(960 * scl, 540 * scl, getCamera());
-		}
+
+		// 创建全新的 ExtendViewport 实例
+		uiViewport = new ExtendViewport(960 * scl, 540 * scl);
 	}
 
 	@Override
@@ -96,6 +105,7 @@ public class CombatScreen extends ExampleGScreen {
 
 		gestureProcessor = new GestureProcessor(getViewport());
 
+		// [修正 1] 添加键盘处理器
 		getImp().addProcessor(uiStage);
 		getImp().addProcessor(gestureProcessor);
 		getImp().addProcessor(new KeyboardProcessor());
@@ -105,57 +115,39 @@ public class CombatScreen extends ExampleGScreen {
 	public void render0(float delta) {
 		gestureProcessor.update(delta);
 
-		// [新增] 全局时缓逻辑
-		// 如果有人在放 H5 大招，世界变慢
 		boolean ultActive = p1.isUltActive || p2.isUltActive;
-		// H5: cast=0.05, slash=0.05? Actually H5 sets timeScale globally.
-		// Cast: 0.05. Slash: 0.1? Let's use 0.1 for visual clarity in Java.
-		// 终结技最后一帧恢复 1.0 (由 Fighter 内部控制 isUltActive = false)
 		float timeScale = ultActive ? 0.05f : 1.0f;
 
-		// 玩家 1 如果在放招，他自己不吃时缓；敌人吃时缓
-		// 注意：Fighter.update 内部使用 60*delta。
-		// 我们传入的 delta 应该是被 timeScale 缩放过的。
-
 		if (p1.isUltActive) {
-			p1.update(delta); // 自己正常更新 (或者按逻辑慢动作? H5里Ult也是按帧走的)
-			// H5: ult update runs every frame, logic depends on internal timer increment.
-			// In Fighter.updateUltLogic: ultTimer += 1.0f * (60 * delta).
-			// If we pass real delta, ult logic runs realtime.
-			p2.update(delta * timeScale); // 敌人变慢
+			p1.update(delta); // P1 Realtime
+			p2.update(delta * timeScale); // P2 Slow
 		} else if (p2.isUltActive) {
 			p2.update(delta);
 			p1.update(delta * timeScale);
 		} else {
-			p1.update(delta);
-			p2.update(delta);
+			p1.update(delta); p2.update(delta);
 		}
 
-		// [新增] 大招震动检测 (Fighter 状态检测)
 		if ((p1.state.equals("ult_slash") && p1.ultTimer % 4 == 0) || (p1.state.equals("ult_end") && p1.ultTimer == 30)) {
 			shake = p1.state.equals("ult_end") ? 20 : 5;
 		}
-		// Apply Shake decay
 		if (shake > 0) shake *= 0.9f;
 
-		barP1.setValue(p1.hp); barP1.setPercent(p1.hp/p1.maxHp); // setValue update
+		barP1.setValue(p1.hp); barP1.setPercent(p1.hp/p1.maxHp);
 		barP2.setValue(p2.hp); barP2.setPercent(p2.hp/p2.maxHp);
 
 		// Camera logic
+		float midX = (p1.x + p2.x) / 2 + 20;
 		float camX = getWorldCamera().position.x;
-		float camY = getWorldCamera().position.y;
-		float targetX = (p1.x + p2.x) / 2 + 20;
-
-		// [新增] 大招特写
+		float targetX = midX;
 		float targetZoom = 1.0f;
-		if (p1.isUltActive) {
-			// 聚焦受害者
-			if (p1.state.equals("ult_slash")) {
-				targetX = p2.x + p2.w/2;
-				targetZoom = 0.7f;
-			}
+
+		if (p1.isUltActive && p1.state.equals("ult_slash")) {
+			targetX = p2.x + p2.w/2;
+			targetZoom = 0.7f;
 		}
 
+		// Camera Follow
 		getWorldCamera().position.x += (targetX - camX) * 5 * delta;
 		getWorldCamera().zoom += (targetZoom - getWorldCamera().zoom) * 5 * delta;
 
@@ -164,13 +156,16 @@ public class CombatScreen extends ExampleGScreen {
 		float shakeY = (MathUtils.random()-0.5f) * shake;
 		getWorldCamera().position.add(shakeX, shakeY, 0);
 
-		// Limit
+		// [修正 2] Camera Limit (正确计算 View Half Width)
 		float viewHalfW = getWorldCamera().viewportWidth / 2 * getWorldCamera().zoom;
-		if (getWorldCamera().position.x < viewHalfW) getWorldCamera().position.x = viewHalfW;
-		if (getWorldCamera().position.x > 1000 - viewHalfW) getWorldCamera().position.x = 1000 - viewHalfW;
-		// Reset Y (shake might displace it permanently if not careful, but here we add/sub per frame? No, we need base pos)
-		// Simplification: hard set Y
-		getWorldCamera().position.y = getWorldCamera().viewportHeight/2 * getWorldCamera().zoom + shakeY;
+		// 扩展地图范围到 -500 ~ 1500 (2000宽)，防止相机在 1.4x 缩放下卡死
+		float mapMinX = -500;
+		float mapMaxX = 1500;
+
+		if (getWorldCamera().position.x < mapMinX + viewHalfW) getWorldCamera().position.x = mapMinX + viewHalfW;
+		if (getWorldCamera().position.x > mapMaxX - viewHalfW) getWorldCamera().position.x = mapMaxX - viewHalfW;
+		// 锁定 Y 轴
+		getWorldCamera().position.y = getWorldCamera().viewportHeight / 2 * getWorldCamera().zoom + shakeY;
 
 		getWorldCamera().update();
 
@@ -178,18 +173,41 @@ public class CombatScreen extends ExampleGScreen {
 		batch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 
-		// [新增] 暗场遮罩 (Dark Overlay)
+		// [修正] 暗场遮罩
+		// 原因：NeonBatch.drawRect 的 x,y 是矩形中心点。
+		// 之前错误地减去了 overlayW/H，导致中心点偏移到了左下角。
+		// 现在直接使用相机位置作为中心，并加上一定的容错尺寸 (overlayW * 2) 确保覆盖。
 		if (ultActive) {
-			// 画一个巨大的黑色半透明矩形覆盖全图
-			neonBatch.drawRect(-1000, -1000, 3000, 3000, 0, 0, new Color(0,0,0,0.8f), true);
+			OrthographicCamera cam = getWorldCamera();
+			float overlayW = cam.viewportWidth * cam.zoom;
+			float overlayH = cam.viewportHeight * cam.zoom;
+
+			// 修正：直接画在相机中心 (cam.position.x, cam.position.y)
+			neonBatch.drawRect(
+				cam.position.x,      // 中心 X
+				cam.position.y,      // 中心 Y
+				overlayW * 2,        // 宽 (2倍屏幕宽，防止震动漏边)
+				overlayH * 2,        // 高
+				0,
+				0,
+				new Color(0, 0, 0, 0.8f),
+				true
+			);
 		}
 
 		neonBatch.drawLine(-500, 0, 1500, 0, 2, Color.GRAY);
-		p1.draw(neonBatch);
-		p2.draw(neonBatch);
+
+		// [修正 3] 渲染层级：先画身体
+		p1.drawBody(neonBatch);
+		p2.drawBody(neonBatch);
+
+		// [修正 3] 渲染层级：后画特效 (剑气)，确保剑气覆盖在身体之上
+		p1.drawEffects(neonBatch);
+		p2.drawEffects(neonBatch);
+
 		neonBatch.end();
 
-		// Restore Camera from Shake (Optional, next frame overwrites X/Y anyway)
+		// Restore Camera from Shake
 		getWorldCamera().position.sub(shakeX, shakeY, 0);
 
 		// Draw UI Trails
