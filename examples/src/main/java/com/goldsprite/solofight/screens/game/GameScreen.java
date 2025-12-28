@@ -220,8 +220,7 @@ public class GameScreen extends ExampleGScreen {
 			return;
 		}
 
-		// [关键修复] 在每一帧渲染的最开始，强制重置 Batch 颜色为纯白不透明
-		// 这能防止上一帧 UI 的淡入淡出效果污染这一帧的游戏世界渲染
+		// 重置 Batch 颜色，防止 UI 透明度污染
 		batch.setColor(Color.WHITE);
 
 		float dt = delta * globalTimeScale;
@@ -240,7 +239,14 @@ public class GameScreen extends ExampleGScreen {
 		else if (p2.isUltActive) { p2.update(dt); p1.update(finalDt); }
 		else { p1.update(finalDt); p2.update(finalDt); }
 
-		ParticleManager.inst().update(finalDt);
+		// [关键修复] 更新特效管理器
+		// 使用 dt (受全局时缓影响，但不受大招 0.05x 极慢速影响，避免闪电定格太久)
+		// 如果你希望闪电在大招期间也变慢，可以改传 finalDt
+		EffectManager.inst().update(finalDt);
+
+		ParticleManager.inst().update(finalDt); // 粒子通常随时间流逝变慢，用 finalDt 较好
+		FloatingTextManager.getInstance().update(finalDt); // 你修改过的逻辑
+
 		checkGameResult();
 
 		if ((p1.state.equals("ult_slash") && p1.ultTimer % 4 == 0) || (p1.state.equals("ult_end") && p1.ultTimer == 30)) {
@@ -275,7 +281,6 @@ public class GameScreen extends ExampleGScreen {
 		getWorldCamera().update();
 
 		// --- Draw World ---
-		// 此时 batch.getColor() 已经是 WHITE，世界渲染将正常
 		batch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 
@@ -290,24 +295,24 @@ public class GameScreen extends ExampleGScreen {
 		p1.drawBody(neonBatch);
 		p2.drawBody(neonBatch);
 
+		// 绘制特效 (残影/电光)
+		EffectManager.inst().draw(neonBatch);
+
 		ParticleManager.inst().draw(neonBatch);
 		p1.drawEffects(neonBatch);
 		p2.drawEffects(neonBatch);
 
-		// [修复 1 & 3] 绘制特效 (残影/电光)
-		// 之前可能漏掉了这个调用，导致残影和闪电没画出来
-		EffectManager.inst().draw(neonBatch);
-
-		// [修复 4] 绘制伤害飘字 (World Space)
-		FloatingTextManager.getInstance().renderWorld(batch); // 飘字用 SpriteBatch 画字体，不是 NeonBatch
+		// 绘制世界空间飘字
+		FloatingTextManager.getInstance().renderWorld(batch);
 
 		neonBatch.end();
 
 		getWorldCamera().position.sub(shakeX, shakeY, 0);
 
 		// --- Draw UI ---
-		// UI 绘制可能会修改 Batch Color (例如 fadeOut)，但这只会影响本帧后续，或者下一帧
-		// 但下一帧开头我们会重置，所以安全了
+
+		// 重置 Batch 颜色，防止 UI 透明度污染
+		batch.setColor(Color.WHITE);
 		batch.setProjectionMatrix(getViewport().getCamera().combined);
 		neonBatch.begin();
 		float splitX = getViewport().getWorldWidth() * 0.5f;
@@ -317,8 +322,8 @@ public class GameScreen extends ExampleGScreen {
 		}
 		neonBatch.end();
 
-		// [修复 4] 绘制连击 UI (UI Space)
-		batch.begin(); // FloatingTextManager 需要 batch begin
+		// 绘制 UI 空间连击
+		batch.begin();
 		FloatingTextManager.getInstance().renderUI(batch, getViewport().getWorldWidth(), getViewport().getWorldHeight());
 		batch.end();
 
