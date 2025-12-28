@@ -9,7 +9,11 @@ import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 
 /**
- * 通用矢量图形绘制基类 (v2.0 抗锯齿优化版)
+ * 通用矢量图形绘制基类
+ * 职责：
+ * 1. 管理 1x1 白点纹理
+ * 2. 提供通用的描边 (Stroke) 和 填充 (Fill) 算法
+ * 3. 所有的几何计算（Miter Join）都在这里完成
  */
 public class BaseShapeBatch {
 	protected final SpriteBatch batch;
@@ -27,40 +31,36 @@ public class BaseShapeBatch {
 
 	public BaseShapeBatch(SpriteBatch batch) {
 		this.batch = batch;
-
-		// [优化] 生成 3x3 纹理，中心白点，边缘透明，模拟软边缘
-		Pixmap pixmap = new Pixmap(3, 3, Pixmap.Format.RGBA8888);
-		pixmap.setColor(0, 0, 0, 0);
-		pixmap.fill(); // 全透明底
+		// 生成 1x1 纯白纹理
+		Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
 		pixmap.setColor(Color.WHITE);
-		pixmap.drawPixel(1, 1); // 中心点纯白
-
+		pixmap.fill();
 		Texture texture = new Texture(pixmap);
-		// 关键：开启线性过滤，让中心白点向周围透明像素平滑过渡
-		texture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
-
+		texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
 		blankRegion = new TextureRegion(texture);
-		// 取中心点 UV (1.5 / 3.0 = 0.5)
-		whiteU = 0.5f;
-		whiteV = 0.5f;
-
+		whiteU = blankRegion.getU();
+		whiteV = blankRegion.getV();
 		pixmap.dispose();
 	}
+
 
 	// [新增] 暴露白纹理供高级自定义绘制使用
 	public TextureRegion getBlankRegion() {
 		return blankRegion;
 	}
 
+
 	public SpriteBatch getBatch() { return batch; }
 
-	// --- Batch 代理 ---
-	public void setProjectionMatrix(Matrix4 projection) { batch.setProjectionMatrix(projection); }
+	// --- Batch 代理方法 ---
+	public void setProjectionMatrix(Matrix4 projection) {
+		batch.setProjectionMatrix(projection);
+	}
 	public void begin() { batch.begin(); }
 	public void end() { batch.end(); }
 	public void setColor(Color color) { batch.setColor(color); }
 
-	// --- 绘图核心 (保持原逻辑不变，仅依赖上面的 Texture 优化) ---
+	// --- 核心算法 1: 填充 (Fill) ---
 
 	/**
 	 * 填充凸多边形 (Convex Polygon) 或星形
@@ -115,6 +115,7 @@ public class BaseShapeBatch {
 	 */
 	protected void pathStroke(float[] vertices, int count, float width, boolean isClosed, Color color) {
 		if (count < 2) return;
+
 		float halfWidth = width * 0.5f;
 		float colorBits = color.toFloatBits();
 
@@ -261,3 +262,4 @@ public class BaseShapeBatch {
 		batch.draw(blankRegion.getTexture(), vArr, 0, 20);
 	}
 }
+
