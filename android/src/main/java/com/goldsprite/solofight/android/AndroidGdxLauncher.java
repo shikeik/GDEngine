@@ -60,7 +60,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 
 		// Root
 		rootLayout = new RelativeLayout(this);
-		rootLayout.setBackgroundColor(Color.BLACK);
+//		rootLayout.setBackgroundColor(Color.BLACK);
 
 		// Game View
 		FrameLayout gameContainer = new FrameLayout(this);
@@ -96,7 +96,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		keyboardContainer = new LinearLayout(this);
 		keyboardContainer.setOrientation(LinearLayout.VERTICAL);
 		// [回归] 不设背景色，或者设完全透明，避免之前的半透明黑底如果不喜欢
-		keyboardContainer.setBackgroundColor(0x88000000);
+//		keyboardContainer.setBackgroundColor(0x88000000);
 		keyboardContainer.setVisibility(View.GONE);
 
 		RelativeLayout.LayoutParams kbParams = new RelativeLayout.LayoutParams(
@@ -270,10 +270,8 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
 			if (isKeyboardVisible) {
 				setKeyboardVisibility(false);
-				return true;
 			}
-			// 如果键盘没开，super.onKeyDown 会把 Back 传给 LibGDX
-			// LibGDX 的 InputProcessor (ScreenManager) 会捕获它并执行 popScreen
+			return true;
 		}
 		return super.onKeyDown(keyCode, event);
 	}
