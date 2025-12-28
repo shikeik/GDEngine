@@ -13,8 +13,9 @@ import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.gameframeworks.screens.GScreen;
+import com.goldsprite.biowar.core.audio.SynthAudio;
 
-public class GdxLauncher extends Game {int k26;
+public class GdxLauncher extends Game {int k27;
 	private Application.ApplicationType userType;
 	
 	public SpriteBatch batch;
@@ -23,10 +24,12 @@ public class GdxLauncher extends Game {int k26;
 	@Override
 	public void create() {
 		userType = Gdx.app.getType();
-		// 2. 初始化 DebugUI
-		debugUI = DebugUI.getInstance();
-
 		batch = new SpriteBatch();
+		
+		// 初始化 DebugUI
+		debugUI = DebugUI.getInstance();
+		
+		SynthAudio.init(); // [新增] 启动音频线程
 
 		// 1. 初始化 VisUI (注入中文字体)
 		VisUIHelper.loadWithChineseFont();
@@ -74,5 +77,6 @@ public class GdxLauncher extends Game {int k26;
 		if (debugUI != null) debugUI.dispose();
 		batch.dispose();
 		VisUI.dispose();
+		SynthAudio.dispose(); // [新增] 关闭线程和设备
 	}
 }

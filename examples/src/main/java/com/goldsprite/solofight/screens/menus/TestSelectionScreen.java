@@ -6,6 +6,7 @@ import com.goldsprite.solofight.screens.tests.HealthBarDemoScreen;
 
 import java.util.Map;
 import com.goldsprite.biowar.core.screens.BloomDebugScreen;
+import com.goldsprite.solofight.screens.tests.AudioTestScreen;
 
 public class TestSelectionScreen extends BaseSelectionScreen {
 
@@ -19,6 +20,7 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 		map.put("UI 组件测试", null);
 		map.put("H5 渐变血条演示", HealthBarDemoScreen.class);
 		map.put("Neon Glow (辉光) 测试(原BioWar)", BloomDebugScreen.class);
+		map.put("Synth Audio (合成音效) 测试", AudioTestScreen.class);
 
 		map.put("物理/碰撞测试", null);
 		// 以后加别的...
