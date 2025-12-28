@@ -8,6 +8,7 @@ import com.goldsprite.biowar.core.audio.SynthAudio;
 import com.goldsprite.biowar.core.audio.SynthAudio.WaveType;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.badlogic.gdx.graphics.Color;
 
 public class AudioTestScreen extends ExampleGScreen {
 
@@ -31,7 +32,30 @@ public class AudioTestScreen extends ExampleGScreen {
         stage.addActor(root);
 
         // --- 按钮布局 ---
+
         root.defaults().width(250).height(60).pad(10);
+		
+		// 在最上方添加 BGM 开关
+        final VisTextButton btnBgm = new VisTextButton("BGM: OFF");
+        btnBgm.setColor(Color.RED);
+
+        btnBgm.addListener(new ChangeListener() {
+				boolean isPlaying = false;
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					isPlaying = !isPlaying;
+					if (isPlaying) {
+						SynthAudio.playBGM();
+						btnBgm.setText("BGM: ON (Cyberpunk)");
+						btnBgm.setColor(Color.GREEN);
+					} else {
+						SynthAudio.stopBGM();
+						btnBgm.setText("BGM: OFF");
+						btnBgm.setColor(Color.RED);
+					}
+				}
+			});
+        root.add(btnBgm).width(300).padBottom(20).row();
 
         // 1. 攻击 (Swing)
         VisTextButton btnSwing = new VisTextButton("Attack (Noise)");
