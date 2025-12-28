@@ -14,8 +14,6 @@ dependencies {
 	api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
 	api "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
 	api "com.kotcrab.vis:vis-ui:$visUIVersion"
-
-	api "com.faendir.rhino:rhino-android:1.6.0"
 }
 
 publishing {
