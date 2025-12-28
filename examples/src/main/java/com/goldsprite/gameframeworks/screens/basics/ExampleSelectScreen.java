@@ -2,6 +2,7 @@ package com.goldsprite.gameframeworks.screens.basics;
 
 import com.goldsprite.gameframeworks.screens.IGScreen;
 import java.util.Map;
+import com.goldsprite.solofight.screens.menus.TestSelectionScreen;
 
 // [修改] 继承 BaseSelectionScreen
 public class ExampleSelectScreen extends BaseSelectionScreen {
@@ -15,7 +16,8 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	protected void initScreenMapping(Map<String, Class<? extends IGScreen>> map) {
 		map.put("场景列表(创建时间逆序)\n", null);
 		
-		map.put("测试场景", null);
+		// [修改] 关联测试子菜单
+		map.put("测试场景", TestSelectionScreen.class);
 
 		map.put("展示场景", null);
 
