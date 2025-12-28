@@ -63,6 +63,17 @@ public class CameraTestScreen extends ExampleGScreen {
 	}
 
 	@Override
+	public void show() {
+		super.show();
+		getScreenManager().setOrientation(ScreenManager.Orientation.LANDSCAPE);
+	}
+	@Override
+	public void hide() {
+		super.hide();
+		getScreenManager().setOrientation(ScreenManager.Orientation.PORTRAIT);
+	}
+
+	@Override
 	public void create() {
 		batch = new SpriteBatch();
 		shapeRenderer = new ShapeRenderer();
@@ -79,17 +90,6 @@ public class CameraTestScreen extends ExampleGScreen {
 
 		initUI();
 		initInput();
-	}
-
-	@Override
-	public void show() {
-		super.show();
-		getScreenManager().setOrientation(ScreenManager.Orientation.LANDSCAPE);
-	}
-	@Override
-	public void hide() {
-		super.hide();
-		getScreenManager().setOrientation(ScreenManager.Orientation.PORTRAIT);
 	}
 
 	private void initInput() {

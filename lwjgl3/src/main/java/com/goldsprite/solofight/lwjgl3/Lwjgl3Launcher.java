@@ -1,44 +1,89 @@
 package com.goldsprite.solofight.lwjgl3;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-
+import com.goldsprite.gameframeworks.PlatformImpl;
+import com.goldsprite.gameframeworks.screens.ScreenManager;
+import com.goldsprite.solofight.BuildConfig;
 import com.goldsprite.solofight.GdxLauncher;
 
 /**
  * Launches the desktop (LWJGL3) application.
  */
 public class Lwjgl3Launcher {
-	public static final float WORLD_WIDTH = 960+200, WORLD_HEIGHT = 540;
+	// 定义基础尺寸
+	public static final int WORLD_WIDTH = 540;
+	public static final int WORLD_HEIGHT = 960;
 
 	public static void main(String[] args) {
 		if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
 		createApplication();
 	}
-
 	private static Lwjgl3Application createApplication() {
+		// --- 1. 实现屏幕切换回调 (PC版就是改窗口大小) ---
+		ScreenManager.orientationChanger = (orientation) -> {
+			int w = Gdx.graphics.getWidth();
+			int h = Gdx.graphics.getHeight();
+
+			// 只有当当前状态不符合目标时才切换
+			if (orientation == ScreenManager.Orientation.LANDSCAPE) {
+				if (w < h) Gdx.graphics.setWindowedMode(h, w); // 翻转
+			} else {
+				if (w > h) Gdx.graphics.setWindowedMode(h, w); // 翻转
+			}
+		};
+		// ---------------------------------------------
 		return new Lwjgl3Application(new GdxLauncher(), getDefaultConfiguration());
 	}
 
 	private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
 		Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-		configuration.setTitle("LibGDXBar-PVZLikeGame");
-		//// Vsync limits the frames per second to what your hardware can display, and helps eliminate
-		//// screen tearing. This setting doesn't always work on Linux, so the line after is a safeguard.
-		// 不使用垂直同步以避免窗口模式卡顿
-		configuration.useVsync(false);
-		//// Limits FPS to the refresh rate of the currently active monitor, plus 1 to try to match fractional
-		//// refresh rates. The Vsync setting above should limit the actual FPS to match the monitor.
-		// 如果不限制帧率注释即可
-		 configuration.setForegroundFPS(120);
-		// configuration.setForegroundFPS(Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate + 1);
-		//// If you remove the above line and set Vsync to false, you can get unlimited FPS, which can be
-		//// useful for testing performance, but can also be very stressful to some hardware.
-		//// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
-//		configuration.setWindowedMode(192*6, 108*6);
+
+		configuration.setTitle("BioWar - V" + BuildConfig.DEV_VERSION);
+
+		Graphics.DisplayMode primaryMode = Lwjgl3ApplicationConfiguration.getDisplayMode();
 		configuration.setWindowedMode((int) WORLD_WIDTH, (int) WORLD_HEIGHT);
+		configuration.setDecorated(true);
+		configuration.setResizable(true);
+
+		//实现退出接口
+		ScreenManager.exitGame.add(() -> {
+			Gdx.app.exit();
+		});
+
+		// 实现全屏接口
+		PlatformImpl.fullScreenEvent = (fullScreen) -> {
+			if (fullScreen) {
+				// 切换到全屏
+				Gdx.graphics.setFullscreenMode(primaryMode);
+				configuration.setDecorated(false); // 全屏模式下通常禁用窗口装饰
+				configuration.setResizable(false); // 全屏模式下通常不允许调整大小
+			} else {
+				// 切换到窗口模式
+				Gdx.graphics.setWindowedMode((int) WORLD_WIDTH, (int) WORLD_HEIGHT);
+				configuration.setDecorated(true);
+				configuration.setResizable(true);
+			}
+		};
+
+		// 可选：设置全屏模式下的其他参数
+		configuration.setInitialVisible(true);
+		configuration.setAutoIconify(true); // 当失去焦点时最小化
+
+		// 全屏模式下建议启用垂直同步以减少屏幕撕裂
+		configuration.useVsync(false);
+		// 全屏模式下使用显示器刷新率
+//		configuration.setForegroundFPS(primaryMode.refreshRate);
+		configuration.setForegroundFPS(240);
+
+		//// 如果你想要窗口最大化模式：
+		// configuration.setMaximized(true);
+
 		//// You can change these files; they are in lwjgl3/src/main/resources/ .
 		configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
+
 		return configuration;
 	}
 }

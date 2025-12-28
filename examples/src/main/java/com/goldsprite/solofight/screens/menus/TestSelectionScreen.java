@@ -25,7 +25,7 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 		map.put("Synth Audio (合成音效) 测试", AudioTestScreen.class);
 		map.put("SmartCamera (智能相机) 测试", CameraTestScreen.class);
 		map.put("Floating Text (飘字) 测试", TextTestScreen.class);
-		
+
 		map.put("物理/碰撞测试", null);
 		// 以后加别的...
 	}

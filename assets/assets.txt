@@ -1,6 +1,8 @@
 fonts/HYSongYunLangHeiW-1.ttf
+fonts/NotoSansMonoCJKsc-Regular.otf
 fonts/ark-pixel-10px-monospaced-zh_cn.ttf
 libgdx.png
+music/gplane2.ogg
 sounds/explosion.wav
 sounds/explosion_0.wav
 sounds/explosion_1.wav

@@ -1,40 +1,31 @@
+import org.gradle.internal.jvm.Jvm
+
 buildscript {
 	repositories {
 		gradlePluginPortal()
 	}
 	dependencies {
-		classpath "io.github.fourlastor:construo:1.5.1"
-
 		if (enableGraalNative == 'true') {
 			classpath "org.graalvm.buildtools.native:org.graalvm.buildtools.native.gradle.plugin:0.9.28"
 		}
 	}
 }
+
 plugins {
 	id "application"
 }
-apply plugin: 'io.github.fourlastor.construo'
-
-
-import io.github.fourlastor.construo.Target
 
 sourceSets.main.resources.srcDirs += [rootProject.file('/assets').path]
 mainClassName = 'com.goldsprite.solofight.lwjgl3.Lwjgl3Launcher'
 application.setMainClass(mainClassName)
 eclipse.project.name = appName + '-lwjgl3'
-java.sourceCompatibility = 8
-java.targetCompatibility = 8
-if (JavaVersion.current().isJava9Compatible()) {
-	compileJava.options.release.set(8)
-}
 
 dependencies {
 	implementation project(':examples')
 
 	implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
-
 	implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-	runtimeOnly "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
+	implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
 
 	if (enableGraalNative == 'true') {
 		implementation "io.github.berstanio:gdx-svmhelper-backend-lwjgl3:$graalHelperVersion"
@@ -53,7 +44,8 @@ run {
 
 jar {
 // sets the name of the .jar file this produces to the name of the game or app, with the version after.
-	archiveFileName.set("${appName}-${projectVersion}.jar")
+	archiveFileName.set("${rootProject.name}_V${projectVersion}.jar")
+	destinationDirectory.set(file("${rootProject.projectDir}/outputs"))
 // the duplicatesStrategy matters starting in Gradle 7.0; this setting works.
 	duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
 	dependsOn configurations.runtimeClasspath
@@ -70,44 +62,6 @@ jar {
 // this last step may help on some OSes that need extra instruction to make runnable JARs.
 	doLast {
 		file(archiveFile).setExecutable(true, false)
-	}
-}
-
-construo {
-	// name of the executable
-	name.set(appName)
-	// human-readable name, used for example in the `.app` name for macOS
-	humanName.set(appName)
-	// Optional, defaults to project version property
-	version.set("$projectVersion")
-
-	targets.configure {
-		create("linuxX64", Target.Linux) {
-			architecture.set(Target.Architecture.X86_64)
-			jdkUrl.set("https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_linux_hotspot_17.0.12_7.tar.gz")
-		}
-		create("macM1", Target.MacOs) {
-			architecture.set(Target.Architecture.AARCH64)
-			jdkUrl.set("https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.12_7.tar.gz")
-			// macOS needs an identifier
-			identifier.set("com.goldsprite.solofight." + appName)
-			// Optional: icon for macOS
-			macIcon.set(project.file("icons/logo.icns"))
-		}
-		create("macX64", Target.MacOs) {
-			architecture.set(Target.Architecture.X86_64)
-			jdkUrl.set("https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_mac_hotspot_17.0.12_7.tar.gz")
-			// macOS needs an identifier
-			identifier.set("com.goldsprite.solofight." + appName)
-			// Optional: icon for macOS
-			macIcon.set(project.file("icons/logo.icns"))
-		}
-		create("winX64", Target.Windows) {
-			architecture.set(Target.Architecture.X86_64)
-			jdkUrl.set("https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.12%2B7/OpenJDK17U-jdk_x64_windows_hotspot_17.0.12_7.zip")
-			// Uncomment the next line to show a console when the game runs, to print messages.
-			//useConsole.set(true)
-		}
 	}
 }
 
@@ -136,3 +90,64 @@ startScripts.classpath = project.tasks.jar.outputs.files
 if (enableGraalNative == 'true') {
 	apply from: file("nativeimage.gradle")
 }
+
+// 更新 exe4j 配置
+tasks.register('updateExe4jOptions') {
+	doFirst {
+		// 假设 exe4j 配置文件路径，请根据实际情况修改
+		def exe4jConfigFile = file("$rootProject.projectDir/outputs/BioWar.exe4j")
+		if (!exe4jConfigFile.exists() || !project.hasProperty("projectVersion")) {
+			println "Exe4j 配置不存在, 跳过exe4j配置更新任务"
+			return
+		}
+		def rootDir = rootProject.rootDir.absolutePath.replace('\\', '/')
+		def outputDir = rootDir + "/outputs"
+		def currentJdkPath = Jvm.current().javaHome.absolutePath.replace("\\", "/")
+		def projectVersion = project.projectVersion
+		def rootProjectName = rootProject.name
+		def newExecutableName = "${rootProjectName}_V${projectVersion}"
+		def newJarName = "${newExecutableName}.jar"
+
+		def content = exe4jConfigFile.getText('UTF-8')
+		def updatedContent = content
+		//替换输出目录位置
+		updatedContent = updatedContent.replaceAll(/distributionSourceDir="[^"]*"/) { match ->
+			"distributionSourceDir=\"${outputDir}\""
+		}
+		//替换iconFile文件位置
+		updatedContent = updatedContent.replaceAll(/iconFile="[^"]*"/) { match ->
+			"iconFile=\"${rootDir}/assets/icon.ico\""
+		}
+		//替换jdk依赖路径
+		updatedContent = updatedContent.replaceAll(/directory location="[^"]*"/) { match ->
+			"directory location=\"${currentJdkPath}\""
+		}
+		//替换发布jar路径
+		updatedContent = updatedContent.replaceAll(/archive location="[^"]*"/) { match ->
+			"archive location=\"${outputDir}/$newJarName\""
+		}
+
+		//替换输出applicationName
+		updatedContent = updatedContent.replaceAll(/application name="[^"]*"/) { match ->
+			"application name=\"${rootProjectName}\""
+		}
+		//替换输出exeName
+		updatedContent = updatedContent.replaceAll(/executable name="[^"]*"/) { match ->
+			"executable name=\"${newExecutableName}\""
+		}
+		//替换应用主类
+		updatedContent = updatedContent.replaceAll(/java mainClass="[^"]*"/) { match ->
+			"java mainClass=\"${mainClassName}\""
+		}
+		//替换jdkVersion
+		updatedContent = updatedContent.replaceAll(/minVersion="[^"]*"/) { match ->
+			"minVersion=\"${jdkVersion}\""
+		}
+		exe4jConfigFile.write(updatedContent, 'UTF-8')
+
+		println "✅ exe4j配置更新完毕"
+	}
+}
+// 设置在编译 Java 前执行此任务
+compileJava.dependsOn(updateExe4jOptions)
+jar.dependsOn(updateExe4jOptions)

@@ -15,7 +15,7 @@ import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.gameframeworks.screens.GScreen;
 import com.goldsprite.biowar.core.audio.SynthAudio;
 
-public class GdxLauncher extends Game {int k46;
+public class GdxLauncher extends Game {int k49;
 	private Application.ApplicationType userType;
 	
 	public SpriteBatch batch;
