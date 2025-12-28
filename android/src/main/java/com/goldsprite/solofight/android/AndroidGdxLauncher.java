@@ -60,7 +60,6 @@ public class AndroidGdxLauncher extends AndroidApplication {
 
 		// Root
 		rootLayout = new RelativeLayout(this);
-//		rootLayout.setBackgroundColor(Color.BLACK);
 
 		// Game View
 		FrameLayout gameContainer = new FrameLayout(this);
@@ -85,18 +84,20 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		ScreenManager.exitGame.add(() -> moveTaskToBack(true));
 		PlatformImpl.showSoftInputKeyBoard = (show) -> runOnUiThread(() -> setKeyboardVisibility(show));
 
-		// [修复] 确保游戏视图一启动就获得焦点，以便接收按键
-		gameView.setFocusable(true);
-		gameView.setFocusableInTouchMode(true);
-		gameView.requestFocus();
+//		// [修复] 确保游戏视图一启动就获得焦点，以便接收按键
+//		gameView.setFocusable(true);
+//		gameView.setFocusableInTouchMode(true);
+//		gameView.requestFocus();
 	}
 
 	private void initOverlayUI() {
-		// Keyboard Container
+		// [v19.4] 移除 rootLayout 的 clip 设置，改用专用容器方案
+		// rootLayout.setClipChildren(false); // 不再需要这个黑魔法
+
+		// --- A. 键盘容器 (保持不变) ---
 		keyboardContainer = new LinearLayout(this);
 		keyboardContainer.setOrientation(LinearLayout.VERTICAL);
-		// [回归] 不设背景色，或者设完全透明，避免之前的半透明黑底如果不喜欢
-//		keyboardContainer.setBackgroundColor(0x88000000);
+		keyboardContainer.setBackgroundColor(0x00000000);
 		keyboardContainer.setVisibility(View.GONE);
 
 		RelativeLayout.LayoutParams kbParams = new RelativeLayout.LayoutParams(
@@ -104,39 +105,145 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		kbParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
 		rootLayout.addView(keyboardContainer, kbParams);
 
-		// Floating Button
+		// --- B. [核心修复] 悬浮按钮专用全屏层 ---
+		// 创建一个填满屏幕的透明 FrameLayout，专门用来“放养”悬浮按钮
+		FrameLayout floatingLayer = new FrameLayout(this);
+		// 关键：让这个层不拦截不在子视图上的点击事件，透传给游戏
+		floatingLayer.setClickable(false);
+		floatingLayer.setFocusable(false);
+
+		// 把它加到最上层 (MATCH_PARENT)
+		rootLayout.addView(floatingLayer, new RelativeLayout.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+		// --- C. 悬浮开关按钮 ---
 		floatingToggleBtn = new Button(this);
-		floatingToggleBtn.setText("⌨");
+		floatingToggleBtn.setText("⌨XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
 		floatingToggleBtn.setTextColor(Color.CYAN);
 		floatingToggleBtn.setTextSize(20);
 		floatingToggleBtn.setPadding(0,0,0,0);
 
 		GradientDrawable shape = new GradientDrawable();
-		shape.setCornerRadius(50);
+		shape.setCornerRadius(100);
 		shape.setColor(0x44000000);
 		shape.setStroke(2, 0xFF00EAFF);
 		floatingToggleBtn.setBackground(shape);
 
-		RelativeLayout.LayoutParams btnParams = new RelativeLayout.LayoutParams(100, 100);
-		btnParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-		btnParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-		btnParams.setMargins(20, 20, 0, 0);
+		// 初始参数 (注意：现在它是 floatingLayer 的子元素，使用 FrameLayout.LayoutParams)
+		int btnSize = 120;
+		FrameLayout.LayoutParams btnParams = new FrameLayout.LayoutParams(btnSize, btnSize);
+		// 初始位置设为 (0,0)，后面靠 setX/Y 移动
+		btnParams.gravity = Gravity.TOP | Gravity.START;
 
 		floatingToggleBtn.setLayoutParams(btnParams);
-		floatingToggleBtn.setOnClickListener(v -> setKeyboardVisibility(true));
 
-		rootLayout.addView(floatingToggleBtn);
+		// 拖拽逻辑
+		floatingToggleBtn.setOnTouchListener(new View.OnTouchListener() {
+			float dX, dY;
+			float downRawX, downRawY;
+			boolean isDrag = false;
+
+			@Override
+			public boolean onTouch(View v, MotionEvent event) {
+				switch (event.getAction()) {
+					case MotionEvent.ACTION_DOWN:
+						// 计算手指相对于 View 左上角的偏移
+						dX = v.getX() - event.getRawX();
+						dY = v.getY() - event.getRawY();
+						downRawX = event.getRawX();
+						downRawY = event.getRawY();
+						isDrag = false;
+						v.animate().alpha(1.0f).scaleX(1.1f).scaleY(1.1f).setDuration(100).start();
+						return true;
+
+					case MotionEvent.ACTION_MOVE:
+						if (Math.abs(event.getRawX() - downRawX) > 10 || Math.abs(event.getRawY() - downRawY) > 10) {
+							isDrag = true;
+						}
+
+						if (isDrag) {
+							// 直接设置 X/Y，因为父容器是全屏的，这里不会被裁减
+							float newX = event.getRawX() + dX;
+							float newY = event.getRawY() + dY;
+
+							// 简单的边界限制
+							newX = Math.max(0, Math.min(screenWidth - v.getWidth(), newX));
+							newY = Math.max(0, Math.min(screenHeight - v.getHeight(), newY));
+
+							v.setX(newX);
+							v.setY(newY);
+						}
+						return true;
+
+					case MotionEvent.ACTION_UP:
+						v.animate().scaleX(1f).scaleY(1f).setDuration(100).start();
+
+						if (!isDrag) {
+							setKeyboardVisibility(true);
+							dockFloatingButton(v);
+						} else {
+							dockFloatingButton(v);
+						}
+						return true;
+				}
+				return false;
+			}
+		});
+
+		floatingToggleBtn.setAlpha(0.3f);
+
+		// 将按钮添加到专用层，而不是 rootLayout
+		floatingLayer.addView(floatingToggleBtn);
+
+		// 初始位置设置
+		floatingToggleBtn.post(() -> {
+			// 手动设置初始位置到左侧中间
+			floatingToggleBtn.setY(screenHeight / 2f - btnSize / 2f);
+			dockFloatingButton(floatingToggleBtn);
+		});
 
 		refreshKeyboardLayout();
+	}
+
+	// [v19.2] 自动贴边隐藏算法
+	private void dockFloatingButton(View v) {
+		float centerX = v.getX() + v.getWidth() / 2f;
+		float screenMid = screenWidth / 2f;
+		float targetX;
+
+		// 隐藏比例 (0.6 = 隐藏 60% 的宽度)
+		float hideRatio = 0.6f;
+		float hiddenOffset = v.getWidth() * hideRatio;
+
+		if (centerX < screenMid) {
+			// 靠左贴边：X 设为负的 offset
+			targetX = -hiddenOffset;
+		} else {
+			// 靠右贴边：X 设为 屏幕宽 - (宽度 - offset) -> 屏幕宽 - 可见宽度
+			// 也就是让右边超出屏幕
+			targetX = screenWidth - v.getWidth() + hiddenOffset;
+		}
+
+		// 执行弹簧动画
+		v.animate()
+			.x(targetX)
+			.alpha(0.3f) // 闲置时变淡
+			.setDuration(300)
+			.start();
 	}
 
 	private void setKeyboardVisibility(boolean visible) {
 		isKeyboardVisible = visible;
 		keyboardContainer.setVisibility(visible ? View.VISIBLE : View.GONE);
-		floatingToggleBtn.setVisibility(visible ? View.GONE : View.VISIBLE);
 
-		// [核心修复] 当键盘关闭时，强制把焦点还给游戏，否则返回键会被Android层拦截
-		if (!visible) {
+		if (visible) {
+			floatingToggleBtn.setVisibility(View.GONE);
+		} else {
+			floatingToggleBtn.setVisibility(View.VISIBLE);
+			// 键盘关闭时，归位并变淡
+			dockFloatingButton(floatingToggleBtn);
+
+			// [重要] 归还焦点给游戏
 			gameView.requestFocus();
 		}
 	}
