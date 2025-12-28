@@ -1,4 +1,4 @@
-package com.goldsprite.biowar.core.audio;
+package com.goldsprite.solofight.core.audio;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.AudioDevice;
@@ -64,7 +64,7 @@ public class SynthAudio {
     private static class Voice {
         float freqStart, freqEnd;
         WaveType type;
-        float duration; 
+        float duration;
         float volume;
         float currentSample = 0;
         float phase = 0;
@@ -83,7 +83,7 @@ public class SynthAudio {
                 float t = currentSample / duration;
                 float currFreq = freqStart + (freqEnd - freqStart) * t;
                 // 简单的线性衰减包络 (ADSR 的 Decay)
-                float currVol = volume * (1f - t); 
+                float currVol = volume * (1f - t);
 
                 float phaseIncrement = (float) (Math.PI * 2 * currFreq / SAMPLE_RATE);
                 phase += phaseIncrement;
@@ -94,9 +94,9 @@ public class SynthAudio {
                     case SINE: sampleValue = (float) Math.sin(phase); break;
                     case SQUARE: sampleValue = (phase < Math.PI) ? 1f : -1f; break;
                     case SAWTOOTH: sampleValue = (float) (phase / Math.PI - 1f); break;
-                    case TRIANGLE: 
+                    case TRIANGLE:
                         float raw = (float) (phase / Math.PI - 1f);
-                        sampleValue = 2f * (0.5f - Math.abs(raw)); 
+                        sampleValue = 2f * (0.5f - Math.abs(raw));
                         break;
                     case NOISE: sampleValue = MathUtils.random(-1f, 1f); break;
                 }
@@ -173,7 +173,7 @@ public class SynthAudio {
             // 1. Kick Drum (底鼓): 4/4 拍 (0, 4, 8, 12)
             if (s % 4 == 0) {
                 // 频率快速下降的正弦波 = 鼓声
-                activeVoices.add(new Voice(150, WaveType.SINE, 0.1f, 0.5f, 10)); 
+                activeVoices.add(new Voice(150, WaveType.SINE, 0.1f, 0.5f, 10));
             }
 
             // 2. Hi-Hat (踩镲): 反拍 (2, 6, 10, 14)

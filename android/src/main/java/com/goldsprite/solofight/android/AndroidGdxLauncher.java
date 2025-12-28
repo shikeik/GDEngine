@@ -58,7 +58,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		// y=4 J K 行（最下面一行）
 		{"", "S", "", "", "", "", "", "", "", "", "", "", "", ""}
 	};
-	// BioWar专属游戏布局 竖屏
+	// 专属游戏布局 竖屏
 	private final String[][] simpleGameLayoutVerti = {
 		{"", "", "", "", "", "", ""},
 		{"", "", "", "", "", "", ""},

@@ -6,7 +6,7 @@ plugins {
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 eclipse.project.name = appName + '-core'
 
-group = 'com.goldsprite.biowar.core'
+group = 'com.goldsprite.solofight.core'
 version = '0.1.0'
 
 dependencies {

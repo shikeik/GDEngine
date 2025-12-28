@@ -1,4 +1,4 @@
-package com.goldsprite.biowar.core;
+package com.goldsprite.solofight.core;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -39,7 +39,7 @@ public class SimpleCameraController implements InputProcessor {
 		if (inputEnabled) {
 			// [修复] 移动速度基于视口宽度，实现自适应
 			// 基础速度：1秒移动 1 个屏幕宽度
-			float baseSpeed = camera.viewportWidth; 
+			float baseSpeed = camera.viewportWidth;
 			float speed = baseSpeed * camera.zoom * dt;
 
 			if(Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) camera.translate(-speed, 0);

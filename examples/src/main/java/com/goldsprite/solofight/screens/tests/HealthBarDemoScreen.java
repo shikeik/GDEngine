@@ -5,7 +5,7 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.goldsprite.biowar.core.ui.H5SkewBar;
+import com.goldsprite.solofight.core.ui.H5SkewBar;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSlider;

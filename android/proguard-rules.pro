@@ -53,16 +53,6 @@
 
 
 
-# LibGDX Json Reflection needs access to these classes
--keep class com.goldsprite.biowar.core.bio.BioBlueprint { *; }
--keep class com.goldsprite.biowar.core.bio.BioNode { *; }
--keep class com.goldsprite.biowar.core.bio.BioPartType { *; }
-
-# Keep the Renderer and Assets to prevent static init issues
--keep class com.goldsprite.biowar.core.bio.BioRenderer { *; }
--keep class com.goldsprite.biowar.game.managers.BioAssets { *; }
--keep class com.goldsprite.biowar.game.managers.EntityRegistry { *; }
-
 # General LibGDX rules (if not already present)
 -keep class com.badlogic.gdx.utils.Json { *; }
 -keep class com.badlogic.gdx.utils.ObjectMap { *; }

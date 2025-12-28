@@ -1,11 +1,11 @@
-package com.goldsprite.biowar.core.ui;
+package com.goldsprite.solofight.core.ui;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.goldsprite.biowar.core.NeonBatch;
+import com.goldsprite.solofight.core.NeonBatch;
 
 /**
  * 通用赛博朋克风格血条组件 (H5复刻版 v2.0)

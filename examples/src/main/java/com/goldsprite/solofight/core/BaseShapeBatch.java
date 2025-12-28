@@ -1,4 +1,4 @@
-package com.goldsprite.biowar.core;
+package com.goldsprite.solofight.core;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -42,12 +42,12 @@ public class BaseShapeBatch {
 		whiteV = blankRegion.getV();
 		pixmap.dispose();
 	}
-	
+
 	// [新增] 暴露白纹理供高级自定义绘制使用
 	public TextureRegion getBlankRegion() {
 		return blankRegion;
 	}
-	
+
 	public SpriteBatch getBatch() { return batch; }
 
 	// --- Batch 代理方法 ---

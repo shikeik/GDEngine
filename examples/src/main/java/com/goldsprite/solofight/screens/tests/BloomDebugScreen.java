@@ -1,9 +1,9 @@
-package com.goldsprite.biowar.core.screens;
+package com.goldsprite.solofight.screens.tests;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.goldsprite.biowar.core.BloomRenderer;
-import com.goldsprite.biowar.core.NeonBatch;
+import com.goldsprite.solofight.core.BloomRenderer;
+import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 
@@ -30,13 +30,13 @@ public class BloomDebugScreen extends ExampleGScreen {
 		worldCamera.position.set(getViewSize().x / 2, getViewSize().y / 2, 0);
 		worldCamera.update();
 		setWorldScale(1f);
-		
+
 	}
 
 	@Override
 	public void render0(float delta) {
 		// 1. 画背景 (不发光的部分)
-		drawCheckerBoard(); 
+		drawCheckerBoard();
 
 		// 2. 捕获发光物体
 		bloom.captureStart(batch);

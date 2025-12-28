@@ -5,7 +5,7 @@ import com.goldsprite.gameframeworks.screens.basics.BaseSelectionScreen;
 import com.goldsprite.solofight.screens.tests.HealthBarDemoScreen;
 
 import java.util.Map;
-import com.goldsprite.biowar.core.screens.BloomDebugScreen;
+import com.goldsprite.solofight.screens.tests.BloomDebugScreen;
 import com.goldsprite.solofight.screens.tests.AudioTestScreen;
 import com.goldsprite.solofight.screens.tests.CameraTestScreen;
 import com.goldsprite.solofight.screens.tests.TextTestScreen;

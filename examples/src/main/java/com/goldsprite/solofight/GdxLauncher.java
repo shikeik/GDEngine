@@ -7,17 +7,17 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.goldsprite.biowar.core.DebugUI;
-import com.goldsprite.biowar.core.VisUIHelper;
+import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.VisUIHelper;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.gameframeworks.screens.GScreen;
-import com.goldsprite.biowar.core.audio.SynthAudio;
+import com.goldsprite.solofight.core.audio.SynthAudio;
 
 public class GdxLauncher extends Game {int k49;
 	private Application.ApplicationType userType;
-	
+
 	public SpriteBatch batch;
 	public DebugUI debugUI;
 
@@ -25,10 +25,10 @@ public class GdxLauncher extends Game {int k49;
 	public void create() {
 		userType = Gdx.app.getType();
 		batch = new SpriteBatch();
-		
+
 		// 初始化 DebugUI
 		debugUI = DebugUI.getInstance();
-		
+
 		SynthAudio.init(); // [新增] 启动音频线程
 
 		// 1. 初始化 VisUI (注入中文字体)
@@ -54,10 +54,10 @@ public class GdxLauncher extends Game {int k49;
 		GScreen curScreen = (GScreen)ScreenManager.getInstance().getCurScreen();
 		curScreen.getViewport().apply();
 		ScreenManager.getInstance().render();
-		
+
 		//DebugUI.info("curScreen viewport: %.1f, %.1f", curScreen.getViewport().getWorldWidth(), curScreen.getViewport().getWorldHeight());
 		//DebugUI.info("curScreen worldCam: %.1f, %.1f", curScreen.getWorldCamera().viewportWidth, curScreen.getWorldCamera().viewportHeight);
-		
+
 
 		if(Gdx.input.isKeyJustPressed(Input.Keys.K)) {
 			DebugUI.showDebugUI = !DebugUI.showDebugUI;

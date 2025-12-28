@@ -1,6 +1,5 @@
-package com.goldsprite.biowar.core;
+package com.goldsprite.solofight.core;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
@@ -47,7 +46,7 @@ public class FloatingTextManager {
 	private FloatingTextManager() {
 		try {
 			// 加载一个较大的字体，通过 scaling 缩小绘制，保证清晰度
-			font = FontUtils.generate(40); 
+			font = FontUtils.generate(40);
 			font.setUseIntegerPositions(false); // 允许浮点坐标，动画更平滑
 		} catch (Exception e) {
 			font = new BitmapFont();
@@ -143,7 +142,7 @@ public class FloatingTextManager {
 			// [修复] 调整缩放比例
 			// 原来的 0.025f 导致字只有 1px 大小
 			// 现在改为 0.8f，字高约 32 单位 (角色高90)，比较合理
-			float baseScale = 0.8f; 
+			float baseScale = 0.8f;
 			float finalScale = baseScale * ft.scale;
 
 			font.getData().setScale(finalScale);
@@ -171,7 +170,7 @@ public class FloatingTextManager {
 		// 2. 设置样式
 		font.setColor(COLOR_COMBO.r, COLOR_COMBO.g, COLOR_COMBO.b, comboAlpha);
 		// UI 层不需要缩太小，直接用像素大小
-		float uiScale = 1.0f * comboScale; 
+		float uiScale = 1.0f * comboScale;
 		font.getData().setScale(uiScale);
 
 		// 3. 绘制
@@ -209,7 +208,7 @@ public class FloatingTextManager {
 			// 物理参数 (复刻 H5: vy = -3 ~ -5, vx = -1 ~ 1)
 			// 注意：H5 Canvas Y轴向下，LibGDX Y轴向上。
 			// H5: vy = -3 (向上飘). GDX: vy = 3 (向上飘).
-			this.vx = (MathUtils.random() - 0.5f) * 40f; 
+			this.vx = (MathUtils.random() - 0.5f) * 40f;
 			this.vy = 80f + MathUtils.random() * 40f; // 初始向上速度
 
 			this.alpha = 1.0f;

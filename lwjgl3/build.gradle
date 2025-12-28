@@ -94,8 +94,8 @@ if (enableGraalNative == 'true') {
 // 更新 exe4j 配置
 tasks.register('updateExe4jOptions') {
 	doFirst {
-		// 假设 exe4j 配置文件路径，请根据实际情况修改
-		def exe4jConfigFile = file("$rootProject.projectDir/outputs/BioWar.exe4j")
+		// exe4j 配置文件路径
+		def exe4jConfigFile = file("$rootProject.projectDir/outputs/SoloFight.exe4j")
 		if (!exe4jConfigFile.exists() || !project.hasProperty("projectVersion")) {
 			println "Exe4j 配置不存在, 跳过exe4j配置更新任务"
 			return

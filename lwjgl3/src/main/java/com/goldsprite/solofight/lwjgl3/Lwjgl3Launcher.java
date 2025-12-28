@@ -14,16 +14,17 @@ import com.goldsprite.solofight.GdxLauncher;
  */
 public class Lwjgl3Launcher {
 	// 定义基础尺寸
-	public static final int WORLD_WIDTH = 540;
-	public static final int WORLD_HEIGHT = 960;
+	static float scl = 1.5f;
+	public static final float WORLD_WIDTH = 960 * scl;
+	public static final float WORLD_HEIGHT = 540 * scl;
 
 	public static void main(String[] args) {
 		if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
 		createApplication();
 	}
 	private static Lwjgl3Application createApplication() {
-		// --- 1. 实现屏幕切换回调 (PC版就是改窗口大小) ---
-		ScreenManager.orientationChanger = (orientation) -> {
+		// --- 1. 实现屏幕切换回调 (PC版就是改窗口大小) ---//因为体验不佳先注释了
+		/*ScreenManager.orientationChanger = (orientation) -> {
 			int w = Gdx.graphics.getWidth();
 			int h = Gdx.graphics.getHeight();
 
@@ -33,7 +34,7 @@ public class Lwjgl3Launcher {
 			} else {
 				if (w > h) Gdx.graphics.setWindowedMode(h, w); // 翻转
 			}
-		};
+		};*/
 		// ---------------------------------------------
 		return new Lwjgl3Application(new GdxLauncher(), getDefaultConfiguration());
 	}
@@ -41,7 +42,7 @@ public class Lwjgl3Launcher {
 	private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
 		Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
 
-		configuration.setTitle("BioWar - V" + BuildConfig.DEV_VERSION);
+		configuration.setTitle(BuildConfig.PROJECT_NAME+" - V" + BuildConfig.DEV_VERSION);
 
 		Graphics.DisplayMode primaryMode = Lwjgl3ApplicationConfiguration.getDisplayMode();
 		configuration.setWindowedMode((int) WORLD_WIDTH, (int) WORLD_HEIGHT);

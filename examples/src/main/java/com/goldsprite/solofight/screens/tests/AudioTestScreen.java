@@ -4,8 +4,8 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.goldsprite.biowar.core.audio.SynthAudio;
-import com.goldsprite.biowar.core.audio.SynthAudio.WaveType;
+import com.goldsprite.solofight.core.audio.SynthAudio;
+import com.goldsprite.solofight.core.audio.SynthAudio.WaveType;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.badlogic.gdx.graphics.Color;
@@ -34,7 +34,7 @@ public class AudioTestScreen extends ExampleGScreen {
         // --- 按钮布局 ---
 
         root.defaults().width(250).height(60).pad(10);
-		
+
 		// 在最上方添加 BGM 开关
         final VisTextButton btnBgm = new VisTextButton("BGM: OFF");
         btnBgm.setColor(Color.RED);

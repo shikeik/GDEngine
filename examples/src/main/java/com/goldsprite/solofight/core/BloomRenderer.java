@@ -1,4 +1,4 @@
-package com.goldsprite.biowar.core;
+package com.goldsprite.solofight.core;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
@@ -22,13 +22,13 @@ public class BloomRenderer {
 	public float bloomSpreadMul = 1.0f; // 扩散递增系数
 
 	// --- Shaders ---
-	private static final String VERT = 
+	private static final String VERT =
 	"attribute vec4 a_position; attribute vec4 a_color; attribute vec2 a_texCoord0; " +
 	"uniform mat4 u_projTrans; varying vec4 v_color; varying vec2 v_texCoords; " +
 	"void main() { v_color = a_color; v_texCoords = a_texCoord0; gl_Position = u_projTrans * a_position; }";
 
 	// 高斯模糊 (保持原样)
-	private static final String BLUR_FRAG = 
+	private static final String BLUR_FRAG =
 	"#ifdef GL_ES\nprecision mediump float;\n#endif\n" +
 	"varying vec4 v_color; varying vec2 v_texCoords; uniform sampler2D u_texture; uniform vec2 u_dir; " +
 	"void main() { " +
@@ -43,7 +43,7 @@ public class BloomRenderer {
 	"}";
 
 	// [修复核心] 合成 Shader
-	private static final String COMBINE_FRAG = 
+	private static final String COMBINE_FRAG =
 	"#ifdef GL_ES\nprecision mediump float;\n#endif\n" +
 	"varying vec2 v_texCoords; " +
 	"uniform sampler2D u_texture; " +  // Texture 0: Original (Base)
@@ -137,7 +137,7 @@ public class BloomRenderer {
 		mainFBO.begin();
 
 		// 1. 清空 FBO 为完全透明 (这是实现透明背景的前提)
-		Gdx.gl.glClearColor(0, 0, 0, 0); 
+		Gdx.gl.glClearColor(0, 0, 0, 0);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 		// 2. 设置混合模式：标准 Alpha 混合
@@ -172,7 +172,7 @@ public class BloomRenderer {
 		// 2. 模糊 (Blur) -> Ping/Pong Loop
 		batch.setShader(blurShader);
 		// [修正] 开启混合，因为模糊本质上是像素扩散
-		batch.enableBlending(); 
+		batch.enableBlending();
 		batch.setBlendFunction(GL20.GL_ONE, GL20.GL_ONE_MINUS_SRC_ALPHA); // Premultiplied safe blend
 
 		for (int i = 0; i < iterations; i++) {
@@ -231,7 +231,7 @@ public class BloomRenderer {
 
 		batch.end();
 	}
-	
+
 	/**
 	 * 将合成结果绘制到屏幕 (或当前绑定的 FBO)
 	 * 这一步会把 发光物体+光晕 合并后画出来
@@ -306,10 +306,10 @@ public class BloomRenderer {
 	}
 
 	public void dispose() {
-		if(mainFBO!=null)mainFBO.dispose(); 
-		if(pingFBO!=null)pingFBO.dispose(); 
+		if(mainFBO!=null)mainFBO.dispose();
+		if(pingFBO!=null)pingFBO.dispose();
 		if(pongFBO!=null)pongFBO.dispose();
-		if(blurShader!=null)blurShader.dispose(); 
+		if(blurShader!=null)blurShader.dispose();
 		if(combineShader!=null)combineShader.dispose();
 		batch.dispose();
 	}

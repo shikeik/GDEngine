@@ -19,9 +19,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.goldsprite.biowar.core.DebugUI;
-import com.goldsprite.biowar.core.SimpleCameraController;
-import com.goldsprite.biowar.core.SmartCameraController;
+import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.SimpleCameraController;
+import com.goldsprite.solofight.core.SmartCameraController;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.kotcrab.vis.ui.widget.VisCheckBox;
@@ -59,7 +59,7 @@ public class CameraTestScreen extends ExampleGScreen {
 	protected void initViewportAndCamera() {
 		float scl = 1.4f;
 		worldCamera = new OrthographicCamera();
-		uiViewport = new ExtendViewport(960 * scl, 540 * scl); 
+		uiViewport = new ExtendViewport(960 * scl, 540 * scl);
 	}
 
 	@Override
@@ -77,7 +77,7 @@ public class CameraTestScreen extends ExampleGScreen {
 	public void create() {
 		batch = new SpriteBatch();
 		shapeRenderer = new ShapeRenderer();
-		debugFont = new BitmapFont(); 
+		debugFont = new BitmapFont();
 
 		smartCam = new SmartCameraController(getWorldCamera());
 		smartCam.setMapBounds(-1000, -800, 2000, 1600);
@@ -94,13 +94,13 @@ public class CameraTestScreen extends ExampleGScreen {
 
 	private void initInput() {
 		// [v3.5] 注册顺序: UI -> FreeCam -> Target
-		getImp().addProcessor(freeCam); 
+		getImp().addProcessor(freeCam);
 
 		getImp().addProcessor(new InputAdapter() {
 				@Override
 				public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 					// [v3.5] 如果开启了自由相机控制，这里不处理目标逻辑
-					if (freeCamControl) return false; 
+					if (freeCamControl) return false;
 
 					Vector2 worldPos = screenToWorldCoord(screenX, screenY);
 					if (button == Input.Buttons.LEFT) {
@@ -140,7 +140,7 @@ public class CameraTestScreen extends ExampleGScreen {
 
 		Table panel = new Table();
 		panel.setBackground(createColorDrawable(new Color(0, 0, 0, 0.5f)));
-		panel.pad(15); 
+		panel.pad(15);
 		panel.defaults().width(220).padBottom(5).left();
 		root.add(panel);
 

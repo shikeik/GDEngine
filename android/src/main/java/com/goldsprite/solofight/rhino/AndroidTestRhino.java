@@ -15,7 +15,7 @@ public class AndroidTestRhino {
 
 	public static void test3() {
 		Object result = JsToaster.eval(
-			"var context = com.goldsprite.biowar.android.AndroidGdxLauncher.getCtx();" +
+			"var context = com.goldsprite.solofight.android.AndroidGdxLauncher.getCtx();" +
 				"var ecs = com.goldsprite.gameframeworks.ecs;" +
 				"var Gobject = ecs.entity.GObject;" +
 				"var player = ecs.system.GameSystem.sceneSystem.findGObjectByTag(\"Player\");" +
@@ -41,11 +41,11 @@ public class AndroidTestRhino {
 
 	private void test2() {
 		Object result = JsToaster.eval(
-			"var context = com.goldsprite.biowar.android.AndroidGdxLauncher.getCtx();\n" +
+			"var context = com.goldsprite.solofight.android.AndroidGdxLauncher.getCtx();\n" +
 				"android.widget.Toast.makeText(context, \"Hello Toast\", 0).show();\n" +
 				"\"eval js finished.\";"
 //			"" +
-//			"var context = com.goldsprite.biowar.android.AndroidGdxLauncher.getCtx();" +
+//			"var context = com.goldsprite.solofight.android.AndroidGdxLauncher.getCtx();" +
 //			"android.widget.Toast.makeText(context, \"Hello Toast\", 0).show();"+
 //			"\"eval js finished.\";" +
 //			""

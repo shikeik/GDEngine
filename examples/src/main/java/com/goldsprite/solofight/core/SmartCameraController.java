@@ -1,4 +1,4 @@
-package com.goldsprite.biowar.core;
+package com.goldsprite.solofight.core;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -119,7 +119,7 @@ public class SmartCameraController {
 		// 5. 震动 (Shake)
 		float shakeX = 0, shakeY = 0;
 		if (trauma > 0) {
-			float shake = trauma * trauma; 
+			float shake = trauma * trauma;
 			shakeX = (MathUtils.random() * 2 - 1) * shakePower * shake;
 			shakeY = (MathUtils.random() * 2 - 1) * shakePower * shake;
 			trauma -= delta * shakeDecay;
@@ -130,8 +130,8 @@ public class SmartCameraController {
 		float finalW = viewportW * this.zoom;
 		float finalH = viewportH * this.zoom;
 		finalBounds.set(
-			this.position.x - finalW / 2 + shakeX, 
-			this.position.y - finalH / 2 + shakeY, 
+			this.position.x - finalW / 2 + shakeX,
+			this.position.y - finalH / 2 + shakeY,
 			finalW, finalH
 		);
 		// 注意：FinalBounds 包含了震动偏移，这可能导致稍微超出地图，这是符合预期的(震动不应被硬切)
@@ -189,7 +189,7 @@ public class SmartCameraController {
 	public void apply() {
 		camera.position.x = finalBounds.x + finalBounds.width / 2;
 		camera.position.y = finalBounds.y + finalBounds.height / 2;
-		camera.zoom = this.zoom; 
+		camera.zoom = this.zoom;
 		camera.update();
 	}
 

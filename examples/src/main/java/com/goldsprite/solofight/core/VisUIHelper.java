@@ -1,4 +1,4 @@
-package com.goldsprite.biowar.core;
+package com.goldsprite.solofight.core;
 
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
@@ -8,7 +8,6 @@ import com.goldsprite.gameframeworks.assets.FontUtils;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
-import com.kotcrab.vis.ui.widget.VisLabel;
 
 public class VisUIHelper {
 

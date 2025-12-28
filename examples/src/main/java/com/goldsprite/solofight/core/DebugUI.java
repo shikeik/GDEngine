@@ -1,4 +1,4 @@
-package com.goldsprite.biowar.core;
+package com.goldsprite.solofight.core;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -9,7 +9,6 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.solofight.BuildConfig;
 import com.goldsprite.gameframeworks.assets.FontUtils;
 import java.util.ArrayList;
@@ -25,7 +24,7 @@ public class DebugUI {
 	private BitmapFont font;
 	private OrthographicCamera camera;
 	private ExtendViewport viewport;
-	
+
 	public static boolean showDebugUI = true;
 
 	// 新增：背景纹理
@@ -44,7 +43,7 @@ public class DebugUI {
 	float screenScl = 1.5f;
 	float shortSide = 1080f*screenScl;
 	float longSide = 1920f*screenScl;
-	
+
 	public DebugUI() {
 		instance = this;
 		camera = new OrthographicCamera();
@@ -149,9 +148,9 @@ public class DebugUI {
 
 		String logsStr = "> " + String.join("\n> ", logs);
 		String infoStr = infoBuilder.toString();
-		
+
 		if(!showDebugUI) return;
-		
+
 		// --- 2. 计算尺寸 (Pack) ---
 		infoLayout.setText(font, infoStr);
 		logLayout.setText(font, logsStr);
@@ -163,7 +162,7 @@ public class DebugUI {
 		uiBatch.setColor(bgColor);
 		uiBatch.setProjectionMatrix(camera.combined);
 		uiBatch.begin();
-		
+
 		// 矩形位置：X = marginLeft - padding
 		// 矩形Y：因为文字是从 topY 向下画的，所以矩形底边是 topY - height - padding
 		uiBatch.draw(bgTexture,

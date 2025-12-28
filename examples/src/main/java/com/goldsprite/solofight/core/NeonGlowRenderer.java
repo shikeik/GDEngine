@@ -1,4 +1,4 @@
-package com.goldsprite.biowar.core;
+package com.goldsprite.solofight.core;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
@@ -23,7 +23,7 @@ public class NeonGlowRenderer implements Disposable {
 	// --- GLSL Shaders (内嵌以简化文件管理) ---
 
 	// 标准顶点着色器
-	private static final String VERTEX_SHADER = 
+	private static final String VERTEX_SHADER =
 	"attribute vec4 " + ShaderProgram.POSITION_ATTRIBUTE + ";\n" +
 	"attribute vec4 " + ShaderProgram.COLOR_ATTRIBUTE + ";\n" +
 	"attribute vec2 " + ShaderProgram.TEXCOORD_ATTRIBUTE + "0;\n" +
@@ -37,7 +37,7 @@ public class NeonGlowRenderer implements Disposable {
 	"}";
 
 	// 简单的 5-Tap 高斯模糊着色器 (配合降采样效果很好)
-	private static final String BLUR_SHADER = 
+	private static final String BLUR_SHADER =
 	"#ifdef GL_ES\n" +
 	"precision mediump float;\n" +
 	"#endif\n" +
@@ -141,7 +141,7 @@ public class NeonGlowRenderer implements Disposable {
         boolean wasDrawing = batch.isDrawing();
 
         // 如果调用者还没结束 batch，我们帮他结束，以便切换矩阵
-        if (wasDrawing) batch.end(); 
+        if (wasDrawing) batch.end();
 
         // 2. 切换到屏幕坐标系 (Screen Space)
         // 因为 FBO 纹理是全屏的，我们需要用 1:1 的屏幕投影来绘制它

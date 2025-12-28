@@ -1,4 +1,4 @@
-package com.goldsprite.biowar.core;
+package com.goldsprite.solofight.core;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -241,11 +241,11 @@ public class NeonBatch extends BaseShapeBatch {
 		}
 		pathStroke(verts, segments + 1, lineWidth, false, color);
 	}
-	
+
 	/**
 	 * [新增] 绘制带倾斜和水平渐变的矩形 (专为 HP Bar 优化)
 	 * 原理：手动构建 SpriteBatch 兼容的 20 个顶点数据 (4个点 x 5属性: x, y, color, u, v)
-	 * 
+	 *
 	 * @param x 左下角X
 	 * @param y 左下角Y
 	 * @param width 宽度
@@ -278,7 +278,7 @@ public class NeonBatch extends BaseShapeBatch {
 		float y4 = y;
 
 		// 构造顶点数据 (复用 pathBuffer)
-		float[] verts = getBuffer(4); 
+		float[] verts = getBuffer(4);
 
 		int idx = 0;
 		// Vertex 0 (BL) - Color Left
