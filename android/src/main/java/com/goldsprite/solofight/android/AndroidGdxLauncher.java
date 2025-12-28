@@ -22,12 +22,10 @@ import java.util.Map;
 public class AndroidGdxLauncher extends AndroidApplication {
 	private static AndroidGdxLauncher ctx;
 
-	// --- 配置参数 ---
 	private final float HEIGHT_RATIO_LANDSCAPE = 0.45f;
 	private final float HEIGHT_RATIO_PORTRAIT = 0.35f;
-	private final int padding = -16; // [回归] 负内边距，防止文字被切
+	private final int padding = -16;
 
-	// --- 全功能终端键盘布局 (5 Rows) ---
 	private final String[][] terminalLayout = {
 		{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "=", "Del"},
 		{"Tab", "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]"},
@@ -38,10 +36,12 @@ public class AndroidGdxLauncher extends AndroidApplication {
 
 	private final Map<String, Integer> keyMap = new HashMap<>();
 
-	private RelativeLayout rootLayout;
+	// [v19.5] 根布局改为 FrameLayout，方便做层级堆叠
+	private FrameLayout rootFrame;
+	private RelativeLayout overlayLayer; // 透明的顶层，包含键盘和按钮
 	private LinearLayout keyboardContainer;
 	private Button floatingToggleBtn;
-	private View gameView; // [新增] 持有游戏视图引用
+	private View gameView;
 
 	private boolean isKeyboardVisible = false;
 	private int screenWidth, screenHeight;
@@ -58,22 +58,22 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		setupViewportListener();
 		initKeyMap();
 
-		// Root
-		rootLayout = new RelativeLayout(this);
+		// 1. 创建根容器 (FrameLayout)
+		rootFrame = new FrameLayout(this);
 
-		// Game View
-		FrameLayout gameContainer = new FrameLayout(this);
+		// 2. 添加游戏视图 (底层)
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
 		cfg.useImmersiveMode = true;
+		// 关键：防止 SurfaceView 遮挡普通 View，虽然 FrameLayout 顺序通常能保证，但加保险
+		// cfg.r = 8; cfg.g = 8; cfg.b = 8; cfg.a = 8; // 如果需要透明背景可开启
 		gameView = initializeForView(GdxLauncherProvider.launcherGame(), cfg);
-		gameContainer.addView(gameView);
 
-		rootLayout.addView(gameContainer, new RelativeLayout.LayoutParams(
+		rootFrame.addView(gameView, new FrameLayout.LayoutParams(
 			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-		setContentView(rootLayout);
+		setContentView(rootFrame);
 
-		// UI Overlay
+		// 3. 延迟加载 UI 层 (顶层)
 		new Handler(getMainLooper()).post(this::initOverlayUI);
 
 		ScreenManager.orientationChanger = (orientation) -> runOnUiThread(() -> {
@@ -84,44 +84,40 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		ScreenManager.exitGame.add(() -> moveTaskToBack(true));
 		PlatformImpl.showSoftInputKeyBoard = (show) -> runOnUiThread(() -> setKeyboardVisibility(show));
 
-//		// [修复] 确保游戏视图一启动就获得焦点，以便接收按键
-//		gameView.setFocusable(true);
-//		gameView.setFocusableInTouchMode(true);
-//		gameView.requestFocus();
+		gameView.setFocusable(true);
+		gameView.setFocusableInTouchMode(true);
+		gameView.requestFocus();
 	}
 
 	private void initOverlayUI() {
-		// [v19.4] 移除 rootLayout 的 clip 设置，改用专用容器方案
-		// rootLayout.setClipChildren(false); // 不再需要这个黑魔法
+		// [v19.5] 创建一个全屏透明的 RelativeLayout 作为 UI 层
+		// 它覆盖在游戏上面，专门放悬浮按钮和键盘
+		overlayLayer = new RelativeLayout(this);
+		overlayLayer.setBackgroundColor(Color.TRANSPARENT);
+		// 让它可以点击穿透（点击空白处传给游戏），但子 View (按钮) 依然可以点击
+		// RelativeLayout 默认就是不拦截空白点击的，只要不设 ClickListener
 
-		// --- A. 键盘容器 (保持不变) ---
+		rootFrame.addView(overlayLayer, new FrameLayout.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+		// --- A. 键盘容器 ---
 		keyboardContainer = new LinearLayout(this);
 		keyboardContainer.setOrientation(LinearLayout.VERTICAL);
-		keyboardContainer.setBackgroundColor(0x00000000);
+		// [回归] 不设背景色或透明
+//		keyboardContainer.setBackgroundColor(0x88000000);
 		keyboardContainer.setVisibility(View.GONE);
 
 		RelativeLayout.LayoutParams kbParams = new RelativeLayout.LayoutParams(
 			ViewGroup.LayoutParams.MATCH_PARENT, 0);
 		kbParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-		rootLayout.addView(keyboardContainer, kbParams);
+		overlayLayer.addView(keyboardContainer, kbParams);
 
-		// --- B. [核心修复] 悬浮按钮专用全屏层 ---
-		// 创建一个填满屏幕的透明 FrameLayout，专门用来“放养”悬浮按钮
-		FrameLayout floatingLayer = new FrameLayout(this);
-		// 关键：让这个层不拦截不在子视图上的点击事件，透传给游戏
-		floatingLayer.setClickable(false);
-		floatingLayer.setFocusable(false);
-
-		// 把它加到最上层 (MATCH_PARENT)
-		rootLayout.addView(floatingLayer, new RelativeLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-		// --- C. 悬浮开关按钮 ---
+		// --- B. 悬浮开关按钮 ---
 		floatingToggleBtn = new Button(this);
-		floatingToggleBtn.setText("⌨XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+		floatingToggleBtn.setText("⌨");
 		floatingToggleBtn.setTextColor(Color.CYAN);
 		floatingToggleBtn.setTextSize(20);
-		floatingToggleBtn.setPadding(0,0,0,0);
+		floatingToggleBtn.setPadding(20, 20, 20, 20); // 给点内边距
 
 		GradientDrawable shape = new GradientDrawable();
 		shape.setCornerRadius(100);
@@ -129,11 +125,13 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		shape.setStroke(2, 0xFF00EAFF);
 		floatingToggleBtn.setBackground(shape);
 
-		// 初始参数 (注意：现在它是 floatingLayer 的子元素，使用 FrameLayout.LayoutParams)
+		// [v19.5 修复] 使用 WRAP_CONTENT，这样文字长了会自动变大，不会被切
 		int btnSize = 120;
 		FrameLayout.LayoutParams btnParams = new FrameLayout.LayoutParams(btnSize, btnSize);
-		// 初始位置设为 (0,0)，后面靠 setX/Y 移动
-		btnParams.gravity = Gravity.TOP | Gravity.START;
+
+		// 初始位置不要用 Margin，直接设为 0，靠 setX/Y 移动
+		btnParams.topMargin = 0;
+		btnParams.leftMargin = 0;
 
 		floatingToggleBtn.setLayoutParams(btnParams);
 
@@ -147,7 +145,6 @@ public class AndroidGdxLauncher extends AndroidApplication {
 			public boolean onTouch(View v, MotionEvent event) {
 				switch (event.getAction()) {
 					case MotionEvent.ACTION_DOWN:
-						// 计算手指相对于 View 左上角的偏移
 						dX = v.getX() - event.getRawX();
 						dY = v.getY() - event.getRawY();
 						downRawX = event.getRawX();
@@ -162,11 +159,11 @@ public class AndroidGdxLauncher extends AndroidApplication {
 						}
 
 						if (isDrag) {
-							// 直接设置 X/Y，因为父容器是全屏的，这里不会被裁减
+							// 这里的 setX/Y 是相对于 overlayLayer 的，也就是全屏
 							float newX = event.getRawX() + dX;
 							float newY = event.getRawY() + dY;
 
-							// 简单的边界限制
+							// 边界限制
 							newX = Math.max(0, Math.min(screenWidth - v.getWidth(), newX));
 							newY = Math.max(0, Math.min(screenHeight - v.getHeight(), newY));
 
@@ -191,59 +188,41 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		});
 
 		floatingToggleBtn.setAlpha(0.3f);
+		overlayLayer.addView(floatingToggleBtn);
 
-		// 将按钮添加到专用层，而不是 rootLayout
-		floatingLayer.addView(floatingToggleBtn);
-
-		// 初始位置设置
+		// 初始位置设置 (延时一帧确保宽高已计算)
 		floatingToggleBtn.post(() -> {
-			// 手动设置初始位置到左侧中间
-			floatingToggleBtn.setY(screenHeight / 2f - btnSize / 2f);
+			floatingToggleBtn.setY(screenHeight / 2f - floatingToggleBtn.getHeight() / 2f);
 			dockFloatingButton(floatingToggleBtn);
 		});
 
 		refreshKeyboardLayout();
 	}
 
-	// [v19.2] 自动贴边隐藏算法
 	private void dockFloatingButton(View v) {
 		float centerX = v.getX() + v.getWidth() / 2f;
 		float screenMid = screenWidth / 2f;
 		float targetX;
 
-		// 隐藏比例 (0.6 = 隐藏 60% 的宽度)
-		float hideRatio = 0.6f;
+		// 隐藏 50%
+		float hideRatio = 0.5f;
 		float hiddenOffset = v.getWidth() * hideRatio;
 
 		if (centerX < screenMid) {
-			// 靠左贴边：X 设为负的 offset
 			targetX = -hiddenOffset;
 		} else {
-			// 靠右贴边：X 设为 屏幕宽 - (宽度 - offset) -> 屏幕宽 - 可见宽度
-			// 也就是让右边超出屏幕
 			targetX = screenWidth - v.getWidth() + hiddenOffset;
 		}
 
-		// 执行弹簧动画
-		v.animate()
-			.x(targetX)
-			.alpha(0.3f) // 闲置时变淡
-			.setDuration(300)
-			.start();
+		v.animate().x(targetX).alpha(0.3f).setDuration(300).start();
 	}
 
 	private void setKeyboardVisibility(boolean visible) {
 		isKeyboardVisible = visible;
 		keyboardContainer.setVisibility(visible ? View.VISIBLE : View.GONE);
+		floatingToggleBtn.setVisibility(visible ? View.GONE : View.VISIBLE);
 
-		if (visible) {
-			floatingToggleBtn.setVisibility(View.GONE);
-		} else {
-			floatingToggleBtn.setVisibility(View.VISIBLE);
-			// 键盘关闭时，归位并变淡
-			dockFloatingButton(floatingToggleBtn);
-
-			// [重要] 归还焦点给游戏
+		if (!visible) {
 			gameView.requestFocus();
 		}
 	}
@@ -274,7 +253,6 @@ public class AndroidGdxLauncher extends AndroidApplication {
 
 				LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
 					0, ViewGroup.LayoutParams.MATCH_PARENT, weight);
-				// [回归] margin 设为 0，让 drawable 自己处理间隔(如果有)
 				btnParams.setMargins(0, 0, 0, 0);
 				keyBtn.setLayoutParams(btnParams);
 
@@ -288,21 +266,15 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		Button btn = new Button(this);
 		btn.setText(text);
 		btn.setTextColor(Color.WHITE);
-		// [回归] 字号 13
 		btn.setTextSize(13);
 		btn.setGravity(Gravity.CENTER);
-
-		// [回归] 负 Padding
 		int p = (int) (padding * getResources().getDisplayMetrics().density);
 		btn.setPadding(p, p, p, p);
-
-		// [回归] 使用 XML 资源作为背景 (自带按下效果)
 		btn.setBackgroundResource(R.drawable.virtual_key_background);
 
 		btn.setOnTouchListener((v, event) -> {
-			// XML drawable 通常处理了按下变色，所以这里只负责发事件
 			if (event.getAction() == MotionEvent.ACTION_DOWN) {
-				v.setPressed(true); // 触发 XML selector
+				v.setPressed(true);
 				handleKeyPress(text, true);
 			} else if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
 				v.setPressed(false);
@@ -373,12 +345,11 @@ public class AndroidGdxLauncher extends AndroidApplication {
 
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		// [修正] 如果键盘开着，Back键只关键盘
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
 			if (isKeyboardVisible) {
 				setKeyboardVisibility(false);
+				return true;
 			}
-			return true;
 		}
 		return super.onKeyDown(keyCode, event);
 	}
