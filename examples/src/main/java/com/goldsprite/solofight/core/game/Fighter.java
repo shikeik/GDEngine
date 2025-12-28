@@ -26,6 +26,9 @@ public class Fighter {
 	public float ultTimer = 0;
 	public boolean isUltActive = false;
 
+	// [新增] 技能触发锁 (防止慢动作下重复触发)
+	private boolean skillTriggered = false;
+
 	private static class SlashLine {
 		float x, y, len, angle, life, maxLife, delay;
 	}
@@ -63,7 +66,6 @@ public class Fighter {
 
 	public void update(float delta) {
 		InputContext input = InputContext.inst();
-
 		if (state.startsWith("ult")) { updateUltLogic(delta); return; }
 		if (state.equals("ult_frozen")) return;
 
@@ -89,9 +91,7 @@ public class Fighter {
 
 		if (!state.equals("dash") && !state.equals("flash_slash") && vx != 0) { vx *= 0.8f; if(Math.abs(vx)<0.1f) vx=0; }
 
-		// 扩展地图边界 (为了配合 1.4x 缩放视口，避免太窄)
-		if (x < -200) x = -200;
-		if (x > 1200 - w) x = 1200 - w;
+		if (x < -200) x = -200; if (x > 1200 - w) x = 1200 - w;
 
 		if (state.equals("attack") && animTimer >= 2 && animTimer <= 5) {
 			float atkX = x + w/2 + (40 * dir);
@@ -135,7 +135,6 @@ public class Fighter {
 				if (enemy != null) {
 					y = enemy.y; vy = 0; inAir = false;
 					float idealX = enemy.x - (enemy.dir * 100);
-					// 修正边界判断
 					if (idealX < -150 || idealX > 1150) idealX = enemy.x + (enemy.dir * 100);
 					x = idealX; dir = (x < enemy.x) ? 1 : -1;
 				}
@@ -143,11 +142,8 @@ public class Fighter {
 		} else if (state.equals("ult_end")) {
 			if (ultTimer >= 30) {
 				if (enemy != null) {
-					enemy.state = "idle";
-					enemy.takeDamage(150, -this.dir);
-
-					// [新增] 大招终结粒子 (Shards)
-					ParticleManager.inst().burst(enemy.x + enemy.w/2, enemy.y + enemy.h/2, Color.CYAN, 30, ParticleManager.Type.SHARD, 15f);
+					enemy.state = "idle"; enemy.takeDamage(150, -this.dir);
+					ParticleManager.inst().burst(enemy.x+enemy.w/2, enemy.y+enemy.h/2, Color.CYAN, 30, ParticleManager.Type.SHARD, 15f);
 				}
 				SynthAudio.playTone(50, SynthAudio.WaveType.SAWTOOTH, 1.5f, 0.5f, 10);
 				SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 1.0f, 0.8f);
@@ -161,90 +157,124 @@ public class Fighter {
 		hp -= dmg; if(hp<=0) hp=0;
 		state = "hit"; vx = 8*hitDir; vy = 5; animTimer = 0; hitFlashTimer = 0.2f;
 		SynthAudio.playTone(100, SynthAudio.WaveType.SAWTOOTH, 0.2f, 0.2f, 50);
-
-		// [新增] 受击粒子 (Box)
 		ParticleManager.inst().burst(x + w/2, y + 40, this.color, 5, ParticleManager.Type.BOX, 10f);
 	}
 
 	private void attack() { state = "attack"; animTimer = 0; vx = 0; SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f); }
 	private void dash(int d) { if(d==0)d=dir; this.dir=d; state="dash"; animTimer=0; vx=25*d; SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f); }
-	private void flashSlash() { state="flash_slash"; animTimer=0; vx=0; slashStartX=x;
+
+	private void flashSlash() {
+		state="flash_slash"; animTimer=0; vx=0;
+		skillTriggered = false; // [新增] 重置锁
+		slashStartX=x;
 		flashTargetX = (enemy!=null) ? enemy.x + (enemy.x>x?100:-100) : x+(300*dir);
 		SynthAudio.playTone(800, SynthAudio.WaveType.SINE, 0.1f, 0.1f, 50);
 	}
+
 	private void updateSkills(float delta) {
 		if(state.equals("attack") && animTimer>15) state="idle";
-		if(state.equals("dash")) { vy=0; if(animTimer>10){state="idle"; vx=0;} }
-		if(state.equals("flash_slash")) { vy=0; if(animTimer>=6 && animTimer<7){ x=flashTargetX;
-			if(enemy!=null && Math.abs(x-enemy.x)<150) enemy.takeDamage(40, dir);
-			SynthAudio.playTone(600, SynthAudio.WaveType.SAWTOOTH, 0.1f, 0.2f, 2000);
-		} if(animTimer>25) state="idle"; }
+		if(state.equals("dash")) {
+			vy=0;
+			if ((int)animTimer % 3 == 0) EffectManager.inst().addAfterimage(x, y, dir, state, animTimer, color);
+			if(animTimer>10){state="idle"; vx=0;}
+		}
+
+		if(state.equals("flash_slash")) {
+			vy=0;
+			// [修正] 使用 skillTriggered 锁，确保只触发一次
+			if(animTimer >= 6 && !skillTriggered) {
+				skillTriggered = true; // 锁定
+
+				// 生成闪电
+				float startX = slashStartX + w/2;
+				float startY = y + h/2;
+				x = flashTargetX;
+				float endX = x + w/2;
+				EffectManager.inst().addLightning(startX, startY, endX, startY);
+
+				if(enemy!=null && Math.abs(x-enemy.x)<150) enemy.takeDamage(40, dir);
+				SynthAudio.playTone(600, SynthAudio.WaveType.SAWTOOTH, 0.1f, 0.2f, 2000);
+			}
+			if(animTimer>25) state="idle";
+		}
 	}
 
-	// [修正 2] 拆分绘制逻辑 - 仅绘制身体
 	public void drawBody(NeonBatch batch) {
-		// 隐身或乱斩期间不画身体
 		if (state.equals("flash_slash") && animTimer >= 6 && animTimer < 18) return;
-		if (state.equals("ult_slash")) return; // 本体现身由 slashLines 代替
+		if (state.equals("ult_slash")) return;
 
 		float cx = x + w / 2;
 		float cy = y;
 		drawColor.set(this.color);
 		if (hitFlashTimer > 0 || (state.equals("flash_slash") && animTimer < 6)) drawColor.set(Color.WHITE);
 
-		drawStickmanFigure(batch, cx, cy, drawColor);
+		// [修正] 横向一闪
+		if (state.equals("flash_slash") && animTimer < 6) {
+			float width = (6 - animTimer) * 400;
+			float height = (6 - animTimer) * 2;
+			Color c = new Color(1, 1, 1, (6 - animTimer) / 6f);
+			// drawRect 原点是中心，所以直接传入 cx, cy+h/2 即可
+			batch.drawRect(cx, cy + h/2, width, height, 0, 0, c, true);
+			return;
+		}
+
+		drawStickmanFigureStatic(batch, cx, cy, dir, state, animTimer, drawColor);
 	}
 
-	// [修正 2] 拆分绘制逻辑 - 仅绘制特效 (剑气)
 	public void drawEffects(NeonBatch batch) {
 		if (!state.equals("ult_slash")) return;
-
 		for (SlashLine sl : slashLines) {
 			if (sl.delay > 0) continue;
 			float alpha = sl.life / sl.maxLife;
 			Color c = new Color(1, 1, 1, alpha);
-
 			float halfLen = sl.len / 2;
 			float cos = MathUtils.cosDeg(sl.angle);
 			float sin = MathUtils.sinDeg(sl.angle);
-
-			float x1 = sl.x - cos * halfLen;
-			float y1 = sl.y - sin * halfLen;
-			float x2 = sl.x + cos * halfLen;
-			float y2 = sl.y + sin * halfLen;
-
-			batch.drawLine(x1, y1, x2, y2, 3f, c);
+			batch.drawLine(sl.x - cos * halfLen, sl.y - sin * halfLen, sl.x + cos * halfLen, sl.y + sin * halfLen, 3f, c);
 		}
 	}
 
-	private void drawStickmanFigure(NeonBatch batch, float cx, float cy, Color c) {
+	// [修正] 身体绘制偏移修复
+	// drawRect(x, y, ...) -> x, y 是中心点
+	// 身体: 宽度30，中心在 cx. 高度40(站立)，范围40~80(脚底0). 中心y = 60.
+	// 下蹲: 高度30，范围30~60. 中心y = 45.
+	public static void drawStickmanFigureStatic(NeonBatch batch, float cx, float cy, int dir, String state, float animTimer, Color c) {
 		float lineWidth = 4f;
+		boolean isCrouch = (state.equals("flash_slash") && animTimer < 5) || (state.equals("idle") && InputContext.inst().crouch);
+
+		LineDrawer d = (lx1, ly1, lx2, ly2) -> {
+			float x1 = cx + (lx1 * dir); float y1 = cy + ly1;
+			float x2 = cx + (lx2 * dir); float y2 = cy + ly2;
+			batch.drawLine(x1, y1, x2, y2, lineWidth, c);
+		};
+
 		if (state.equals("jump") || state.equals("dash") || state.equals("flash_slash")) {
-			drawLine(batch, cx, cy, -10, 40, -25, 15, c, lineWidth); drawLine(batch, cx, cy, 10, 40, 25, 25, c, lineWidth);
+			d.draw(-10, 40, -25, 15); d.draw(10, 40, 25, 25);
 		} else if (state.equals("run")) {
 			float cycle = MathUtils.sin(animTimer * 0.5f) * 15;
-			drawLine(batch, cx, cy, -10, 40, -20 + cycle, 0, c, lineWidth); drawLine(batch, cx, cy, 10, 40, 20 - cycle, 0, c, lineWidth);
+			d.draw(-10, 40, -20 + cycle, 0); d.draw(10, 40, 20 - cycle, 0);
 		} else {
-			drawLine(batch, cx, cy, -10, 40, -20, 0, c, lineWidth); drawLine(batch, cx, cy, 10, 40, 20, 0, c, lineWidth);
+			d.draw(-10, 40, -20, 0); d.draw(10, 40, 20, 0);
 		}
-		boolean isCrouch = (state.equals("flash_slash") && animTimer < 5) || (state.equals("idle") && InputContext.inst().crouch && !isAi);
+
+		// 身体矩形修正：直接传中心点坐标
 		if (isCrouch) batch.drawRect(cx, cy + 45, 30, 30, 0, lineWidth, c, true);
 		else batch.drawRect(cx, cy + 60, 30, 40, 0, lineWidth, c, true);
 
 		if (state.equals("ult_cast") || state.equals("ult_end")) {
-			drawLine(batch, cx, cy, -10, 70, -30, 50, c, lineWidth); drawLine(batch, cx, cy, 10, 70, 30, 50, c, lineWidth);
+			d.draw(-10, 70, -30, 50); d.draw(10, 70, 30, 50);
 		} else if (state.equals("attack")) {
-			drawLine(batch, cx, cy, -10, 70, -20, 40, c, lineWidth); drawLine(batch, cx, cy, 10, 70, 40, 70, c, lineWidth);
+			d.draw(-10, 70, -20, 40); d.draw(10, 70, 40, 70);
+		} else if (isCrouch) {
+			d.draw(-10, 60, 10, 50); d.draw(10, 60, 30, 50);
 		} else {
 			float armS = state.equals("run") ? MathUtils.sin(animTimer * 0.5f) * 15 : 0;
-			drawLine(batch, cx, cy, -10, 70, -20 + armS, 30, c, lineWidth); drawLine(batch, cx, cy, 10, 70, 20 - armS, 30, c, lineWidth);
+			d.draw(-10, 70, -20 + armS, 30); d.draw(10, 70, 20 - armS, 30);
 		}
+
 		float headY = isCrouch ? 65 : 90;
 		batch.drawCircle(cx, cy + headY, 12, 0, c, 16, true);
 	}
 
-	private void drawLine(NeonBatch batch, float cx, float cy, float lx1, float ly1, float lx2, float ly2, Color c, float width) {
-		float x1 = cx + (lx1 * dir); float y1 = cy + ly1; float x2 = cx + (lx2 * dir); float y2 = cy + ly2;
-		batch.drawLine(x1, y1, x2, y2, width, c);
-	}
+	private interface LineDrawer { void draw(float x1, float y1, float x2, float y2); }
 }

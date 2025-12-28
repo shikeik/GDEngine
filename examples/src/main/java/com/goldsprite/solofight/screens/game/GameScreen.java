@@ -15,6 +15,7 @@ import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.DebugUI;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.TextDB;
+import com.goldsprite.solofight.core.game.EffectManager;
 import com.goldsprite.solofight.core.game.Fighter;
 import com.goldsprite.solofight.core.game.ParallaxBackground;
 import com.goldsprite.solofight.core.game.ParticleManager;
@@ -86,6 +87,9 @@ public class GameScreen extends ExampleGScreen {
 
 		// [新增] 清理粒子
 		ParticleManager.inst().clear();
+
+		// [新增] 清理特效
+		EffectManager.inst().clear();
 
 		initUI();
 		initInputLogic();
@@ -235,6 +239,10 @@ public class GameScreen extends ExampleGScreen {
 			p2.update(finalDt);
 		}
 
+		// [新增] 更新特效 (残影/电光也受时缓影响)
+		EffectManager.inst().update(finalDt);
+		ParticleManager.inst().update(finalDt);
+
 		// 粒子更新
 		ParticleManager.inst().update(finalDt);
 
@@ -298,6 +306,9 @@ public class GameScreen extends ExampleGScreen {
 		neonBatch.drawLine(-500, 0, 1500, 0, 2, Color.GRAY);
 		p1.drawBody(neonBatch);
 		p2.drawBody(neonBatch);
+
+		// [新增] 绘制残影和电光 (在角色层和特效层之间)
+		EffectManager.inst().draw(neonBatch);
 
 		// 4. 粒子 (在角色之上)
 		ParticleManager.inst().draw(neonBatch);
