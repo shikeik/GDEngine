@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Timer;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
@@ -25,6 +26,7 @@ import com.goldsprite.solofight.core.input.InputDef;
 import com.goldsprite.solofight.core.input.KeyboardProcessor;
 import com.goldsprite.solofight.core.input.ToastUI;
 import com.goldsprite.solofight.core.input.VirtualJoystick;
+import com.goldsprite.solofight.core.ui.GameOverUI;
 import com.goldsprite.solofight.core.ui.H5SkewBar;
 import com.goldsprite.solofight.core.ui.HelpWindow;
 import com.kotcrab.vis.ui.widget.VisTextButton;
@@ -49,6 +51,11 @@ public class GameScreen extends ExampleGScreen {
 	// Entities
 	private Fighter p1, p2;
 	private float shake = 0;
+
+	// [新增] 结算相关
+	private GameOverUI gameOverUI;
+	private boolean gameEnded = false; // 防止重复触发
+	private float globalTimeScale = 1.0f; // 全局时间缩放 (用于结算慢动作)
 
 	@Override
 	public String getIntroduction() { return ""; }
@@ -136,6 +143,10 @@ public class GameScreen extends ExampleGScreen {
 		helpWindow = new HelpWindow();
 		helpWindow.setVisible(false);
 		uiStage.addActor(helpWindow);
+
+		// 5. Game Over UI (最后添加，确保在最上层)
+		gameOverUI = new GameOverUI();
+		uiStage.addActor(gameOverUI);
 	}
 
 	private void initBars() {
@@ -194,94 +205,184 @@ public class GameScreen extends ExampleGScreen {
 
 	@Override
 	public void render0(float delta) {
+		// 1. 如果帮助窗口打开，暂停游戏逻辑更新，只画 UI
 		if (helpWindow.isVisible()) {
 			uiStage.act(delta);
 			uiStage.draw();
 			return;
 		}
 
-		gestureProcessor.update(delta);
+		// 2. 计算全局时间缩放 (用于结算慢动作)
+		float dt = delta * globalTimeScale;
 
+		// --- Logic Updates ---
+		gestureProcessor.update(dt);
+
+		// 大招时缓逻辑
 		boolean ultActive = p1.isUltActive || p2.isUltActive;
-		float timeScale = ultActive ? 0.05f : 1.0f;
+		float ultScale = ultActive ? 0.05f : 1.0f;
+		float finalDt = dt * ultScale;
 
-		// [新增] 更新粒子 (受时缓影响)
-		ParticleManager.inst().update(delta * (ultActive ? 0.05f : 1.0f));
+		// 实体更新 (P1 释放大招时自己不慢)
+		if (p1.isUltActive) {
+			p1.update(dt);
+			p2.update(finalDt);
+		} else if (p2.isUltActive) {
+			p2.update(dt);
+			p1.update(finalDt);
+		} else {
+			p1.update(finalDt);
+			p2.update(finalDt);
+		}
 
-		if (p1.isUltActive) { p1.update(delta); p2.update(delta * timeScale); }
-		else if (p2.isUltActive) { p2.update(delta); p1.update(delta * timeScale); }
-		else { p1.update(delta); p2.update(delta); }
+		// 粒子更新
+		ParticleManager.inst().update(finalDt);
 
+		// 胜负判定
+		checkGameResult();
+
+		// 震动衰减
 		if ((p1.state.equals("ult_slash") && p1.ultTimer % 4 == 0) || (p1.state.equals("ult_end") && p1.ultTimer == 30)) {
 			shake = p1.state.equals("ult_end") ? 20 : 5;
 		}
 		if (shake > 0) shake *= 0.9f;
 
-		barP1.setValue(p1.hp); barP2.setValue(p2.hp);
+		// 更新 UI 数据
+		barP1.setValue(p1.hp); barP1.setPercent(p1.hp/p1.maxHp);
+		barP2.setValue(p2.hp); barP2.setPercent(p2.hp/p2.maxHp);
 
+		// --- Camera Logic ---
+		float camX = getWorldCamera().position.x;
 		float targetX = (p1.x + p2.x) / 2 + 20;
 		float targetZoom = 1.0f;
-		if (p1.isUltActive && p1.state.equals("ult_slash")) { targetX = p2.x + p2.w/2; targetZoom = 0.7f; }
 
-		getWorldCamera().position.x += (targetX - getWorldCamera().position.x) * 5 * delta;
+		// 大招特写
+		if (p1.isUltActive && p1.state.equals("ult_slash")) {
+			targetX = p2.x + p2.w/2;
+			targetZoom = 0.7f;
+		}
+
+		// 相机跟随与缩放
+		getWorldCamera().position.x += (targetX - camX) * 5 * delta;
 		getWorldCamera().zoom += (targetZoom - getWorldCamera().zoom) * 5 * delta;
 
-		float sx = (MathUtils.random()-0.5f) * shake;
-		float sy = (MathUtils.random()-0.5f) * shake;
-		getWorldCamera().position.add(sx, sy, 0);
+		// [关键修正] 统一变量名 shakeX, shakeY，并在此处定义
+		float shakeX = (MathUtils.random()-0.5f) * shake;
+		float shakeY = (MathUtils.random()-0.5f) * shake;
+		getWorldCamera().position.add(shakeX, shakeY, 0);
 
-		float vw = getWorldCamera().viewportWidth/2 * getWorldCamera().zoom;
-		if(getWorldCamera().position.x < -200 + vw) getWorldCamera().position.x = -200 + vw;
-		if(getWorldCamera().position.x > 1200 - vw) getWorldCamera().position.x = 1200 - vw;
-		getWorldCamera().position.y = getWorldCamera().viewportHeight/2 * getWorldCamera().zoom + sy;
+		// 限制相机边界
+		float viewHalfW = getWorldCamera().viewportWidth / 2 * getWorldCamera().zoom;
+		if (getWorldCamera().position.x < -200 + viewHalfW) getWorldCamera().position.x = -200 + viewHalfW;
+		if (getWorldCamera().position.x > 1200 - viewHalfW) getWorldCamera().position.x = 1200 - viewHalfW;
+		// 锁定 Y 轴并应用震动
+		getWorldCamera().position.y = getWorldCamera().viewportHeight/2 * getWorldCamera().zoom + shakeY;
+
 		getWorldCamera().update();
 
 		// --- Draw World ---
 		batch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 
+		// 1. 视差背景
 		parallaxBG.draw(neonBatch, getWorldCamera());
 
-		// [关键修复 4] 遮罩覆盖
+		// 2. 暗场遮罩
 		if (ultActive) {
 			OrthographicCamera cam = getWorldCamera();
-			// 直接画一个极大值，无视 Zoom 计算误差
-			float massiveSize = 10000f;
-			neonBatch.drawRect(
-				cam.position.x, cam.position.y, // 中心
-				massiveSize, massiveSize,       // 尺寸
-				0, 0,
-				new Color(0,0,0,0.8f),
-				true
-			);
+			// 简单粗暴画大一点覆盖全屏
+			neonBatch.drawRect(cam.position.x, cam.position.y, 10000, 10000, 0, 0, new Color(0,0,0,0.8f), true);
 		}
 
+		// 3. 地面与角色
 		neonBatch.drawLine(-500, 0, 1500, 0, 2, Color.GRAY);
-
 		p1.drawBody(neonBatch);
 		p2.drawBody(neonBatch);
 
-		// [新增] 绘制粒子 (在角色之上，特效之下? 或者最上面?)
-		// H5: 粒子在角色之上。
+		// 4. 粒子 (在角色之上)
 		ParticleManager.inst().draw(neonBatch);
 
+		// 5. 特效 (剑气最上层)
 		p1.drawEffects(neonBatch);
 		p2.drawEffects(neonBatch);
 
 		neonBatch.end();
-		getWorldCamera().position.sub(sx, sy, 0);
 
+		// [关键修正] 恢复相机位置 (移除震动偏移，避免下一帧累加偏移导致漂移)
+		getWorldCamera().position.sub(shakeX, shakeY, 0);
+
+		// --- Draw UI ---
 		batch.setProjectionMatrix(getViewport().getCamera().combined);
 		neonBatch.begin();
+		// UI 分隔线
 		float splitX = getViewport().getWorldWidth() * 0.5f;
 		neonBatch.drawLine(splitX, 0, splitX, getViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
-		for (com.goldsprite.solofight.core.input.GestureTrail t : gestureProcessor.getTrails()) t.draw(neonBatch);
+		// 手势轨迹
+		for (com.goldsprite.solofight.core.input.GestureTrail trail : gestureProcessor.getTrails()) {
+			trail.draw(neonBatch);
+		}
 		neonBatch.end();
 
 		uiStage.act(delta);
 		uiStage.draw();
 
 		DebugUI.info("P1 MP: %.0f | Ult: %b", p1.mp, p1.isUltActive);
+	}
+
+	// [新增] 胜负检测与结算触发
+	private void checkGameResult() {
+		if (gameEnded) return;
+
+		boolean p1Dead = p1.hp <= 0;
+		boolean p2Dead = p2.hp <= 0;
+
+		if (p1Dead || p2Dead) {
+			gameEnded = true;
+
+			// 1. 瞬间慢动作 (H5: timeScale = 0.1)
+			globalTimeScale = 0.1f;
+
+			// 2. 延迟 2.5秒 (真实时间) 后显示 UI
+			Timer.schedule(new Timer.Task() {
+				@Override
+				public void run() {
+					// 游戏完全暂停 (或者保持极慢? H5里 running=false 停止 update)
+					// 这里我们设置 timeScale = 0，彻底冻结画面
+					globalTimeScale = 0f;
+
+					// 显示结算面板
+					boolean isWin = p2Dead; // 敌人死 = 胜利
+					gameOverUI.show(isWin, () -> restartGame());
+				}
+			}, 2.5f);
+		}
+	}
+
+	// [新增] 重开游戏逻辑
+	private void restartGame() {
+		gameEnded = false;
+		globalTimeScale = 1.0f; // 恢复时间
+
+		// 重置 P1
+		p1.hp = p1.maxHp;
+		p1.mp = 100; // 测试方便给满蓝
+		p1.state = "idle";
+		p1.x = 200; p1.y = 0; p1.vx = 0; p1.vy = 0;
+		p1.isUltActive = false;
+
+		// 重置 P2
+		p2.hp = p2.maxHp;
+		p2.mp = 0;
+		p2.state = "idle";
+		p2.x = 800; p2.y = 0; p2.vx = 0; p2.vy = 0;
+		p2.isUltActive = false;
+
+		// 清理场面
+		ParticleManager.inst().clear();
+
+		// 重置相机
+		getWorldCamera().position.set(0, 0, 0); // 具体位置会在 render 中被 Camera Follow 修正
+		getWorldCamera().zoom = 1.0f;
 	}
 
 	@Override
