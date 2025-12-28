@@ -64,6 +64,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		// 2. 添加游戏视图 (底层)
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
 		cfg.useImmersiveMode = true;
+		cfg.numSamples = 2; // Android端通常设为2以平衡性能
 		// 关键：防止 SurfaceView 遮挡普通 View，虽然 FrameLayout 顺序通常能保证，但加保险
 		// cfg.r = 8; cfg.g = 8; cfg.b = 8; cfg.a = 8; // 如果需要透明背景可开启
 		gameView = initializeForView(GdxLauncherProvider.launcherGame(), cfg);

@@ -2,7 +2,7 @@ ignored: indentFix codeFormatFix
 
 # TODO   
 做ui布局编辑器: 可调整控件和布局的对齐方式，调整布局位置...
-
+中文提示, 虚拟指令重复
 
 
 
