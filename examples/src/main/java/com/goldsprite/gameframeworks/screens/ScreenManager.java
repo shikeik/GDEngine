@@ -1,0 +1,240 @@
+package com.goldsprite.gameframeworks.screens;
+
+import com.badlogic.gdx.*;
+import com.badlogic.gdx.utils.Disposable;
+import com.badlogic.gdx.utils.viewport.Viewport;
+import com.goldsprite.gameframeworks.PlatformImpl;
+//import com.goldsprite.gameframeworks.log.Debug;
+
+import java.util.*;
+import java.util.function.Consumer;
+
+/**
+ * 使用：
+ * * 创建:
+ * * * 实例化: ScreenManager.getInstance().addScreen(new YourScreen()).setLaunchScreen(YourScreen.class);
+ * * * 渲染: ScreenManager.getInstance().render();
+ * * * 重大小: ScreenManager.getInstance().resize(width, height);
+ * * * 回收: ScreenManager.getInstance().dispose();
+ * * 切换屏幕:
+ * * * 首先需要已添加目标屏幕，然后在屏幕内部使用getScreenManager().setCurScreen(TargetScreen.class)
+ * * 返回上次屏幕:
+ * * * 在屏幕历史堆栈有屏幕时getScreenManager().popLastScreen()来返回上个屏幕
+ */
+public class ScreenManager implements Disposable {
+
+	// 1. 定义屏幕方向枚举
+	public enum Orientation {
+		PORTRAIT, // 竖屏
+		LANDSCAPE // 横屏
+		}
+
+	// 2. 定义回调接口 (底层不依赖 Android/Lwjgl)
+	public static Consumer<Orientation> orientationChanger;
+	public static List<Runnable> exitGame = new ArrayList<>();//声明退出游戏事件回调，需要在各平台自身实现
+	private static ScreenManager instance;
+	private final Map<Class<?>, IGScreen> screens = new HashMap<>();
+	private final InputMultiplexer imp;
+	//屏幕历史堆栈
+	private final Stack<IGScreen> screenHistory = new Stack<>();
+	private IGScreen curScreen;
+	private IGScreen launchScreen;
+	private boolean popping;//用于标记是否为弹出历史屏幕状态
+	private Viewport viewport;//统一视口
+
+	public ScreenManager() {
+		this(new InputMultiplexer());
+	}
+
+	public ScreenManager(InputMultiplexer imp) {
+		instance = this;
+		//初始化输入处理器
+		initInputHandler(this.imp = imp);
+	}
+
+	/**
+	 * 单例屏幕管理器
+	 */
+	public static synchronized ScreenManager getInstance() {
+		//初始化语句
+		if (instance == null) {
+			new ScreenManager();
+		}
+		return instance;
+	}
+
+	// 3. 增加切换方法
+	public void setOrientation(Orientation orientation) {
+		if (orientationChanger != null) {
+			orientationChanger.accept(orientation);
+			curScreen.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+		}
+		// 注意：实际视口 resize 会在 resize() 回调中被触发，这里不需要手动改 Viewport
+	}
+
+	private void initInputHandler(InputMultiplexer imp) {
+		//设置到gdx输入管线
+		if (Gdx.input.getInputProcessor() == null) Gdx.input.setInputProcessor(imp);
+		//创建默认处理器
+		InputAdapter defaultHandler = new InputAdapter() {
+			boolean isFullscreen;
+
+			public boolean keyDown(int keyCode) {
+				Application.ApplicationType userType = Gdx.app.getType();
+
+				//从堆栈弹出并返回上个屏幕
+				if (keyCode == Input.Keys.BACK || keyCode == Input.Keys.ESCAPE) {
+					if (!popLastScreen()) {
+						//如果已在最顶层则退出游戏
+						if (exitGame != null && !exitGame.isEmpty()) exitGame.forEach(r -> r.run());
+					}
+					return true;
+				}
+				else if(keyCode == Input.Keys.F11) {
+					isFullscreen = !isFullscreen;
+					PlatformImpl.fullScreenEvent.accept(isFullscreen);
+//					if(Application.ApplicationType.Desktop.equals(userType))
+//						ScreenManager.orientationChanger.accept(isFullscreen ? ScreenManager.Orientation.LANDSCAPE : ScreenManager.Orientation.PORTRAIT);
+//					Debug.logT("FullscreenManager", "切换到%s模式", isFullscreen ? "全屏" : "窗口");
+				}
+				return false;
+			}
+		};
+		imp.addProcessor(defaultHandler);
+	}
+
+	public InputMultiplexer getImp() {
+		return imp;
+	}
+
+	public Viewport getViewport() {
+		return viewport;
+	}
+
+	public ScreenManager setViewport(Viewport viewport) {
+		this.viewport = viewport;
+		return this;
+	}
+
+	/**
+	 * 渲染(已初始化的)当前屏幕
+	 */
+	public void render() {
+		if (!curScreen.isInitialized()) return;
+		float delta = Gdx.graphics.getDeltaTime();
+		curScreen.render(delta);
+	}
+
+	/**
+	 * 释放资源
+	 */
+	@Override
+	public void dispose() {
+		for (IGScreen screen : screens.values()) {
+			if (screen.isInitialized())
+				screen.dispose();
+		}
+	}
+
+	public void resize(int width, int height) {
+		curScreen.resize(width, height);
+	}
+
+	/**
+	 * 添加并配置游戏屏幕
+	 */
+	public ScreenManager addScreen(IGScreen screen) {
+		Class<?> key = screen.getClass();
+		if (!screens.containsKey(key)) {
+			screens.put(key, screen);
+			screen.setScreenManager(this);
+			screen.setImp(new InputMultiplexer());
+		}
+		//防止没有设置当前屏幕异常，现已无用
+		//if (curScreen == null) curScreen = screen;
+		return this;
+	}
+
+	/**
+	 * 通过键获取游戏屏幕
+	 */
+	public IGScreen getScreen(Class<?> key) {
+		if (!screens.containsKey(key)) throw new RuntimeException("未找到此屏幕." + key.getSimpleName());
+		return screens.get(key);
+	}
+
+	public boolean existsScreen(Class<?> key) {
+		return screens.containsKey(key);
+	}
+
+	/**
+	 * 获取当前屏幕
+	 */
+	public IGScreen getCurScreen() {
+		return curScreen;
+	}
+
+	public void setCurScreen(Class<? extends IGScreen> key) {
+		setCurScreen(key, false);
+	}
+
+	public void setCurScreen(IGScreen screen) {
+		//如果屏幕未准备则初始化屏幕
+		screen.initialize();
+		//隐藏上个屏幕并切换到目标屏幕
+		if (this.curScreen != null) {
+			this.curScreen.hide();
+			//如果为非popping状态，将旧屏幕推入历史堆栈以记录
+			if (!popping) screenHistory.push(curScreen);
+		}
+		this.curScreen = screen;
+		this.curScreen.show();
+		//刷新屏幕视口
+		this.curScreen.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+	}
+
+	public void setCurScreen(Class<? extends IGScreen> key, boolean autoCreate) {
+		//自动加入管理屏幕中
+		if (autoCreate && !existsScreen(key)) {
+			try {
+				addScreen(key.getConstructor().newInstance());
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		setCurScreen(getScreen(key));
+	}
+
+	//回到上个屏幕
+	public boolean popLastScreen() {
+		if (screenHistory.isEmpty()) return false;
+		IGScreen lastScreen = screenHistory.pop();
+		popping = true;
+		setCurScreen(lastScreen);
+		popping = false;
+		return true;
+	}
+
+	public IGScreen getLaunchScreen() {
+		return launchScreen;
+	}
+
+	public void setLaunchScreen(Class<? extends IGScreen> key) {
+		setLaunchScreen(getScreen(key));
+	}
+
+	public void setLaunchScreen(IGScreen screen) {
+		launchScreen = screen;
+		if (!screen.isInitialized())
+			setCurScreen(launchScreen);
+	}
+
+	public void enableInput(InputMultiplexer screenImp) {
+		imp.addProcessor(screenImp);
+	}
+
+	public void disableInput(InputMultiplexer screenImp) {
+		imp.removeProcessor(screenImp);
+	}
+
+}

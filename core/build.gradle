@@ -1,0 +1,106 @@
+plugins {
+	id 'java-library'
+	id 'maven-publish'
+}
+
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+eclipse.project.name = appName + '-core'
+
+group = 'com.goldsprite.biowar.core'
+version = '0.1.0'
+
+dependencies {
+	api "com.badlogicgames.gdx:gdx:$gdxVersion"
+	api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+	api "com.badlogicgames.gdx:gdx-tools:$gdxVersion"
+	api "com.kotcrab.vis:vis-ui:$visUIVersion"
+
+	api "com.faendir.rhino:rhino-android:1.6.0"
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	// 用于抑制java构建版本过时警告
+	options.compilerArgs << "-Xlint:-options"
+}
+
+tasks.javadoc {
+	// 设置生成的 Javadoc 的输出目录
+	destinationDir = file("$rootProject.projectDir/readme/docs/javadoc")
+
+	// 配置 Javadoc 的额外选项
+	options {
+		// 设置语言版本
+		source = '8'
+		// 配置字符编码
+		encoding = 'UTF-8'
+		// 取消严格注释
+		options.addStringOption('Xdoclint:none', '-quiet')
+		// 添加文档标题
+		docTitle = 'My Project API Documentation'
+		// 显示所有成员，包括私有
+		addBooleanOption('private', true)
+		// 包含作者和版本信息
+		addBooleanOption('author', true)
+		addBooleanOption('version', true)
+	}
+}
+// 在构建过程中执行该任务
+build.dependsOn javadoc
+
+//自动同步版本文件
+def projectPackage = project.projectPackage//获取项目包名
+tasks.register('generateBuildConfig') {
+	def packagePath = projectPackage.replace('.', '/')//处理为包路径
+	def versionFile = file("$projectDir/src/main/java/${packagePath}/BuildConfig.java")//创建配置文件
+	versionFile.parentFile.mkdirs()//创建前置所有目录
+	//写入数据
+	versionFile.text = """package $projectPackage;
+public class BuildConfig {
+	public static final String PROJECT_NAME = "${rootProject.name}";
+	public static final String DEV_VERSION = "${project.projectVersion}";
+	public static final String JDK_VERSION = "${project.jdkVersion}";
+}"""
+	println "Updated BuildConfig version to ${projectVersion}"
+}
+compileJava.dependsOn(generateBuildConfig)
+
+//更新README项目版本
+tasks.register('updateReadmeVersion') {
+	//不需要doLast因为修改项目版本号后立即刷新gradle配置就顺势更新了
+//	doLast {
+	def readmeFile = file("$rootProject.projectDir/README.md")
+	if (!readmeFile.exists() || !project.hasProperty("projectVersion")) return
+
+	def content = readmeFile.getText('UTF-8')
+	def projectVersion = project.projectVersion
+	// 使用正则表达式匹配并替换版本号
+	def updatedContent = content.replaceFirst(/^(# $rootProject.name.*V)(.*)/) {
+		all, prefix, oldVersion ->
+			"${prefix}${projectVersion}"
+	}
+	readmeFile.write(updatedContent, 'UTF-8')
+	println "Updated README.md version to ${projectVersion}"
+//	}
+}
+compileJava.dependsOn(updateReadmeVersion)
+
+testing {
+	suites {
+		// Configure the built-in test suite
+		test {
+			// Use JUnit4 test framework
+			useJUnit('4.13.2')
+		}
+	}
+}
+tasks.named('build') {
+	dependsOn testing.suites.test // 确保 testing 的测试任务在 build 时执行
+}
