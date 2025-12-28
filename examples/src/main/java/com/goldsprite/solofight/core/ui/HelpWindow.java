@@ -121,16 +121,21 @@ public class HelpWindow extends VisWindow {
 		addRow("skl_flash", "key_flash", "tch_flash", true);
 	}
 
+	// [修改] 重写行构建逻辑，使用真正的 Table Column
 	private void addHeaderRow(String k1, String k2, String k3) {
 		Table row = new Table();
-		row.defaults().expandX().fillX().pad(5);
-		row.add(new Label(TextDB.get(k1), new Label.LabelStyle(FontUtils.generate(18), COL_ACTIVE)));
-		row.add(new Label(TextDB.get(k2), new Label.LabelStyle(FontUtils.generate(18), COL_ACTIVE)));
-		row.add(new Label(TextDB.get(k3), new Label.LabelStyle(FontUtils.generate(18), COL_ACTIVE)));
-		contentArea.add(row).growX().row();
+		// 设置固定宽度或权重，确保对齐
+		// Action: 20%, Key: 40%, Touch: 40%
+		Label l1 = new Label(TextDB.get(k1), new Label.LabelStyle(FontUtils.generate(18), COL_ACTIVE));
+		Label l2 = new Label(TextDB.get(k2), new Label.LabelStyle(FontUtils.generate(18), COL_ACTIVE));
+		Label l3 = new Label(TextDB.get(k3), new Label.LabelStyle(FontUtils.generate(18), COL_ACTIVE));
 
-		// [修复] 使用 createSeparator
-		contentArea.add(createSeparator()).height(1).growX().row();
+		row.add(l1).expandX().width(120).left();
+		row.add(l2).expandX().width(200).left();
+		row.add(l3).expandX().width(200).left();
+
+		contentArea.add(row).growX().padBottom(5).row();
+		contentArea.add(createSeparator()).height(1).growX().padBottom(5).row();
 	}
 
 	private void addRow(String k1, String k2, String k3) {
@@ -139,20 +144,24 @@ public class HelpWindow extends VisWindow {
 
 	private void addRow(String k1, String k2, String k3, boolean special) {
 		Table row = new Table();
-		row.defaults().expandX().fillX().pad(5);
 
 		Color c = special ? Color.valueOf("ffeb3b") : Color.LIGHT_GRAY;
 		String t1 = TextDB.get(k1);
-		String t2 = TextDB.get(k2);
-		String t3 = TextDB.get(k3);
+		String t2 = TextDB.get(k2); // 已经是翻译后的值了? 不，是 Key
+		// key_dash_l 是 Key，需要 TextDB.get
+		// W A S D 不是 Key，直接显示
+		// 简单判断：如果 TextDB 有值则用，否则原样
 
-		row.add(new Label(t1, new Label.LabelStyle(FontUtils.generate(14), c)));
-		row.add(new Label(t2, new Label.LabelStyle(FontUtils.generate(14), Color.WHITE)));
-		row.add(new Label(t3, new Label.LabelStyle(FontUtils.generate(14), Color.WHITE)));
+		row.add(new Label(t1, new Label.LabelStyle(FontUtils.generate(14), c))).expandX().width(120).left();
+		row.add(new Label(safeGet(k2), new Label.LabelStyle(FontUtils.generate(14), Color.WHITE))).expandX().width(200).left();
+		row.add(new Label(safeGet(k3), new Label.LabelStyle(FontUtils.generate(14), Color.WHITE))).expandX().width(200).left();
 
-		contentArea.add(row).growX().row();
+		contentArea.add(row).growX().padBottom(5).row();
+		contentArea.add(createSeparator()).height(1).growX().padBottom(5).row();
+	}
 
-		// [修复] 使用 createSeparator
-		contentArea.add(createSeparator()).height(1).growX().row();
+	private String safeGet(String key) {
+		String val = TextDB.get(key);
+		return val.equals(key) ? key : val; // 如果没翻译，返回原Key(针对 WASD 这种硬编码)
 	}
 }

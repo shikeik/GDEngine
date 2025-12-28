@@ -142,7 +142,13 @@ public class Fighter {
 			}
 		} else if (state.equals("ult_end")) {
 			if (ultTimer >= 30) {
-				if (enemy != null) { enemy.state = "idle"; enemy.takeDamage(150, -this.dir); }
+				if (enemy != null) {
+					enemy.state = "idle";
+					enemy.takeDamage(150, -this.dir);
+
+					// [新增] 大招终结粒子 (Shards)
+					ParticleManager.inst().burst(enemy.x + enemy.w/2, enemy.y + enemy.h/2, Color.CYAN, 30, ParticleManager.Type.SHARD, 15f);
+				}
 				SynthAudio.playTone(50, SynthAudio.WaveType.SAWTOOTH, 1.5f, 0.5f, 10);
 				SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 1.0f, 0.8f);
 				isUltActive = false; state = "idle"; slashLines.clear();
@@ -155,7 +161,11 @@ public class Fighter {
 		hp -= dmg; if(hp<=0) hp=0;
 		state = "hit"; vx = 8*hitDir; vy = 5; animTimer = 0; hitFlashTimer = 0.2f;
 		SynthAudio.playTone(100, SynthAudio.WaveType.SAWTOOTH, 0.2f, 0.2f, 50);
+
+		// [新增] 受击粒子 (Box)
+		ParticleManager.inst().burst(x + w/2, y + 40, this.color, 5, ParticleManager.Type.BOX, 10f);
 	}
+
 	private void attack() { state = "attack"; animTimer = 0; vx = 0; SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f); }
 	private void dash(int d) { if(d==0)d=dir; this.dir=d; state="dash"; animTimer=0; vx=25*d; SynthAudio.playTone(0, SynthAudio.WaveType.NOISE, 0.1f, 0.1f); }
 	private void flashSlash() { state="flash_slash"; animTimer=0; vx=0; slashStartX=x;

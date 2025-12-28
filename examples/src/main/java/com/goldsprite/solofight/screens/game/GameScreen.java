@@ -16,6 +16,7 @@ import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.TextDB;
 import com.goldsprite.solofight.core.game.Fighter;
 import com.goldsprite.solofight.core.game.ParallaxBackground;
+import com.goldsprite.solofight.core.game.ParticleManager;
 import com.goldsprite.solofight.core.input.ComboEngine;
 import com.goldsprite.solofight.core.input.CommandHistoryUI;
 import com.goldsprite.solofight.core.input.GestureProcessor;
@@ -75,6 +76,9 @@ public class GameScreen extends ExampleGScreen {
 		p1 = new Fighter(200, Color.CYAN, false);
 		p2 = new Fighter(800, Color.valueOf("ff0055"), true);
 		p1.setEnemy(p2); p2.setEnemy(p1);
+
+		// [新增] 清理粒子
+		ParticleManager.inst().clear();
 
 		initUI();
 		initInputLogic();
@@ -153,9 +157,20 @@ public class GameScreen extends ExampleGScreen {
 
 	private void initInputLogic() {
 		gestureProcessor = new GestureProcessor(getViewport());
-		getImp().addProcessor(uiStage);
-		getImp().addProcessor(gestureProcessor);
+
+		// [关键修复 1] 调整处理器顺序
+		// 键盘处理器优先级最高 (防止 Stage 吞键? 其实通常 Stage 不吞 WASD)
+		// 但为了保险，我们把 Keyboard 放在 Stage 后面 (LibGDX Multiplexer 0 is processed FIRST).
+		// 实际上: Stage 如果 focused TextField 会吞，否则 ignore.
+		// 我们的问题可能是之前的 Screen 没有重置 Processor.
+
+		// 重新构建 Multiplexer:
+		// 1. Keyboard (最优先，处理 WASD 快捷键)
 		getImp().addProcessor(new KeyboardProcessor());
+		// 2. UI Stage (处理按钮点击)
+		getImp().addProcessor(uiStage);
+		// 3. Gesture (处理 World Touch，如果 UI 没处理)
+		getImp().addProcessor(gestureProcessor);
 
 		InputContext.inst().commandListener = (cmdId, src) -> ComboEngine.inst().push(cmdId, src);
 
@@ -190,6 +205,9 @@ public class GameScreen extends ExampleGScreen {
 		boolean ultActive = p1.isUltActive || p2.isUltActive;
 		float timeScale = ultActive ? 0.05f : 1.0f;
 
+		// [新增] 更新粒子 (受时缓影响)
+		ParticleManager.inst().update(delta * (ultActive ? 0.05f : 1.0f));
+
 		if (p1.isUltActive) { p1.update(delta); p2.update(delta * timeScale); }
 		else if (p2.isUltActive) { p2.update(delta); p1.update(delta * timeScale); }
 		else { p1.update(delta); p2.update(delta); }
@@ -218,21 +236,37 @@ public class GameScreen extends ExampleGScreen {
 		getWorldCamera().position.y = getWorldCamera().viewportHeight/2 * getWorldCamera().zoom + sy;
 		getWorldCamera().update();
 
+		// --- Draw World ---
 		batch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 
 		parallaxBG.draw(neonBatch, getWorldCamera());
 
+		// [关键修复 4] 遮罩覆盖
 		if (ultActive) {
 			OrthographicCamera cam = getWorldCamera();
-			float ow = cam.viewportWidth * cam.zoom;
-			float oh = cam.viewportHeight * cam.zoom;
-			neonBatch.drawRect(cam.position.x, cam.position.y, ow*2, oh*2, 0, 0, new Color(0,0,0,0.8f), true);
+			// 直接画一个极大值，无视 Zoom 计算误差
+			float massiveSize = 10000f;
+			neonBatch.drawRect(
+				cam.position.x, cam.position.y, // 中心
+				massiveSize, massiveSize,       // 尺寸
+				0, 0,
+				new Color(0,0,0,0.8f),
+				true
+			);
 		}
 
 		neonBatch.drawLine(-500, 0, 1500, 0, 2, Color.GRAY);
-		p1.drawBody(neonBatch); p2.drawBody(neonBatch);
-		p1.drawEffects(neonBatch); p2.drawEffects(neonBatch);
+
+		p1.drawBody(neonBatch);
+		p2.drawBody(neonBatch);
+
+		// [新增] 绘制粒子 (在角色之上，特效之下? 或者最上面?)
+		// H5: 粒子在角色之上。
+		ParticleManager.inst().draw(neonBatch);
+
+		p1.drawEffects(neonBatch);
+		p2.drawEffects(neonBatch);
 
 		neonBatch.end();
 		getWorldCamera().position.sub(sx, sy, 0);

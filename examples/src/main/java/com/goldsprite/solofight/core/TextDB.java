@@ -1,5 +1,7 @@
 package com.goldsprite.solofight.core;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,8 +11,10 @@ public class TextDB {
 	private static Lang currentLang = Lang.CN;
 	private static final Map<String, String> zh = new HashMap<>();
 	private static final Map<String, String> en = new HashMap<>();
+	private static final Preferences prefs = Gdx.app.getPreferences("solofight_config");
 
 	static {
+		// ... (原有的 put 代码保持不变，请保留之前的字典内容) ...
 		// --- ZH ---
 		zh.put("tab_ctrl", "操作说明"); zh.put("tab_moves", "出招表");
 		zh.put("th_action", "动作"); zh.put("th_key", "键盘"); zh.put("th_touch", "触屏"); zh.put("th_skill", "招式");
@@ -44,6 +48,10 @@ public class TextDB {
 		en.put("CMD_DASH_L", "DASH L"); en.put("CMD_DASH_R", "DASH R"); en.put("CMD_DASH_AUTO", "DASH");
 		en.put("FLASH SLASH", "FLASH SLASH"); en.put("DASH", "DASH"); en.put("ATTACK", "ATTACK"); en.put("JUMP", "JUMP"); en.put("ULTIMATE", "ULTIMATE");
 		en.put("KEY", "Key"); en.put("STICK", "Stick"); en.put("GESTURE", "Gesture");
+
+		// [新增] 加载配置
+		String saved = prefs.getString("lang", "CN");
+		currentLang = saved.equals("EN") ? Lang.EN : Lang.CN;
 	}
 
 	public static String get(String key) {
@@ -53,9 +61,10 @@ public class TextDB {
 
 	public static void toggle() {
 		currentLang = (currentLang == Lang.CN) ? Lang.EN : Lang.CN;
+		// [新增] 保存配置
+		prefs.putString("lang", currentLang.name());
+		prefs.flush();
 	}
 
-	public static String getLangName() {
-		return currentLang.name();
-	}
+	public static String getLangName() { return currentLang.name(); }
 }
