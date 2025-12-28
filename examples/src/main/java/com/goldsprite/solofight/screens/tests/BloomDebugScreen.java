@@ -53,7 +53,7 @@ public class BloomDebugScreen extends ExampleGScreen {
 		bloom.process();
 		// 4. 合成并上屏 (Overlays on top of background)
 		// 这一步会混合：原图 + 光晕，并且处理透明度
-		bloom.renderOld(neonBatch.getBatch());
+		bloom.render(neonBatch.getBatch());
 	}
 
 	private void drawCheckerBoard() {
