@@ -8,23 +8,19 @@ import com.goldsprite.gameframeworks.screens.GScreen;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 
 public abstract class ExampleGScreen extends GScreen {
-	private static SpriteBatch batch;
-	private static BitmapFont introFnt;
-	private static GlyphLayout glyphLayout;
-	
+	private SpriteBatch batch;
+	private BitmapFont introFnt;
+	private GlyphLayout glyphLayout;
+
 	private final Vector2 introPos = new Vector2();
 
 	public ExampleGScreen() {
 		super(); // GScreen 构造
-		if(batch==null){
-			batch = new SpriteBatch();
-			// 防止字体加载失败
-			BitmapFont temp;
-			try { temp = FontUtils.generateAutoClarity(16); }
-			catch (Exception e) { temp = new BitmapFont(); }
-			introFnt = temp;
-			glyphLayout = new GlyphLayout();
-		}
+
+		batch = new SpriteBatch();
+		glyphLayout = new GlyphLayout();
+		introFnt = FontUtils.generateAutoClarity(30);
+		introFnt.getData().setScale(1f);
 	}
 
 	public abstract String getIntroduction();
@@ -53,5 +49,6 @@ public abstract class ExampleGScreen extends GScreen {
 	public void dispose() {
 		super.dispose();
 		if(introFnt != null) introFnt.dispose();
+		if(batch != null) batch.dispose();
 	}
 }
