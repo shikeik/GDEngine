@@ -112,20 +112,23 @@ public class CombatScreen extends ExampleGScreen {
 	}
 
 	@Override
-	public void render0(float delta) {
-		gestureProcessor.update(delta);
+	public void render0(float dt) {
+		gestureProcessor.update(dt);
 
 		boolean ultActive = p1.isUltActive || p2.isUltActive;
-		float timeScale = ultActive ? 0.05f : 1.0f;
+		float ultScale = ultActive ? 0.05f : 1.0f;
+		float finalDt = dt * ultScale;
 
+		// [修复] 传入 null 作为 platforms 参数
 		if (p1.isUltActive) {
-			p1.update(delta); // P1 Realtime
-			p2.update(delta * timeScale); // P2 Slow
+			p1.update(dt, null);
+			p2.update(finalDt, null);
 		} else if (p2.isUltActive) {
-			p2.update(delta);
-			p1.update(delta * timeScale);
+			p2.update(dt, null);
+			p1.update(finalDt, null);
 		} else {
-			p1.update(delta); p2.update(delta);
+			p1.update(finalDt, null);
+			p2.update(finalDt, null);
 		}
 
 		if ((p1.state.equals("ult_slash") && p1.ultTimer % 4 == 0) || (p1.state.equals("ult_end") && p1.ultTimer == 30)) {
@@ -148,8 +151,8 @@ public class CombatScreen extends ExampleGScreen {
 		}
 
 		// Camera Follow
-		getWorldCamera().position.x += (targetX - camX) * 5 * delta;
-		getWorldCamera().zoom += (targetZoom - getWorldCamera().zoom) * 5 * delta;
+		getWorldCamera().position.x += (targetX - camX) * 5 * dt;
+		getWorldCamera().zoom += (targetZoom - getWorldCamera().zoom) * 5 * dt;
 
 		// Shake Apply
 		float shakeX = (MathUtils.random()-0.5f) * shake;
@@ -220,7 +223,7 @@ public class CombatScreen extends ExampleGScreen {
 		}
 		neonBatch.end();
 
-		uiStage.act(delta);
+		uiStage.act(dt);
 		uiStage.draw();
 
 		DebugUI.info("P1 MP: %.0f | Ult: %b", p1.mp, p1.isUltActive);

@@ -8,6 +8,8 @@ import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.goldsprite.solofight.core.input.InputContext;
 
+import java.util.List;
+
 public class Fighter {
 	public float x, y, vx, vy;
 	public float w = 40, h = 90;
@@ -64,7 +66,8 @@ public class Fighter {
 		if (enemy != null) { enemy.state = "ult_frozen"; enemy.vx = 0; enemy.vy = 0; }
 	}
 
-	public void update(float delta) {
+	// [修改] update 签名增加 platforms 参数
+	public void update(float delta, List<Platform> platforms) {
 		InputContext input = InputContext.inst();
 		if (state.startsWith("ult")) { updateUltLogic(delta); return; }
 		if (state.equals("ult_frozen")) return;
@@ -86,8 +89,47 @@ public class Fighter {
 		x += vx * (60 * delta);
 		y += vy * (60 * delta);
 
-		if (y < 0) { y = 0; vy = 0; inAir = false; if(state.equals("jump")||state.equals("hit")) state="idle"; }
-		else { inAir = true; if(state.equals("run")) state="jump"; }
+		// [新增] 平台碰撞检测 (One-way platform)
+		// 逻辑：只有当 vy <= 0 (下落) 且 脚底之前在平台上方时才碰撞
+		// H5 logic simplified:
+		boolean onGround = false;
+
+		// 地面 (y=0)
+		if (y <= 0) {
+			y = 0;
+			onGround = true;
+		} else if (vy <= 0 && platforms != null) {
+			// 检查平台
+			for (Platform p : platforms) {
+				// AABB Check
+				// 玩家水平范围: x ~ x+w
+				// 平台水平范围: p.x ~ p.x+p.w
+				if (x + w > p.x && x < p.x + p.w) {
+					// 垂直检测: 脚底 (y) 接近 平台顶部 (p.y + p.h)
+					// 容差: 穿透深度不能太多，且上一帧应该在上面 (这里简化为检测当前y是否接近平台顶)
+					// H5: y+h <= p.y + vy + 20? No, H5 logic checks feet.
+					// 我们这里 y 是脚底。
+					// 判定区间: y 在 [p.y+p.h - threshold, p.y+p.h + threshold]
+					float pTop = p.y + p.h; // H5中 y向下，p.y是顶。这里y向上，p.y是底?
+					// 我们定义 Platform x,y 是左下角。p.y + p.h 是顶面。
+
+					if (y >= pTop - 15 && y <= pTop + 15) { // 命中平台
+						y = pTop;
+						onGround = true;
+						break;
+					}
+				}
+			}
+		}
+
+		if (onGround) {
+			vy = 0;
+			inAir = false;
+			if(state.equals("jump")||state.equals("hit")) state="idle";
+		} else {
+			inAir = true;
+			if(state.equals("run")) state="jump";
+		}
 
 		if (!state.equals("dash") && !state.equals("flash_slash") && vx != 0) { vx *= 0.8f; if(Math.abs(vx)<0.1f) vx=0; }
 

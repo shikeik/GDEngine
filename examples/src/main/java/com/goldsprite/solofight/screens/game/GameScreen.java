@@ -8,7 +8,6 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.badlogic.gdx.utils.Timer;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
@@ -20,6 +19,7 @@ import com.goldsprite.solofight.core.game.EffectManager;
 import com.goldsprite.solofight.core.game.Fighter;
 import com.goldsprite.solofight.core.game.ParallaxBackground;
 import com.goldsprite.solofight.core.game.ParticleManager;
+import com.goldsprite.solofight.core.game.Platform; // [新增]
 import com.goldsprite.solofight.core.input.ComboEngine;
 import com.goldsprite.solofight.core.input.CommandHistoryUI;
 import com.goldsprite.solofight.core.input.GestureProcessor;
@@ -33,14 +33,15 @@ import com.goldsprite.solofight.core.ui.H5SkewBar;
 import com.goldsprite.solofight.core.ui.HelpWindow;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class GameScreen extends ExampleGScreen {
 
-	// Rendering
 	private SpriteBatch batch;
 	private NeonBatch neonBatch;
 	private ParallaxBackground parallaxBG;
 
-	// UI
 	private Stage uiStage;
 	private VirtualJoystick joystick;
 	private GestureProcessor gestureProcessor;
@@ -48,16 +49,17 @@ public class GameScreen extends ExampleGScreen {
 	private ToastUI toastUI;
 	private H5SkewBar barP1, barP2;
 	private HelpWindow helpWindow;
-	private VisTextButton btnLang, btnHelp;
+	private GameOverUI gameOverUI;
 
-	// Entities
 	private Fighter p1, p2;
 	private float shake = 0;
 
-	// [新增] 结算相关
-	private GameOverUI gameOverUI;
-	private boolean gameEnded = false; // 防止重复触发
-	private float globalTimeScale = 1.0f; // 全局时间缩放 (用于结算慢动作)
+	// [新增] 平台列表
+	private List<Platform> platforms = new ArrayList<>();
+
+	// 结算逻辑变量
+	private boolean gameEnded = false;
+	private float globalTimeScale = 1.0f;
 
 	@Override
 	public String getIntroduction() { return ""; }
@@ -81,20 +83,22 @@ public class GameScreen extends ExampleGScreen {
 		neonBatch = new NeonBatch(batch);
 		parallaxBG = new ParallaxBackground();
 
-		// Init Game World
+		// [新增] 初始化平台 (H5 数据)
+		// { x: 200, y: 350, w: 200, h: 20 }
+		// { x: 600, y: 200, w: 200, h: 20 }
+		// { x: 450, y: 300, w: 100, h: 20 }
+		platforms.add(new Platform(200, 350, 200, 20));
+		platforms.add(new Platform(600, 200, 200, 20));
+		platforms.add(new Platform(450, 300, 100, 20));
+
 		p1 = new Fighter(200, Color.CYAN, false);
 		p2 = new Fighter(800, Color.valueOf("ff0055"), true);
 		p1.setEnemy(p2); p2.setEnemy(p1);
 
-		// [修复 4] 初始化飘字
 		FloatingTextManager.init();
-		FloatingTextManager.resetCombo();
-
-		// [新增] 清理粒子
-		ParticleManager.inst().clear();
-
-		// [新增] 清理特效
+		FloatingTextManager.getInstance().resetCombo();
 		EffectManager.inst().clear();
+		ParticleManager.inst().clear();
 
 		initUI();
 		initInputLogic();
@@ -103,94 +107,84 @@ public class GameScreen extends ExampleGScreen {
 	private void initUI() {
 		uiStage = new Stage(getViewport());
 
-		// 1. In-Game Controls
+		// --- Root Table 布局管理 (修复 UI 错位) ---
+		Table root = new Table();
+		root.setFillParent(true);
+		uiStage.addActor(root);
+
+		// 1. Top Layer (Buttons & Bars)
+		Table topTable = new Table();
+
+		// Left: Help & Lang Buttons
+		VisTextButton btnHelp = new VisTextButton("?");
+		btnHelp.addListener(new ClickListener() {
+			public void clicked(InputEvent e, float x, float y) {
+				helpWindow.setVisible(true); helpWindow.toFront(); helpWindow.refreshLang();
+			}
+		});
+		VisTextButton btnLang = new VisTextButton("CN");
+		btnLang.addListener(new ClickListener() {
+			public void clicked(InputEvent e, float x, float y) {
+				TextDB.toggle(); btnLang.setText(TextDB.getLangName()); helpWindow.refreshLang();
+			}
+		});
+		topTable.add(btnHelp).size(40).padRight(10);
+		topTable.add(btnLang).size(50, 40).padRight(20);
+
+		// Middle: Spacer
+		topTable.add().expandX();
+
+		root.add(topTable).growX().top().pad(10).row();
+
+		// 2. Center Layer (History & Toast)
+		Table centerTable = new Table();
+
+		// Left: History UI (Align Left, Top)
+		historyUI = new CommandHistoryUI();
+		centerTable.add(historyUI).left().top().padLeft(10).padTop(10);
+
+		// Center: Toast (Expand X to center it)
+		toastUI = new ToastUI();
+		centerTable.add(toastUI).expandX().center().top().padTop(50);
+
+		// Right: Empty
+		centerTable.add().expandX();
+
+		root.add(centerTable).grow().row();
+
+		// 3. Absolute/Overlay Actors (Joystick, Bars, Modals)
+		// 摇杆如果不放 Table 里更容易控制位置
 		joystick = new VirtualJoystick();
 		joystick.setPosition(50, 50);
 		uiStage.addActor(joystick);
 
-		historyUI = new CommandHistoryUI();
-		historyUI.setPosition(10, getViewport().getWorldHeight() * 0.4f);
-		uiStage.addActor(historyUI);
-
-		toastUI = new ToastUI();
-		toastUI.setPosition(getViewport().getWorldWidth()/2 - 50, 150);
-		uiStage.addActor(toastUI);
-
-		// 2. Bars
-		initBars();
-
-		// 3. Top Buttons (Help & Lang)
-		Table topTable = new Table();
-		topTable.setFillParent(true);
-		topTable.top().pad(10);
-
-		btnHelp = new VisTextButton("?");
-		btnHelp.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				helpWindow.setVisible(true);
-				helpWindow.toFront();
-				helpWindow.refreshLang();
-			}
-		});
-
-		btnLang = new VisTextButton("CN");
-		btnLang.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				TextDB.toggle();
-				btnLang.setText(TextDB.getLangName());
-				helpWindow.refreshLang();
-			}
-		});
-
-		topTable.add(btnHelp).size(40, 40).padRight(10);
-		topTable.add(btnLang).size(50, 40);
-		uiStage.addActor(topTable);
-
-		// 4. Help Modal
-		helpWindow = new HelpWindow();
-		helpWindow.setVisible(false);
-		uiStage.addActor(helpWindow);
-
-		// 5. Game Over UI (最后添加，确保在最上层)
-		gameOverUI = new GameOverUI();
-		uiStage.addActor(gameOverUI);
-	}
-
-	private void initBars() {
+		// 血条 (手动定位，因为要倾斜特效，放 Table 里容易被裁切)
 		H5SkewBar.BarStyle s1 = new H5SkewBar.BarStyle();
 		s1.gradientStart = Color.valueOf("00eaff"); s1.gradientEnd = Color.valueOf("0088aa"); s1.skewDeg = -20f;
 		barP1 = new H5SkewBar(0, 500, s1);
 		barP1.setSize(350, 25);
-		barP1.setPosition(20, getViewport().getWorldHeight() - 50);
-		uiStage.addActor(barP1);
+		uiStage.addActor(barP1); // 在 resize 中定位
 
 		H5SkewBar.BarStyle s2 = new H5SkewBar.BarStyle();
 		s2.gradientStart = Color.valueOf("ff0055"); s2.gradientEnd = Color.valueOf("aa0033"); s2.skewDeg = 20f;
 		barP2 = new H5SkewBar(0, 500, s2);
 		barP2.setSize(350, 25);
 		barP2.setFillFromRight(true);
-		barP2.setPosition(getViewport().getWorldWidth() - 370, getViewport().getWorldHeight() - 50);
-		uiStage.addActor(barP2);
+		uiStage.addActor(barP2); // 在 resize 中定位
+
+		helpWindow = new HelpWindow();
+		helpWindow.setVisible(false);
+		uiStage.addActor(helpWindow);
+
+		gameOverUI = new GameOverUI();
+		uiStage.addActor(gameOverUI);
 	}
 
 	private void initInputLogic() {
 		gestureProcessor = new GestureProcessor(getViewport());
-
-		// [关键修复 1] 调整处理器顺序
-		// 键盘处理器优先级最高 (防止 Stage 吞键? 其实通常 Stage 不吞 WASD)
-		// 但为了保险，我们把 Keyboard 放在 Stage 后面 (LibGDX Multiplexer 0 is processed FIRST).
-		// 实际上: Stage 如果 focused TextField 会吞，否则 ignore.
-		// 我们的问题可能是之前的 Screen 没有重置 Processor.
-
-		// 重新构建 Multiplexer:
-		// 1. Keyboard (最优先，处理 WASD 快捷键)
-		getImp().addProcessor(new KeyboardProcessor());
-		// 2. UI Stage (处理按钮点击)
-		getImp().addProcessor(uiStage);
-		// 3. Gesture (处理 World Touch，如果 UI 没处理)
-		getImp().addProcessor(gestureProcessor);
+		getImp().addProcessor(new KeyboardProcessor()); // Key First
+		getImp().addProcessor(uiStage); // UI Second
+		getImp().addProcessor(gestureProcessor); // Gesture Last
 
 		InputContext.inst().commandListener = (cmdId, src) -> ComboEngine.inst().push(cmdId, src);
 
@@ -215,38 +209,27 @@ public class GameScreen extends ExampleGScreen {
 	@Override
 	public void render0(float delta) {
 		if (helpWindow.isVisible()) {
-			uiStage.act(delta);
-			uiStage.draw();
-			return;
+			uiStage.act(delta); uiStage.draw(); return;
 		}
 
-		// 重置 Batch 颜色，防止 UI 透明度污染
+		// [修复透明度 1] 帧首重置
 		batch.setColor(Color.WHITE);
 
 		float dt = delta * globalTimeScale;
-
-		// --- Logic Updates ---
-		// [修复 4] 更新飘字
-		FloatingTextManager.getInstance().update(dt);
-
 		gestureProcessor.update(dt);
 
 		boolean ultActive = p1.isUltActive || p2.isUltActive;
 		float ultScale = ultActive ? 0.05f : 1.0f;
 		float finalDt = dt * ultScale;
 
-		if (p1.isUltActive) { p1.update(dt); p2.update(finalDt); }
-		else if (p2.isUltActive) { p2.update(dt); p1.update(finalDt); }
-		else { p1.update(finalDt); p2.update(finalDt); }
+		// [修改] 传递 platforms
+		if (p1.isUltActive) { p1.update(dt, platforms); p2.update(finalDt, platforms); }
+		else if (p2.isUltActive) { p2.update(dt, platforms); p1.update(finalDt, platforms); }
+		else { p1.update(finalDt, platforms); p2.update(finalDt, platforms); }
 
-		// [关键修复] 更新特效管理器
-		// 使用 dt (受全局时缓影响，但不受大招 0.05x 极慢速影响，避免闪电定格太久)
-		// 如果你希望闪电在大招期间也变慢，可以改传 finalDt
-		EffectManager.inst().update(finalDt);
-
-		ParticleManager.inst().update(finalDt); // 粒子通常随时间流逝变慢，用 finalDt 较好
-		FloatingTextManager.getInstance().update(finalDt); // 你修改过的逻辑
-
+		EffectManager.inst().update(dt);
+		ParticleManager.inst().update(finalDt);
+		FloatingTextManager.getInstance().update(dt);
 		checkGameResult();
 
 		if ((p1.state.equals("ult_slash") && p1.ultTimer % 4 == 0) || (p1.state.equals("ult_end") && p1.ultTimer == 30)) {
@@ -257,27 +240,21 @@ public class GameScreen extends ExampleGScreen {
 		barP1.setValue(p1.hp); barP1.setPercent(p1.hp/p1.maxHp);
 		barP2.setValue(p2.hp); barP2.setPercent(p2.hp/p2.maxHp);
 
+		// Camera logic... (保持不变)
 		float camX = getWorldCamera().position.x;
 		float targetX = (p1.x + p2.x) / 2 + 20;
 		float targetZoom = 1.0f;
-
-		if (p1.isUltActive && p1.state.equals("ult_slash")) {
-			targetX = p2.x + p2.w/2;
-			targetZoom = 0.7f;
-		}
+		if (p1.isUltActive && p1.state.equals("ult_slash")) { targetX = p2.x + p2.w/2; targetZoom = 0.7f; }
 
 		getWorldCamera().position.x += (targetX - camX) * 5 * delta;
 		getWorldCamera().zoom += (targetZoom - getWorldCamera().zoom) * 5 * delta;
-
 		float shakeX = (MathUtils.random()-0.5f) * shake;
 		float shakeY = (MathUtils.random()-0.5f) * shake;
 		getWorldCamera().position.add(shakeX, shakeY, 0);
-
 		float viewHalfW = getWorldCamera().viewportWidth / 2 * getWorldCamera().zoom;
 		if (getWorldCamera().position.x < -200 + viewHalfW) getWorldCamera().position.x = -200 + viewHalfW;
 		if (getWorldCamera().position.x > 1200 - viewHalfW) getWorldCamera().position.x = 1200 - viewHalfW;
 		getWorldCamera().position.y = getWorldCamera().viewportHeight/2 * getWorldCamera().zoom + shakeY;
-
 		getWorldCamera().update();
 
 		// --- Draw World ---
@@ -286,33 +263,32 @@ public class GameScreen extends ExampleGScreen {
 
 		parallaxBG.draw(neonBatch, getWorldCamera());
 
+		// [新增] 绘制平台
+		for (Platform p : platforms) {
+			// 样式：实心填充 + 描边 (Neon Style)
+			neonBatch.drawRect(p.x + p.w/2, p.y + p.h/2, p.w, p.h, 0, 0, Color.valueOf("333333"), true);
+			neonBatch.drawRect(p.x + p.w/2, p.y + p.h/2, p.w, p.h, 0, 2f, Color.valueOf("00eaff"), false);
+		}
+
 		if (ultActive) {
 			OrthographicCamera cam = getWorldCamera();
 			neonBatch.drawRect(cam.position.x, cam.position.y, 10000, 10000, 0, 0, new Color(0,0,0,0.8f), true);
 		}
 
 		neonBatch.drawLine(-500, 0, 1500, 0, 2, Color.GRAY);
-		p1.drawBody(neonBatch);
-		p2.drawBody(neonBatch);
-
-		// 绘制特效 (残影/电光)
+		p1.drawBody(neonBatch); p2.drawBody(neonBatch);
 		EffectManager.inst().draw(neonBatch);
-
 		ParticleManager.inst().draw(neonBatch);
-		p1.drawEffects(neonBatch);
-		p2.drawEffects(neonBatch);
-
-		// 绘制世界空间飘字
+		p1.drawEffects(neonBatch); p2.drawEffects(neonBatch);
 		FloatingTextManager.getInstance().renderWorld(batch);
 
 		neonBatch.end();
-
 		getWorldCamera().position.sub(shakeX, shakeY, 0);
 
 		// --- Draw UI ---
-
-		// 重置 Batch 颜色，防止 UI 透明度污染
+		// [修复透明度 2] 强制重置 Batch 颜色，防止 FloatingTextManager 或 NeonBatch 污染 UI
 		batch.setColor(Color.WHITE);
+
 		batch.setProjectionMatrix(getViewport().getCamera().combined);
 		neonBatch.begin();
 		float splitX = getViewport().getWorldWidth() * 0.5f;
@@ -322,7 +298,6 @@ public class GameScreen extends ExampleGScreen {
 		}
 		neonBatch.end();
 
-		// 绘制 UI 空间连击
 		batch.begin();
 		FloatingTextManager.getInstance().renderUI(batch, getViewport().getWorldWidth(), getViewport().getWorldHeight());
 		batch.end();
@@ -333,70 +308,44 @@ public class GameScreen extends ExampleGScreen {
 		DebugUI.info("P1 MP: %.0f | Ult: %b", p1.mp, p1.isUltActive);
 	}
 
-	// [新增] 胜负检测与结算触发
+	// ... (checkGameResult, restartGame 等保持不变) ...
 	private void checkGameResult() {
 		if (gameEnded) return;
-
 		boolean p1Dead = p1.hp <= 0;
 		boolean p2Dead = p2.hp <= 0;
-
 		if (p1Dead || p2Dead) {
 			gameEnded = true;
-
-			// 1. 瞬间慢动作 (H5: timeScale = 0.1)
 			globalTimeScale = 0.1f;
-
-			// 2. 延迟 2.5秒 (真实时间) 后显示 UI
-			Timer.schedule(new Timer.Task() {
+			com.badlogic.gdx.utils.Timer.schedule(new com.badlogic.gdx.utils.Timer.Task() {
 				@Override
 				public void run() {
-					// 游戏完全暂停 (或者保持极慢? H5里 running=false 停止 update)
-					// 这里我们设置 timeScale = 0，彻底冻结画面
 					globalTimeScale = 0f;
-
-					// 显示结算面板
-					boolean isWin = p2Dead; // 敌人死 = 胜利
+					boolean isWin = p2Dead;
 					gameOverUI.show(isWin, () -> restartGame());
 				}
 			}, 2.5f);
 		}
 	}
 
-	// [新增] 重开游戏逻辑
 	private void restartGame() {
-		gameEnded = false;
-		globalTimeScale = 1.0f; // 恢复时间
-
-		// 重置 P1
-		p1.hp = p1.maxHp;
-		p1.mp = 100; // 测试方便给满蓝
-		p1.state = "idle";
-		p1.x = 200; p1.y = 0; p1.vx = 0; p1.vy = 0;
-		p1.isUltActive = false;
-
-		// 重置 P2
-		p2.hp = p2.maxHp;
-		p2.mp = 0;
-		p2.state = "idle";
-		p2.x = 800; p2.y = 0; p2.vx = 0; p2.vy = 0;
-		p2.isUltActive = false;
-
-		// 清理场面
-		ParticleManager.inst().clear();
-
-		// 重置相机
-		getWorldCamera().position.set(0, 0, 0); // 具体位置会在 render 中被 Camera Follow 修正
-		getWorldCamera().zoom = 1.0f;
+		gameEnded = false; globalTimeScale = 1.0f;
+		p1.hp = p1.maxHp; p1.mp = 100; p1.state = "idle"; p1.x = 200; p1.y = 0; p1.vx = 0; p1.vy = 0; p1.isUltActive = false;
+		p2.hp = p2.maxHp; p2.mp = 0; p2.state = "idle"; p2.x = 800; p2.y = 0; p2.vx = 0; p2.vy = 0; p2.isUltActive = false;
+		ParticleManager.inst().clear(); EffectManager.inst().clear();
+		getWorldCamera().position.set(0, 0, 0); getWorldCamera().zoom = 1.0f;
 	}
 
 	@Override
 	public void resize(int width, int height) {
 		super.resize(width, height);
+		// 手动定位绝对布局的组件
 		if (barP2 != null) barP2.setPosition(getViewport().getWorldWidth() - 370, getViewport().getWorldHeight() - 50);
 		if (barP1 != null) barP1.setPosition(20, getViewport().getWorldHeight() - 50);
 		if (helpWindow != null) helpWindow.centerWindow();
+		// Toast 不需要手动定位了，Table 会管理
 	}
 
+	// ... (dispose) ...
 	@Override
 	public void dispose() {
 		super.dispose();
