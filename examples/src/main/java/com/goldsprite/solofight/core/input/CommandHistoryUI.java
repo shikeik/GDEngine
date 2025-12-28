@@ -4,102 +4,114 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
+import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.utils.Align;
 import com.goldsprite.gameframeworks.assets.FontUtils;
-import com.kotcrab.vis.ui.VisUI;
 
 public class CommandHistoryUI extends Table {
 
 	private final int MAX_ITEMS = 8;
-	// 背景纹理单例
+	private final float ITEM_WIDTH = 160;
+	private final float ITEM_HEIGHT = 22;
+
+	// 静态资源 (只加载一次)
 	private static Texture bgRaw, bgMove;
+	private static Label.LabelStyle styleIcon, styleNameMove, styleNameRaw, styleSrc;
+	private static boolean isInit = false;
 
 	public CommandHistoryUI() {
-		// H5: bottom: 250px, left: 10px, width: 160px
-		// Table 布局从下往上
-		bottom().left();
-		initTextures();
+		top().left(); // 顶部对齐，新消息往下堆叠
+		initResources();
 	}
 
-	private void initTextures() {
-		if (bgRaw != null) return;
+	private void initResources() {
+		if (isInit) return;
 
-		// Raw: Dark bg (0,0,0,0.8), Left Border #555 3px
-		Pixmap p1 = new Pixmap(160, 22, Pixmap.Format.RGBA8888);
+		// 1. Raw 背景: 深黑 + 灰色边框
+		Pixmap p1 = new Pixmap((int)ITEM_WIDTH, (int)ITEM_HEIGHT, Pixmap.Format.RGBA8888);
 		p1.setColor(0, 0, 0, 0.8f);
 		p1.fill();
-		p1.setColor(0.33f, 0.33f, 0.33f, 1f); // #555
-		p1.fillRectangle(0, 0, 3, 22);
-		bgRaw = new Texture(p1); p1.dispose();
+		p1.setColor(0.33f, 0.33f, 0.33f, 1f);
+		p1.fillRectangle(0, 0, 3, (int)ITEM_HEIGHT);
+		bgRaw = new Texture(p1);
+		p1.dispose();
 
-		// Move: Linear Gradient (Cyan 0.2 -> Transparent), Left Border #00eaff 3px
-		// Pixmap 不支持渐变，用纯色模拟低透明度背景
-		Pixmap p2 = new Pixmap(160, 22, Pixmap.Format.RGBA8888);
-		p2.setColor(0/255f, 234/255f, 255/255f, 0.2f); // Cyan 0.2
-		p2.fill(); // 暂用纯色代替渐变
-		p2.setColor(0/255f, 234/255f, 255/255f, 1f); // #00eaff
-		p2.fillRectangle(0, 0, 3, 22);
-		bgMove = new Texture(p2); p2.dispose();
+		// 2. Move 背景: 淡青 + 青色边框
+		Pixmap p2 = new Pixmap((int)ITEM_WIDTH, (int)ITEM_HEIGHT, Pixmap.Format.RGBA8888);
+		p2.setColor(0/255f, 234/255f, 255/255f, 0.15f);
+		p2.fill();
+		p2.setColor(0/255f, 234/255f, 255/255f, 1f);
+		p2.fillRectangle(0, 0, 3, (int)ITEM_HEIGHT);
+		bgMove = new Texture(p2);
+		p2.dispose();
+
+		// 3. 字体样式 (复用)
+		BitmapFont font12 = FontUtils.generate(12);
+		BitmapFont font9 = FontUtils.generate(9);
+
+		styleIcon = new Label.LabelStyle(font12, Color.WHITE);
+		styleNameMove = new Label.LabelStyle(font12, new Color(0, 234/255f, 255/255f, 1f));
+		styleNameRaw = new Label.LabelStyle(font12, new Color(0.8f, 0.8f, 0.8f, 1f));
+		styleSrc = new Label.LabelStyle(font9, Color.GRAY);
+
+		isInit = true;
 	}
 
 	public void addHistory(String cmdId, String src, String type, String icon) {
-		HistoryItem item = new HistoryItem(cmdId, src, type, icon);
-
-		// 插入到最上方 (Table row logic: add() puts at bottom if not configured, but we want new on top?
-		// H5 CSS: flex-direction: column-reverse. Newest at bottom visually?
-		// No, H5: insertBefore(div, firstChild) -> Newest on TOP.
-		// And CSS bottom:250px, column-reverse -> Newest at BOTTOM of container?
-		// Wait, H5: `flex-direction: column-reverse` aligns items to bottom, but DOM order matters.
-		// Let's stick to standard VisUI Table: add().row() puts at bottom.
-		// We want newest at BOTTOM visually to match "stacking up" or TOP?
-		// H5 Prototype visual: History grows upwards or stays fixed?
-		// "bottom: 250px ... max-height: 200px ... overflow: hidden".
-		// Usually fighting games history scrolls DOWN (newest on top) or UP (newest on bottom).
-		// Let's implement: Newest on Top.
-
-		// Clean old
-		if (getChildren().size >= MAX_ITEMS) {
-			getChildren().first().remove(); // Remove oldest
+		// [修复逻辑] 如果满了，移除最上面的项 (Oldest)，而不是最下面的 (Newest)
+		if (getCells().size >= MAX_ITEMS) {
+			Cell c = getCells().first(); // 获取顶部 Cell
+			c.getActor().remove();       // 移除 Actor
+			getCells().removeIndex(0);   // 移除 Cell 定义
 		}
 
-		// Add new item
-		add(item).width(160).height(22).padBottom(2).row();
+		// 创建并添加到最底部 (Newest)
+		HistoryItem item = new HistoryItem(cmdId, src, type, icon);
+		add(item).width(ITEM_WIDTH).height(ITEM_HEIGHT).padTop(2).row();
 
-		// Animation: Slide In
+		// [关键] 强制刷新布局，确保位置正确
+		pack();
+
+		// 动画: 从左侧滑入
 		item.getColor().a = 0;
 		item.addAction(Actions.parallel(
 			Actions.fadeIn(0.1f),
-			Actions.moveBy(-10, 0), // Start pos adjustment
-			Actions.moveBy(10, 0, 0.1f) // Slide right
+			Actions.sequence(
+				Actions.moveBy(-10, 0),
+				Actions.moveBy(10, 0, 0.1f)
+			)
 		));
 	}
 
 	private static class HistoryItem extends Group {
-		private Texture bg;
+		private final Texture bg;
 
 		public HistoryItem(String cmdId, String src, String type, String icon) {
-			this.bg = type.equals("move") ? bgMove : bgRaw;
+			// [关键] 显式设置 Group 尺寸，否则 draw 里的 getWidth() 可能为 0
+			setSize(160, 22);
 
-			// Layout (Manual positioning for performance)
+			boolean isMove = type.equals("move");
+			this.bg = isMove ? bgMove : bgRaw;
+
 			// Icon
-			Label lIcon = new Label(icon, new Label.LabelStyle(FontUtils.generate(12), Color.WHITE));
+			Label lIcon = new Label(icon, styleIcon);
 			lIcon.setPosition(8, 4);
 			addActor(lIcon);
 
 			// Name
-			String name = cmdId.replace("CMD_", ""); // 简易 i18n
-			Label lName = new Label(name, new Label.LabelStyle(FontUtils.generate(12), Color.WHITE));
-			if (type.equals("move")) lName.setColor(0, 234/255f, 255/255f, 1f);
-			else lName.setColor(0.8f, 0.8f, 0.8f, 1f);
+			String name = cmdId.replace("CMD_", "");
+			Label lName = new Label(name, isMove ? styleNameMove : styleNameRaw);
 			lName.setPosition(28, 4);
 			addActor(lName);
 
-			// Source (Right aligned)
-			Label lSrc = new Label(src, new Label.LabelStyle(FontUtils.generate(9), Color.GRAY));
+			// Source
+			Label lSrc = new Label(src, styleSrc);
+			lSrc.setAlignment(Align.right);
 			lSrc.setPosition(160 - lSrc.getPrefWidth() - 5, 5);
 			addActor(lSrc);
 		}
@@ -108,7 +120,12 @@ public class CommandHistoryUI extends Table {
 		public void draw(Batch batch, float parentAlpha) {
 			Color c = getColor();
 			batch.setColor(c.r, c.g, c.b, c.a * parentAlpha);
-			batch.draw(bg, getX(), getY(), getWidth(), getHeight());
+
+			// 绘制背景
+			if (bg != null) {
+				batch.draw(bg, getX(), getY(), getWidth(), getHeight());
+			}
+
 			super.draw(batch, parentAlpha);
 		}
 	}

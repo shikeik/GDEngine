@@ -13,25 +13,28 @@ import com.goldsprite.solofight.core.NeonBatch;
 
 public class VirtualJoystick extends Actor {
 
-	private NeonBatch neon; // 高性能绘图器
+	private NeonBatch neon;
 
 	private final float baseRadius = 70f;
 	private final float thumbRadius = 25f;
 	private final float slotDist = 65f;
 
 	private final Vector2 value = new Vector2();
-	private final Vector2 touchPos = new Vector2(); // 相对中心的触摸偏移
+	private final Vector2 touchPos = new Vector2();
 	private boolean isTouched = false;
 	private int currentZone = -1;
 
-	// 颜色常量
-	private final Color COL_BG = new Color(0, 0, 0, 0.3f);
-	private final Color COL_BORDER = new Color(1, 1, 1, 0.1f);
-	private final Color COL_SLOT_INACTIVE = new Color(0.4f, 0.4f, 0.4f, 0.5f);
-	private final Color COL_SLOT_ACTIVE = new Color(0, 234/255f, 255/255f, 1f); // #00eaff
-	private final Color COL_LINE_INACTIVE = new Color(1, 1, 1, 0.05f);
-	private final Color COL_LINE_ACTIVE = new Color(0, 234/255f, 255/255f, 0.6f);
-	private final Color COL_THUMB = new Color(0/255f, 234/255f, 255/255f, 0.5f);
+	// 预定义颜色常量 (避免每帧 new)
+	private static final Color C_BASE_BG = new Color(0, 0, 0, 0.3f);
+	private static final Color C_BASE_BORDER = new Color(1, 1, 1, 0.1f);
+	private static final Color C_THUMB = new Color(0, 0.917f, 1f, 0.5f); // #00eaff
+	private static final Color C_SLOT_INACTIVE = new Color(0.4f, 0.4f, 0.4f, 0.5f);
+	private static final Color C_SLOT_ACTIVE_CORE = new Color(0, 0.917f, 1f, 1f);
+	private static final Color C_SLOT_ACTIVE_GLOW = new Color(0, 0.917f, 1f, 0.3f);
+	private static final Color C_LINE_ACTIVE = new Color(0, 0.917f, 1f, 0.6f);
+	private static final Color C_LINE_INACTIVE = new Color(1, 1, 1, 0.05f);
+
+	private final Color tmpC = new Color(); // 绘图临时变量
 
 	public VirtualJoystick() {
 		setSize(baseRadius * 2, baseRadius * 2);
@@ -53,11 +56,12 @@ public class VirtualJoystick extends Actor {
 				isTouched = false;
 				value.setZero();
 				touchPos.setZero();
-				updateZone(-1); // 重置区域
-
-				InputContext.inst().stickRaw.setZero();
-				InputContext.inst().stickZone = -1;
-				InputContext.inst().updateVirtualState();
+				if (currentZone != -1) {
+					currentZone = -1;
+					InputContext.inst().stickZone = -1;
+					InputContext.inst().stickRaw.setZero();
+					InputContext.inst().updateVirtualState();
+				}
 			}
 		});
 	}
@@ -88,12 +92,11 @@ public class VirtualJoystick extends Actor {
 			newZone = (int) Math.floor((deg + 22.5f) / 45f) % 8;
 		}
 
-		// [修复] 只有当区域发生变化时，才更新并触发指令
+		// 只有当区域发生变化时，才更新并触发指令
 		if (newZone != currentZone) {
-			updateZone(newZone);
-			if (newZone != -1) {
-				mapZoneToCommand(newZone);
-			}
+			currentZone = newZone;
+			InputContext.inst().stickZone = newZone;
+			if (newZone != -1) mapZoneToCommand(newZone);
 		}
 	}
 
@@ -105,68 +108,51 @@ public class VirtualJoystick extends Actor {
 		ctx.updateVirtualState();
 	}
 
-	private void updateZone(int zone) {
-		this.currentZone = zone;
-		InputContext.inst().stickZone = zone;
-	}
-
 	@Override
 	public void draw(Batch batch, float parentAlpha) {
-		// 懒加载 NeonBatch (复用 Stage 的 SpriteBatch)
 		if (neon == null || neon.getBatch() != batch) {
 			if (batch instanceof SpriteBatch) neon = new NeonBatch((SpriteBatch) batch);
-			else return; // Should not happen in standard setup
+			else return;
 		}
 
 		float cx = getX() + getWidth()/2;
 		float cy = getY() + getHeight()/2;
 
-		// 1. 绘制底座 (Base)
-		// 填充半透明黑
-		neon.drawCircle(cx, cy, baseRadius, 0, applyAlpha(COL_BG, parentAlpha), 32, true);
-		// 描边微弱白
-		neon.drawCircle(cx, cy, baseRadius, 2f, applyAlpha(COL_BORDER, parentAlpha), 32, false);
+		// 1. Base (Circle with border)
+		neon.drawCircle(cx, cy, baseRadius, 0, alpha(C_BASE_BG, parentAlpha), 32, true);
+		neon.drawCircle(cx, cy, baseRadius, 2f, alpha(C_BASE_BORDER, parentAlpha), 32, false);
 
-		// 2. 绘制 8 扇区槽 (Slots & Lines)
+		// 2. Slots & Lines
 		for (int i = 0; i < 8; i++) {
 			float rad = i * 45 * MathUtils.degreesToRadians;
 			float cos = MathUtils.cos(rad);
 			float sin = MathUtils.sin(rad);
-
 			float sx = cx + cos * slotDist;
 			float sy = cy + sin * slotDist;
 
-			boolean isActive = (i == currentZone);
+			boolean active = (i == currentZone);
 
-			// A. 连线 (Center to Slot)
-			Color lineColor = isActive ? COL_LINE_ACTIVE : COL_LINE_INACTIVE;
-			float lineWidth = isActive ? 3f : 1f;
-			// 线不从圆心画，稍微留点空隙
-			float startOff = 10f;
-			neon.drawLine(cx + cos*startOff, cy + sin*startOff, sx, sy, lineWidth, applyAlpha(lineColor, parentAlpha));
+			// Connection Line
+			Color lc = active ? C_LINE_ACTIVE : C_LINE_INACTIVE;
+			float lw = active ? 3f : 1f;
+			neon.drawLine(cx + cos*10, cy + sin*10, sx, sy, lw, alpha(lc, parentAlpha));
 
-			// B. 宝石 (Octagon)
-			Color slotColor = isActive ? COL_SLOT_ACTIVE : COL_SLOT_INACTIVE;
-			float size = isActive ? 9f : 5f; // Active时放大
-
-			// 正八边形 (8 sides)
-			// 旋转 22.5 度让平边对齐
-			if (isActive) {
-				// Glow effect (画个大的半透明)
-				neon.drawRegularPolygon(sx, sy, size * 1.5f, 8, 22.5f, 0, applyAlpha(slotColor, parentAlpha * 0.4f), true);
+			// Octagon Slot (正八边形)
+			if (active) {
+				// Glow
+				neon.drawRegularPolygon(sx, sy, 9f * 1.5f, 8, 22.5f, 0, alpha(C_SLOT_ACTIVE_GLOW, parentAlpha), true);
+				// Core
+				neon.drawRegularPolygon(sx, sy, 9f, 8, 22.5f, 0, alpha(C_SLOT_ACTIVE_CORE, parentAlpha), true);
+			} else {
+				neon.drawRegularPolygon(sx, sy, 5f, 8, 22.5f, 0, alpha(C_SLOT_INACTIVE, parentAlpha), true);
 			}
-			// Core
-			neon.drawRegularPolygon(sx, sy, size, 8, 22.5f, 0, applyAlpha(slotColor, parentAlpha), true);
 		}
 
-		// 3. 绘制摇杆头 (Thumb)
-		float tx = cx + touchPos.x;
-		float ty = cy + touchPos.y;
-		neon.drawCircle(tx, ty, thumbRadius, 0, applyAlpha(COL_THUMB, parentAlpha), 24, true);
+		// 3. Thumb
+		neon.drawCircle(cx + touchPos.x, cy + touchPos.y, thumbRadius, 0, alpha(C_THUMB, parentAlpha), 24, true);
 	}
 
-	private Color tmpC = new Color();
-	private Color applyAlpha(Color c, float alpha) {
-		return tmpC.set(c).mul(1, 1, 1, alpha);
+	private Color alpha(Color c, float a) {
+		return tmpC.set(c).mul(1, 1, 1, a);
 	}
 }
