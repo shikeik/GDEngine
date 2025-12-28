@@ -2,13 +2,9 @@ package com.goldsprite.solofight.screens.menus;
 
 import com.goldsprite.gameframeworks.screens.IGScreen;
 import com.goldsprite.gameframeworks.screens.basics.BaseSelectionScreen;
-import com.goldsprite.solofight.screens.tests.HealthBarDemoScreen;
+import com.goldsprite.solofight.screens.tests.*;
 
 import java.util.Map;
-import com.goldsprite.solofight.screens.tests.BloomDebugScreen;
-import com.goldsprite.solofight.screens.tests.AudioTestScreen;
-import com.goldsprite.solofight.screens.tests.CameraTestScreen;
-import com.goldsprite.solofight.screens.tests.TextTestScreen;
 
 public class TestSelectionScreen extends BaseSelectionScreen {
 
@@ -25,6 +21,7 @@ public class TestSelectionScreen extends BaseSelectionScreen {
 		map.put("Synth Audio (合成音效) 测试", AudioTestScreen.class);
 		map.put("SmartCamera (智能相机) 测试", CameraTestScreen.class);
 		map.put("Floating Text (飘字) 测试", TextTestScreen.class);
+		map.put("输入系统综合测试", InputTestScreen.class);
 
 		map.put("物理/碰撞测试", null);
 		// 以后加别的...
