@@ -267,11 +267,16 @@ public class Fighter {
 
 		// 冲刺状态结束判定 (12帧约0.2秒)
 		if (state.equals("dash")) {
-			// 冲刺期间保持速度
-			vx = 25 * dir; 
+			vx = 25 * dir;
+
+			// [新增] 产生残影逻辑：每 3 帧 (animTimer 约等于帧数) 生成一个残影
+			if ((int)animTimer % 2 == 0) {
+				EffectManager.inst().addAfterimage(x, y, dir, state, animTimer, this.color);
+			}
+
 			if (animTimer > 12) {
 				state = "idle";
-				vx = 0; // 冲刺结束急停
+				vx = 0;
 			}
 		}
 
