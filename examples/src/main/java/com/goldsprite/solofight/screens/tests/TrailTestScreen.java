@@ -39,10 +39,10 @@ public class TrailTestScreen extends ExampleGScreen {
 		batch = new SpriteBatch();
 		neonBatch = new NeonBatch(batch);
 		// [修复] 共享 Batch 以解决纹理状态不同步导致的 UI 变白问题
-		stage = new Stage(getViewport(), batch);
+		stage = new Stage(getUIViewport(), batch);
 		getImp().addProcessor(stage);
 
-		cursor.set(getViewport().getWorldWidth() / 2, getViewport().getWorldHeight() / 2);
+		cursor.set(getUIViewport().getWorldWidth() / 2, getUIViewport().getWorldHeight() / 2);
 		ribbonTrail = new RibbonTrail(2000);
 
 		initUI();
@@ -100,7 +100,7 @@ public class TrailTestScreen extends ExampleGScreen {
 
 		win.add(t);
 		win.pack();
-		win.setPosition(20, getViewport().getWorldHeight() - win.getHeight() - 20);
+		win.setPosition(20, getUIViewport().getWorldHeight() - win.getHeight() - 20);
 		stage.addActor(win);
 	}
 

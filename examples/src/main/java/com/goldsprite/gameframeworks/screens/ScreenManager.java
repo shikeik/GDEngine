@@ -8,6 +8,7 @@ import com.goldsprite.gameframeworks.PlatformImpl;
 
 import java.util.*;
 import java.util.function.Consumer;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 
 /**
  * 使用：
@@ -34,7 +35,7 @@ public class ScreenManager implements Disposable {
 	public static List<Runnable> exitGame = new ArrayList<>();//声明退出游戏事件回调，需要在各平台自身实现
 	private static ScreenManager instance;
 	private final Map<Class<?>, IGScreen> screens = new HashMap<>();
-	private final InputMultiplexer imp;
+	private InputMultiplexer imp;
 	//屏幕历史堆栈
 	private final Stack<IGScreen> screenHistory = new Stack<>();
 	private IGScreen curScreen;
@@ -47,19 +48,25 @@ public class ScreenManager implements Disposable {
 	}
 
 	public ScreenManager(InputMultiplexer imp) {
-		instance = this;
-		//初始化输入处理器
-		initInputHandler(this.imp = imp);
+		this(new ScreenViewport(), imp);
 	}
+	public ScreenManager(Viewport viewport) {
+		this(viewport, new InputMultiplexer());
+	}
+	
+	public ScreenManager(Viewport viewport, InputMultiplexer imp) {
+		instance = this;
+		this.viewport = viewport;
+		//关键 这里需要手动update才能触发worldWidth/Height初始化赋值，之后GScreen才能拿到视口数据
+		viewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
+		initInputHandler(imp);
+	}
+	
 
 	/**
 	 * 单例屏幕管理器
 	 */
 	public static synchronized ScreenManager getInstance() {
-		//初始化语句
-		if (instance == null) {
-			new ScreenManager();
-		}
 		return instance;
 	}
 
@@ -73,6 +80,8 @@ public class ScreenManager implements Disposable {
 	}
 
 	private void initInputHandler(InputMultiplexer imp) {
+		this.imp = imp;
+		
 		//设置到gdx输入管线
 		if (Gdx.input.getInputProcessor() == null) Gdx.input.setInputProcessor(imp);
 		//创建默认处理器
@@ -121,7 +130,9 @@ public class ScreenManager implements Disposable {
 	 */
 	public void render() {
 		if (!curScreen.isInitialized()) return;
+		
 		float delta = Gdx.graphics.getDeltaTime();
+		curScreen.getUIViewport().apply();
 		curScreen.render(delta);
 	}
 
@@ -150,8 +161,6 @@ public class ScreenManager implements Disposable {
 			screen.setScreenManager(this);
 			screen.setImp(new InputMultiplexer());
 		}
-		//防止没有设置当前屏幕异常，现已无用
-		//if (curScreen == null) curScreen = screen;
 		return this;
 	}
 
@@ -189,8 +198,6 @@ public class ScreenManager implements Disposable {
 		}
 		this.curScreen = screen;
 		this.curScreen.show();
-		//刷新屏幕视口
-		this.curScreen.resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	}
 
 	public void setCurScreen(Class<? extends IGScreen> key, boolean autoCreate) {
@@ -214,7 +221,7 @@ public class ScreenManager implements Disposable {
 		popping = false;
 		return true;
 	}
-
+	
 	public IGScreen getLaunchScreen() {
 		return launchScreen;
 	}

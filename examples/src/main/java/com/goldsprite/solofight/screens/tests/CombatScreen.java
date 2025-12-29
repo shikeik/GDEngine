@@ -48,7 +48,7 @@ public class CombatScreen extends ExampleGScreen {
 	public void hide() { super.hide(); getScreenManager().setOrientation(ScreenManager.Orientation.PORTRAIT); }
 
 	@Override
-	protected void initViewportAndCamera() {
+	protected void initViewport() {
 		// [修正] 不调用 super，完全自定义，避免引用共享视口
 
 		// 1. 初始化独立的世界相机 (用于游戏场景物体绘制)
@@ -89,21 +89,21 @@ public class CombatScreen extends ExampleGScreen {
 	}
 
 	private void initUI() {
-		uiStage = new Stage(getViewport());
+		uiStage = new Stage(getUIViewport());
 		joystick = new VirtualJoystick(); joystick.setPosition(50, 50); uiStage.addActor(joystick);
-		historyUI = new CommandHistoryUI(); historyUI.setPosition(10, getViewport().getWorldHeight() * 0.4f); uiStage.addActor(historyUI);
-		toastUI = new ToastUI(); toastUI.setPosition(getViewport().getWorldWidth() / 2 - 50, 100); uiStage.addActor(toastUI);
+		historyUI = new CommandHistoryUI(); historyUI.setPosition(10, getUIViewport().getWorldHeight() * 0.4f); uiStage.addActor(historyUI);
+		toastUI = new ToastUI(); toastUI.setPosition(getUIViewport().getWorldWidth() / 2 - 50, 100); uiStage.addActor(toastUI);
 
 		H5SkewBar.BarStyle style1 = new H5SkewBar.BarStyle();
 		style1.gradientStart = Color.valueOf("00eaff"); style1.gradientEnd = Color.valueOf("0088aa"); style1.skewDeg = -20f;
-		barP1 = new H5SkewBar(0, 500, style1); barP1.setSize(350, 25); barP1.setPosition(20, getViewport().getWorldHeight() - 50); uiStage.addActor(barP1);
+		barP1 = new H5SkewBar(0, 500, style1); barP1.setSize(350, 25); barP1.setPosition(20, getUIViewport().getWorldHeight() - 50); uiStage.addActor(barP1);
 
 		H5SkewBar.BarStyle style2 = new H5SkewBar.BarStyle();
 		style2.gradientStart = Color.valueOf("ff0055"); style2.gradientEnd = Color.valueOf("aa0033"); style2.skewDeg = 20f;
 		barP2 = new H5SkewBar(0, 500, style2); barP2.setSize(350, 25); barP2.setFillFromRight(true);
-		barP2.setPosition(getViewport().getWorldWidth() - 350 - 20, getViewport().getWorldHeight() - 50); uiStage.addActor(barP2);
+		barP2.setPosition(getUIViewport().getWorldWidth() - 350 - 20, getUIViewport().getWorldHeight() - 50); uiStage.addActor(barP2);
 
-		gestureProcessor = new GestureProcessor(getViewport());
+		gestureProcessor = new GestureProcessor(getUIViewport());
 
 		// [修正 1] 添加键盘处理器
 		getImp().addProcessor(uiStage);
@@ -214,10 +214,10 @@ public class CombatScreen extends ExampleGScreen {
 		getWorldCamera().position.sub(shakeX, shakeY, 0);
 
 		// Draw UI Trails
-		batch.setProjectionMatrix(getViewport().getCamera().combined);
+		batch.setProjectionMatrix(getUIViewport().getCamera().combined);
 		neonBatch.begin();
-		float splitX = getViewport().getWorldWidth() * 0.5f;
-		neonBatch.drawLine(splitX, 0, splitX, getViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
+		float splitX = getUIViewport().getWorldWidth() * 0.5f;
+		neonBatch.drawLine(splitX, 0, splitX, getUIViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
 		for (com.goldsprite.solofight.core.input.GestureTrail trail : gestureProcessor.getTrails()) {
 			trail.draw(neonBatch);
 		}
@@ -232,8 +232,8 @@ public class CombatScreen extends ExampleGScreen {
 	@Override
 	public void resize(int width, int height) {
 		super.resize(width, height);
-		if (barP2 != null) barP2.setPosition(getViewport().getWorldWidth() - 370, getViewport().getWorldHeight() - 50);
-		if (barP1 != null) barP1.setPosition(20, getViewport().getWorldHeight() - 50);
+		if (barP2 != null) barP2.setPosition(getUIViewport().getWorldWidth() - 370, getUIViewport().getWorldHeight() - 50);
+		if (barP1 != null) barP1.setPosition(20, getUIViewport().getWorldHeight() - 50);
 	}
 
 	@Override

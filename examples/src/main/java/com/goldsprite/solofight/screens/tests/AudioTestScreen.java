@@ -24,7 +24,7 @@ public class AudioTestScreen extends ExampleGScreen {
         // 确保音频引擎已启动
         SynthAudio.init();
 
-        stage = new Stage(getViewport());
+        stage = new Stage(getUIViewport());
         getImp().addProcessor(stage);
 
         Table root = new Table();
@@ -118,7 +118,7 @@ public class AudioTestScreen extends ExampleGScreen {
 
     @Override
     public void render0(float delta) {
-        getViewport().apply();
+        getUIViewport().apply();
         stage.act(delta);
         stage.draw();
     }

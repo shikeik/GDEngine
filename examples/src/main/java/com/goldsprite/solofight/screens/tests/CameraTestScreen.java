@@ -56,7 +56,7 @@ public class CameraTestScreen extends ExampleGScreen {
 	protected void drawIntros() {}
 
 	@Override
-	protected void initViewportAndCamera() {
+	protected void initViewport() {
 		float scl = 1.4f;
 		worldCamera = new OrthographicCamera();
 		uiViewport = new ExtendViewport(960 * scl, 540 * scl);
@@ -130,7 +130,7 @@ public class CameraTestScreen extends ExampleGScreen {
 	}
 
 	private void initUI() {
-		uiStage = new Stage(getViewport());
+		uiStage = new Stage(getUIViewport());
 		getImp().addProcessor(uiStage);
 
 		Table root = new Table();

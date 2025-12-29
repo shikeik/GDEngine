@@ -20,14 +20,14 @@ public abstract class ExampleGScreen extends GScreen {
 		batch = new SpriteBatch();
 		glyphLayout = new GlyphLayout();
 		introFnt = FontUtils.generateAutoClarity(30);
-		introFnt.getData().setScale(1f);
+		introFnt.getData().setScale(0.5f);
 	}
 
 	public abstract String getIntroduction();
 
 	public Vector2 getIntroductionPos() {
 		// 适配 Viewport 坐标
-		return introPos.set(getViewSize().x - 20 - glyphLayout.width, getViewSize().y - 60);
+		return introPos.set(20, getViewSize().y - 60);
 	}
 
 	@Override
@@ -38,7 +38,7 @@ public abstract class ExampleGScreen extends GScreen {
 
 	protected void drawIntros() {
 		// 确保 Batch 使用相机的投影矩阵
-		batch.setProjectionMatrix(getCamera().combined);
+		batch.setProjectionMatrix(getUICamera().combined);
 		batch.begin();
 		glyphLayout.setText(introFnt, getIntroduction());
 		introFnt.draw(batch, getIntroduction(), getIntroductionPos().x, getIntroductionPos().y);

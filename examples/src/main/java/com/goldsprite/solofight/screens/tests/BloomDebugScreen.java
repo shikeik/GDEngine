@@ -25,12 +25,6 @@ public class BloomDebugScreen extends ExampleGScreen {
 		neonBatch = new NeonBatch(batch);
 		bloom = new BloomRenderer();
 		bgRenderer = new ShapeRenderer();
-
-		// worldCamera 默认居中
-		worldCamera.position.set(getViewSize().x / 2, getViewSize().y / 2, 0);
-		worldCamera.update();
-		setWorldScale(1f);
-
 	}
 
 	@Override
@@ -62,8 +56,8 @@ public class BloomDebugScreen extends ExampleGScreen {
 		bgRenderer.begin(ShapeRenderer.ShapeType.Filled);
 		float cellSize = 60;
 		// 覆盖 Viewport 范围
-		float w = getViewport().getWorldWidth();
-		float h = getViewport().getWorldHeight();
+		float w = getUIViewport().getWorldWidth();
+		float h = getUIViewport().getWorldHeight();
 		int cols = (int) (w / cellSize) + 1;
 		int rows = (int) (h / cellSize) + 1;
 

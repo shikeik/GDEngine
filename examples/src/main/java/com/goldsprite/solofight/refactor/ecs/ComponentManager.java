@@ -160,6 +160,10 @@ public class ComponentManager {
 	public static void clearCache() {
 		entityCache.clear();
 	}
+	
+	public static int getRegisteredComponentCount() {
+        return componentPools.size();
+    }
 
 	public static void debugInfo() {
 		DebugUI.log("=== ComponentManager Debug ===");

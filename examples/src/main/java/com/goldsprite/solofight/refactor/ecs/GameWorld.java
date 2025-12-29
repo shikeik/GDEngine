@@ -55,7 +55,6 @@ public class GameWorld {
 	}
 
 	public static GameWorld inst() {
-		if (instance == null) instance = new GameWorld();
 		return instance;
 	}
 

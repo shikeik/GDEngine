@@ -19,7 +19,7 @@ public class DebugSmartInputScreen extends ExampleGScreen {
 
     @Override
     public void create() {
-        stage = new Stage(getViewport());
+        stage = new Stage(getUIViewport());
         getImp().addProcessor(stage);
 
         Table root = new Table();

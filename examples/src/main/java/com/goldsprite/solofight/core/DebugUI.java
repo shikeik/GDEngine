@@ -26,6 +26,7 @@ public class DebugUI {
 	private ExtendViewport viewport;
 
 	public static boolean showDebugUI = true;
+	static int maxLogsCache = 100, maxRenderLogs = 8;
 
 	// 新增：背景纹理
 	private Texture bgTexture;
@@ -40,7 +41,7 @@ public class DebugUI {
 	private final Color bgColor = new Color(0, 0, 0, 0.1f);
 
 	// 定义基准分辨率 (手机常用比例)
-	float screenScl = 1.5f;
+	float screenScl = 1.3f;
 	float shortSide = 1080f*screenScl;
 	float longSide = 1920f*screenScl;
 
@@ -103,7 +104,7 @@ public class DebugUI {
 		}
 
 		getInstance().logs.add(msg);
-		if (getInstance().logs.size() > 50) getInstance().logs.remove(0);
+		if (getInstance().logs.size() > maxLogsCache) getInstance().logs.remove(0);
 		Gdx.app.log("DEBUG", msg);
 	}
 
@@ -137,6 +138,7 @@ public class DebugUI {
 		viewport.apply(true);
 
 		// --- 1. 准备数据 (String Building) ---
+		// Info
 		StringBuilder infoBuilder = new StringBuilder();
 		infoBuilder.append(BuildConfig.PROJECT_NAME).append(": V").append(BuildConfig.DEV_VERSION).append("\n");
 		infoBuilder.append("FPS: ").append(Gdx.graphics.getFramesPerSecond()).append("\n");
@@ -144,7 +146,12 @@ public class DebugUI {
 		if(!debugInfos.isEmpty()) infoBuilder.append("\n").append(String.join("\n", debugInfos)); // 自定义监控
 		debugInfos.clear();
 
-		String logsStr = "> " + String.join("\n> ", logs);
+		//截获log
+		int startIndex = logs.size() - maxRenderLogs;
+		List<String> subLogs = logs;
+		if(startIndex >= 0) subLogs = logs.subList(startIndex, logs.size());
+		//Log
+		String logsStr = "> " + String.join("\n> ", subLogs);
 		String infoStr = infoBuilder.toString();
 
 		if (!showDebugUI) return;

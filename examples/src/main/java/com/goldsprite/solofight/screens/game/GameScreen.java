@@ -72,7 +72,7 @@ public class GameScreen extends ExampleGScreen {
 	public void hide() { super.hide(); getScreenManager().setOrientation(ScreenManager.Orientation.PORTRAIT); }
 
 	@Override
-	protected void initViewportAndCamera() {
+	protected void initViewport() {
 		worldCamera = new OrthographicCamera();
 		uiViewport = new ExtendViewport(1344, 756, new OrthographicCamera());
 	}
@@ -105,7 +105,7 @@ public class GameScreen extends ExampleGScreen {
 	}
 
 	private void initUI() {
-		uiStage = new Stage(getViewport());
+		uiStage = new Stage(getUIViewport());
 
 		// --- Root Table 布局管理 (修复 UI 错位) ---
 		Table root = new Table();
@@ -181,7 +181,7 @@ public class GameScreen extends ExampleGScreen {
 	}
 
 	private void initInputLogic() {
-		gestureProcessor = new GestureProcessor(getViewport());
+		gestureProcessor = new GestureProcessor(getUIViewport());
 		getImp().addProcessor(new KeyboardProcessor()); // Key First
 		getImp().addProcessor(uiStage); // UI Second
 		getImp().addProcessor(gestureProcessor); // Gesture Last
@@ -277,12 +277,12 @@ public class GameScreen extends ExampleGScreen {
 		// [修复 3] 强制重置 UI 绘制颜色 (这解决了 UI 透明/变色问题)
 		batch.setColor(Color.WHITE);
 
-		batch.setProjectionMatrix(getViewport().getCamera().combined);
+		batch.setProjectionMatrix(getUIViewport().getCamera().combined);
 		neonBatch.begin();
 
 		// UI 分隔线
-		float splitX = getViewport().getWorldWidth() * 0.5f;
-		neonBatch.drawLine(splitX, 0, splitX, getViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
+		float splitX = getUIViewport().getWorldWidth() * 0.5f;
+		neonBatch.drawLine(splitX, 0, splitX, getUIViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
 
 		// 手势轨迹
 		for (com.goldsprite.solofight.core.input.GestureTrail trail : gestureProcessor.getTrails()) {
@@ -293,7 +293,7 @@ public class GameScreen extends ExampleGScreen {
 		// 连击 UI
 		batch.setColor(Color.WHITE); // 防御性重置
 		batch.begin();
-		FloatingTextManager.getInstance().renderUI(batch, getViewport().getWorldWidth(), getViewport().getWorldHeight());
+		FloatingTextManager.getInstance().renderUI(batch, getUIViewport().getWorldWidth(), getUIViewport().getWorldHeight());
 		batch.end();
 
 		// Stage UI (History, Joystick, Bars)
@@ -337,8 +337,8 @@ public class GameScreen extends ExampleGScreen {
 	public void resize(int width, int height) {
 		super.resize(width, height);
 		// 手动定位绝对布局的组件
-		if (barP2 != null) barP2.setPosition(getViewport().getWorldWidth() - 370, getViewport().getWorldHeight() - 50);
-		if (barP1 != null) barP1.setPosition(20, getViewport().getWorldHeight() - 50);
+		if (barP2 != null) barP2.setPosition(getUIViewport().getWorldWidth() - 370, getUIViewport().getWorldHeight() - 50);
+		if (barP1 != null) barP1.setPosition(20, getUIViewport().getWorldHeight() - 50);
 		if (helpWindow != null) helpWindow.centerWindow();
 		// Toast 不需要手动定位了，Table 会管理
 	}

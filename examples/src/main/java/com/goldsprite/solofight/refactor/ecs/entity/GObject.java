@@ -136,6 +136,10 @@ public class GObject implements IRunnable {
 		}
 		return null;
 	}
+	
+	public TransformComponent getTransform() {
+		return transform;
+	}
 
 	public void awake() {
 		DebugUI.log("GObject Awake: %s", getName());

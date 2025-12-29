@@ -26,7 +26,7 @@ public class InputTestScreen extends ExampleGScreen {
 	public String getIntroduction() { return ""; }
 
 	@Override
-	protected void initViewportAndCamera() {
+	protected void initViewport() {
 		float scl = 1.4f;
 		worldCamera = new OrthographicCamera();
 		uiViewport = new ExtendViewport(960 * scl, 540 * scl);
@@ -48,7 +48,7 @@ public class InputTestScreen extends ExampleGScreen {
 	public void create() {
 		batch = new SpriteBatch();
 		neonBatch = new NeonBatch(batch);
-		stage = new Stage(getViewport());
+		stage = new Stage(getUIViewport());
 
 		// A. 虚拟摇杆 (左下角)
 		joystick = new VirtualJoystick();
@@ -57,16 +57,16 @@ public class InputTestScreen extends ExampleGScreen {
 
 		// B. 指令历史 (左侧偏上)
 		historyUI = new CommandHistoryUI();
-		historyUI.setPosition(10, getViewport().getWorldHeight() * 0.4f);
+		historyUI.setPosition(10, getUIViewport().getWorldHeight() * 0.4f);
 		stage.addActor(historyUI);
 
 		// C. Toast (屏幕底部)
 		toastUI = new ToastUI();
-		toastUI.setPosition(getViewport().getWorldWidth() / 2 - 50, 100);
+		toastUI.setPosition(getUIViewport().getWorldWidth() / 2 - 50, 100);
 		stage.addActor(toastUI);
 
 		// D. 手势处理器 (World Space)
-		gestureProcessor = new GestureProcessor(getViewport());
+		gestureProcessor = new GestureProcessor(getUIViewport());
 
 		// E. 输入管线
 		getImp().addProcessor(stage);
@@ -95,10 +95,10 @@ public class InputTestScreen extends ExampleGScreen {
 		gestureProcessor.update(delta);
 
 		// 2. 绘制手势 (UI Space)
-		batch.setProjectionMatrix(getViewport().getCamera().combined);
+		batch.setProjectionMatrix(getUIViewport().getCamera().combined);
 		neonBatch.begin();
-		float midX = getViewport().getWorldWidth() * 0.5f;
-		neonBatch.drawLine(midX, 0, midX, getViewport().getWorldHeight(), 2, new Color(1,1,1,0.1f));
+		float midX = getUIViewport().getWorldWidth() * 0.5f;
+		neonBatch.drawLine(midX, 0, midX, getUIViewport().getWorldHeight(), 2, new Color(1,1,1,0.1f));
 		for (GestureTrail trail : gestureProcessor.getTrails()) {
 			trail.draw(neonBatch);
 		}
@@ -117,7 +117,7 @@ public class InputTestScreen extends ExampleGScreen {
 	@Override
 	public void resize(int width, int height) {
 		super.resize(width, height);
-		if (toastUI != null) toastUI.setPosition(getViewport().getWorldWidth() / 2 - toastUI.getPrefWidth() / 2, 120);
+		if (toastUI != null) toastUI.setPosition(getUIViewport().getWorldWidth() / 2 - toastUI.getPrefWidth() / 2, 120);
 	}
 
 	@Override

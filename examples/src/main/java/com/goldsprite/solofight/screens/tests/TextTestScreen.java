@@ -50,7 +50,7 @@ public class TextTestScreen extends ExampleGScreen {
 	}
 
 	private void initUI() {
-		uiStage = new Stage(getViewport());
+		uiStage = new Stage(getUIViewport());
 		getImp().addProcessor(uiStage);
 
 		Table root = new Table();
@@ -88,9 +88,9 @@ public class TextTestScreen extends ExampleGScreen {
 
 		// 4. 绘制 UI Space 文字 (连击)
 		// 注意：这里使用 UI Viewport 的矩阵
-		batch.setProjectionMatrix(getViewport().getCamera().combined);
+		batch.setProjectionMatrix(getUIViewport().getCamera().combined);
 		batch.begin();
-		FloatingTextManager.getInstance().renderUI(batch, getViewport().getWorldWidth(), getViewport().getWorldHeight());
+		FloatingTextManager.getInstance().renderUI(batch, getUIViewport().getWorldWidth(), getUIViewport().getWorldHeight());
 		batch.end();
 
 		uiStage.act(delta);

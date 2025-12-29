@@ -17,5 +17,5 @@ public interface IGScreen extends Screen {
 
 	void setImp(InputMultiplexer imp);
 	
-	Viewport getViewport();
+	Viewport getUIViewport();
 }

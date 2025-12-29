@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.goldsprite.solofight.screens.game.GameScreen;
 import com.goldsprite.solofight.screens.menus.TestSelectionScreen;
+import com.goldsprite.solofight.screens.refactor.RefactorSelectionScreen;
 
 // [修改] 继承 BaseSelectionScreen
 public class ExampleSelectScreen extends BaseSelectionScreen {
@@ -18,6 +19,9 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	protected void initScreenMapping(Map<String, Class<? extends IGScreen>> map) {
 		map.put("场景列表(创建时间逆序)\n", null);
 
+		// [新增] 重构实验室入口 (置顶)
+        map.put(">>> 架构重构实验室 <<<", RefactorSelectionScreen.class);
+		
 		// [修改] 关联测试子菜单
 		map.put("测试场景", TestSelectionScreen.class);
 

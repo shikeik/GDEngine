@@ -14,8 +14,9 @@ import com.goldsprite.gameframeworks.screens.basics.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.gameframeworks.screens.GScreen;
 import com.goldsprite.solofight.core.audio.SynthAudio;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
-public class GdxLauncher extends Game {
+public class GdxLauncher extends Game {int k31;
 	private Application.ApplicationType userType;
 
 	public SpriteBatch batch;
@@ -34,14 +35,14 @@ public class GdxLauncher extends Game {
 		// 1. 初始化 VisUI (注入中文字体)
 		VisUIHelper.loadWithChineseFont();
 
-		// 3. 初始化屏幕管理器
-		ScreenManager.getInstance();
-
 		// 4. 设置全局视口
-		OrthographicCamera camera = new OrthographicCamera();
 		float scl = 1.2f;
-		ExtendViewport viewport = new ExtendViewport(540*scl, 960*scl, camera);
-		ScreenManager.getInstance().setViewport(viewport);
+		Viewport uiViewport = new ExtendViewport(540*scl, 960*scl, new OrthographicCamera());
+
+		// 3. 初始化屏幕管理器
+		new ScreenManager(uiViewport);
+		DebugUI.log("Main: initViewport: %.0f, %.0f", uiViewport.getWorldWidth(), uiViewport.getWorldHeight());
+
 
 		// 5. 进入演示列表
 		ScreenManager.getInstance()
@@ -51,13 +52,11 @@ public class GdxLauncher extends Game {
 
 	@Override
 	public void render() {
-		GScreen curScreen = (GScreen)ScreenManager.getInstance().getCurScreen();
-		curScreen.getViewport().apply();
-		ScreenManager.getInstance().render();
-
 		if(Gdx.input.isKeyJustPressed(Input.Keys.K)) {
 			DebugUI.showDebugUI = !DebugUI.showDebugUI;
 		}
+		
+		ScreenManager.getInstance().render();
 		if (debugUI != null) debugUI.render();
 	}
 

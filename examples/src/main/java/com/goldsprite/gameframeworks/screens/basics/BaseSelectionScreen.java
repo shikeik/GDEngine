@@ -38,7 +38,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
-		stage = new Stage(getViewport());
+		stage = new Stage(getUIViewport());
 		getImp().addProcessor(stage);
 
 		rootTable = new VisTable();
@@ -90,7 +90,6 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 
 	@Override
 	public void render0(float delta) {
-		getViewport().apply(true);
 		stage.act(delta);
 		stage.draw();
 	}
