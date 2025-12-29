@@ -56,6 +56,15 @@ public class GObject implements IRunnable {
 	public GObject() {
 		this("GObject");
 	}
+	
+    // [新增] 仅供调试使用的 Getter
+    public List<GObject> getChildren() {
+        return childGObjects;
+    }
+
+    public GObject getParent() {
+        return parent;
+    }
 
 	// [修复] 补充 getComponents 方法供 ComponentManager 使用
 	public Map<String, List<IComponent>> getComponents() {
@@ -213,17 +222,44 @@ public class GObject implements IRunnable {
 	public String getTag() { return tag; }
 	public void setTag(String tag) { this.tag = tag; }
 
-	public void addChild(GObject child) {
-		if(!childGObjects.contains(child)) {
-			childGObjects.add(child);
-			child.parent = this;
-			GameWorld.manageGObject(child, ManageMode.REMOVE); // 从顶层移除，由父级管理
-		}
-	}
-	public void removeChild(GObject child) {
-		if(childGObjects.remove(child)) {
-			child.parent = null;
-			GameWorld.manageGObject(child, ManageMode.ADD); // 回到顶层
-		}
-	}
+	// [重写] 更加健壮的 addChild，支持自动“换爹”
+    public void addChild(GObject child) {
+        if (child == null || child == this) return; // 防止空或自引用
+
+        // 1. 如果子物体已经有父级，且父级不是我，先从旧父级移除
+        if (child.parent != null && child.parent != this) {
+            child.parent.removeChild(child);
+        }
+
+        // 2. 添加到我的列表
+        if (!childGObjects.contains(child)) {
+            childGObjects.add(child);
+            child.parent = this;
+
+            // 3. 关键：子物体不再由 World 直接驱动，而是由父级驱动
+            // 所以要从 World 的顶层 Update 列表中移除
+            GameWorld.manageGObject(child, ManageMode.REMOVE);
+        }
+    }
+	// [重写] 移除子物体
+    public void removeChild(GObject child) {
+        if (childGObjects.remove(child)) {
+            child.parent = null;
+            // 4. 关键：子物体失去了父亲，变为孤儿（顶层物体）
+            // 需要重新加入 World 的顶层 Update 列表
+            GameWorld.manageGObject(child, ManageMode.ADD);
+        }
+    }
+	
+	// [新增] 设置父级的快捷方法
+    public void setParent(GObject newParent) {
+        if (newParent != null) {
+            newParent.addChild(this);
+        } else {
+            // 如果传 null，说明想脱离父级
+            if (this.parent != null) {
+                this.parent.removeChild(this);
+            }
+        }
+    }
 }

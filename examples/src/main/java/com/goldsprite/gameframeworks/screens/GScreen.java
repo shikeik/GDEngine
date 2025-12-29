@@ -83,7 +83,7 @@ public abstract class GScreen implements IGScreen {
 		// [修改] 调用可重写的初始化方法，代替直接实例化
 		initViewport();
 		//uiViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
-		initWorldCamera(1.0f);
+		initWorldCamera(worldScale);
 		
 		create();
 	}
@@ -266,6 +266,7 @@ public abstract class GScreen implements IGScreen {
 				worldCamera.position.set(
 					worldCamera.viewportWidth/2f,
 					worldCamera.viewportHeight/2f, 0);
+				DebugUI.log("初始化相机中心位置: %s", worldCamera.position);
 			}
 			worldCamera.update();
 		}

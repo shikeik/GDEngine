@@ -61,7 +61,6 @@ public class CameraTestScreen extends ExampleGScreen {
 		worldCamera = new OrthographicCamera();
 		uiViewport = new ExtendViewport(960 * scl, 540 * scl);
 	}
-
 	@Override
 	public void show() {
 		super.show();
