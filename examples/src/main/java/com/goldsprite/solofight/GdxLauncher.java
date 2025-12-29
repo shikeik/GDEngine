@@ -15,7 +15,7 @@ import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.gameframeworks.screens.GScreen;
 import com.goldsprite.solofight.core.audio.SynthAudio;
 
-public class GdxLauncher extends Game {int k51;
+public class GdxLauncher extends Game {int k53;
 	private Application.ApplicationType userType;
 
 	public SpriteBatch batch;

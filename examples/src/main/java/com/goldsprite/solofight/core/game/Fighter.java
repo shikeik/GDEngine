@@ -9,6 +9,7 @@ import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.goldsprite.solofight.core.input.InputContext;
 
 import java.util.List;
+import com.goldsprite.solofight.core.DebugUI;
 
 public class Fighter {
 	public float x, y, vx, vy;
@@ -254,8 +255,27 @@ public class Fighter {
 	}
 
 	private void updateSkills(float delta) {
-		// ... (Attack, Dash logic) ...
+		// [修复] 补全 Attack 和 Dash 的状态退出逻辑
 
+		// 攻击状态结束判定 (15帧约0.25秒)
+		if (state.equals("attack")) {
+			if (animTimer > 15) {
+				state = "idle";
+				// 攻击结束时如果不按方向键，应该稍微停顿或允许立即移动(由下一帧update决定)
+			}
+		}
+
+		// 冲刺状态结束判定 (12帧约0.2秒)
+		if (state.equals("dash")) {
+			// 冲刺期间保持速度
+			vx = 25 * dir; 
+			if (animTimer > 12) {
+				state = "idle";
+				vx = 0; // 冲刺结束急停
+			}
+		}
+
+		// --- 原有的 Flash Slash 逻辑 ---
 		if(state.equals("flash_slash")) {
 			vy=0;
 			if(animTimer>=6 && !skillTriggered) {
