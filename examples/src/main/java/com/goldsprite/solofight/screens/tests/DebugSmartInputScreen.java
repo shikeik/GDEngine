@@ -1,12 +1,13 @@
 package com.goldsprite.solofight.screens.tests;
 
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.ui.SmartColorInput;
-import com.goldsprite.solofight.core.ui.SmartNumInput;
 import com.kotcrab.vis.ui.widget.VisLabel;
+import com.goldsprite.solofight.core.ui.SmartNumInput;
+import com.goldsprite.solofight.core.ui.SmartColorInput;
+import com.badlogic.gdx.graphics.Color;
 
 public class DebugSmartInputScreen extends ExampleGScreen {
 
@@ -15,6 +16,11 @@ public class DebugSmartInputScreen extends ExampleGScreen {
     @Override
     public String getIntroduction() {
         return "UI 控件隔离测试\n验证样式污染问题";
+    }
+
+	@Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Portrait;
     }
 
     @Override

@@ -1,14 +1,15 @@
 package com.goldsprite.solofight.screens.tests;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.goldsprite.gameframeworks.screens.ScreenManager;
+import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.goldsprite.solofight.core.audio.SynthAudio.WaveType;
-import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.badlogic.gdx.graphics.Color;
 
 public class AudioTestScreen extends ExampleGScreen {
 
@@ -17,6 +18,11 @@ public class AudioTestScreen extends ExampleGScreen {
     @Override
     public String getIntroduction() {
         return "SynthAudio 合成器测试\n(无资源文件，数学生成)";
+    }
+	
+	@Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Portrait;
     }
 
     @Override

@@ -23,26 +23,9 @@ public class InputTestScreen extends ExampleGScreen {
 	private NeonBatch neonBatch;
 
 	@Override
-	public String getIntroduction() { return ""; }
-
-	@Override
-	protected void initViewport() {
-		float scl = 1.4f;
-		worldCamera = new OrthographicCamera();
-		uiViewport = new ExtendViewport(960 * scl, 540 * scl);
-	}
-
-	@Override
-	public void show() {
-		super.show();
-		getScreenManager().setOrientation(ScreenManager.Orientation.LANDSCAPE);
-	}
-
-	@Override
-	public void hide() {
-		super.hide();
-		getScreenManager().setOrientation(ScreenManager.Orientation.PORTRAIT);
-	}
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Landscape;
+    }
 
 	@Override
 	public void create() {

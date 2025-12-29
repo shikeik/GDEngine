@@ -49,28 +49,11 @@ public class CameraTestScreen extends ExampleGScreen {
 	private boolean ghostMode = true; // 是否不应用智能相机位置
 	private boolean freeCamControl = false; // 是否启用自由相机输入
 	private boolean drawBackground = false;
-
+	
 	@Override
-	public String getIntroduction() { return ""; }
-	@Override
-	protected void drawIntros() {}
-
-	@Override
-	protected void initViewport() {
-		float scl = 1.4f;
-		worldCamera = new OrthographicCamera();
-		uiViewport = new ExtendViewport(960 * scl, 540 * scl);
-	}
-	@Override
-	public void show() {
-		super.show();
-		getScreenManager().setOrientation(ScreenManager.Orientation.LANDSCAPE);
-	}
-	@Override
-	public void hide() {
-		super.hide();
-		getScreenManager().setOrientation(ScreenManager.Orientation.PORTRAIT);
-	}
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Landscape;
+    }
 
 	@Override
 	public void create() {

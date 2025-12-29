@@ -14,6 +14,7 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.goldsprite.gameframeworks.screens.ScreenManager;
 
 public abstract class BaseSelectionScreen extends ExampleGScreen {
 	protected final Map<String, Class<? extends IGScreen>> screenMapping = new LinkedHashMap<>();
@@ -32,6 +33,12 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 	public String getIntroduction() {
 		return "";
 	}
+	
+	// [新增] 菜单默认竖屏
+    @Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Portrait;
+    }
 
 	// 子类只需实现这个方法来填充列表
 	protected abstract void initScreenMapping(Map<String, Class<? extends IGScreen>> map);

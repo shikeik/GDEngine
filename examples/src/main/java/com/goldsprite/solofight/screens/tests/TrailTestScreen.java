@@ -7,11 +7,13 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Array;
+import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.NeonBatch;
-import com.goldsprite.solofight.core.ui.SmartColorInput;
-import com.goldsprite.solofight.core.ui.SmartNumInput;
 import com.kotcrab.vis.ui.widget.VisWindow;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.goldsprite.solofight.core.ui.SmartNumInput;
+import com.goldsprite.solofight.core.ui.SmartColorInput;
 
 public class TrailTestScreen extends ExampleGScreen {
 
@@ -33,6 +35,11 @@ public class TrailTestScreen extends ExampleGScreen {
 	public String getIntroduction() {
 		return "高级拖尾测试\nSmooth Ribbon Trail";
 	}
+	
+	@Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Landscape;
+    }
 
 	@Override
 	public void create() {

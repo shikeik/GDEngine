@@ -26,8 +26,8 @@ public class ScreenManager implements Disposable {
 
 	// 1. 定义屏幕方向枚举
 	public enum Orientation {
-		PORTRAIT, // 竖屏
-		LANDSCAPE // 横屏
+		Portrait, // 竖屏
+		Landscape // 横屏
 		}
 
 	// 2. 定义回调接口 (底层不依赖 Android/Lwjgl)

@@ -10,8 +10,9 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.goldsprite.solofight.core.FloatingTextManager;
+import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
+import com.goldsprite.solofight.core.FloatingTextManager;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class TextTestScreen extends ExampleGScreen {
@@ -24,6 +25,11 @@ public class TextTestScreen extends ExampleGScreen {
 	public String getIntroduction() {
 		return "漂浮文字系统测试\n[点击屏幕] 生成伤害数字\n[UI按钮] 增加连击";
 	}
+
+	@Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Portrait;
+    }
 
 	@Override
 	public void create() {

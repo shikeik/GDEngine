@@ -60,22 +60,12 @@ public class GameScreen extends ExampleGScreen {
 	// 结算逻辑变量
 	private boolean gameEnded = false;
 	private float globalTimeScale = 1.0f;
-
-	@Override
-	public String getIntroduction() { return ""; }
-	@Override
-	protected void drawIntros() {}
-
-	@Override
-	public void show() { super.show(); getScreenManager().setOrientation(ScreenManager.Orientation.LANDSCAPE); }
-	@Override
-	public void hide() { super.hide(); getScreenManager().setOrientation(ScreenManager.Orientation.PORTRAIT); }
-
-	@Override
-	protected void initViewport() {
-		worldCamera = new OrthographicCamera();
-		uiViewport = new ExtendViewport(1344, 756, new OrthographicCamera());
-	}
+	
+	// [新增] 指定横屏
+    @Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Landscape;
+    }
 
 	@Override
 	public void create() {

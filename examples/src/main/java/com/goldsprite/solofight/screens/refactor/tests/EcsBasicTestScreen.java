@@ -2,6 +2,7 @@ package com.goldsprite.solofight.screens.refactor.tests;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.DebugUI;
 import com.goldsprite.solofight.core.NeonBatch;
@@ -20,6 +21,11 @@ public class EcsBasicTestScreen extends ExampleGScreen {
 	public String getIntroduction() {
 		return "ECS 基础循环测试\n验证: World Init, Entity Creation, Update Loop";
 	}
+	
+	@Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Landscape;
+    }
 
 	@Override
 	public void create() {

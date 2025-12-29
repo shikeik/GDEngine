@@ -78,7 +78,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		new Handler(getMainLooper()).post(this::initOverlayUI);
 
 		ScreenManager.orientationChanger = (orientation) -> runOnUiThread(() -> {
-			setRequestedOrientation(orientation == ScreenManager.Orientation.LANDSCAPE ?
+			setRequestedOrientation(orientation == ScreenManager.Orientation.Landscape ?
 				ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE : ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 		});
 

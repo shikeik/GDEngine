@@ -6,14 +6,10 @@ import java.util.Map;
 import com.goldsprite.solofight.screens.game.GameScreen;
 import com.goldsprite.solofight.screens.menus.TestSelectionScreen;
 import com.goldsprite.solofight.screens.refactor.RefactorSelectionScreen;
+import com.goldsprite.gameframeworks.screens.ScreenManager;
 
 // [修改] 继承 BaseSelectionScreen
 public class ExampleSelectScreen extends BaseSelectionScreen {
-
-	@Override
-	public String getIntroduction() {
-		return "示例选择";
-	}
 
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends IGScreen>> map) {

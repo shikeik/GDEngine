@@ -16,7 +16,7 @@ import com.goldsprite.gameframeworks.screens.GScreen;
 import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-public class GdxLauncher extends Game {int k39;
+public class GdxLauncher extends Game {int k42;
 	private Application.ApplicationType userType;
 
 	public SpriteBatch batch;

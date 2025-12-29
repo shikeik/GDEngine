@@ -36,31 +36,11 @@ public class CombatScreen extends ExampleGScreen {
 	private Fighter p1;
 	private Fighter p2;
 	private float shake = 0;
-
+	
 	@Override
-	public String getIntroduction() { return ""; }
-	@Override
-	protected void drawIntros() {}
-
-	@Override
-	public void show() { super.show(); getScreenManager().setOrientation(ScreenManager.Orientation.LANDSCAPE); }
-	@Override
-	public void hide() { super.hide(); getScreenManager().setOrientation(ScreenManager.Orientation.PORTRAIT); }
-
-	@Override
-	protected void initViewport() {
-		// [修正] 不调用 super，完全自定义，避免引用共享视口
-
-		// 1. 初始化独立的世界相机 (用于游戏场景物体绘制)
-		worldCamera = new OrthographicCamera();
-
-		// 2. 初始化独立的 UI 视口和相机 (用于 UI 绘制)
-		// 目标尺寸: 960x540 * 1.4 = 1344x756
-		float scl = 1.4f;
-
-		// 创建全新的 ExtendViewport 实例
-		uiViewport = new ExtendViewport(960 * scl, 540 * scl);
-	}
+    public ScreenManager.Orientation getOrientation() {
+	return ScreenManager.Orientation.Landscape;
+    }
 
 	@Override
 	public void create() {
