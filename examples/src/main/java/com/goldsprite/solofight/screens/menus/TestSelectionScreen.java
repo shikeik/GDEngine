@@ -11,8 +11,9 @@ import com.goldsprite.solofight.screens.tests.InputTestScreen;
 import com.goldsprite.solofight.screens.tests.TextTestScreen;
 import com.goldsprite.solofight.screens.tests.TrailTestScreen;
 import java.util.Map;
+import com.goldsprite.solofight.screens.tests.DebugSmartInputScreen;
 
-public class TestSelectionScreen extends BaseSelectionScreen {int k63;
+public class TestSelectionScreen extends BaseSelectionScreen {int k69;
 
 	@Override
 	public String getIntroduction() {
@@ -32,6 +33,11 @@ public class TestSelectionScreen extends BaseSelectionScreen {int k63;
 		map.put("连招测试屏幕", CombatScreen.class);
 
 		map.put("物理/碰撞测试", null);
+
+		map.put("Debug/问题定位", null);
+		map.put("智能控件颜色问题", DebugSmartInputScreen.class);
+		
+		
 		// 以后加别的...
 	}
 }

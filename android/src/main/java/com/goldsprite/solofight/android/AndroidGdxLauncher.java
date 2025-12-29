@@ -349,8 +349,8 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
 			if (isKeyboardVisible) {
 				setKeyboardVisibility(false);
-				return true;
 			}
+			return true;
 		}
 		return super.onKeyDown(keyCode, event);
 	}

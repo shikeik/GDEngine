@@ -9,7 +9,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.NeonBatch;
-import com.goldsprite.solofight.core.ui.SmartNumInput; // 引入新控件
+import com.goldsprite.solofight.core.ui.SmartColorInput;
+import com.goldsprite.solofight.core.ui.SmartNumInput;
 import com.kotcrab.vis.ui.widget.VisWindow;
 
 public class TrailTestScreen extends ExampleGScreen {
@@ -21,10 +22,12 @@ public class TrailTestScreen extends ExampleGScreen {
 	private Vector2 cursor = new Vector2();
 	private RibbonTrail ribbonTrail;
 
-	// --- 可配置参数 ---
+	// --- 默认配置 ---
 	private float cfgSegmentLen = 5f;
 	private float cfgMaxLen = 600f;
 	private float cfgStartWidth = 60f;
+	private Color cfgHeadColor = new Color(Color.CYAN);
+	private Color cfgTailColor = new Color(Color.BLUE);
 
 	@Override
 	public String getIntroduction() {
@@ -35,7 +38,8 @@ public class TrailTestScreen extends ExampleGScreen {
 	public void create() {
 		batch = new SpriteBatch();
 		neonBatch = new NeonBatch(batch);
-		stage = new Stage(getViewport());
+		// [修复] 共享 Batch 以解决纹理状态不同步导致的 UI 变白问题
+		stage = new Stage(getViewport(), batch);
 		getImp().addProcessor(stage);
 
 		cursor.set(getViewport().getWorldWidth() / 2, getViewport().getWorldHeight() / 2);
@@ -54,7 +58,6 @@ public class TrailTestScreen extends ExampleGScreen {
 					ribbonTrail.reset(world.x, world.y);
 					return true;
 				}
-
 				@Override
 				public boolean touchDragged(int screenX, int screenY, int pointer) {
 					Vector2 world = screenToWorldCoord(screenX, screenY);
@@ -65,66 +68,54 @@ public class TrailTestScreen extends ExampleGScreen {
 	}
 
 	private void initUI() {
-		// 使用 Table 布局或者直接添加 Actor
-		// 这里为了精确控制初始位置在左上角，我们不使用全屏 Table 的 align，
-		// 而是直接设置 Window 的位置。
-
 		VisWindow win = new VisWindow("Trail Settings");
-		win.setMovable(true); // 允许拖动
+		win.setMovable(true);
 		win.setResizable(false);
 		win.addCloseButton();
 
 		Table t = new Table();
 		t.pad(10);
 
-		// 1. Segment Length (Smoothness)
-		// 步进 0.1，变化时更新逻辑
+		// 1. 数值控制
 		t.add(new SmartNumInput("Seg Len:", cfgSegmentLen, 0.5f, v -> {
-			cfgSegmentLen = v;
-			ribbonTrail.setSegmentLength(v);
+			cfgSegmentLen = v; ribbonTrail.setSegmentLength(v);
 		})).fillX().row();
 
-		// 2. Max Length
-		// 步进 10
 		t.add(new SmartNumInput("Max Len:", cfgMaxLen, 10f, v -> {
-			cfgMaxLen = v;
-			ribbonTrail.setMaxLength(v);
+			cfgMaxLen = v; ribbonTrail.setMaxLength(v);
 		})).fillX().row();
 
-		// 3. Head Width
-		// 步进 5
 		t.add(new SmartNumInput("Width:", cfgStartWidth, 5f, v -> {
-			cfgStartWidth = v;
-			ribbonTrail.setStartWidth(v);
+			cfgStartWidth = v; ribbonTrail.setStartWidth(v);
+		})).fillX().row();
+
+		// 2. 颜色控制
+		t.add(new SmartColorInput("Head Col:", cfgHeadColor, c -> {
+			cfgHeadColor.set(c); // 直接更新引用对象
+		})).fillX().row();
+
+		t.add(new SmartColorInput("Tail Col:", cfgTailColor, c -> {
+			cfgTailColor.set(c);
 		})).fillX().row();
 
 		win.add(t);
 		win.pack();
-
-		// 设置位置：左上角 (20, Top - 20)
-		// 注意：Stage坐标系 (0,0) 在左下角
 		win.setPosition(20, getViewport().getWorldHeight() - win.getHeight() - 20);
-
 		stage.addActor(win);
 	}
 
 	@Override
 	public void render0(float delta) {
-		// Update logic
 		ribbonTrail.update(cursor.x, cursor.y);
 
-		// Draw
 		batch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
-
 		drawGrid(neonBatch);
 
-		// 绘制拖尾 (头部亮青色 -> 尾部透明蓝)
-		ribbonTrail.draw(neonBatch, Color.CYAN, Color.BLUE);
+		// 使用配置的颜色
+		ribbonTrail.draw(neonBatch, cfgHeadColor, cfgTailColor);
 
-		// 绘制光标
 		neonBatch.drawCircle(cursor.x, cursor.y, 10, 0, Color.WHITE, 16, true);
-
 		neonBatch.end();
 
 		stage.act(delta);
@@ -141,15 +132,13 @@ public class TrailTestScreen extends ExampleGScreen {
 	public void dispose() {
 		super.dispose();
 		if (stage != null) stage.dispose();
+		// Stage 构造函数传入 batch 时，dispose 不会销毁该 batch，需要手动销毁
 		if (batch != null) batch.dispose();
 	}
 
-	// ==========================================
-	// 核心算法：Smooth Ribbon Trail (保持不变)
-	// ==========================================
+	// RibbonTrail 类代码 (完全复用之前版本，无变动，此处省略)
 	public static class RibbonTrail {
-		// ... (RibbonTrail 代码与之前一致，无需变动，此处省略以节省空间) ...
-		// 存储所有的细分点
+		// ... (请确保粘贴之前的 RibbonTrail 完整代码) ...
 		private final Array<Vector2> points = new Array<>();
 		private float[] vertsCache;
 		private float[] colorsCache;
@@ -162,27 +151,17 @@ public class TrailTestScreen extends ExampleGScreen {
 			vertsCache = new float[capacity * 4];
 			colorsCache = new float[capacity * 2];
 		}
-
 		public void setSegmentLength(float v) { this.segmentLength = Math.max(1f, v); }
 		public void setMaxLength(float v) { this.maxLength = v; }
 		public void setStartWidth(float v) { this.startWidth = v; }
-
-		public void reset(float x, float y) {
-			points.clear();
-			points.add(new Vector2(x, y));
-		}
-
+		public void reset(float x, float y) { points.clear(); points.add(new Vector2(x, y)); }
 		public void update(float x, float y) {
-			if (points.size == 0) {
-				points.add(new Vector2(x, y));
-				return;
-			}
+			if (points.size == 0) { points.add(new Vector2(x, y)); return; }
 			if (points.size == 1) {
 				if (points.get(0).dst(x, y) > segmentLength) points.insert(0, new Vector2(x, y));
 				else points.get(0).set(x, y);
 			} else {
-				Vector2 head = points.get(0);
-				Vector2 next = points.get(1);
+				Vector2 head = points.get(0); Vector2 next = points.get(1);
 				head.set(x, y);
 				float d = head.dst(next);
 				if (d > segmentLength) {
@@ -197,10 +176,7 @@ public class TrailTestScreen extends ExampleGScreen {
 			float currentLen = 0;
 			for (int i = 0; i < points.size - 1; i++) {
 				currentLen += points.get(i).dst(points.get(i+1));
-				if (currentLen > maxLength) {
-					points.truncate(i + 2); 
-					break;
-				}
+				if (currentLen > maxLength) { points.truncate(i + 2); break; }
 			}
 			int reqVerts = points.size * 4;
 			if (vertsCache.length < reqVerts) {
@@ -208,13 +184,10 @@ public class TrailTestScreen extends ExampleGScreen {
 				colorsCache = new float[points.size * 2 * 2];
 			}
 		}
-
 		public void draw(NeonBatch batch, Color headColor, Color tailColor) {
 			if (points.size < 2) return;
 			batch.drawCircle(points.first().x, points.first().y, startWidth / 2f, 0, headColor, 16, true);
-			int idx = 0;
-			Vector2 dir = new Vector2();
-			Vector2 nor = new Vector2();
+			int idx = 0; Vector2 dir = new Vector2(); Vector2 nor = new Vector2();
 			for (int i = 0; i < points.size; i++) {
 				Vector2 curr = points.get(i);
 				if (i == 0) dir.set(curr).sub(points.get(i+1)).nor();

@@ -44,25 +44,25 @@ public class SmartNumInput extends VisTable {
         // 中间 拖拽按钮
         VisTextButton dragBtn = new VisTextButton("<>");
         dragBtn.addListener(new InputListener() {
-				float lastStageX;
+            float lastStageX;
 
-				@Override
-				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-					lastStageX = event.getStageX();
-					return true;
-				}
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                lastStageX = event.getStageX();
+                return true;
+            }
 
-				@Override
-				public void touchDragged(InputEvent event, float x, float y, int pointer) {
-					float currentStageX = event.getStageX();
-					float dx = currentStageX - lastStageX;
-					if (dx == 0) return;
+            @Override
+            public void touchDragged(InputEvent event, float x, float y, int pointer) {
+                float currentStageX = event.getStageX();
+                float dx = currentStageX - lastStageX;
+                if (dx == 0) return;
 
-					// 拖拽更新数值
-					updateValue(currentValue + dx * step);
-					lastStageX = currentStageX;
-				}
-			});
+                // 拖拽更新数值
+                updateValue(currentValue + dx * step);
+                lastStageX = currentStageX;
+            }
+        });
         add(dragBtn).width(24).padRight(2);
 
         // 右侧 输入框
@@ -72,11 +72,11 @@ public class SmartNumInput extends VisTable {
         textField.setDisabled(true); // 禁用原生键盘，使用自定义数字键盘
 
         textField.addListener(new ClickListener() {
-				@Override
-				public void clicked(InputEvent event, float x, float y) {
-					showNumPad();
-				}
-			});
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                showNumPad();
+            }
+        });
 
         add(textField).growX().minWidth(50).row();
     }
@@ -104,7 +104,7 @@ public class SmartNumInput extends VisTable {
         if (sharedNumPad.getStage() != getStage()) {
             if (getStage() != null) getStage().addActor(sharedNumPad);
         }
-
+        
         // 确保在最上层
         sharedNumPad.toFront();
 
@@ -157,10 +157,10 @@ public class SmartNumInput extends VisTable {
             addButton("-", this::toggleNegative);
             VisTextButton okBtn = new VisTextButton("OK");
             okBtn.addListener(new ClickListener() {
-					public void clicked(InputEvent event, float x, float y) {
-						confirm();
-					}
-				});
+                public void clicked(InputEvent event, float x, float y) {
+                    confirm();
+                }
+            });
             add(okBtn).colspan(2).fillX().height(btnH).pad(1);
             pack();
             setVisible(false);
@@ -181,8 +181,8 @@ public class SmartNumInput extends VisTable {
         private void addButton(String text, Runnable action) {
             VisTextButton btn = new VisTextButton(text);
             btn.addListener(new ClickListener() {
-					public void clicked(InputEvent event, float x, float y) { action.run(); }
-				});
+                public void clicked(InputEvent event, float x, float y) { action.run(); }
+            });
             add(btn).size(btnW, btnH).pad(1);
         }
 
