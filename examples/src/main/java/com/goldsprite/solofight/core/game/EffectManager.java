@@ -122,7 +122,11 @@ public class EffectManager {
 		public void draw(NeonBatch batch) {
 			boolean bloom = timer < 5 || ((int)timer % 3 == 0);
 			float width = bloom ? 5f : 2f;
-			Color c = bloom ? Color.WHITE : Color.CYAN;
+
+			// [BUG修复] 之前是 Color c = bloom ? Color.WHITE : Color.CYAN;
+			// 这样直接修改 c.a 会导致全局 Color.WHITE/CYAN 透明度被永久改变
+			// 必须 new Color() 创建副本
+			Color c = new Color(bloom ? Color.WHITE : Color.CYAN);
 			c.a = MathUtils.clamp(timer / 15f, 0, 1);
 
 			for (int i = 0; i < path.size - 1; i++) {
