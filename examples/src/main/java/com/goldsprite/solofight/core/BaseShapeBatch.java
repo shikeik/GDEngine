@@ -261,5 +261,31 @@ public class BaseShapeBatch {
 
 		batch.draw(blankRegion.getTexture(), vArr, 0, 20);
 	}
+	
+	// [新增] 支持独立颜色的三角形带绘制
+	protected void drawTriangleStrip(float[] vertices, float[] colors, int count) {
+		if (count < 3) return;
+		for (int i = 0; i < count - 2; i++) {
+			// 构成三角形: (i, i+1, i+2)
+			int idx1 = i, idx2 = i + 1, idx3 = i + 2;
+			// 简单的交替绕序处理（虽然 Batch 默认不开剔除，为了规范还是写一下）
+			if (i % 2 != 0) { int tmp = idx2; idx2 = idx3; idx3 = tmp; } // Swap to maintain winding
+
+			drawSolidTriangle(
+				vertices[idx1*2], vertices[idx1*2+1], colors[idx1],
+				vertices[idx2*2], vertices[idx2*2+1], colors[idx2],
+				vertices[idx3*2], vertices[idx3*2+1], colors[idx3]
+			);
+		}
+	}
+
+	private void drawSolidTriangle(float x1, float y1, float c1, float x2, float y2, float c2, float x3, float y3, float c3) {
+		float[] vArr = tempVerts;
+		vArr[0] = x1; vArr[1] = y1; vArr[2] = c1; vArr[3] = whiteU; vArr[4] = whiteV;
+		vArr[5] = x2; vArr[6] = y2; vArr[7] = c2; vArr[8] = whiteU; vArr[9] = whiteV;
+		vArr[10]= x3; vArr[11]= y3; vArr[12]= c3; vArr[13]= whiteU; vArr[14]= whiteV;
+		vArr[15]= x3; vArr[16]= y3; vArr[17]= c3; vArr[18]= whiteU; vArr[19]= whiteV;
+		batch.draw(blankRegion.getTexture(), vArr, 0, 20);
+	}
 }
 

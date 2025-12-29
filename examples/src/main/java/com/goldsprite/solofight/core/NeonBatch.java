@@ -297,6 +297,15 @@ public class NeonBatch extends BaseShapeBatch {
 		// SpriteBatch 会自动把这4个点处理成两个三角形
 		batch.draw(blankRegion.getTexture(), verts, 0, 20);
 	}
+	
+    /**
+     * [重载] 绘制渐变三角形带 (Triangle Strip)
+     * 顶点数组: [x0, y0, x1, y1, ...]
+     * 颜色数组: [floatBits0, floatBits1, ...] 长度必须与顶点数一致
+     */
+    public void drawTriangleStrip(float[] vertices, float[] colors, int count) {
+        super.drawTriangleStrip(vertices, colors, count);
+    }
 
 	// --- 内部辅助 ---
 
