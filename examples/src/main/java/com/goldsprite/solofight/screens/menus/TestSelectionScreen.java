@@ -12,7 +12,7 @@ import com.goldsprite.solofight.screens.tests.TextTestScreen;
 import com.goldsprite.solofight.screens.tests.TrailTestScreen;
 import java.util.Map;
 
-public class TestSelectionScreen extends BaseSelectionScreen {int k62;
+public class TestSelectionScreen extends BaseSelectionScreen {int k63;
 
 	@Override
 	public String getIntroduction() {
