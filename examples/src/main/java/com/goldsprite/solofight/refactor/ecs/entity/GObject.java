@@ -115,6 +115,10 @@ public class GObject implements IRunnable {
 		ComponentManager.unregisterComponent(this, component.getClass(), component);
 		ComponentManager.updateEntityComponentMask(this);
 	}
+	
+	public boolean hasComponent(Class<? extends IComponent> type) {
+		return components.containsKey(type.getName());
+	}
 
 	public <T extends IComponent> T getComponent(Class<T> type) {
 		return getComponent(type, 0);
@@ -177,16 +181,31 @@ public class GObject implements IRunnable {
 		GameWorld.inst().addDestroyGObject(this);
 	}
 
-	public void destroyImmediate() {
-		for (List<IComponent> list : components.values()) {
-			for (int i = list.size() - 1; i >= 0; i--) {
-				list.get(i).destroyImmediate();
-			}
-		}
-		components.clear();
-		ComponentManager.removeEntity(this);
-		GameWorld.manageGObject(this, ManageMode.REMOVE);
-	}
+	// [核心修复] 修改 destroyImmediate 方法，增加递归销毁子物体的逻辑
+    public void destroyImmediate() {
+        // 1. 先递归销毁所有子物体
+        // 使用倒序遍历，防止移除时索引错位
+        for (int i = childGObjects.size() - 1; i >= 0; i--) {
+            GObject child = childGObjects.get(i);
+            // 子物体不在 GameWorld 的顶层列表中，所以需要手动级联销毁
+            child.destroyImmediate(); 
+        }
+        childGObjects.clear();
+
+        // 2. 销毁自身组件
+        for (List<IComponent> list : components.values()) {
+            for (int i = list.size() - 1; i >= 0; i--) {
+                list.get(i).destroyImmediate();
+            }
+        }
+        components.clear();
+
+        // 3. 从管理器注销
+        ComponentManager.removeEntity(this);
+        GameWorld.manageGObject(this, ManageMode.REMOVE);
+        
+        // DebugUI.log("GObject Destroyed: " + getName());
+    }
 
 	public boolean isDestroyed() { return isDestroyed; }
 	public boolean isEnable() { return isEnabled; }
