@@ -5,7 +5,6 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector2;
 
 /**
@@ -15,8 +14,7 @@ import com.badlogic.gdx.math.Vector2;
  * 2. 提供通用的描边 (Stroke) 和 填充 (Fill) 算法
  * 3. 所有的几何计算（Miter Join）都在这里完成
  */
-public class BaseShapeBatch {
-	protected final SpriteBatch batch;
+public class BaseShapeBatch extends SpriteBatch{
 	protected final TextureRegion blankRegion;
 	// 缓存 UV，避免每次绘制调用方法
 	protected final float whiteU, whiteV;
@@ -29,8 +27,7 @@ public class BaseShapeBatch {
 	private final Vector2 tmpV2 = new Vector2();
 	private final Vector2 miterTmp = new Vector2();
 
-	public BaseShapeBatch(SpriteBatch batch) {
-		this.batch = batch;
+	public BaseShapeBatch() {
 		// 生成 1x1 纯白纹理
 		Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
 		pixmap.setColor(Color.WHITE);
@@ -48,17 +45,6 @@ public class BaseShapeBatch {
 	public TextureRegion getBlankRegion() {
 		return blankRegion;
 	}
-
-
-	public SpriteBatch getBatch() { return batch; }
-
-	// --- Batch 代理方法 ---
-	public void setProjectionMatrix(Matrix4 projection) {
-		batch.setProjectionMatrix(projection);
-	}
-	public void begin() { batch.begin(); }
-	public void end() { batch.end(); }
-	public void setColor(Color color) { batch.setColor(color); }
 
 	// --- 核心算法 1: 填充 (Fill) ---
 
@@ -259,7 +245,7 @@ public class BaseShapeBatch {
 		// V4 (Repeat V3) -> Degenerate
 		vArr[15] = x3; vArr[16] = y3; vArr[17] = colorBits; vArr[18] = whiteU; vArr[19] = whiteV;
 
-		batch.draw(blankRegion.getTexture(), vArr, 0, 20);
+		draw(blankRegion.getTexture(), vArr, 0, 20);
 	}
 	
 	// [新增] 支持独立颜色的三角形带绘制
@@ -285,7 +271,7 @@ public class BaseShapeBatch {
 		vArr[5] = x2; vArr[6] = y2; vArr[7] = c2; vArr[8] = whiteU; vArr[9] = whiteV;
 		vArr[10]= x3; vArr[11]= y3; vArr[12]= c3; vArr[13]= whiteU; vArr[14]= whiteV;
 		vArr[15]= x3; vArr[16]= y3; vArr[17]= c3; vArr[18]= whiteU; vArr[19]= whiteV;
-		batch.draw(blankRegion.getTexture(), vArr, 0, 20);
+		draw(blankRegion.getTexture(), vArr, 0, 20);
 	}
 }
 

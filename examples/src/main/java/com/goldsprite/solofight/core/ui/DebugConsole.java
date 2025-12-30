@@ -55,7 +55,7 @@ public class DebugConsole extends Group {
 
 	public DebugConsole() {
 		// 1. 资源准备
-		backDrawable = ColorTextureUtils.createColorDrawable(Color.valueOf("00000030"));
+		backDrawable = ColorTextureUtils.createColorDrawable(Color.valueOf("00000099"));
 		back2Drawable = ColorTextureUtils.createColorDrawable(Color.valueOf("00000000"));
 		dragDrawable = ColorTextureUtils.createColorDrawable(Color.valueOf("FFAAAAFF"));
 

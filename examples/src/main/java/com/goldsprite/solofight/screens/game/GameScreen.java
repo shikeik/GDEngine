@@ -38,7 +38,6 @@ import java.util.List;
 
 public class GameScreen extends ExampleGScreen {
 
-	private SpriteBatch batch;
 	private NeonBatch neonBatch;
 	private ParallaxBackground parallaxBG;
 
@@ -76,8 +75,7 @@ public class GameScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
-		batch = new SpriteBatch();
-		neonBatch = new NeonBatch(batch);
+		neonBatch = new NeonBatch();
 		parallaxBG = new ParallaxBackground();
 
 		// [新增] 初始化平台 (H5 数据)
@@ -240,8 +238,8 @@ public class GameScreen extends ExampleGScreen {
 
 		// --- Draw World ---
 		// [修复 3] 强制重置 World 绘制颜色
-		batch.setColor(Color.WHITE);
-		batch.setProjectionMatrix(getWorldCamera().combined);
+		neonBatch.setColor(Color.WHITE);
+		neonBatch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 
 		parallaxBG.draw(neonBatch, getWorldCamera());
@@ -264,17 +262,17 @@ public class GameScreen extends ExampleGScreen {
 		p1.drawEffects(neonBatch); p2.drawEffects(neonBatch);
 
 		// 飘字绘制前也最好重置一下，虽然 FloatingTextManager 内部可能处理了
-		batch.setColor(Color.WHITE);
-		FloatingTextManager.getInstance().renderWorld(batch);
+		neonBatch.setColor(Color.WHITE);
+		FloatingTextManager.getInstance().renderWorld(neonBatch);
 
 		neonBatch.end();
 		getWorldCamera().position.sub(shakeX, shakeY, 0);
 
 		// --- Draw UI ---
 		// [修复 3] 强制重置 UI 绘制颜色 (这解决了 UI 透明/变色问题)
-		batch.setColor(Color.WHITE);
+		neonBatch.setColor(Color.WHITE);
 
-		batch.setProjectionMatrix(getUIViewport().getCamera().combined);
+		neonBatch.setProjectionMatrix(getUIViewport().getCamera().combined);
 		neonBatch.begin();
 
 		// UI 分隔线
@@ -288,15 +286,15 @@ public class GameScreen extends ExampleGScreen {
 		neonBatch.end();
 
 		// 连击 UI
-		batch.setColor(Color.WHITE); // 防御性重置
-		batch.begin();
-		FloatingTextManager.getInstance().renderUI(batch, getUIViewport().getWorldWidth(), getUIViewport().getWorldHeight());
-		batch.end();
+		neonBatch.setColor(Color.WHITE); // 防御性重置
+		neonBatch.begin();
+		FloatingTextManager.getInstance().renderUI(neonBatch, getUIViewport().getWorldWidth(), getUIViewport().getWorldHeight());
+		neonBatch.end();
 
 		// Stage UI (History, Joystick, Bars)
 		// Stage 内部通常会管理 Batch，但如果外部 Batch 状态脏了，也可能受影响
 		// 所以我们在 draw 之前把 Batch 状态洗白是最好的习惯
-		batch.setColor(Color.WHITE);
+		neonBatch.setColor(Color.WHITE);
 		uiStage.act(delta);
 		uiStage.draw();
 
@@ -344,7 +342,7 @@ public class GameScreen extends ExampleGScreen {
 	@Override
 	public void dispose() {
 		super.dispose();
-		if(uiStage!=null)uiStage.dispose(); if(batch!=null)batch.dispose();
+		if(uiStage!=null)uiStage.dispose(); if(neonBatch!=null)neonBatch.dispose();
 		InputContext.inst().commandListener = null; ComboEngine.inst().onCommandExecuted = null;
 	}
 }

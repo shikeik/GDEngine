@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.goldsprite.solofight.core.Debug;
 
 
 /**
@@ -77,12 +78,13 @@ public abstract class GScreen implements IGScreen {
 
 	//初始化一些配置
 	private void init() {
-		shapeRenderer = new ShapeRenderer();
+		shapeRenderer = new ShapeRenderer();int k;
 
 		// [修改] 调用可重写的初始化方法，代替直接实例化
 		initViewport();
-		//uiViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
+		//Debug.log("3ui视口宽高: %s", getViewSize());
 		initWorldCamera(worldScale);
+		//Debug.log("4ui视口宽高: %s, 相机宽高: %s", getViewSize(), getWorldSize());
 
 		create();
 	}
@@ -153,6 +155,7 @@ public abstract class GScreen implements IGScreen {
 	 */
 	public void setWorldScale(float scale) {
 		this.worldScale = scale;
+		resizeWorldCamera(true);
 	}
 
 	public Vector2 getViewSize() { return viewSize.set(getUIViewport().getWorldWidth(), getUIViewport().getWorldHeight()); }

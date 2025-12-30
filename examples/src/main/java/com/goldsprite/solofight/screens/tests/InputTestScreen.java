@@ -8,16 +8,16 @@ import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.input.*;
+import com.goldsprite.solofight.core.NeonStage;
 
 public class InputTestScreen extends ExampleGScreen {
 
-	private Stage stage;
+	private NeonStage stage;
 	private VirtualJoystick joystick;
 	private GestureProcessor gestureProcessor;
 	private CommandHistoryUI historyUI;
 	private ToastUI toastUI;
 
-	private SpriteBatch batch;
 	private NeonBatch neonBatch;
 
 	@Override
@@ -27,9 +27,8 @@ public class InputTestScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
-		batch = new SpriteBatch();
-		neonBatch = new NeonBatch(batch);
-		stage = new Stage(getUIViewport());
+		neonBatch = new NeonBatch();
+		stage = new NeonStage(getUIViewport());
 
 		// A. 虚拟摇杆 (左下角)
 		joystick = new VirtualJoystick();
@@ -76,7 +75,7 @@ public class InputTestScreen extends ExampleGScreen {
 		gestureProcessor.update(delta);
 
 		// 2. 绘制手势 (UI Space)
-		batch.setProjectionMatrix(getUIViewport().getCamera().combined);
+		neonBatch.setProjectionMatrix(getUIViewport().getCamera().combined);
 		neonBatch.begin();
 		float midX = getUIViewport().getWorldWidth() * 0.5f;
 		neonBatch.drawLine(midX, 0, midX, getUIViewport().getWorldHeight(), 2, new Color(1,1,1,0.1f));
@@ -105,7 +104,7 @@ public class InputTestScreen extends ExampleGScreen {
 	public void dispose() {
 		super.dispose();
 		if (stage != null) stage.dispose();
-		if (batch != null) batch.dispose();
+		if (neonBatch != null) neonBatch.dispose();
 		InputContext.inst().commandListener = null;
 	}
 }

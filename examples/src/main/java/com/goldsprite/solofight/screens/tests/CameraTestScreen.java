@@ -60,13 +60,12 @@ public class CameraTestScreen extends ExampleGScreen {
 		debugFont = new BitmapFont();
 
 		smartCam = new SmartCameraController(getWorldCamera());
-		smartCam.setMapBounds(-1000, -800, 2000, 1600);
+		smartCam.setMapBounds(0, 0, 3000, 2400);
 
 		freeCam = new SimpleCameraController(getWorldCamera());
 		freeCam.setInputEnabled(false); // 默认关闭自由操作
-
-		targets.add(new Vector2(-200, 0));
-		targets.add(new Vector2(200, 0));
+		
+		resetTargets();
 
 		initUI();
 		initInput();
@@ -118,7 +117,7 @@ public class CameraTestScreen extends ExampleGScreen {
 		root.top().left().pad(20);
 		uiStage.addActor(root);
 
-		Table panel = new Table();
+		Table panel = new Table();int k;
 		panel.setBackground(createColorDrawable(new Color(0, 0, 0, 0.5f)));
 		panel.pad(15);
 		panel.defaults().width(220).padBottom(5).left();
@@ -132,7 +131,7 @@ public class CameraTestScreen extends ExampleGScreen {
 					ghostMode = cbGhost.isChecked();
 					if (ghostMode && !freeCamControl) {
 						// 仅当没有开启自由控制时，重置视角方便观察
-						getWorldCamera().position.set(0, 0, 0);
+						getWorldCamera().position.set(getWorldCenter().x, getWorldCenter().y, 0);
 						getWorldCamera().zoom = 1f;
 						getWorldCamera().update();
 					}
@@ -214,9 +213,7 @@ public class CameraTestScreen extends ExampleGScreen {
 		btnClear.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
-					targets.clear();
-					targets.add(new Vector2(-200, 0));
-					targets.add(new Vector2(200, 0));
+					resetTargets();
 				}
 			});
 		panel.add(btnClear).fillX().row();
@@ -269,13 +266,20 @@ public class CameraTestScreen extends ExampleGScreen {
 		shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
 		shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1f);
 		int size = 100;
-		for (int x = -2000; x <= 3000; x += size) shapeRenderer.line(x, -2000, x, 3000);
-		for (int y = -2000; y <= 3000; y += size) shapeRenderer.line(-2000, y, 3000, y);
+//		for (int x = -2000; x <= 3000; x += size) shapeRenderer.line(x, -2000, x, 3000);
+//		for (int y = -2000; y <= 3000; y += size) shapeRenderer.line(-2000, y, 3000, y);
 		shapeRenderer.setColor(Color.ORANGE);
 		// 画地图边界
-		shapeRenderer.rect(-1000, -800, 2000, 1600); // 必须和 SmartCam 里的设置一致
+		shapeRenderer.rect(0, 0, 3000, 2400); // 必须和 SmartCam 里的设置一致
 		shapeRenderer.end();
 		Gdx.gl.glDisable(GL20.GL_BLEND);
+	}
+	
+	private void resetTargets() {
+		targets.clear();
+		Debug.log("相机size: %s", getWorldSize());
+		targets.add(new Vector2(getWorldCenter().x -200, getWorldCenter().y));
+		targets.add(new Vector2(getWorldCenter().x +200, getWorldCenter().y));
 	}
 
 	@Override

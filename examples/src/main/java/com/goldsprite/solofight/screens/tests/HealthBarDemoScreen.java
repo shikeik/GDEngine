@@ -11,6 +11,7 @@ import com.goldsprite.solofight.core.ui.H5SkewBar;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSlider;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.goldsprite.solofight.core.NeonStage;
 
 public class HealthBarDemoScreen extends ExampleGScreen {
 
@@ -30,7 +31,7 @@ public class HealthBarDemoScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
-		stage = new Stage(getUIViewport());
+		stage = new NeonStage(getUIViewport());
 		getImp().addProcessor(stage);
 
 		Table root = new Table();

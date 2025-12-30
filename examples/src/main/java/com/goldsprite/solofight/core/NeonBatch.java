@@ -14,13 +14,6 @@ public class NeonBatch extends BaseShapeBatch {
 	// 顶点生成缓存 (避免每次 drawCircle 都 new 数组)
 	private float[] pathBuffer = new float[2048];
 
-	public NeonBatch() {
-		this(new SpriteBatch());
-	}
-	public NeonBatch(SpriteBatch batch) {
-		super(batch);
-	}
-
 	// ==========================================================
 	// 1. 基础形状 (Line, Rect)
 	// ==========================================================
@@ -299,7 +292,7 @@ public class NeonBatch extends BaseShapeBatch {
 
 		// 提交绘制
 		// SpriteBatch 会自动把这4个点处理成两个三角形
-		batch.draw(blankRegion.getTexture(), verts, 0, 20);
+		draw(blankRegion.getTexture(), verts, 0, 20);
 	}
 	
 	/**

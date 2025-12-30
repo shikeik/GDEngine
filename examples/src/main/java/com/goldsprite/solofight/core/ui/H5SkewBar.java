@@ -2,10 +2,10 @@ package com.goldsprite.solofight.core.ui;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.Batch;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.goldsprite.solofight.core.NeonBatch;
+import com.goldsprite.solofight.core.NeonActor;
 
 /**
  * 通用赛博朋克风格血条组件 (H5复刻版 v2.0)
@@ -15,7 +15,7 @@ import com.goldsprite.solofight.core.NeonBatch;
  * - 支持任意角度倾斜 (Skew Degrees)
  * - 支持双向填充 (Left-to-Right / Right-to-Left)
  */
-public class H5SkewBar extends Actor {
+public class H5SkewBar extends NeonActor {
 
 	// --- 样式定义 ---
 	public static class BarStyle {
@@ -55,7 +55,6 @@ public class H5SkewBar extends Actor {
 	}
 
 	// --- 成员变量 ---
-	private NeonBatch neonRenderer;
 	private BarStyle style;
 
 	private float min, max;
@@ -121,14 +120,8 @@ public class H5SkewBar extends Actor {
 	}
 
 	@Override
-	public void draw(Batch batch, float parentAlpha) {
+	public void draw(NeonBatch neonBatch, float parentAlpha) {
 		if (style == null) return;
-
-		// 懒加载 Renderer
-		if (neonRenderer == null || neonRenderer.getBatch() != batch) {
-			if (batch instanceof SpriteBatch) neonRenderer = new NeonBatch((SpriteBatch) batch);
-			else return;
-		}
 
 		float x = getX();
 		float y = getY();
@@ -148,7 +141,7 @@ public class H5SkewBar extends Actor {
 			x + skewOffset, y + h
 		};
 		// 使用 NeonBatch 画闭合多边形描边
-		neonRenderer.drawPolygon(borderVerts, 4, style.borderThickness, style.borderColor, false);
+		neonBatch.drawPolygon(borderVerts, 4, style.borderThickness, style.borderColor, false);
 
 		// 3. 计算内容区域 (Padding)
 		float pad = style.borderThickness;
@@ -160,7 +153,7 @@ public class H5SkewBar extends Actor {
 		float cSkew = cH * MathUtils.tanDeg(style.skewDeg);
 
 		// 4. 绘制槽底 (Background)
-		neonRenderer.drawSkewGradientRect(cX, cY, cW, cH, cSkew, style.backgroundColor, style.backgroundColor);
+		neonBatch.drawSkewGradientRect(cX, cY, cW, cH, cSkew, style.backgroundColor, style.backgroundColor);
 
 		// 5. 准备绘制条形 (通用逻辑)
 		float visualP = getVisualPercent();
@@ -175,7 +168,7 @@ public class H5SkewBar extends Actor {
 		if (visualP > 0) {
 			float dmgWidth = cW * visualP;
 			float drawX = fillFromRight ? (startX - dmgWidth) : startX;
-			neonRenderer.drawSkewGradientRect(drawX, cY, dmgWidth, cH, cSkew, style.damageColor, style.damageColor);
+			neonBatch.drawSkewGradientRect(drawX, cY, dmgWidth, cH, cSkew, style.damageColor, style.damageColor);
 		}
 
 		// 7. 绘制实际血量 (Health Layer)
@@ -199,7 +192,7 @@ public class H5SkewBar extends Actor {
 			Color c1 = tmpColor(cLeft, parentAlpha);
 			Color c2 = tmpColor(cRight, parentAlpha);
 
-			neonRenderer.drawSkewGradientRect(drawX, cY, barWidth, cH, cSkew, c1, c2);
+			neonBatch.drawSkewGradientRect(drawX, cY, barWidth, cH, cSkew, c1, c2);
 		}
 	}
 

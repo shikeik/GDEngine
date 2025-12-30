@@ -10,11 +10,9 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.goldsprite.solofight.core.NeonBatch;
+import com.goldsprite.solofight.core.NeonActor;
 
-public class VirtualJoystick extends Actor {
-
-	private NeonBatch neon;
-
+public class VirtualJoystick extends NeonActor {
 	private final float baseRadius = 70f;
 	private final float thumbRadius = 25f;
 	private final float slotDist = 65f;
@@ -109,18 +107,13 @@ public class VirtualJoystick extends Actor {
 	}
 
 	@Override
-	public void draw(Batch batch, float parentAlpha) {
-		if (neon == null || neon.getBatch() != batch) {
-			if (batch instanceof SpriteBatch) neon = new NeonBatch((SpriteBatch) batch);
-			else return;
-		}
-
+	public void draw(NeonBatch neonBatch, float parentAlpha) {
 		float cx = getX() + getWidth()/2;
 		float cy = getY() + getHeight()/2;
 
 		// 1. Base (Circle with border)
-		neon.drawCircle(cx, cy, baseRadius, 0, alpha(C_BASE_BG, parentAlpha), 32, true);
-		neon.drawCircle(cx, cy, baseRadius, 2f, alpha(C_BASE_BORDER, parentAlpha), 32, false);
+		neonBatch.drawCircle(cx, cy, baseRadius, 0, alpha(C_BASE_BG, parentAlpha), 32, true);
+		neonBatch.drawCircle(cx, cy, baseRadius, 2f, alpha(C_BASE_BORDER, parentAlpha), 32, false);
 
 		// 2. Slots & Lines
 		for (int i = 0; i < 8; i++) {
@@ -135,21 +128,21 @@ public class VirtualJoystick extends Actor {
 			// Connection Line
 			Color lc = active ? C_LINE_ACTIVE : C_LINE_INACTIVE;
 			float lw = active ? 3f : 1f;
-			neon.drawLine(cx + cos*10, cy + sin*10, sx, sy, lw, alpha(lc, parentAlpha));
+			neonBatch.drawLine(cx + cos*10, cy + sin*10, sx, sy, lw, alpha(lc, parentAlpha));
 
 			// Octagon Slot (正八边形)
 			if (active) {
 				// Glow
-				neon.drawRegularPolygon(sx, sy, 9f * 1.5f, 8, 22.5f, 0, alpha(C_SLOT_ACTIVE_GLOW, parentAlpha), true);
+				neonBatch.drawRegularPolygon(sx, sy, 9f * 1.5f, 8, 22.5f, 0, alpha(C_SLOT_ACTIVE_GLOW, parentAlpha), true);
 				// Core
-				neon.drawRegularPolygon(sx, sy, 9f, 8, 22.5f, 0, alpha(C_SLOT_ACTIVE_CORE, parentAlpha), true);
+				neonBatch.drawRegularPolygon(sx, sy, 9f, 8, 22.5f, 0, alpha(C_SLOT_ACTIVE_CORE, parentAlpha), true);
 			} else {
-				neon.drawRegularPolygon(sx, sy, 5f, 8, 22.5f, 0, alpha(C_SLOT_INACTIVE, parentAlpha), true);
+				neonBatch.drawRegularPolygon(sx, sy, 5f, 8, 22.5f, 0, alpha(C_SLOT_INACTIVE, parentAlpha), true);
 			}
 		}
 
 		// 3. Thumb
-		neon.drawCircle(cx + touchPos.x, cy + touchPos.y, thumbRadius, 0, alpha(C_THUMB, parentAlpha), 24, true);
+		neonBatch.drawCircle(cx + touchPos.x, cy + touchPos.y, thumbRadius, 0, alpha(C_THUMB, parentAlpha), 24, true);
 	}
 
 	private Color alpha(Color c, float a) {

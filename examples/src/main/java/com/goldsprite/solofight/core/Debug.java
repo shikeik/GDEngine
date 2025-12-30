@@ -148,7 +148,6 @@ public class Debug {
 		if (banTag(tag)) return;
 
 		String msg = String.format("[%s] %s", tag, formatString(values));
-		msg = String.format("[%s] %s", formatTime("HH:mm:ss:SSS"), msg);// 添加时间戳
 
 		logInfos.add(msg);
 	}

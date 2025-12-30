@@ -22,7 +22,6 @@ import com.goldsprite.solofight.core.ui.H5SkewBar;
 
 public class CombatScreen extends ExampleGScreen {
 
-	private SpriteBatch batch;
 	private NeonBatch neonBatch;
 	private Stage uiStage;
 
@@ -43,8 +42,7 @@ public class CombatScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
-		batch = new SpriteBatch();
-		neonBatch = new NeonBatch(batch);
+		neonBatch = new NeonBatch();
 
 		p1 = new Fighter(200, Color.CYAN, false);
 		p2 = new Fighter(800, Color.valueOf("ff0055"), true);
@@ -152,7 +150,7 @@ public class CombatScreen extends ExampleGScreen {
 		getWorldCamera().update();
 
 		// Draw World
-		batch.setProjectionMatrix(getWorldCamera().combined);
+		neonBatch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 
 		// [修正] 暗场遮罩
@@ -193,7 +191,7 @@ public class CombatScreen extends ExampleGScreen {
 		getWorldCamera().position.sub(shakeX, shakeY, 0);
 
 		// Draw UI Trails
-		batch.setProjectionMatrix(getUIViewport().getCamera().combined);
+		neonBatch.setProjectionMatrix(getUIViewport().getCamera().combined);
 		neonBatch.begin();
 		float splitX = getUIViewport().getWorldWidth() * 0.5f;
 		neonBatch.drawLine(splitX, 0, splitX, getUIViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
@@ -219,7 +217,7 @@ public class CombatScreen extends ExampleGScreen {
 	public void dispose() {
 		super.dispose();
 		if (uiStage != null) uiStage.dispose();
-		if (batch != null) batch.dispose();
+		if (neonBatch != null) neonBatch.dispose();
 		InputContext.inst().commandListener = null;
 		ComboEngine.inst().onCommandExecuted = null;
 	}

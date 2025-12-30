@@ -18,7 +18,6 @@ import com.goldsprite.solofight.core.ui.SmartColorInput;
 public class TrailTestScreen extends ExampleGScreen {
 
 	private Stage stage;
-	private SpriteBatch batch;
 	private NeonBatch neonBatch;
 
 	private Vector2 cursor = new Vector2();
@@ -43,10 +42,9 @@ public class TrailTestScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
-		batch = new SpriteBatch();
-		neonBatch = new NeonBatch(batch);
+		neonBatch = new NeonBatch();
 		// [修复] 共享 Batch 以解决纹理状态不同步导致的 UI 变白问题
-		stage = new Stage(getUIViewport(), batch);
+		stage = new Stage(getUIViewport(), neonBatch);
 		getImp().addProcessor(stage);
 
 		cursor.set(getUIViewport().getWorldWidth() / 2, getUIViewport().getWorldHeight() / 2);
@@ -115,7 +113,7 @@ public class TrailTestScreen extends ExampleGScreen {
 	public void render0(float delta) {
 		ribbonTrail.update(cursor.x, cursor.y);
 
-		batch.setProjectionMatrix(getWorldCamera().combined);
+		neonBatch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 		drawGrid(neonBatch);
 
@@ -140,7 +138,7 @@ public class TrailTestScreen extends ExampleGScreen {
 		super.dispose();
 		if (stage != null) stage.dispose();
 		// Stage 构造函数传入 batch 时，dispose 不会销毁该 batch，需要手动销毁
-		if (batch != null) batch.dispose();
+		if (neonBatch != null) neonBatch.dispose();
 	}
 
 	// RibbonTrail 类代码 (完全复用之前版本，无变动，此处省略)

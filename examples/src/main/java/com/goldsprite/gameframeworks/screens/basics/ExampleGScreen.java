@@ -20,18 +20,31 @@ public abstract class ExampleGScreen extends GScreen {
 	// 3. 智能初始化视口 (接管 GScreen 的 initViewport)
 	@Override
 	protected void initViewport() {
-		float w, h;
+		float w, h, sw, sh;
+		int screenW, screenH;
+		screenW = Gdx.graphics.getWidth();
+		screenH = Gdx.graphics.getHeight();
+		int sLong = Math.max(screenW, screenH);
+		int sShort = Math.min(screenW, screenH);
 		if (getOrientation() == ScreenManager.Orientation.Landscape) {
 			w = BASE_LONG;
 			h = BASE_SHORT;
+			screenW = sLong;
+			screenH = sShort;
 		} else {
 			w = BASE_SHORT;
 			h = BASE_LONG;
+			screenW = sShort;
+			screenH = sLong;
 		}
 
 		// 自动应用缩放系数
 		uiViewport = new ExtendViewport(w * VIEWPORT_SCALE, h * VIEWPORT_SCALE);
-		uiViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
+		//Debug.log("1ui视口宽高: %s", getViewSize());
+		
+		uiViewport.update(screenW, screenH, true);
+		//Debug.log("2ui视口宽高: %s", getViewSize());int k5;
+		
 	}
 
 	// 4. 自动处理转屏逻辑

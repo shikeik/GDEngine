@@ -12,7 +12,6 @@ public class BloomDebugScreen extends ExampleGScreen {
 
 	private BloomRenderer bloom;
 	private NeonBatch neonBatch;
-	private SpriteBatch batch;
 	private ShapeRenderer bgRenderer;
 
 	@Override
@@ -27,8 +26,7 @@ public class BloomDebugScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
-		batch = new SpriteBatch();
-		neonBatch = new NeonBatch(batch);
+		neonBatch = new NeonBatch();
 		bloom = new BloomRenderer();
 		bgRenderer = new ShapeRenderer();
 	}
@@ -39,21 +37,21 @@ public class BloomDebugScreen extends ExampleGScreen {
 		drawCheckerBoard();
 
 		// 2. 捕获发光物体
-		bloom.captureStart(batch);
+		bloom.captureStart(neonBatch);
 		{
-			batch.setProjectionMatrix(worldCamera.combined);
-			batch.begin();
+			neonBatch.setProjectionMatrix(worldCamera.combined);
+			neonBatch.begin();
 			{
 				neonBatch.drawCircle(worldCamera.position.x, worldCamera.position.y, 100, 8, Color.CYAN, 32, false);
 			}
-			batch.end();
+			neonBatch.end();
 		}
 		bloom.captureEnd();
 		// 3. 计算模糊
 		bloom.process();
 		// 4. 合成并上屏 (Overlays on top of background)
 		// 这一步会混合：原图 + 光晕，并且处理透明度
-		bloom.render(neonBatch.getBatch());
+		bloom.render(neonBatch);
 	}
 
 	private void drawCheckerBoard() {
