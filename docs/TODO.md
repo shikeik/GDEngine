@@ -1,12 +1,8 @@
 ignored: indentFix codeFormatFix
 
 # TODO   
-做ui布局编辑器: 可调整控件和布局的对齐方式，调整布局位置...
-<>[float]输入ui与数字小键盘ui没有拿进来
-手机上看不到指令历史ui
-三级平台没有加
-
-
+重构DebugUI为Debug并加回tag机制与时间戳格式
+依次检查ecs结构所有类, 为每个关键逻辑创建测试场景并通过所有测试.
 
 
 
@@ -35,4 +31,6 @@ ignored: indentFix codeFormatFix
 
 
 
-## 已搁置  
+## 已搁置
+做ui布局编辑器: 可调整控件和布局的对齐方式，调整布局位置...
+
