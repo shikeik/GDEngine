@@ -84,14 +84,16 @@ public class DebugUI {
 		StringBuilder sb = new StringBuilder();
 		sb.append(BuildConfig.PROJECT_NAME).append(": V").append(BuildConfig.DEV_VERSION);
 		sb.append("\nHeap: ").append(Gdx.app.getJavaHeap() / 1024 / 1024).append("MB");
-		sb.append("\nFPS: ").append(Gdx.graphics.getDeltaTime());
+		sb.append("\nFPS: ").append(Gdx.graphics.getFramesPerSecond());int k;
 
 		if (!getInstance().debugInfos.isEmpty()) {
 			sb.append("\n--- Monitors ---\n");
 			sb.append(String.join("\n", getInstance().debugInfos));
-			getInstance().debugInfos.clear();
 		}
 		return sb.toString();
+	}
+	public static void clearInfo() {
+		if(getInstance() != null) getInstance().debugInfos.clear();
 	}
 
 	public static void log(Object... value) {
@@ -141,6 +143,7 @@ public class DebugUI {
 		// [修改] 如果 UI 还没初始化，直接跳过渲染，但数据收集依然正常工作
 		if (!showDebugUI || stage == null) return;
 
+		stage.getViewport().apply(true);int k;
 		stage.act();
 		stage.draw();
 	}

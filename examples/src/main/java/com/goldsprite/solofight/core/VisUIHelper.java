@@ -27,7 +27,10 @@ public class VisUIHelper {
 
 			// 2. 生成支持中文的字体 (使用 FontUtils 现有的逻辑)
 			// 大小设为 24，清晰度较高
-			cnFont = FontUtils.generateAutoClarity(24);
+			cnFont = FontUtils.generateAutoClarity(40);int k2;
+			cnFont.getData().setScale(cnFont.getData().scaleX * 0.7f);
+			BitmapFont smFont = FontUtils.generate(40);
+			smFont.getData().setScale(smFont.getData().scaleX * 0.56f);
 
 			// 3. 获取 VisUI 的皮肤
 			Skin skin = VisUI.getSkin();
@@ -36,7 +39,7 @@ public class VisUIHelper {
 
 			// Label (最重要)
 			skin.get(Label.LabelStyle.class).font = cnFont;
-			skin.get(VisLabel.LabelStyle.class).font = cnFont;
+			skin.get("small", Label.LabelStyle.class).font = smFont;
 
 			//VisScrollPane.ScrollPaneStyle 没有font
 

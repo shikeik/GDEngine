@@ -51,9 +51,9 @@ public class CameraTestScreen extends ExampleGScreen {
 	private boolean drawBackground = false;
 	
 	@Override
-    public ScreenManager.Orientation getOrientation() {
-        return ScreenManager.Orientation.Landscape;
-    }
+	public ScreenManager.Orientation getOrientation() {
+		return ScreenManager.Orientation.Landscape;
+	}
 
 	@Override
 	public void create() {

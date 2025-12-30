@@ -143,9 +143,9 @@ public class GameWorld {
 		sceneSystem.addDestroyComponent(component);
 	}
 	
-    public static float getTotalDeltaTime() {
-        return totalDeltaTime;
-    }
+	public static float getTotalDeltaTime() {
+		return totalDeltaTime;
+	}
 
 	// --- 系统注册 API ---
 	public void registerSystem(BaseSystem system) {

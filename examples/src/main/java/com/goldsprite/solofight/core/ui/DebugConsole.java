@@ -20,6 +20,9 @@ import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.goldsprite.gameframeworks.assets.ColorTextureUtils;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
+import com.kotcrab.vis.ui.VisUI;
+import com.goldsprite.solofight.core.VisUIHelper;
 
 /**
  * 调试控制台 (抽屉动画版)
@@ -47,16 +50,17 @@ public class DebugConsole extends Group {
 	private final float LERP_SPEED = 15f; // 插值速度
 
 	// 数据刷新
-	private float updateTimer = 0;
-	private final float REFRESH_RATE = 0.2f; // UI 刷新频率 5Hz
+	private float updateTimer = 0;int k;
+	private final float REFRESH_RATE = 1/60f; // UI 刷新频率
 
 	float resizeHandleHeight = 20;
 
-	private final TextureRegionDrawable backDrawable, dragDrawable;
+	private final TextureRegionDrawable backDrawable, back2Drawable, dragDrawable;
 
 	public DebugConsole() {
 		// 1. 资源准备
 		backDrawable = ColorTextureUtils.createColorDrawable(Color.valueOf("00000030"));
+		back2Drawable = ColorTextureUtils.createColorDrawable(Color.valueOf("00000000"));
 		dragDrawable = ColorTextureUtils.createColorDrawable(Color.valueOf("FFAAAAFF"));
 
 		// 2. 初始化子组件
@@ -73,8 +77,12 @@ public class DebugConsole extends Group {
 	}
 
 	private void createFpsButton() {
+		VisTextButton.VisTextButtonStyle fpsStyle = new VisTextButton.VisTextButtonStyle();
+		fpsStyle.font = VisUIHelper.cnFont;
+		fpsStyle.up = back2Drawable;
+		fpsStyle.down = back2Drawable;
 		fpsBtn = new VisTextButton("FPS: 0");
-		fpsBtn.setBackground(backDrawable);
+		fpsBtn.setStyle(fpsStyle);
 		fpsBtn.addListener(new ClickListener() {
 				@Override
 				public void clicked(InputEvent event, float x, float y) {
@@ -111,11 +119,11 @@ public class DebugConsole extends Group {
 		panel.add(header).growX().height(40).pad(5).row();
 
 		// --- 内容区 ---
-		introLabel = new VisLabel(""); introLabel.setWrap(true);
+		introLabel = new VisLabel("", "small"); introLabel.setWrap(true);
 		introScroll = new ScrollPane(introLabel);
-		logLabel = new VisLabel(""); logLabel.setWrap(true);
+		logLabel = new VisLabel("", "small"); logLabel.setWrap(true);
 		logScroll = new ScrollPane(logLabel);
-		infoLabel = new VisLabel("");
+		infoLabel = new VisLabel("", "small");
 		infoScroll = new ScrollPane(infoLabel);
 
 		contentContainer = new Container<>();
@@ -237,6 +245,7 @@ public class DebugConsole extends Group {
 			updateTimer = 0;
 			refreshData();
 		}
+		DebugUI.clearInfo();
 	}
 
 	private void refreshData() {
@@ -262,6 +271,9 @@ public class DebugConsole extends Group {
 	public void dispose() {
 		if (backDrawable.getRegion().getTexture() != null) {
 			backDrawable.getRegion().getTexture().dispose();
+		}
+		if (back2Drawable.getRegion().getTexture() != null) {
+			back2Drawable.getRegion().getTexture().dispose();
 		}
 		if (dragDrawable.getRegion().getTexture() != null) {
 			dragDrawable.getRegion().getTexture().dispose();

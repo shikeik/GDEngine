@@ -35,6 +35,7 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.badlogic.gdx.utils.viewport.FitViewport;
 
 public class GameScreen extends ExampleGScreen {
 
@@ -62,10 +63,17 @@ public class GameScreen extends ExampleGScreen {
 	private float globalTimeScale = 1.0f;
 	
 	// [新增] 指定横屏
-    @Override
-    public ScreenManager.Orientation getOrientation() {
-        return ScreenManager.Orientation.Landscape;
-    }
+	@Override
+	public ScreenManager.Orientation getOrientation() {
+		return ScreenManager.Orientation.Landscape;
+	}
+
+	@Override
+	protected void initViewport() {int k2;
+		float scl = 0.9f;
+		uiViewport = new ExtendViewport(960, 540);
+		setWorldScale(0.8f);
+	}
 
 	@Override
 	public void create() {

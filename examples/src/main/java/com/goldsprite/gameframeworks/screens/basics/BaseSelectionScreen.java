@@ -35,10 +35,10 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 	}
 	
 	// [新增] 菜单默认竖屏
-    @Override
-    public ScreenManager.Orientation getOrientation() {
-        return ScreenManager.Orientation.Portrait;
-    }
+	@Override
+	public ScreenManager.Orientation getOrientation() {
+		return ScreenManager.Orientation.Portrait;
+	}
 
 	// 子类只需实现这个方法来填充列表
 	protected abstract void initScreenMapping(Map<String, Class<? extends IGScreen>> map);

@@ -162,8 +162,8 @@ public class ComponentManager {
 	}
 	
 	public static int getRegisteredComponentCount() {
-        return componentPools.size();
-    }
+		return componentPools.size();
+	}
 
 	public static void debugInfo() {
 		DebugUI.log("=== ComponentManager Debug ===");

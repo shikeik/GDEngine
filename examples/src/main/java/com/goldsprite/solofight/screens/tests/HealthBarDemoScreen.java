@@ -24,9 +24,9 @@ public class HealthBarDemoScreen extends ExampleGScreen {
 	}
 
 	@Override
-    public ScreenManager.Orientation getOrientation() {
-        return ScreenManager.Orientation.Portrait;
-    }
+	public ScreenManager.Orientation getOrientation() {
+		return ScreenManager.Orientation.Portrait;
+	}
 
 	@Override
 	public void create() {

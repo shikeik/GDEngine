@@ -38,9 +38,9 @@ public class CombatScreen extends ExampleGScreen {
 	private float shake = 0;
 	
 	@Override
-    public ScreenManager.Orientation getOrientation() {
+	public ScreenManager.Orientation getOrientation() {
 	return ScreenManager.Orientation.Landscape;
-    }
+	}
 
 	@Override
 	public void create() {

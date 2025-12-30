@@ -23,9 +23,9 @@ public class InputTestScreen extends ExampleGScreen {
 	private NeonBatch neonBatch;
 
 	@Override
-    public ScreenManager.Orientation getOrientation() {
-        return ScreenManager.Orientation.Landscape;
-    }
+	public ScreenManager.Orientation getOrientation() {
+		return ScreenManager.Orientation.Landscape;
+	}
 
 	@Override
 	public void create() {
