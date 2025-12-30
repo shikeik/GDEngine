@@ -35,13 +35,14 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.goldsprite.solofight.core.NeonStage;
 
 public class GameScreen extends ExampleGScreen {
 
 	private NeonBatch neonBatch;
 	private ParallaxBackground parallaxBG;
 
-	private Stage uiStage;
+	private NeonStage uiStage;
 	private VirtualJoystick joystick;
 	private GestureProcessor gestureProcessor;
 	private CommandHistoryUI historyUI;
@@ -100,7 +101,7 @@ public class GameScreen extends ExampleGScreen {
 	}
 
 	private void initUI() {
-		uiStage = new Stage(getUIViewport());
+		uiStage = new NeonStage(getUIViewport());
 
 		// --- Root Table 布局管理 (修复 UI 错位) ---
 		Table root = new Table();

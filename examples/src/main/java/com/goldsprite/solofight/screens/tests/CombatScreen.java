@@ -19,11 +19,12 @@ import com.goldsprite.solofight.core.input.KeyboardProcessor;
 import com.goldsprite.solofight.core.input.ToastUI;
 import com.goldsprite.solofight.core.input.VirtualJoystick;
 import com.goldsprite.solofight.core.ui.H5SkewBar;
+import com.goldsprite.solofight.core.NeonStage;
 
 public class CombatScreen extends ExampleGScreen {
 
 	private NeonBatch neonBatch;
-	private Stage uiStage;
+	private NeonStage uiStage;
 
 	private VirtualJoystick joystick;
 	private GestureProcessor gestureProcessor;
@@ -66,7 +67,7 @@ public class CombatScreen extends ExampleGScreen {
 	}
 
 	private void initUI() {
-		uiStage = new Stage(getUIViewport());
+		uiStage = new NeonStage(getUIViewport());
 		joystick = new VirtualJoystick(); joystick.setPosition(50, 50); uiStage.addActor(joystick);
 		historyUI = new CommandHistoryUI(); historyUI.setPosition(10, getUIViewport().getWorldHeight() * 0.4f); uiStage.addActor(historyUI);
 		toastUI = new ToastUI(); toastUI.setPosition(getUIViewport().getWorldWidth() / 2 - 50, 100); uiStage.addActor(toastUI);
