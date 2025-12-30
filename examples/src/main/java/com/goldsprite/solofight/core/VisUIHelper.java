@@ -8,7 +8,6 @@ import com.goldsprite.gameframeworks.assets.FontUtils;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
-import com.kotcrab.vis.ui.widget.VisLabel;
 
 public class VisUIHelper {
 	public static BitmapFont cnFont;
@@ -23,7 +22,7 @@ public class VisUIHelper {
 		VisUI.load();
 
 		try {
-			DebugUI.log("Injecting Chinese Font into VisUI...");
+			Debug.log("Injecting Chinese Font into VisUI...");
 
 			// 2. 生成支持中文的字体 (使用 FontUtils 现有的逻辑)
 			// 大小设为 24，清晰度较高
@@ -50,11 +49,11 @@ public class VisUIHelper {
 			// TextField (输入框)
 			skin.get(VisTextField.VisTextFieldStyle.class).font = cnFont;
 
-			DebugUI.log("VisUI 中文字体调整成功.");
+			Debug.log("VisUI 中文字体调整成功.");
 
 		} catch (Exception e) {
 			e.printStackTrace();
-			DebugUI.log("VisUI Font Inject Failed: " + e.getMessage());
+			Debug.log("VisUI Font Inject Failed: " + e.getMessage());
 		}
 	}
 }

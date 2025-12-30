@@ -1,13 +1,13 @@
 package com.goldsprite.solofight.refactor.ecs.component;
 
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 
 public class LifecycleLogComponent extends Component {
 
 	@Override
 	public void awake() {
 		super.awake();
-		DebugUI.log("[Lifecycle] %s: Awake!", getGObject().getName());
+		Debug.log("[Lifecycle] %s: Awake!", getGObject().getName());
 	}
 
 	@Override
@@ -18,13 +18,13 @@ public class LifecycleLogComponent extends Component {
 
 	@Override
 	public void destroy() {
-		DebugUI.log("[Lifecycle] %s: Destroy Called (Available next frame)", getGObject().getName());
+		Debug.log("[Lifecycle] %s: Destroy Called (Available next frame)", getGObject().getName());
 		super.destroy();
 	}
 
 	@Override
 	public void destroyImmediate() {
-		DebugUI.log("[Lifecycle] %s: Destroy Immediate (Memory Freed)", getGObject().getName());
+		Debug.log("[Lifecycle] %s: Destroy Immediate (Memory Freed)", getGObject().getName());
 		super.destroyImmediate();
 	}
 }

@@ -9,7 +9,6 @@ import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.goldsprite.solofight.core.input.InputContext;
 
 import java.util.List;
-import com.goldsprite.solofight.core.DebugUI;
 
 public class Fighter {
 	public float x, y, vx, vy;

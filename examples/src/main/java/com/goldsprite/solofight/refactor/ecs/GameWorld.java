@@ -2,7 +2,7 @@ package com.goldsprite.solofight.refactor.ecs;
 
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.refactor.ecs.component.IComponent;
 import com.goldsprite.solofight.refactor.ecs.entity.GObject;
 import com.goldsprite.solofight.refactor.ecs.enums.ManageMode;
@@ -59,7 +59,7 @@ public class GameWorld {
 	}
 
 	private void initializeCoreSystems() {
-		DebugUI.log("GameWorld: 初始化核心系统...");
+		Debug.log("GameWorld: 初始化核心系统...");
 
 		// 1. 初始化场景系统 (负责生命周期)
 		sceneSystem = new SceneSystem();
@@ -67,7 +67,7 @@ public class GameWorld {
 		// 2. TODO: 初始化物理、渲染系统
 		// physicsSystem = new PhysicsSystem();
 
-		DebugUI.log("GameWorld: 初始化完成, 系统数: " + systems.size());
+		Debug.log("GameWorld: 初始化完成, 系统数: " + systems.size());
 	}
 
 	public void setViewport(Viewport worldViewport, Viewport uiViewport) {
@@ -86,7 +86,7 @@ public class GameWorld {
 			awaked = true;
 			for(BaseSystem system : systems) system.awake();
 			sceneSystem.awakeScene();
-			DebugUI.log("GameWorld: 世界已唤醒");
+			Debug.log("GameWorld: 世界已唤醒");
 			return;
 		}
 
@@ -142,7 +142,7 @@ public class GameWorld {
 	public void addDestroyComponent(IComponent component) {
 		sceneSystem.addDestroyComponent(component);
 	}
-	
+
 	public static float getTotalDeltaTime() {
 		return totalDeltaTime;
 	}
@@ -163,7 +163,7 @@ public class GameWorld {
 				updateSystems.add(system);
 			}
 
-			DebugUI.log("System Registered: " + system.getSystemName());
+			Debug.log("System Registered: " + system.getSystemName());
 		}
 	}
 

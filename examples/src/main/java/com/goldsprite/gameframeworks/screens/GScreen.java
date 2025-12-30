@@ -13,7 +13,6 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.goldsprite.solofight.core.DebugUI;
 
 
 /**
@@ -79,12 +78,12 @@ public abstract class GScreen implements IGScreen {
 	//初始化一些配置
 	private void init() {
 		shapeRenderer = new ShapeRenderer();
-		
+
 		// [修改] 调用可重写的初始化方法，代替直接实例化
 		initViewport();
 		//uiViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 		initWorldCamera(worldScale);
-		
+
 		create();
 	}
 
@@ -99,7 +98,7 @@ public abstract class GScreen implements IGScreen {
 		uiViewport = new ExtendViewport(baseViewport.getWorldWidth(), baseViewport.getWorldHeight());
 		uiViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 	}
-	
+
 	protected void initWorldCamera(float worldScl) {
 		// 创建一个新的世界相机
 		worldCamera = new OrthographicCamera();
@@ -126,7 +125,7 @@ public abstract class GScreen implements IGScreen {
 	public void setImp(InputMultiplexer imp) {
 		this.imp = imp;
 	}
-	
+
 	@Override
 	public Viewport getUIViewport() {
 		// [!!! 核心修复 !!!]
@@ -160,7 +159,7 @@ public abstract class GScreen implements IGScreen {
 	public Vector2 getViewCenter() { return viewCenter.set(getUIViewport().getWorldWidth() / 2, getUIViewport().getWorldHeight() / 2); }
 	public Vector2 getWorldSize() { return worldSize.set(getWorldCamera().viewportWidth, getWorldCamera().viewportHeight); }
 	public Vector2 getWorldCenter() { return worldSize.set(getWorldCamera().viewportWidth / 2, getWorldCamera().viewportHeight / 2); }
-	
+
 	public Vector2 getGraphicSize() {
 		return graphicSize.set(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	}
@@ -272,7 +271,7 @@ public abstract class GScreen implements IGScreen {
 			worldCamera.update();
 		}
 	}
-	
+
 	@Override
 	public void resize(int width, int height) {
 		if (getUIViewport() != null) {

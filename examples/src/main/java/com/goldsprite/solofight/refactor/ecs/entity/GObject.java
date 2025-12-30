@@ -1,10 +1,9 @@
 package com.goldsprite.solofight.refactor.ecs.entity;
 
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.refactor.ecs.ComponentManager;
 import com.goldsprite.solofight.refactor.ecs.GameWorld; // 稍后提供
 import com.goldsprite.solofight.refactor.ecs.IRunnable;
-import com.goldsprite.solofight.refactor.ecs.component.Component;
 import com.goldsprite.solofight.refactor.ecs.component.IComponent;
 import com.goldsprite.solofight.refactor.ecs.component.TransformComponent;
 import com.goldsprite.solofight.refactor.ecs.enums.ManageMode; // 稍后提供
@@ -56,7 +55,7 @@ public class GObject implements IRunnable {
 	public GObject() {
 		this("GObject");
 	}
-	
+
 	// [新增] 仅供调试使用的 Getter
 	public List<GObject> getChildren() {
 		return childGObjects;
@@ -124,7 +123,7 @@ public class GObject implements IRunnable {
 		ComponentManager.unregisterComponent(this, component.getClass(), component);
 		ComponentManager.updateEntityComponentMask(this);
 	}
-	
+
 	public boolean hasComponent(Class<? extends IComponent> type) {
 		return components.containsKey(type.getName());
 	}
@@ -149,13 +148,13 @@ public class GObject implements IRunnable {
 		}
 		return null;
 	}
-	
+
 	public TransformComponent getTransform() {
 		return transform;
 	}
 
 	public void awake() {
-		DebugUI.log("GObject Awake: %s", getName());
+		Debug.log("GObject Awake: %s", getName());
 		for(List<IComponent> compList : components.values()) {
 			for(IComponent comp : compList) {
 				comp.awake();
@@ -197,7 +196,7 @@ public class GObject implements IRunnable {
 		for (int i = childGObjects.size() - 1; i >= 0; i--) {
 			GObject child = childGObjects.get(i);
 			// 子物体不在 GameWorld 的顶层列表中，所以需要手动级联销毁
-			child.destroyImmediate(); 
+			child.destroyImmediate();
 		}
 		childGObjects.clear();
 
@@ -212,7 +211,7 @@ public class GObject implements IRunnable {
 		// 3. 从管理器注销
 		ComponentManager.removeEntity(this);
 		GameWorld.manageGObject(this, ManageMode.REMOVE);
-		
+
 		// DebugUI.log("GObject Destroyed: " + getName());
 	}
 
@@ -250,7 +249,7 @@ public class GObject implements IRunnable {
 			GameWorld.manageGObject(child, ManageMode.ADD);
 		}
 	}
-	
+
 	// [新增] 设置父级的快捷方法
 	public void setParent(GObject newParent) {
 		if (newParent != null) {

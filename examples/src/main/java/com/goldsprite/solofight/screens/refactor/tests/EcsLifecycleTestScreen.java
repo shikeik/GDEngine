@@ -1,7 +1,6 @@
 package com.goldsprite.solofight.screens.refactor.tests;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
@@ -9,11 +8,10 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.assets.FontUtils;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.refactor.ecs.ComponentManager;
 import com.goldsprite.solofight.refactor.ecs.GameWorld;
@@ -38,7 +36,7 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 	public String getIntroduction() {
 		return "生命周期与层级测试 v2\n可视化调试 | 换父级测试 | 压力测试";
 	}
-	
+
 	@Override
 	public ScreenManager.Orientation getOrientation() {
 		return ScreenManager.Orientation.Landscape;
@@ -94,14 +92,14 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
 					if (childUnit != null && !childUnit.isDestroyed()) {
-						DebugUI.log("Child already exists!");
+						Debug.log("Child already exists!");
 						return;
 					}
 					childUnit = new GObject("Unit_Child");
 					childUnit.getTransform().setPosition(300, 300); // 初始位置在 A 下方
 					childUnit.addComponent(LifecycleLogComponent.class);
 					rootA.addChild(childUnit);
-					DebugUI.log("Spawned Child under Base A");
+					Debug.log("Spawned Child under Base A");
 				}
 			});
 		root.add(btnSpawnChild).row();
@@ -115,7 +113,7 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 						rootB.addChild(childUnit); // 自动从 A 移除并加入 B
 						// 简单的视觉移动动画模拟 (瞬移)
 						childUnit.getTransform().setPosition(900, 300);
-						DebugUI.log("Moved Child to Base B");
+						Debug.log("Moved Child to Base B");
 					}
 				}
 			});
@@ -129,7 +127,7 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 					if (validateChild()) {
 						rootA.addChild(childUnit);
 						childUnit.getTransform().setPosition(300, 300);
-						DebugUI.log("Moved Child back to Base A");
+						Debug.log("Moved Child back to Base A");
 					}
 				}
 			});
@@ -143,7 +141,7 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 					if (validateChild()) {
 						childUnit.setParent(null); // 测试 setParent(null) 逻辑
 						childUnit.getTransform().setPosition(600, 500); // 移到中间顶部
-						DebugUI.log("Detached Child (Now Independent)");
+						Debug.log("Detached Child (Now Independent)");
 					}
 				}
 			});
@@ -164,9 +162,9 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 						);
 						// 5秒后自动销毁的逻辑需要额外写组件，这里为了演示简单，仅生成
 						// 实际上我们可以给它们加个 Rotator 看看性能
-						// p.addComponent(TestRotatorComponent.class); 
+						// p.addComponent(TestRotatorComponent.class);
 					}
-					DebugUI.log("Spawned 100 entities.");
+					Debug.log("Spawned 100 entities.");
 				}
 			});
 		root.add(btnStress).row();
@@ -180,7 +178,7 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 						obj.destroy();
 					}
 					rootA = null; rootB = null; childUnit = null; greenMover = null;
-					DebugUI.log("Requested destroy for ALL entities.");
+					Debug.log("Requested destroy for ALL entities.");
 				}
 			});
 		root.add(btnClearAll).row();
@@ -188,7 +186,7 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 
 	private boolean validateChild() {
 		if (childUnit == null || childUnit.isDestroyed()) {
-			DebugUI.log("Child does not exist!");
+			Debug.log("Child does not exist!");
 			return false;
 		}
 		return true;
@@ -203,7 +201,7 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 		neonBatch.begin();
 
 		neonBatch.drawRect(getWorldCenter().x, getWorldCenter().y, getWorldSize().x, getWorldSize().y, 0, 20, Color.RED, false);
-		
+
 		// 绘制网格背景
 		drawGrid(neonBatch);
 
@@ -228,8 +226,8 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 		stage.act(delta);
 		stage.draw();
 
-		DebugUI.info("Entities (Roots): %d", GameWorld.inst().getAllEntities().size());
-		DebugUI.info("Components: %d", ComponentManager.getRegisteredComponentCount());
+		Debug.info("Entities (Roots): %d", GameWorld.inst().getAllEntities().size());
+		Debug.info("Components: %d", ComponentManager.getRegisteredComponentCount());
 	}
 
 	// 递归绘制实体及其连线
@@ -256,7 +254,7 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 				neonBatch.drawLine(x, y, cx, cy, 2, Color.LIGHT_GRAY);
 
 				// 递归绘制子节点
-				drawEntityDebug(child); 
+				drawEntityDebug(child);
 			}
 		}
 	}

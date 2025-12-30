@@ -2,14 +2,13 @@ package com.goldsprite.solofight.screens.tests;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.goldsprite.gameframeworks.assets.FontUtils;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.ui.SmartNumInput;
 import com.kotcrab.vis.ui.widget.VisLabel;
@@ -79,7 +78,7 @@ public class TempTestScreen extends ExampleGScreen {
 		// B. 对照组 (Small)
 		smallLabel = new VisLabel("Reference (Small Style)");
 		// 这里手动设置一个小字体样式作为对比，或者直接用 VisUI 默认
-		smallLabel.setFontScale(0.7f); 
+		smallLabel.setFontScale(0.7f);
 		smallLabel.setColor(Color.GRAY);
 		root.add(smallLabel).padTop(20).row();
 
@@ -98,7 +97,7 @@ public class TempTestScreen extends ExampleGScreen {
 			Label.LabelStyle style = new Label.LabelStyle(targetLabel.getStyle());
 			style.font = dynamicFont;
 			targetLabel.setStyle(style);
-			
+
 			// 1. 销毁旧字体，防止内存泄漏
 			if (this.dynamicFont != null) {
 				this.dynamicFont.dispose();
@@ -108,11 +107,11 @@ public class TempTestScreen extends ExampleGScreen {
 			// 强制重算布局
 			targetLabel.pack();
 
-			DebugUI.log("Font Gen: Target=%.0f, Clarity=%.1f -> TexSize=%d, Scale=%.2f", 
+			Debug.log("Font Gen: Target=%.0f, Clarity=%.1f -> TexSize=%d, Scale=%.2f",
 						targetSize, clarity, (int)(targetSize*clarity), 1f/clarity);
 
 		} catch (Exception e) {
-			DebugUI.log("Font Gen Error: " + e.getMessage());
+			Debug.log("Font Gen Error: " + e.getMessage());
 		}
 	}
 
@@ -155,11 +154,11 @@ public class TempTestScreen extends ExampleGScreen {
 		stage.act(delta);
 		stage.draw();
 
-		DebugUI.info("Target Size: %.0f px", targetSize);
-		DebugUI.info("Clarity: %.2f", clarity);
+		Debug.info("Target Size: %.0f px", targetSize);
+		Debug.info("Clarity: %.2f", clarity);
 		if (dynamicFont != null) {
-			DebugUI.info("Actual Data Scale: %.3f", dynamicFont.getData().scaleX);
-			DebugUI.info("Line Height: %.1f", dynamicFont.getLineHeight());
+			Debug.info("Actual Data Scale: %.3f", dynamicFont.getData().scaleX);
+			Debug.info("Line Height: %.1f", dynamicFont.getLineHeight());
 		}
 	}
 

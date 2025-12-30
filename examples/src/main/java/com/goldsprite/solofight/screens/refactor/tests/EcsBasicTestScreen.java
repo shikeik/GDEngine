@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.refactor.ecs.ComponentManager;
 import com.goldsprite.solofight.refactor.ecs.GameWorld;
@@ -21,7 +21,7 @@ public class EcsBasicTestScreen extends ExampleGScreen {
 	public String getIntroduction() {
 		return "ECS 基础循环测试\n验证: World Init, Entity Creation, Update Loop";
 	}
-	
+
 	@Override
 	public ScreenManager.Orientation getOrientation() {
 		return ScreenManager.Orientation.Landscape;
@@ -47,13 +47,13 @@ public class EcsBasicTestScreen extends ExampleGScreen {
 		// 3. 挂载测试组件
 		testEntity.addComponent(TestRotatorComponent.class);
 
-		DebugUI.log("ECS Environment Created.");
+		Debug.log("ECS Environment Created.");
 	}
 
 	@Override
 	public void render0(float delta) {
-		DebugUI.info("相机位置: %s", getWorldCamera().position);
-		
+		Debug.info("相机位置: %s", getWorldCamera().position);
+
 		// 1. 驱动世界循环
 		GameWorld.inst().update(delta);
 
@@ -72,9 +72,9 @@ public class EcsBasicTestScreen extends ExampleGScreen {
 		neonBatch.end();
 
 		// 3. Debug 信息面板
-		DebugUI.info("World Entities: %d", GameWorld.inst().getAllEntities().size());
-		DebugUI.info("Registered Components: %d", ComponentManager.getRegisteredComponentCount()); // 需要在ComponentManager加个getter验证
-		DebugUI.info("Target Pos: (%.1f, %.1f)", x, y);
+		Debug.info("World Entities: %d", GameWorld.inst().getAllEntities().size());
+		Debug.info("Registered Components: %d", ComponentManager.getRegisteredComponentCount()); // 需要在ComponentManager加个getter验证
+		Debug.info("Target Pos: (%.1f, %.1f)", x, y);
 	}
 
 	@Override

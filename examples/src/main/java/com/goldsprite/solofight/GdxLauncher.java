@@ -7,12 +7,11 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.VisUIHelper;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
-import com.goldsprite.gameframeworks.screens.GScreen;
 import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
@@ -20,7 +19,7 @@ public class GdxLauncher extends Game {
 	private Application.ApplicationType userType;
 
 	public SpriteBatch batch;
-	public DebugUI debugUI;
+	public Debug debug;
 
 	@Override
 	public void create() {
@@ -29,10 +28,10 @@ public class GdxLauncher extends Game {
 
 		// 1. 初始化 VisUI (注入中文字体)
 		VisUIHelper.loadWithChineseFont();
-		
+
 		// 初始化 DebugUI
-		debugUI = DebugUI.getInstance();
-		debugUI.initUI();
+		debug = Debug.getInstance();
+		debug.initUI();
 
 		SynthAudio.init(); // [新增] 启动音频线程
 
@@ -42,7 +41,7 @@ public class GdxLauncher extends Game {
 
 		// 3. 初始化屏幕管理器
 		new ScreenManager(uiViewport);
-		DebugUI.log("Main: initViewport: %.0f, %.0f", uiViewport.getWorldWidth(), uiViewport.getWorldHeight());
+		Debug.log("Main: initViewport: %.0f, %.0f", uiViewport.getWorldWidth(), uiViewport.getWorldHeight());
 
 
 		// 5. 进入演示列表
@@ -54,23 +53,23 @@ public class GdxLauncher extends Game {
 	@Override
 	public void render() {
 		if(Gdx.input.isKeyJustPressed(Input.Keys.K)) {
-			DebugUI.showDebugUI = !DebugUI.showDebugUI;
+			Debug.showDebugUI = !Debug.showDebugUI;
 		}
-		
+
 		ScreenManager.getInstance().render();
-		if (debugUI != null) debugUI.render();
+		if (debug != null) debug.render();
 	}
 
 	@Override
 	public void resize(int width, int height) {
 		ScreenManager.getInstance().resize(width, height);
-		if(debugUI != null)debugUI.resize(width, height);
+		if(debug != null) debug.resize(width, height);
 	}
 
 	@Override
 	public void dispose() {
 		ScreenManager.getInstance().dispose();
-		if (debugUI != null) debugUI.dispose();
+		if (debug != null) debug.dispose();
 		batch.dispose();
 		VisUI.dispose();
 		SynthAudio.dispose(); // [新增] 关闭线程和设备

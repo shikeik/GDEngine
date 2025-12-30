@@ -1,13 +1,11 @@
 package com.goldsprite.solofight.screens.tests;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.input.*;
 
@@ -93,8 +91,8 @@ public class InputTestScreen extends ExampleGScreen {
 
 		// 4. Debug Info (使用全局 DebugUI)
 		InputContext ctx = InputContext.inst();
-		DebugUI.info("MoveX: %.1f | Crouch: %b", ctx.moveX, ctx.crouch);
-		DebugUI.info("Stick: (%.2f, %.2f) Zone: %d", ctx.stickRaw.x, ctx.stickRaw.y, ctx.stickZone);
+		Debug.info("MoveX: %.1f | Crouch: %b", ctx.moveX, ctx.crouch);
+		Debug.info("Stick: (%.2f, %.2f) Zone: %d", ctx.stickRaw.x, ctx.stickRaw.y, ctx.stickZone);
 	}
 
 	@Override

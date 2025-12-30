@@ -10,8 +10,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class DebugUI {
-	private static DebugUI instance;
+public class Debug {
+	private static Debug instance;
 
 	// 数据层 (构造时即可用)
 	private List<String> logs = new ArrayList<>();
@@ -29,13 +29,13 @@ public class DebugUI {
 	private static final float LOGICAL_LONG = 960f*scl;
 
 	// [修改] 构造函数只做最基础的数据准备，绝对不碰 UI
-	public DebugUI() {
+	public Debug() {
 		instance = this;
 		// 移除 Stage 和 Console 的创建代码
 	}
 
-	public static DebugUI getInstance() {
-		if (instance == null) new DebugUI();
+	public static Debug getInstance() {
+		if (instance == null) new Debug();
 		return instance;
 	}
 

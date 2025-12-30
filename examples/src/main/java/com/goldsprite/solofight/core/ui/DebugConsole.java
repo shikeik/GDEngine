@@ -2,8 +2,6 @@ package com.goldsprite.solofight.core.ui;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -15,13 +13,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.goldsprite.gameframeworks.assets.ColorTextureUtils;
-import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
-import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.solofight.core.VisUIHelper;
 
 /**
@@ -70,7 +66,7 @@ public class DebugConsole extends Group {
 		// 3. 初始状态：收起
 		// 初始位置设为屏幕外，避免第一帧闪烁
 		// 这里的 Height 还没 Layout，先给个大数，act() 第一帧会修正
-		currentPanelY = 9999f; 
+		currentPanelY = 9999f;
 		targetPanelY = 9999f;
 
 		switchState(State.COLLAPSED);
@@ -158,7 +154,7 @@ public class DebugConsole extends Group {
 					// 拖拽时强制更新目标位置和当前位置，保证跟手
 					// 展开态的目标位置是：StageH - panelH
 					float topY = stageH; // 面板顶部贴着屏幕顶
-					targetPanelY = topY - panelHeight; 
+					targetPanelY = topY - panelHeight;
 					currentPanelY = targetPanelY; // 直接设置，取消插值延迟
 				}
 			});
@@ -220,7 +216,7 @@ public class DebugConsole extends Group {
 		// 展开(显示)：面板顶边在屏幕顶 -> Y = H - panelHeight
 
 		if (currentState == State.COLLAPSED) {
-			targetPanelY = H; 
+			targetPanelY = H;
 		} else {
 			targetPanelY = H - panelHeight;
 		}
@@ -245,7 +241,7 @@ public class DebugConsole extends Group {
 			updateTimer = 0;
 			refreshData();
 		}
-		DebugUI.clearInfo();
+		Debug.clearInfo();
 	}
 
 	private void refreshData() {
@@ -254,12 +250,12 @@ public class DebugConsole extends Group {
 		// 只有面板在屏幕内时才更新文本 (优化)
 		if (currentPanelY < getStage().getHeight()) {
 			if (contentContainer.getActor() == logScroll) {
-				logLabel.setText(String.join("\n", DebugUI.getLogs()));
+				logLabel.setText(String.join("\n", Debug.getLogs()));
 				if (logScroll.getScrollY() >= logScroll.getMaxY() - 50) {
 					logScroll.layout(); logScroll.setScrollY(logScroll.getMaxY());
 				}
 			} else if (contentContainer.getActor() == infoScroll) {
-				infoLabel.setText(DebugUI.getInfoString());
+				infoLabel.setText(Debug.getInfoString());
 			}
 		}
 	}

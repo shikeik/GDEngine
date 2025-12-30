@@ -4,7 +4,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -18,8 +17,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.SimpleCameraController;
 import com.goldsprite.solofight.core.SmartCameraController;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
@@ -49,7 +47,7 @@ public class CameraTestScreen extends ExampleGScreen {
 	private boolean ghostMode = true; // 是否不应用智能相机位置
 	private boolean freeCamControl = false; // 是否启用自由相机输入
 	private boolean drawBackground = false;
-	
+
 	@Override
 	public ScreenManager.Orientation getOrientation() {
 		return ScreenManager.Orientation.Landscape;
@@ -257,9 +255,9 @@ public class CameraTestScreen extends ExampleGScreen {
 			smartCam.drawDebug(shapeRenderer, batch, debugFont, drawBackground);
 		}
 
-		DebugUI.info("Targets: %d", targets.size());
-		DebugUI.info("Cam Pos: %.0f, %.0f", getWorldCamera().position.x, getWorldCamera().position.y);
-		DebugUI.info("Cam Zoom: %.2f", getWorldCamera().zoom);
+		Debug.info("Targets: %d", targets.size());
+		Debug.info("Cam Pos: %.0f, %.0f", getWorldCamera().position.x, getWorldCamera().position.y);
+		Debug.info("Cam Zoom: %.2f", getWorldCamera().zoom);
 
 		uiStage.act(delta);
 		uiStage.draw();

@@ -5,10 +5,9 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.game.Fighter;
 import com.goldsprite.solofight.core.input.ComboEngine;
@@ -36,7 +35,7 @@ public class CombatScreen extends ExampleGScreen {
 	private Fighter p1;
 	private Fighter p2;
 	private float shake = 0;
-	
+
 	@Override
 	public ScreenManager.Orientation getOrientation() {
 	return ScreenManager.Orientation.Landscape;
@@ -206,7 +205,7 @@ public class CombatScreen extends ExampleGScreen {
 		uiStage.act(dt);
 		uiStage.draw();
 
-		DebugUI.info("P1 MP: %.0f | Ult: %b", p1.mp, p1.isUltActive);
+		Debug.info("P1 MP: %.0f | Ult: %b", p1.mp, p1.isUltActive);
 	}
 
 	@Override

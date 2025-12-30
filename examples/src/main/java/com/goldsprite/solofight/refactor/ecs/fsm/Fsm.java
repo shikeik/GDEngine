@@ -1,6 +1,5 @@
 package com.goldsprite.solofight.refactor.ecs.fsm;
 
-import com.goldsprite.solofight.core.DebugUI;
 import com.goldsprite.solofight.refactor.ecs.entity.GObject;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -21,7 +20,7 @@ public class Fsm {
 		if(currentState == null) return false;
 		return stateClazz.isAssignableFrom(currentState.getClass());
 	}
-	
+
 	public String getCurrentStateName() {
 		return currentState == null ? "None" : currentState.getClass().getSimpleName();
 	}
@@ -29,9 +28,9 @@ public class Fsm {
 	public void addState(State state, int priority) {
 		// [修改] 注入上下文
 		state.setContext(this, owner);
-		
+
 		states.put(state.getClass(), new StateInfo(state, priority));
-		
+
 		// 如果是第一个添加的状态，默认进入
 		if(currentState == null){
 			changeState(state);
@@ -71,10 +70,10 @@ public class Fsm {
 	private StateInfo findNextState() {
 		StateInfo bestStateInfo = null;
 		int bestPriority = -1;
-		
+
 		// 如果当前状态锁死（不可退出），则不进行任何切换查找
 		if(currentState != null && !currentState.canExit()) return null;
-		
+
 		// 如果当前状态可退出，基准优先级为当前状态的优先级
 		// 意思是：只有比当前优先级 更高 或 相等 的状态才有资格打断
 		if(currentState != null) {
@@ -84,7 +83,7 @@ public class Fsm {
 		for (StateInfo stateInfo : states.values()) {
 			// 跳过自己
 			if(stateInfo.state == currentState) continue;
-			
+
 			// 核心轮询逻辑：
 			// 1. 优先级 >= 当前 (高级打断低级，或者同级切换)
 			// 2. 优先级 >= 已找到的候选者 (找最高级的)

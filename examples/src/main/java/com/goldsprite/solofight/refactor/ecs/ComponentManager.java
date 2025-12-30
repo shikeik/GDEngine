@@ -1,6 +1,6 @@
 package com.goldsprite.solofight.refactor.ecs;
 
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.refactor.ecs.component.IComponent;
 import com.goldsprite.solofight.refactor.ecs.entity.GObject;
 
@@ -34,7 +34,7 @@ public class ComponentManager {
 		// 这里简化处理，直接为每个具体类分配 ID
 		return componentIds.computeIfAbsent(componentType, k -> nextComponentId++);
 	}
-	
+
 	public static <T extends IComponent> int preRegisterComponentType(Class<T> componentType) {
 		return getComponentId(componentType);
 	}
@@ -160,13 +160,13 @@ public class ComponentManager {
 	public static void clearCache() {
 		entityCache.clear();
 	}
-	
+
 	public static int getRegisteredComponentCount() {
 		return componentPools.size();
 	}
 
 	public static void debugInfo() {
-		DebugUI.log("=== ComponentManager Debug ===");
-		DebugUI.log("Entities: %d, Cached Queries: %d", entityComponentMasks.size(), entityCache.size());
+		Debug.log("=== ComponentManager Debug ===");
+		Debug.log("Entities: %d, Cached Queries: %d", entityComponentMasks.size(), entityCache.size());
 	}
 }

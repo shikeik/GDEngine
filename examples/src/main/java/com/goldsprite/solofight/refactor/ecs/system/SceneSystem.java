@@ -1,6 +1,6 @@
 package com.goldsprite.solofight.refactor.ecs.system;
 
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.refactor.ecs.GameSystemInfo;
 import com.goldsprite.solofight.refactor.ecs.GameWorld;
 import com.goldsprite.solofight.refactor.ecs.component.IComponent;
@@ -57,7 +57,7 @@ public class SceneSystem extends BaseSystem {
 			for (int i = destroyGObjects.size() - 1; i >= 0; i--) {
 				GObject obj = destroyGObjects.get(i);
 				if (obj != null) {
-					DebugUI.log("Destroy GObject: " + obj.getName());
+					Debug.log("Destroy GObject: " + obj.getName());
 					obj.destroyImmediate();
 					GameWorld.manageGObject(obj, ManageMode.REMOVE);
 				}

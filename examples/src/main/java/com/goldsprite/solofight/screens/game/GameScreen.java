@@ -11,7 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.FloatingTextManager;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.core.TextDB;
@@ -35,7 +35,6 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.badlogic.gdx.utils.viewport.FitViewport;
 
 public class GameScreen extends ExampleGScreen {
 
@@ -61,7 +60,7 @@ public class GameScreen extends ExampleGScreen {
 	// 结算逻辑变量
 	private boolean gameEnded = false;
 	private float globalTimeScale = 1.0f;
-	
+
 	// [新增] 指定横屏
 	@Override
 	public ScreenManager.Orientation getOrientation() {
@@ -301,7 +300,7 @@ public class GameScreen extends ExampleGScreen {
 		uiStage.act(delta);
 		uiStage.draw();
 
-		DebugUI.info("P1 MP: %.0f | Ult: %b", p1.mp, p1.isUltActive);
+		Debug.info("P1 MP: %.0f | Ult: %b", p1.mp, p1.isUltActive);
 	}
 
 	// ... (checkGameResult, restartGame 等保持不变) ...

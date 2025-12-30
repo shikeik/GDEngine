@@ -3,7 +3,7 @@ package com.goldsprite.gameframeworks.screens.basics;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.GScreen;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.badlogic.gdx.Gdx;
 
 public abstract class ExampleGScreen extends GScreen {
@@ -13,7 +13,7 @@ public abstract class ExampleGScreen extends GScreen {
 	protected static final float BASE_LONG = 960f;
 
 	public String getIntroduction() { return ""; }
-	
+
 	// 2. 强制子类指定方向
 	public abstract ScreenManager.Orientation getOrientation();
 
@@ -39,8 +39,8 @@ public abstract class ExampleGScreen extends GScreen {
 	public void show() {
 		super.show(); // GScreen.show 处理输入和 resize
 		getScreenManager().setOrientation(getOrientation());
-		
+
 		// [核心改动] 将介绍文本注入到 DebugUI，而不是自己画
-		DebugUI.setIntros(getIntroduction());
+		Debug.setIntros(getIntroduction());
 	}
 }

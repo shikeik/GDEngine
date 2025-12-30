@@ -1,21 +1,17 @@
 package com.goldsprite.solofight.screens.refactor.tests;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.DebugUI;
+import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.core.NeonBatch;
 import com.goldsprite.solofight.refactor.ecs.GameWorld;
 import com.goldsprite.solofight.refactor.ecs.component.FsmComponent;
 import com.goldsprite.solofight.refactor.ecs.component.TransformComponent;
 import com.goldsprite.solofight.refactor.ecs.entity.GObject;
 import com.goldsprite.solofight.refactor.ecs.fsm.State;
-import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.badlogic.gdx.math.MathUtils;
 
@@ -24,7 +20,7 @@ public class EcsFsmTestScreen extends ExampleGScreen {
 	private NeonBatch neonBatch;
 	private Stage stage;
 	private GObject player;
-	
+
 	// 模拟输入信号
 	private boolean inputMove = false;
 	private boolean inputAttack = false;
@@ -42,7 +38,7 @@ public class EcsFsmTestScreen extends ExampleGScreen {
 	@Override
 	public void create() {
 		neonBatch = new NeonBatch();
-		
+
 		if (GameWorld.inst() != null) GameWorld.inst().dispose();
 		new GameWorld();
 
@@ -53,9 +49,9 @@ public class EcsFsmTestScreen extends ExampleGScreen {
 	private void initEntity() {
 		player = new GObject("PlayerFighter");
 		player.getTransform().setPosition(400, 300);
-		
+
 		FsmComponent fsm = player.addComponent(FsmComponent.class);
-		
+
 		// 注册状态
 		fsm.registerState(new TestIdleState(), 0);   // P0
 		fsm.registerState(new TestMoveState(), 1);   // P1
@@ -102,9 +98,9 @@ public class EcsFsmTestScreen extends ExampleGScreen {
 
 		neonBatch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
-		
+
 		neonBatch.drawRect(0, 0, getWorldSize().x, getWorldSize().y, 0, 5, Color.CYAN, false);
-		
+
 		// 绘制玩家，根据状态变色
 		FsmComponent fsm = player.getComponent(FsmComponent.class);
 		String stateName = fsm.getCurrentStateName();
@@ -112,17 +108,17 @@ public class EcsFsmTestScreen extends ExampleGScreen {
 		if (stateName.contains("Idle")) c = Color.CYAN;
 		if (stateName.contains("Move")) c = Color.GREEN;
 		if (stateName.contains("Attack")) c = Color.RED;
-		
+
 		TransformComponent t = player.getTransform();
 		neonBatch.drawCircle(t.position.x, t.position.y, 40, 0, c, 16, true);
-		
+
 		neonBatch.end();
 
 		stage.act();
 		stage.draw();
-		
-		DebugUI.info("State: %s", stateName);
-		DebugUI.info("Input: Move=%b, Atk=%b", inputMove, inputAttack);
+
+		Debug.info("State: %s", stateName);
+		Debug.info("Input: Move=%b, Atk=%b", inputMove, inputAttack);
 	}
 
 	// --- 内部测试状态类 ---
@@ -154,7 +150,7 @@ public class EcsFsmTestScreen extends ExampleGScreen {
 			entity.getTransform().position.y = 300; // 归位
 		}
 	}
-	
+
 	@Override
 	public void dispose() {
 		super.dispose();

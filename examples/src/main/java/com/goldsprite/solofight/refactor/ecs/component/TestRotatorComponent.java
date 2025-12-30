@@ -1,7 +1,5 @@
 package com.goldsprite.solofight.refactor.ecs.component;
 
-import com.goldsprite.solofight.core.DebugUI;
-
 /**
  * 测试组件：控制实体左右移动，用于验证 Update 循环
  */
