@@ -16,7 +16,7 @@ import com.goldsprite.gameframeworks.screens.GScreen;
 import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-public class GdxLauncher extends Game {int k42;
+public class GdxLauncher extends Game {
 	private Application.ApplicationType userType;
 
 	public SpriteBatch batch;
@@ -27,13 +27,14 @@ public class GdxLauncher extends Game {int k42;
 		userType = Gdx.app.getType();
 		batch = new SpriteBatch();
 
-		// 初始化 DebugUI
-		debugUI = DebugUI.getInstance();
-
-		SynthAudio.init(); // [新增] 启动音频线程
-
 		// 1. 初始化 VisUI (注入中文字体)
 		VisUIHelper.loadWithChineseFont();
+		
+		// 初始化 DebugUI
+		debugUI = DebugUI.getInstance();
+		debugUI.initUI();
+
+		SynthAudio.init(); // [新增] 启动音频线程
 
 		// 4. 设置全局视口
 		float scl = 1.2f;

@@ -7,6 +7,7 @@ import com.goldsprite.solofight.screens.game.GameScreen;
 import com.goldsprite.solofight.screens.menus.TestSelectionScreen;
 import com.goldsprite.solofight.screens.refactor.RefactorSelectionScreen;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
+import com.goldsprite.solofight.screens.tests.TempTestScreen;
 
 // [修改] 继承 BaseSelectionScreen
 public class ExampleSelectScreen extends BaseSelectionScreen {
@@ -20,6 +21,7 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 		
 		// [修改] 关联测试子菜单
 		map.put("测试场景", TestSelectionScreen.class);
+		map.put("!!! 临时测试 (Temp) !!!", TempTestScreen.class);
 
 		map.put("展示场景", null);
 

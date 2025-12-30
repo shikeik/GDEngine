@@ -8,8 +8,10 @@ import com.goldsprite.gameframeworks.assets.FontUtils;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
+import com.kotcrab.vis.ui.widget.VisLabel;
 
 public class VisUIHelper {
+	public static BitmapFont cnFont;
 
 	/**
 	 * 加载 VisUI 并注入中文字体
@@ -25,7 +27,7 @@ public class VisUIHelper {
 
 			// 2. 生成支持中文的字体 (使用 FontUtils 现有的逻辑)
 			// 大小设为 24，清晰度较高
-			BitmapFont cnFont = FontUtils.generateAutoClarity(24);
+			cnFont = FontUtils.generateAutoClarity(24);
 
 			// 3. 获取 VisUI 的皮肤
 			Skin skin = VisUI.getSkin();
@@ -34,6 +36,7 @@ public class VisUIHelper {
 
 			// Label (最重要)
 			skin.get(Label.LabelStyle.class).font = cnFont;
+			skin.get(VisLabel.LabelStyle.class).font = cnFont;
 
 			//VisScrollPane.ScrollPaneStyle 没有font
 

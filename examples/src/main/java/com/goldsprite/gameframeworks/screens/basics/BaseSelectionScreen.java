@@ -31,7 +31,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 
 	@Override
 	public String getIntroduction() {
-		return "";
+		return "选择屏";
 	}
 	
 	// [新增] 菜单默认竖屏
