@@ -1,6 +1,6 @@
 package com.goldsprite.solofight.refactor.ecs;
 
-import com.goldsprite.solofight.refactor.ecs.component.IComponent;
+import com.goldsprite.solofight.refactor.ecs.component.Component;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface GameSystemInfo {
 	// 系统关心的组件列表 (用于自动筛选实体)
-	Class<? extends IComponent>[] interestComponents() default {};
+	Class<? extends Component>[] interestComponents() default {};
 
 	// 更新类型
 	SystemType type() default SystemType.UPDATE;

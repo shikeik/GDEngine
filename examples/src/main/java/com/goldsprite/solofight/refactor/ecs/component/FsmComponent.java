@@ -7,7 +7,7 @@ public class FsmComponent extends Component {
 	private Fsm fsm;
 
 	@Override
-	public void awake() {
+	public void onAwake() {
 		super.awake();
 		// 初始化 FSM，注入 owner
 		fsm = new Fsm(getGObject());

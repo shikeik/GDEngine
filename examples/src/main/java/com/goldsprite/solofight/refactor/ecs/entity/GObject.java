@@ -253,8 +253,7 @@ public class GObject extends EcsObject {
     // ==========================================
     // 状态控制 (修正11: SetActive 联动)
     // ==========================================
-    public boolean isActive() { return isActive; }
-
+	
     public void setActive(boolean active) { 
         if (this.isActive == active) return;
         this.isActive = active;
@@ -298,6 +297,8 @@ public class GObject extends EcsObject {
     }
 
     // Getters
+	public boolean isActive() { return isActive; }
+	public boolean isDestroyed() { return isDestroyed; }
     public String getTag() { return tag; }
     public void setTag(String tag) { this.tag = tag; }
     public int getLayer() { return layer; }
