@@ -6,3 +6,5 @@ include 'android'
 include 'lwjgl3'
 include 'examples'
 
+
+include 'aaa'

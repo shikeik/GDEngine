@@ -2,10 +2,14 @@ package com.goldsprite.solofight.core;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.utils.Logger;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.solofight.BuildConfig;
 import com.goldsprite.solofight.core.ui.DebugConsole;
+
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,9 +17,23 @@ import java.util.List;
 public class Debug {
 	private static Debug instance;
 
+	public static final String passStr = "Y";
+	public static final boolean singleMode = false;
+	public static String singleTag = "Default";
+	public static String[] showTags = {
+		"Default Y",
+		"拦截 N",
+		//Test
+		"TEST Y",
+		"Test1 Y",
+	};
+
+	public static String LOG_TAG = BuildConfig.PROJECT_NAME;
+	private static final Logger logger = new Logger(LOG_TAG);
+
 	// 数据层 (构造时即可用)
-	private List<String> logs = new ArrayList<>();
-	private List<String> debugInfos = new ArrayList<>();
+	private static List<String> logMessages = new ArrayList<>();
+	private static List<String> logInfos = new ArrayList<>();
 	public static boolean showDebugUI = true;
 	static int maxLogsCache = 100;
 
@@ -77,7 +95,7 @@ public class Debug {
 	// --- 数据接口 ---
 
 	public static List<String> getLogs() {
-		return getInstance().logs;
+		return getInstance().logMessages;
 	}
 
 	public static String getInfoString() {
@@ -86,50 +104,97 @@ public class Debug {
 		sb.append("\nHeap: ").append(Gdx.app.getJavaHeap() / 1024 / 1024).append("MB");
 		sb.append("\nFPS: ").append(Gdx.graphics.getFramesPerSecond());int k;
 
-		if (!getInstance().debugInfos.isEmpty()) {
+		if (!getInstance().logInfos.isEmpty()) {
 			sb.append("\n--- Monitors ---\n");
-			sb.append(String.join("\n", getInstance().debugInfos));
+			sb.append(String.join("\n", getInstance().logInfos));
 		}
 		return sb.toString();
 	}
 	public static void clearInfo() {
-		if(getInstance() != null) getInstance().debugInfos.clear();
+		if(getInstance() != null) getInstance().logInfos.clear();
 	}
 
-	public static void log(Object... value) {
-		if (value == null || value.length == 0) return;
+
+
+	public static void log(Object... values) {
+		logT("Default", values);
+	}
+
+	public static void logT(String tag, Object... values) {
+		if (banTag(tag)) {
+			if(showTags[1].equals("拦截 Y"))
+				logT("拦截", "被拦截的: "+formatString(values));
+			return;
+		}
+
+		String msg = String.format("[%s] %s", tag, formatString(values));
+		msg = String.format("[%s] %s", formatTime("HH:mm:ss:SSS"), msg);// 添加时间戳
+
+		logger.setLevel(Logger.NONE);
+		logger.info(msg);
+
+		//提供给UI
+		logMessages.add(/*"NONE: " + */msg);
+		//打印到控制台
+		System.out.println(msg);
+	}
+
+
+	public static void info(Object... values) {
+		infoT("Default", values);
+	}
+
+	public static void infoT(String tag, Object... values) {
+		if (banTag(tag)) return;
+
+		String msg = String.format("[%s] %s", tag, formatString(values));
+		msg = String.format("[%s] %s", formatTime("HH:mm:ss:SSS"), msg);// 添加时间戳
+
+		logInfos.add(msg);
+	}
+
+	public static boolean banTag(String tag) {
+		if (singleMode) {
+			return !singleTag.equals(tag);
+		}
+
+		for (String tagInfo : showTags) {
+			String[] splits = tagInfo.split(" ");
+			if (splits.length < 2) continue;
+
+			String key = splits[0];
+			String show = splits[1];
+			if (key.equals(tag))
+				return !passStr.equals(show);
+		}
+
+		return true;
+	}
+
+	/**
+	 * 格式化当前时间（Java 8+ 推荐）
+	 * @param pattern 时间格式，如 "HH:mm:ss:SSS"
+	 * @return 格式化后的时间字符串
+	 */
+	public static String formatTime(String pattern) {
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+		return LocalTime.now().format(formatter);
+	}
+
+	public static String formatString(Object... values) {
 		String msg;
-		if (value.length == 1) {
-			msg = String.valueOf(value[0]);
+		if (values.length == 1) {
+			msg = String.valueOf(values[0]);
 		} else {
 			try {
-				String format = String.valueOf(value[0]);
-				Object[] args = Arrays.copyOfRange(value, 1, value.length);
+				String format = String.valueOf(values[0]);
+				Object[] args = Arrays.copyOfRange(values, 1, values.length);
 				msg = String.format(format, args);
 			} catch (Exception e) {
-				msg = String.valueOf(value[0]) + " <FmtErr> " + Arrays.toString(Arrays.copyOfRange(value, 1, value.length));
+				msg = values[0] + " <FmtErr> " + Arrays.toString(Arrays.copyOfRange(values, 1, values.length));
 			}
 		}
-		getInstance().logs.add(msg);
-		if (getInstance().logs.size() > maxLogsCache) getInstance().logs.remove(0);
-		Gdx.app.log("DEBUG", msg);
-	}
-
-	public static void info(Object... value) {
-		if (value == null || value.length == 0) return;
-		String finalStr;
-		if (value.length == 1) {
-			finalStr = String.valueOf(value[0]);
-		} else {
-			try {
-				String format = String.valueOf(value[0]);
-				Object[] args = Arrays.copyOfRange(value, 1, value.length);
-				finalStr = String.format(format, args);
-			} catch (Exception e) {
-				finalStr = String.valueOf(value[0]);
-			}
-		}
-		getInstance().debugInfos.add(finalStr);
+		return msg;
 	}
 
 	public static void setIntros(String text) {
