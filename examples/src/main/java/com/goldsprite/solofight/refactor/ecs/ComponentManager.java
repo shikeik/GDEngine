@@ -1,7 +1,7 @@
 package com.goldsprite.solofight.refactor.ecs;
 
 import com.goldsprite.solofight.core.Debug;
-import com.goldsprite.solofight.refactor.ecs.component.IComponent;
+import com.goldsprite.solofight.refactor.ecs.component.Component;
 import com.goldsprite.solofight.refactor.ecs.entity.GObject;
 
 import java.util.*;
@@ -9,164 +9,289 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 组件管理器 (核心)
+ * 组件管理器 (ECS 核心索引模块)
+ * <p>
  * 职责：
- * 1. 维护组件类型 ID (BitSet Index)
- * 2. 维护实体的组件掩码 (Component Mask)
- * 3. 缓存查询结果，加速 System 的实体筛选 (O(1)读取)
+ * 1. <b>类型映射</b>: 为每种 Component 类分配唯一的整数 ID (0, 1, 2...)。
+ * 2. <b>档案管理</b>: 维护每个实体拥有的组件列表 (BitSet 掩码)。
+ * 3. <b>查询加速</b>: 缓存 System 查询的结果，提供 O(1) 的查询性能。
+ * </p>
  */
 public class ComponentManager {
-	private static int nextComponentId = 0;
-	// 组件类型 -> ID 映射
-	private static final Map<Class<? extends IComponent>, Integer> componentIds = new ConcurrentHashMap<>();
-	// 组件类型 -> 所有实例池
-	private static final Map<Class<? extends IComponent>, List<IComponent>> componentPools = new ConcurrentHashMap<>();
-	// 查询掩码 -> 实体列表缓存 (System 查询加速)
-	private static final Map<BitSet, List<GObject>> entityCache = new ConcurrentHashMap<>();
-	// 实体 -> 该实体拥有的组件掩码
-	private static final Map<GObject, BitSet> entityComponentMasks = new ConcurrentHashMap<>();
 
-	/**
-	 * 获取或生成组件类型的唯一 ID
-	 */
-	public static <T extends IComponent> int getComponentId(Class<T> componentType) {
-		// 检查是否已注册父类或接口，如果有继承关系处理逻辑可在此扩展
-		// 这里简化处理，直接为每个具体类分配 ID
-		return componentIds.computeIfAbsent(componentType, k -> nextComponentId++);
-	}
+    // ==========================================
+    // 1. 类型 ID 分配系统
+    // ==========================================
 
-	public static <T extends IComponent> int preRegisterComponentType(Class<T> componentType) {
-		return getComponentId(componentType);
-	}
+    /** 全局组件类型计数器 */
+    private static int nextComponentId = 0;
 
-	/**
-	 * 注册组件 (当 Component.awake 时调用)
-	 */
-	public static <T extends IComponent> void registerComponent(GObject entity, Class<T> componentType, IComponent component) {
-		// 1. 加入组件池
-		List<IComponent> pool = componentPools.computeIfAbsent(componentType, k -> new CopyOnWriteArrayList<>());
-		if (!pool.contains(component)) {
-			pool.add(component);
-		}
+    /** 
+     * 组件类 -> 唯一整数ID 的映射缓存
+     * 例如: TransformComponent.class -> 0, Collider.class -> 1
+     */
+    private static final Map<Class<? extends Component>, Integer> componentIds = new ConcurrentHashMap<>();
 
-		// 2. 更新实体的掩码
-		BitSet mask = entityComponentMasks.computeIfAbsent(entity, k -> new BitSet());
-		mask.set(getComponentId(componentType));
+    // ==========================================
+    // 2. 数据存储 (Database)
+    // ==========================================
 
-		// 3. 标记缓存脏 (这是最激进的策略，保证正确性)
-		// 优化思路：只清除受影响的 queryMask，但目前规模 clear 全部没问题
-		entityCache.clear();
-	}
+    /**
+     * 组件池: Class -> [所有该类型的组件实例]
+     * 作用: 方便进行全量类型查询 (例如获取世界上所有的 Collider)
+     */
+    private static final Map<Class<? extends Component>, List<Component>> componentPools = new ConcurrentHashMap<>();
 
-	public static <T extends IComponent> void unregisterComponent(GObject entity, Class<T> componentType, IComponent component) {
-		// 1. 从组件池移除
-		List<IComponent> pool = componentPools.get(componentType);
-		if (pool != null) {
-			pool.remove(component);
-		}
+    /**
+     * 实体档案表: GObject -> ComponentMask (BitSet)
+     * 作用: 记录每个实体拥有哪些组件。
+     * Key: 实体对象
+     * Value: 位掩码 (如 {0, 2, 5} 表示拥有 ID为0,2,5 的组件)
+     */
+    private static final Map<GObject, BitSet> entityComponentMasks = new ConcurrentHashMap<>();
 
-		// 2. 更新掩码
-		BitSet mask = entityComponentMasks.get(entity);
-		if (mask != null) {
-			mask.clear(getComponentId(componentType));
-			if (mask.isEmpty()) {
-				entityComponentMasks.remove(entity);
-			}
-		}
+    // ==========================================
+    // 3. 查询缓存 (Cache)
+    // ==========================================
 
-		// 3. 清除缓存
-		entityCache.clear();
-	}
+    /**
+     * 查询缓存: QueryMask -> EntityList
+     * <p>
+     * Key: 查询条件的掩码 (例如 "需要组件 0 和 1")
+     * Value: 符合该条件的所有实体列表
+     * </p>
+     * 优化策略: 使用<b>增量更新 (Incremental Update)</b>。
+     * 当实体组件变动时，不清除整个缓存，而是遍历所有 Key，检查该实体是否应加入或移除。
+     */
+    private static final Map<BitSet, List<GObject>> entityCache = new ConcurrentHashMap<>();
 
-	/**
-	 * System 调用的核心方法：获取拥有特定组件的所有实体
-	 */
-	@SafeVarargs
-	public static List<GObject> getEntitiesWithComponents(Class<? extends IComponent>... componentTypes) {
-		if (componentTypes.length == 0) {
-			return new ArrayList<>(entityComponentMasks.keySet());
-		}
+    // ----------------------------------------------------------------
 
-		// 构建查询掩码
-		BitSet queryMask = createComponentMask(componentTypes);
+    /**
+     * 获取组件类型的唯一 ID (线程安全懒加载)
+     * @param componentType 组件类对象
+     * @return 0 到 N 的整数 ID
+     */
+    public static int getComponentId(Class<? extends Component> componentType) {
+        return componentIds.computeIfAbsent(componentType, k -> nextComponentId++);
+    }
 
-		// 命中缓存直接返回 (O(1))
-		if (entityCache.containsKey(queryMask)) {
-			return new ArrayList<>(entityCache.get(queryMask));
-		}
+    /**
+     * 注册组件到管理器
+     * <p>通常在 {@link Component#awake()} 时调用。</p>
+     * 
+     * @param entity 组件所属的实体
+     * @param componentType 组件的类型 (通常是 getClass())
+     * @param component 组件实例
+     */
+    public static void registerComponent(GObject entity, Class<? extends Component> componentType, Component component) {
+        // 1. 加入全量组件池 (方便 getComponents(Type) 查询)
+        // 使用 CopyOnWriteArrayList 保证迭代安全，虽写慢读快，但注册操作相对低频
+        List<Component> pool = componentPools.computeIfAbsent(componentType, k -> new CopyOnWriteArrayList<>());
+        if (!pool.contains(component)) {
+            pool.add(component);
+        }
 
-		// 缓存未命中，执行筛选 (O(N))
-		List<GObject> result = new ArrayList<>();
-		for (Map.Entry<GObject, BitSet> entry : entityComponentMasks.entrySet()) {
-			BitSet entityMask = entry.getValue();
-			// 检查实体是否包含所有请求的组件位
-			if (containsAllBits(entityMask, queryMask)) {
-				result.add(entry.getKey());
-			}
-		}
+        // 2. 更新该实体的“档案”(Mask)
+        // 如果是新实体，创建一个新的 BitSet
+        BitSet mask = entityComponentMasks.computeIfAbsent(entity, k -> new BitSet());
+        // 在对应 ID 的位置打勾
+        mask.set(getComponentId(componentType));
 
-		// 写入缓存
-		entityCache.put(queryMask, new CopyOnWriteArrayList<>(result));
-		return result;
-	}
+        // 3. [核心优化] 增量更新缓存
+        // 告诉缓存系统：这个人的档案变了，请检查他是否符合各个查询条件
+        updateCacheForEntity(entity, mask);
+    }
 
-	private static BitSet createComponentMask(Class<? extends IComponent>... componentTypes) {
-		BitSet mask = new BitSet();
-		for (Class<? extends IComponent> type : componentTypes) {
-			mask.set(getComponentId(type));
-		}
-		return mask;
-	}
+    /**
+     * 从管理器注销组件
+     * <p>通常在 {@link Component#destroyImmediate()} 时调用。</p>
+     */
+    public static void unregisterComponent(GObject entity, Class<? extends Component> componentType, Component component) {
+        // 1. 从全量组件池移除
+        List<Component> pool = componentPools.get(componentType);
+        if (pool != null) {
+            pool.remove(component);
+        }
 
-	// 检查 source 是否包含 target 的所有位
-	private static boolean containsAllBits(BitSet source, BitSet target) {
-		// 优化：BitSet.intersects 只能查交集，我们需要包含关系
-		// 逻辑： (source & target) == target
-		BitSet temp = (BitSet) target.clone();
-		temp.and(source);
-		return temp.equals(target);
-	}
+        // 2. 更新实体档案
+        BitSet mask = entityComponentMasks.get(entity);
+        if (mask != null) {
+            // 清除对应位的勾
+            mask.clear(getComponentId(componentType));
 
-	public static void updateEntityComponentMask(GObject entity) {
-		BitSet mask = new BitSet();
-		for (List<IComponent> components : entity.getComponents().values()) {
-			for (IComponent comp : components) {
-				mask.set(getComponentId(comp.getClass()));
-			}
-		}
+            // 如果实体身上一个组件都没了，从管理表中移除该实体
+            if (mask.isEmpty()) {
+                entityComponentMasks.remove(entity);
+            }
 
-		if (!mask.isEmpty()) {
-			entityComponentMasks.put(entity, mask);
-		} else {
-			entityComponentMasks.remove(entity);
-		}
-		entityCache.clear();
-	}
+            // 3. [核心优化] 增量更新缓存
+            updateCacheForEntity(entity, mask);
+        } else {
+            // 防御性编程：如果档案都没了，说明实体可能已经彻底移除了
+            // 确保它不在任何缓存列表里
+            removeFromAllCaches(entity);
+        }
+    }
 
-	public static void removeEntity(GObject entity) {
-		// 从池中清理
-		for (List<IComponent> components : entity.getComponents().values()) {
-			for (IComponent comp : components) {
-				for (List<IComponent> pool : componentPools.values()) {
-					pool.remove(comp);
-				}
-			}
-		}
-		entityComponentMasks.remove(entity);
-		entityCache.clear();
-	}
+    /**
+     * [核心优化算法] 仅更新特定实体的缓存归属
+     * <p>
+     * 复杂度: O(M)，其中 M 为<b>当前活跃的查询条件数量</b> (即 System 的数量)。
+     * 相比全量重建缓存 O(N * M) (N为实体总数)，性能有数量级提升。
+     * </p>
+     * 
+     * @param entity 发生变动的实体
+     * @param entityMask 实体当前最新的组件掩码
+     */
+    private static void updateCacheForEntity(GObject entity, BitSet entityMask) {
+        // 遍历缓存中的每一个查询条件 (Query Mask)
+        // 例如：SystemA 查 {0,1}, SystemB 查 {2}
+        for (Map.Entry<BitSet, List<GObject>> entry : entityCache.entrySet()) {
+            BitSet queryMask = entry.getKey();
+            List<GObject> resultList = entry.getValue();
 
-	// [修复] 补充 clearCache 方法
-	public static void clearCache() {
-		entityCache.clear();
-	}
+            // 判断：实体的当前配置(entityMask) 是否满足 查询条件(queryMask)
+            // 逻辑: (Entity & Query) == Query
+            boolean isMatch = containsAllBits(entityMask, queryMask);
 
-	public static int getRegisteredComponentCount() {
-		return componentPools.size();
-	}
+            if (isMatch) {
+                // 情况A: 满足条件，且列表里没有它 -> 加进去
+                // (CopyOnWriteArrayList.contains 是 O(N)，但结果列表通常是缓存的，读多写少)
+                if (!resultList.contains(entity)) {
+                    resultList.add(entity);
+                }
+            } else {
+                // 情况B: 不满足条件，但列表里有它 -> 踢出去
+                // 比如以前有Collider现在移除了，就不该在 PhysicsSystem 的列表里了
+                resultList.remove(entity);
+            }
+        }
+    }
 
-	public static void debugInfo() {
-		Debug.log("=== ComponentManager Debug ===");
-		Debug.log("Entities: %d, Cached Queries: %d", entityComponentMasks.size(), entityCache.size());
-	}
+    /**
+     * [辅助] 当实体彻底销毁时，从所有缓存列表里暴力移除它
+     */
+    private static void removeFromAllCaches(GObject entity) {
+        for (List<GObject> list : entityCache.values()) {
+            list.remove(entity);
+        }
+    }
+
+    /**
+     * <b>核心查询方法</b>：获取拥有特定组件集合的所有实体
+     * <p>System 主要调用此方法来筛选它关心的实体。</p>
+     * 
+     * @param componentTypes 需要包含的组件类型列表
+     * @return 符合条件的实体列表 (只读引用或副本)
+     */
+    @SafeVarargs
+    public static List<GObject> getEntitiesWithComponents(Class<? extends Component>... componentTypes) {
+        // 如果没传参数，返回所有有组件的实体
+        if (componentTypes.length == 0) {
+            return new ArrayList<>(entityComponentMasks.keySet());
+        }
+
+        // 1. 构建查询掩码 (我要找有 0号 和 5号 组件的人 -> Mask: ...00100001)
+        BitSet queryMask = createComponentMask(componentTypes);
+
+        // 2. 查缓存 (O(1))
+        // 如果这个查询条件之前有人查过，直接返回结果
+        if (entityCache.containsKey(queryMask)) {
+            return entityCache.get(queryMask); 
+        }
+
+        // 3. 缓存未命中 (这是一次新的查询类型)
+        // 执行全量扫描 (O(N))，并将结果存入缓存
+        List<GObject> result = new CopyOnWriteArrayList<>(); // 使用线程安全 List
+
+        for (Map.Entry<GObject, BitSet> entry : entityComponentMasks.entrySet()) {
+            // 检查包含关系
+            if (containsAllBits(entry.getValue(), queryMask)) {
+                result.add(entry.getKey());
+            }
+        }
+
+        // 4. 存入缓存，下次就快了
+        entityCache.put(queryMask, result);
+        return result;
+    }
+
+    // --- 内部辅助工具 ---
+
+    private static BitSet createComponentMask(Class<? extends Component>... componentTypes) {
+        BitSet mask = new BitSet();
+        for (Class<? extends Component> type : componentTypes) {
+            mask.set(getComponentId(type));
+        }
+        return mask;
+    }
+
+    /**
+     * 位运算判断：source 是否包含 target 的所有位
+     * <br>逻辑: (source & target) == target
+     */
+    private static boolean containsAllBits(BitSet source, BitSet target) {
+        if (source == null || target == null) return false;
+        // 必须 clone，因为 BitSet.and 会修改自身
+        BitSet temp = (BitSet) target.clone();
+        temp.and(source); // 取交集
+        return temp.equals(target); // 如果交集等于目标，说明全包含
+    }
+
+    /** 
+     * 强制刷新实体掩码 (当 addComponent 批量操作或初始化时调用)
+     * 会重新扫描实体身上的所有组件并更新缓存 
+     */
+    public static void updateEntityComponentMask(GObject entity) {
+        BitSet mask = new BitSet();
+
+        // 遍历实体所有组件 (通过 GObject 的内部访问器)
+        for (List<Component> components : entity.getComponentsMap().values()) {
+            for (Component comp : components) {
+                mask.set(getComponentId(comp.getClass()));
+            }
+        }
+
+        if (!mask.isEmpty()) {
+            entityComponentMasks.put(entity, mask);
+            // [优化] 增量更新缓存
+            updateCacheForEntity(entity, mask);
+        } else {
+            entityComponentMasks.remove(entity);
+            removeFromAllCaches(entity);
+        }
+    }
+
+    /**
+     * 彻底移除实体 (当 GObject.destroyImmediate 时调用)
+     */
+    public static void removeEntity(GObject entity) {
+        // 1. 清理组件池中的引用 (O(C) C=组件数)
+        // 虽然组件 destroy 时会自己调 unregister，但这里作为最后一道保险
+        for (List<Component> components : entity.getComponentsMap().values()) {
+            for (Component comp : components) {
+                List<Component> pool = componentPools.get(comp.getClass());
+                if (pool != null) pool.remove(comp);
+            }
+        }
+
+        // 2. 移除档案
+        entityComponentMasks.remove(entity);
+
+        // 3. 从所有缓存列表中剔除
+        removeFromAllCaches(entity); 
+    }
+
+    /** 清空所有缓存 (通常用于场景切换或调试) */
+    public static void clearCache() {
+        entityCache.clear();
+    }
+
+    public static void debugInfo() {
+        Debug.log("=== ComponentManager Debug ===");
+        Debug.log("Registered Types: %d", componentIds.size());
+        Debug.log("Tracked Entities: %d", entityComponentMasks.size());
+        Debug.log("Cached Queries: %d", entityCache.size());
+    }
 }

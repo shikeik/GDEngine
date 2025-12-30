@@ -8,56 +8,44 @@ import com.goldsprite.solofight.refactor.ecs.component.TransformComponent;
 import com.goldsprite.solofight.refactor.ecs.enums.ManageMode;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap; // [修正1] 使用 LinkedHashMap
 import java.util.List;
 import java.util.Map;
-import java.util.LinkedHashMap;
 
 /**
  * 游戏实体 (对应 Unity.GameObject)
- * 职责：
- * 1. 维护组件列表 (支持同类多个)
- * 2. 维护父子层级关系
- * 3. 转发生命周期 (Awake, Update, Destroy)
  */
 public class GObject extends EcsObject {
 
     // ==========================================
-    // 1. 核心属性
+    // 属性
     // ==========================================
-    private boolean isActive = true;      // 对应 .activeSelf
+    private boolean isActive = true;      
     private boolean isDestroyed = false;
-    private String tag = "Untagged";      // 对应 .tag
-    private int layer = 0;                // 对应 .layer (物理/逻辑层)
+    private String tag = "Untagged";      
+    private int layer = 0;                
 
-    // 核心组件：每个实体必有 Transform
     public final TransformComponent transform;
 
-    // ==========================================
-    // 2. 容器
-    // ==========================================
-    // 组件容器: Map<类对象, 组件列表>。使用 List 允许同一种组件挂多个。
+    // [修正1] 使用 LinkedHashMap 保证遍历顺序与添加顺序一致
     private final Map<Class<?>, List<Component>> components = new LinkedHashMap<>();
 
-    // 层级容器
     private GObject parent;
     private final List<GObject> children = new ArrayList<>();
 
     // ==========================================
-    // 3. 构造与初始化
+    // 构造
     // ==========================================
     public GObject(String name) {
-        super(); // 分配 GID
+        super();
         setName(name);
 
-        // 1. 立即创建并绑定 Transform
-        // 注意：这里手动 new 并赋值，确保 addComponent 内部能引用到它
+        // 核心组件初始化
         this.transform = new TransformComponent();
-        // 2. 将 Transform 作为普通组件加入管理
-        // 特殊处理：先赋值 field，再 add，防止 add 内部回调时 transform 为空
+        // 手动注入，不走 addComponent 避免递归死循环 (如果 addComponent 里有特殊逻辑的话)
         addComponentInternal(this.transform);
 
-        // 3. 注册到世界 (默认加入 Update 列表)
+        // 注册到世界
         GameWorld.manageGObject(this, ManageMode.ADD);
     }
 
@@ -66,10 +54,9 @@ public class GObject extends EcsObject {
     }
 
     // ==========================================
-    // 4. 组件管理 (CRUD)
+    // 组件管理
     // ==========================================
 
-    /** 添加组件 (通过类) */
     public <T extends Component> T addComponent(Class<T> clazz) {
         try {
             T comp = clazz.getDeclaredConstructor().newInstance();
@@ -79,9 +66,7 @@ public class GObject extends EcsObject {
         }
     }
 
-    /** 添加组件 (通过实例) */
     public <T extends Component> T addComponent(T component) {
-        // 防止重复添加同一个实例
         if (component.getGObject() == this) return component;
         return addComponentInternal(component);
     }
@@ -89,65 +74,58 @@ public class GObject extends EcsObject {
     private <T extends Component> T addComponentInternal(T component) {
         Class<?> type = component.getClass();
 
-        // 1. 放入 Map
+        // 1. 存入容器
         List<Component> list = components.computeIfAbsent(type, k -> new ArrayList<>());
         list.add(component);
 
-        // 2. 绑定关系 (这一步会自动让组件获取 transform 引用)
+        // 2. 绑定
         component.setGObject(this);
 
-        // 3. 触发生命周期
+        // 3. 唤醒 (Phase 2: Awake)
+        // [说明] Awake 是“自身初始化”。
+        // Start (Phase 3) 将在 Component.update() 首次运行时惰性触发 (Lazy Start)
+        // 或者由 System 在下一帧统一触发。目前我们在 Component 类里没写 Lazy Start，
+        // 暂时假设 System 会处理，或者组件只用 Awake。
         component.awake();
-        // 如果游戏已经运行了一段时间，新加的组件可能需要补调 Start (暂时不加，按我们约定的 Awake 模式)
 
         return component;
     }
 
-    /** 移除组件 */
     public void removeComponent(Component component) {
         if (component == null) return;
         Class<?> type = component.getClass();
 
-        // 1. 从 Map 移除
         List<Component> list = components.get(type);
         if (list != null) {
             list.remove(component);
             if (list.isEmpty()) components.remove(type);
         }
 
-        // 2. 管理器注销 (ComponentManager 缓存脏标记)
-        // 注意：这里不负责调 destroy，那是 Component 自己的事，这里只负责解绑关系
+        // [修正8] 移除 = 解绑。
+        // 只有调用 destroy() 才会触发 onDestroy 回调。
+        // 这里只是单纯地把组件从物体上剥离。
         ComponentManager.unregisterComponent(this, component.getClass(), component);
     }
 
     // ==========================================
-    // 5. 组件查找 (核心算法)
+    // 查找 (保持不变，省略部分代码以节省篇幅)
     // ==========================================
+    // ... getComponent(Class), getComponents(Class) 等逻辑 ...
+    // 这里完全沿用之前的实现，逻辑是正确的。
 
-    /** 查找逻辑：优先精准匹配，其次遍历子类 */
     public <T extends Component> T getComponent(Class<T> type) {
-        // 1. 精准查表 (O(1))
         List<Component> list = components.get(type);
-        if (list != null && !list.isEmpty()) {
-            return (T) list.get(0);
-        }
+        if (list != null && !list.isEmpty()) return (T) list.get(0);
 
-        // 2. 接口/父类查找 (O(N)) - 模拟 Unity 行为
-        // 比如 getComponent(Collider.class) 应该返回 BoxCollider
         for (List<Component> comps : components.values()) {
-            if (!comps.isEmpty()) {
-                Component c = comps.get(0);
-                if (type.isAssignableFrom(c.getClass())) {
-                    return (T) c;
-                }
+            if (!comps.isEmpty() && type.isAssignableFrom(comps.get(0).getClass())) {
+                return (T) comps.get(0);
             }
         }
         return null;
     }
 
-    /** 按名字查找 (O(N)) */
     public <T extends Component> T getComponent(Class<T> type, String name) {
-        // 遍历所有组件，找到类型匹配且名字匹配的
         for (List<Component> comps : components.values()) {
             for (Component c : comps) {
                 if (type.isAssignableFrom(c.getClass()) && c.getName().equals(name)) {
@@ -158,168 +136,172 @@ public class GObject extends EcsObject {
         return null;
     }
 
-    /** 按索引查找 */
     public <T extends Component> T getComponent(Class<T> type, int index) {
         List<T> all = getComponents(type);
-        if (all != null && index >= 0 && index < all.size()) {
-            return all.get(index);
-        }
+        if (all != null && index >= 0 && index < all.size()) return all.get(index);
         return null;
     }
 
-    /** 获取所有同类组件 */
     public <T extends Component> List<T> getComponents(Class<T> type) {
         List<T> result = new ArrayList<>();
-        // 同样需要支持继承查找
         for (List<Component> comps : components.values()) {
-            if (!comps.isEmpty()) {
-                // 检查列表里的第一个元素即可判断类型
-                if (type.isAssignableFrom(comps.get(0).getClass())) {
-                    for (Component c : comps) {
-                        result.add((T) c);
-                    }
-                }
+            if (!comps.isEmpty() && type.isAssignableFrom(comps.get(0).getClass())) {
+                for (Component c : comps) result.add((T) c);
             }
         }
         return result;
     }
 
     // ==========================================
-    // 6. 层级管理 (Parent-Child)
+    // 层级管理 (保持不变)
     // ==========================================
+    // ... setParent, addChild, removeChild ...
+    // 之前的逻辑（自动从 GameWorld 添加/移除顶层列表）是正确的。
 
     public void setParent(GObject newParent) {
         if (this.parent == newParent) return;
-
-        // 1. 从旧父级移除
-        if (this.parent != null) {
-            this.parent.children.remove(this);
-        } else {
-            // 旧父级是 null，说明之前是世界顶层物体，现在要认爹了
-            // 从世界顶层列表中移除 (由父级驱动 Update)
-            GameWorld.manageGObject(this, ManageMode.REMOVE);
-        }
+        if (this.parent != null) this.parent.children.remove(this);
+        else GameWorld.manageGObject(this, ManageMode.REMOVE);
 
         this.parent = newParent;
 
-        // 2. 加入新父级
-        if (newParent != null) {
-            newParent.children.add(this);
-        } else {
-            // 新父级是 null，说明变成了孤儿（顶层物体）
-            // 重新加入世界顶层列表
-            GameWorld.manageGObject(this, ManageMode.ADD);
-        }
+        if (newParent != null) newParent.children.add(this);
+        else GameWorld.manageGObject(this, ManageMode.ADD);
     }
 
-    public void addChild(GObject child) {
-        if (child != null) child.setParent(this);
-    }
-
+    public void addChild(GObject child) { if (child != null) child.setParent(this); }
+    public void removeChild(GObject child) { if (child != null && child.parent == this) child.setParent(null); }
     public GObject getParent() { return parent; }
     public List<GObject> getChildren() { return children; }
 
     // ==========================================
-    // 7. 生命周期循环
+    // 循环
     // ==========================================
 
     @Override
     public void update(float delta) {
         if (!isActive || isDestroyed) return;
 
-        // 1. 更新自己的组件
-        // 遍历 Map.values() 时需要小心并发修改异常 (如果 Update 里 Add/Remove 组件)
-        // 简单起见，这里假设 Update 不会频繁增删组件结构，或者使用 CopyOnWrite
-        // 为了性能，暂直接遍历
+        // [修正9] 并发修改保护
+        // 在遍历时如果有组件 destroy，它是安全的（因为它只是标记 flag）。
+        // 只有在遍历时 add/removeComponent 才会崩。
+        // 目前为了性能，我们假设用户不会在 Update 里疯狂做结构变更。
+        // 如果真要严谨，这里需要 new ArrayList<>(components.values())，但这太慢了。
+        // 遵守 ECS 规范：结构变更(Add/Remove)请延迟到下一帧，或者使用 System 处理。
+
         for (List<Component> list : components.values()) {
             for (int i = 0; i < list.size(); i++) {
                 Component c = list.get(i);
+                // 只有组件 Enable 且物体 Active (外层已判断) 时才运行
                 if (c.isEnable() && !c.isDestroyed()) {
                     c.update(delta);
                 }
             }
         }
 
-        // 2. 递归更新子物体
         for (int i = 0; i < children.size(); i++) {
             children.get(i).update(delta);
         }
     }
 
     public void awake() {
-        // 唤醒所有组件
         for (List<Component> list : components.values()) {
             for (Component c : list) c.awake();
         }
-        // 递归唤醒子物体
         for (GObject child : children) child.awake();
     }
 
     // ==========================================
-    // 8. 销毁逻辑
+    // 销毁 (修正10: 流程清晰化)
     // ==========================================
 
     public void destroy() {
         if (isDestroyed) return;
         isDestroyed = true;
-        GameWorld.inst().addDestroyGObject(this); // 软销毁
+        // 1. 标记自己
+        GameWorld.inst().addDestroyGObject(this); 
+        // 2. 标记所有组件 (可选，为了让组件能触发 OnDisable 等)
+        // 但通常 SceneSystem 的 destroyImmediate 会统一处理
     }
 
-    /** 级联硬销毁 */
     public void destroyImmediate() {
-        // 1. 先杀孩子 (倒序)
+        // 1. 递归杀子
         for (int i = children.size() - 1; i >= 0; i--) {
             children.get(i).destroyImmediate();
         }
         children.clear();
 
-        // 2. 再杀组件
-        for (List<Component> list : components.values()) {
-            for (Component c : list) {
-                // 组件硬销毁会调用 onDestroy 并解绑
-                // 但这里我们手写逻辑避免 ConcurrentModificationException
-                c.onDisable();
-                c.onDestroy();
-                ComponentManager.unregisterComponent(this, c.getClass(), c);
-            }
-        }
-        components.clear();
+        // 2. 杀组件 (倒序安全)
+        // 需要把 Map 铺平成 List 倒序删，避免 Map 遍历时 remove
+        List<Component> allComps = new ArrayList<>();
+        for (List<Component> list : components.values()) allComps.addAll(list);
 
-        // 3. 处理父级关系
+        for (int i = allComps.size() - 1; i >= 0; i--) {
+            allComps.get(i).destroyImmediate(); // 这里面会调 removeComponent
+        }
+        // components.clear(); // removeComponent 里会删，这里不需要了
+
+        // 3. 杀自己
         if (parent != null) {
             parent.children.remove(this);
         } else {
             GameWorld.manageGObject(this, ManageMode.REMOVE);
         }
-
         parent = null;
-        // transform = null; // final 字段无法置空，但对象已无引用
     }
 
     // ==========================================
-    // 9. Getters / Setters
+    // 状态控制 (修正11: SetActive 联动)
     // ==========================================
     public boolean isActive() { return isActive; }
+
     public void setActive(boolean active) { 
+        if (this.isActive == active) return;
         this.isActive = active;
-        // Unity 中 SetActive 会触发组件的 OnEnable/OnDisable
+
+        // 触发组件的 OnEnable / OnDisable
         for (List<Component> list : components.values()) {
             for (Component c : list) {
-                if (c.isEnable()) { // 只有组件本身 Enable 时，物体开关才有效
+                // 只有当组件本身开关是开着的时候，物体的开关才会影响它
+                if (c.isEnable()) { 
                     if (active) c.onEnable();
                     else c.onDisable();
                 }
             }
         }
+
+        // 递归子物体？
+        // Unity 逻辑：子物体的 activeSelf 不变，但 activeInHierarchy 会变。
+        // 我们简化处理：子物体如果 activeSelf 是 true，那就也会收到 Update 调用。
+        // Update 循环里有 check isActive，所以不需要递归改 active 变量。
+        // 但需要递归触发 OnEnable/Disable 吗？Unity 会。
+        for (GObject child : children) {
+            if (child.isActive()) { // 只有本来就是开着的子物体，才会被这一级影响
+                child.setActiveRecursivelyEffect(active);
+            }
+        }
     }
 
+    // 内部辅助：仅触发回调，不改 activeSelf 值
+    private void setActiveRecursivelyEffect(boolean active) {
+        for (List<Component> list : components.values()) {
+            for (Component c : list) {
+                if (c.isEnable()) {
+                    if (active) c.onEnable();
+                    else c.onDisable();
+                }
+            }
+        }
+        for (GObject child : children) {
+            if (child.isActive()) child.setActiveRecursivelyEffect(active);
+        }
+    }
+
+    // Getters
     public String getTag() { return tag; }
     public void setTag(String tag) { this.tag = tag; }
     public int getLayer() { return layer; }
     public void setLayer(int layer) { this.layer = layer; }
 
-    // [补充] 提供给 ComponentManager 使用的后门
-    public Map<Class<?>, List<Component>> getComponentsMap() {
-        return components;
-    }
+    public Map<Class<?>, List<Component>> getComponentsMap() { return components; }
 }
