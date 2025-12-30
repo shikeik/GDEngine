@@ -37,9 +37,13 @@ public class NeonBatch extends BaseShapeBatch {
 	 * 绘制矩形
 	 * @param rotationDeg 旋转角度 (角度制)
 	 */
-	public void drawRect(float x, float y, float width, float height, float rotationDeg, float lineWidth, Color color, boolean filled) {
+	public void drawRect(float ldx, float ldy, float width, float height, float rotationDeg, float lineWidth, Color color, boolean filled) {
 		float halfW = width / 2;
 		float halfH = height / 2;
+
+		//转为中心起始坐标
+		float cx = ldx + halfW;
+		float cy = ldy + halfH;
 
 		// 计算4个角 (从中心旋转)
 		float rad = rotationDeg * MathUtils.degreesToRadians;
@@ -53,8 +57,8 @@ public class NeonBatch extends BaseShapeBatch {
 		float[] verts = getBuffer(4);
 		for (int i = 0; i < 4; i++) {
 			// Rotate & Translate
-			verts[i * 2] = x + (lx[i] * cos - ly[i] * sin);
-			verts[i * 2 + 1] = y + (lx[i] * sin + ly[i] * cos);
+			verts[i * 2] = cx + (lx[i] * cos - ly[i] * sin);
+			verts[i * 2 + 1] = cy + (lx[i] * sin + ly[i] * cos);
 		}
 
 		if (filled) pathFill(verts, 4, color);

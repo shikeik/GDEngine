@@ -4,6 +4,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.GScreen;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.solofight.core.DebugUI;
+import com.badlogic.gdx.Gdx;
 
 public abstract class ExampleGScreen extends GScreen {
 	// 1. 定义基准尺寸 (540p)
@@ -30,6 +31,7 @@ public abstract class ExampleGScreen extends GScreen {
 
 		// 自动应用缩放系数
 		uiViewport = new ExtendViewport(w * VIEWPORT_SCALE, h * VIEWPORT_SCALE);
+		uiViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 	}
 
 	// 4. 自动处理转屏逻辑

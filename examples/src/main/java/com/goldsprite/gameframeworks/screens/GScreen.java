@@ -97,6 +97,7 @@ public abstract class GScreen implements IGScreen {
 	protected void initViewport() {
 		Viewport baseViewport = getScreenManager().getViewport();
 		uiViewport = new ExtendViewport(baseViewport.getWorldWidth(), baseViewport.getWorldHeight());
+		uiViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 	}
 	
 	protected void initWorldCamera(float worldScl) {
@@ -261,12 +262,12 @@ public abstract class GScreen implements IGScreen {
 		if (worldCamera != null) {
 			worldCamera.viewportWidth = getUIViewport().getWorldWidth() * worldScale;
 			worldCamera.viewportHeight = getUIViewport().getWorldHeight() * worldScale;
-			DebugUI.log("%s %s.重置世界相机: %s,%s", isWorldCameraInitialized?"切屏":"屏幕初始化", getClass().getSimpleName(), worldCamera.viewportWidth, worldCamera.viewportHeight);
+			//DebugUI.log("%s %s.重置世界相机: %s,%s", isWorldCameraInitialized?"切屏":"屏幕初始化", getClass().getSimpleName(), worldCamera.viewportWidth, worldCamera.viewportHeight);
 			if(centerCamera) {
 				worldCamera.position.set(
 					worldCamera.viewportWidth/2f,
 					worldCamera.viewportHeight/2f, 0);
-				DebugUI.log("初始化相机中心位置: %s", worldCamera.position);
+				//DebugUI.log("初始化相机中心位置: %s", worldCamera.position);
 			}
 			worldCamera.update();
 		}
@@ -278,9 +279,10 @@ public abstract class GScreen implements IGScreen {
 			// 1. 更新 UI 视口 (自动居中 UI 相机), 左下角为0,0
 			getUIViewport().update(width, height, true);
 
-			//更新世界相机视口参数, 仅初始化时自动居中
-			if(!isWorldCameraInitialized) { resizeWorldCamera(true); isWorldCameraInitialized = true; }
-			else resizeWorldCamera(false);
+//			//更新世界相机视口参数, 仅初始化时自动居中
+//			if(!isWorldCameraInitialized) { resizeWorldCamera(true); isWorldCameraInitialized = true; }
+//			else resizeWorldCamera(false);
+			resizeWorldCamera(true);
 		}
 	}
 
