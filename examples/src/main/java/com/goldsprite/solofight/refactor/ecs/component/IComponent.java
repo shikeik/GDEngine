@@ -2,14 +2,14 @@ package com.goldsprite.solofight.refactor.ecs.component;
 
 import com.goldsprite.solofight.refactor.ecs.ComponentManager;
 import com.goldsprite.solofight.refactor.ecs.GameWorld;
-import com.goldsprite.solofight.refactor.ecs.IRunnable;
+import com.goldsprite.solofight.refactor.ecs.EcsObject;
 import com.goldsprite.solofight.refactor.ecs.entity.GObject;
 
-public interface IComponent extends IRunnable {
+public interface IComponent extends EcsObject {
 	ComponentField getCompFields();
 
 	@Override
-	default IRunnable.IRunnableFields getIRunnableFields() {
+	default EcsObject.IRunnableFields getIRunnableFields() {
 		return getCompFields();
 	}
 

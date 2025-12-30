@@ -3,7 +3,7 @@ package com.goldsprite.solofight.refactor.ecs.system;
 import com.goldsprite.solofight.refactor.ecs.ComponentManager;
 import com.goldsprite.solofight.refactor.ecs.GameSystemInfo;
 import com.goldsprite.solofight.refactor.ecs.GameWorld;
-import com.goldsprite.solofight.refactor.ecs.IRunnable;
+import com.goldsprite.solofight.refactor.ecs.EcsObject;
 import com.goldsprite.solofight.refactor.ecs.component.IComponent;
 import com.goldsprite.solofight.refactor.ecs.entity.GObject;
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.List;
  * 系统基类
  * 自动根据 @GameSystemInfo 注解筛选感兴趣的实体
  */
-public abstract class BaseSystem implements IRunnable {
+public abstract class BaseSystem implements EcsObject {
 	private IRunnableFields fields = new IRunnableFields();
 
 	protected GameWorld world;
@@ -35,7 +35,7 @@ public abstract class BaseSystem implements IRunnable {
 	}
 
 	@Override
-	public IRunnable.IRunnableFields getIRunnableFields() {
+	public EcsObject.IRunnableFields getIRunnableFields() {
 		return fields;
 	}
 
