@@ -25,7 +25,16 @@ dependencies {
 	implementation "org.mockito:mockito-core:5.21.0" // Mock 工具
 }
 
-// 【核心修正2】删除 useJUnitPlatform()，默认使用 JUnit 4 运行器
-// test {
-//    useJUnitPlatform()
-// }
+test {
+	// 【关键】配置日志输出
+	testLogging {
+		// 让它打印标准输出 (System.out)
+		showStandardStreams = true
+
+		// 显示具体的事件：通过、跳过、失败
+		events "passed", "skipped", "failed"
+
+		// 遇到异常显示完整的堆栈
+		exceptionFormat "full"
+	}
+}
