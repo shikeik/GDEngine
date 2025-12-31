@@ -14,9 +14,8 @@ import com.goldsprite.solofight.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.solofight.core.audio.SynthAudio;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.goldsprite.solofight.screens.newyear.NewYearScreen;
 
-public class GdxLauncher extends Game {int k24;
+public class GdxLauncher extends Game {int k25;
 	private Application.ApplicationType userType;
 
 	public SpriteBatch batch;

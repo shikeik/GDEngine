@@ -7,8 +7,6 @@ import com.goldsprite.gameframeworks.screens.basics.BaseSelectionScreen;
 import com.goldsprite.solofight.screens.game.GameScreen;
 import com.goldsprite.solofight.screens.menus.TestSelectionScreen;
 import com.goldsprite.solofight.screens.ecs.RefactorSelectionScreen;
-import com.goldsprite.solofight.screens.tests.TempTestScreen;
-import com.goldsprite.solofight.screens.newyear.NewYearScreen;
 
 // [修改] 继承 BaseSelectionScreen
 public class ExampleSelectScreen extends BaseSelectionScreen {
@@ -16,9 +14,6 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends IGScreen>> map) {
 		map.put("场景列表\n", null);
-
-		//map.put("即时临时测试", TempTestScreen.class);
-		map.put("2026新年快乐！", NewYearScreen.class);
 
 		map.put(">>> 新ECS场景 <<<", RefactorSelectionScreen.class);
 
