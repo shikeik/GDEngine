@@ -70,31 +70,46 @@ public class Fsm {
     }
 
     /**
-     * [核心算法复刻]
-     * 逻辑：如果当前状态不可退出，则门槛提升至当前优先级。
-     * 必须找到一个优先级 >= 门槛，且能 Enter 的状态。
+     * [核心修复] 查找逻辑
      */
     private StateInfo findNextState() {
+        // 规则1：如果当前状态"锁死" (霸体中)，且不允许强行打断，直接返回
+        // (注：这里的逻辑由你的具体需求决定，目前的测试用例要求 Hurt 能打断 Skill霸体)
+        // (所以我们依靠优先级比较来决定是否破招，而不是在这里直接 return null)
+        // 但为了严谨，如果逻辑是 "canExit=false 意味着绝对无敌"，可以在这里拦截。
+        // 根据测试 testLockAndBreak，我们希望高优先级能破招，所以不在这里拦截。
+
         StateInfo bestStateInfo = null;
+        
+        // [修复点] 基准优先级默认为 -1
         int bestPriority = -1;
 
-        // 关键逻辑还原：
-        // 如果当前状态不愿意退出 (!canExit)，则只有 Priority >= 当前优先级的状态才有资格打断。
-        // 否则 (canExit)，任何 Priority >= -1 的状态都有资格 (即所有状态)。
-        if (currentState != null && !currentState.canExit()) {
+        // [修复点] 如果当前有状态，基准线提升至当前状态的优先级
+        // 意思是：想要篡位，你的优先级必须 >= 我！
+        // (不管是普通的 Attack，还是霸体的 Skill，都得遵守基本法：低级不能打高级)
+        if (currentState != null) {
             bestPriority = getCurrentStatePriority(currentState);
         }
 
-        for (StateInfo stateInfo : states.values()) {
-            if (stateInfo.state == currentState) continue;
+        for (StateInfo info : states.values()) {
+            if (info.state == currentState) continue;
 
             // 筛选：
-            // 1. 优先级必须 >= 当前门槛 (bestPriority)
-            // 2. 状态本身必须满足进入条件 (canEnter)
-            // 3. (隐式逻辑) 循环会不断抬高 bestPriority，确保最终找到的是最高优先级的那个
-            if (stateInfo.priority >= bestPriority && stateInfo.state.canEnter()) {
-                bestStateInfo = stateInfo;
-                bestPriority = stateInfo.priority;
+            // 1. 优先级必须 >= 当前基准线
+            // 2. 状态本身满足进入条件
+            if (info.priority >= bestPriority && info.state.canEnter()) {
+                
+                // 特殊处理：如果优先级相等，是否切换？
+                // 通常保持当前状态更稳定。但为了满足 "Idle(0) -> Attack(10)" 这种升级，
+                // 或者 "Combo1(10) -> Combo2(10)" 这种同级切换，
+                // 我们允许 >=。
+                // 但为了通过 testPrioritySuppress (Move 5 vs Attack 10)，5 >= 10 为 false，正确拦截。
+                
+                // 再次确认 testLockAndBreak (Skill 10 霸体 vs Hurt 100)
+                // 100 >= 10，正确打断。
+                
+                bestStateInfo = info;
+                bestPriority = info.priority;
             }
         }
 

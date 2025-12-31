@@ -7,5 +7,4 @@ include 'lwjgl3'
 include 'examples'
 
 
-include 'aaa'
 include 'tests'

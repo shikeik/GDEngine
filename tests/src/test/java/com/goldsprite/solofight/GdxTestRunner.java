@@ -1,55 +1,93 @@
 package com.goldsprite.solofight;
 
-import com.badlogic.gdx.ApplicationListener;
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.backends.headless.HeadlessApplication;
-import com.badlogic.gdx.backends.headless.HeadlessApplicationConfiguration;
+import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.graphics.GL20;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.InitializationError;
-import static org.mockito.Mockito.mock;
 
-public class GdxTestRunner extends BlockJUnit4ClassRunner implements ApplicationListener {
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 
-	private static boolean initialized = false;
+/**
+ * 纯 JDK 动态代理版 TestRunner
+ * 无 Mockito，无 Headless，无 Native 依赖。
+ * 专治各种水土不服。
+ */
+public class GdxTestRunner extends BlockJUnit4ClassRunner {
 
-	public GdxTestRunner(Class<?> klass) throws InitializationError {
-		super(klass);
-		synchronized (GdxTestRunner.class) {
-			if (!initialized) {
-				// 1. 配置无头模式
-				HeadlessApplicationConfiguration config = new HeadlessApplicationConfiguration();
+    private static boolean initialized = false;
 
-				// 2. 启动 HeadlessApp (它会初始化 Gdx.app, Gdx.files 等)
-				new HeadlessApplication(this, config);
+    public GdxTestRunner(Class<?> klass) throws InitializationError {
+        super(klass);
+        initGdxEnvironment();
+    }
 
-				// 3. 【关键】模拟 OpenGL 上下文
-				// 因为没有显卡，任何 Gdx.gl 的调用都会空指针。
-				// 我们用 Mockito 创建一个“假”的 GL20 对象，骗过所有绘图代码。
-				Gdx.gl = mock(GL20.class);
-				Gdx.gl20 = Gdx.gl;
+    private synchronized void initGdxEnvironment() {
+        if (initialized) return;
 
-				initialized = true;
-			}
-		}
-	}
+        // 1. 模拟 Application (处理日志)
+        Gdx.app = (Application) Proxy.newProxyInstance(
+                Application.class.getClassLoader(),
+                new Class[]{Application.class},
+                new InvocationHandler() {
+                    @Override
+                    public Object invoke(Object proxy, Method method, Object[] args) {
+                        String name = method.getName();
+                        // 拦截日志输出，打印到控制台
+                        if (name.equals("log") || name.equals("error") || name.equals("debug")) {
+                            String tag = args.length > 0 ? String.valueOf(args[0]) : "";
+                            String msg = args.length > 1 ? String.valueOf(args[1]) : "";
+                            System.out.println("[" + tag + "] " + msg);
+                        }
+                        // 拦截 getType，返回 Desktop 防止某些逻辑判断出错
+                        if (name.equals("getType")) {
+                            return Application.ApplicationType.Desktop;
+                        }
+                        return defaultValue(method.getReturnType());
+                    }
+                }
+        );
 
-	@Override
-	public void create() {}
-	@Override
-	public void resize(int width, int height) {}
-	@Override
-	public void render() {} // 这里是空跑，你可以手动触发 update
-	@Override
-	public void pause() {}
-	@Override
-	public void resume() {}
-	@Override
-	public void dispose() {}
+        // 2. 模拟 Graphics (处理时间和帧数)
+        Gdx.graphics = (Graphics) Proxy.newProxyInstance(
+                Graphics.class.getClassLoader(),
+                new Class[]{Graphics.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getDeltaTime")) return 0.016f; // 60FPS
+                    if (method.getName().equals("getFrameId")) return 1L;
+                    return defaultValue(method.getReturnType());
+                }
+        );
 
-	@Override
-	public void run(RunNotifier notifier) {
-		super.run(notifier);
-	}
+        // 3. 模拟 GL20 (防空指针，什么都不做)
+        Gdx.gl = (GL20) Proxy.newProxyInstance(
+                GL20.class.getClassLoader(),
+                new Class[]{GL20.class},
+                (proxy, method, args) -> defaultValue(method.getReturnType())
+        );
+        Gdx.gl20 = Gdx.gl;
+
+        initialized = true;
+    }
+
+    /**
+     * 返回基本类型的默认值，防止空指针或类型转换错误
+     */
+    private Object defaultValue(Class<?> type) {
+        if (type == boolean.class) return false;
+        if (type == int.class) return 0;
+        if (type == float.class) return 0f;
+        if (type == long.class) return 0L;
+        if (type == double.class) return 0.0;
+        return null; // 对象类型返回 null
+    }
+
+    @Override
+    public void run(RunNotifier notifier) {
+        super.run(notifier);
+    }
 }
