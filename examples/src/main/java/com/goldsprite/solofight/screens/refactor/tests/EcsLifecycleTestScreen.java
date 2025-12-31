@@ -2,7 +2,7 @@ package com.goldsprite.solofight.screens.refactor.tests;
 
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.NeonBatch;
+import com.goldsprite.solofight.core.neonbatch.NeonBatch;
 
 public class EcsLifecycleTestScreen extends ExampleGScreen {
 
@@ -18,5 +18,5 @@ public class EcsLifecycleTestScreen extends ExampleGScreen {
 		neonBatch = new NeonBatch();
 	}
 
-	
+
 }

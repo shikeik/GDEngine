@@ -7,11 +7,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.ui.H5SkewBar;
+import com.goldsprite.solofight.core.ui.widget.H5SkewBar;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSlider;
 import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.goldsprite.solofight.core.NeonStage;
+import com.goldsprite.solofight.core.neonbatch.NeonStage;
 
 public class HealthBarDemoScreen extends ExampleGScreen {
 

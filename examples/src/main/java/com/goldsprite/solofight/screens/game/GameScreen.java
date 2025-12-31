@@ -2,40 +2,39 @@ package com.goldsprite.solofight.screens.game;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.Debug;
-import com.goldsprite.solofight.core.FloatingTextManager;
-import com.goldsprite.solofight.core.NeonBatch;
-import com.goldsprite.solofight.core.TextDB;
-import com.goldsprite.solofight.core.game.EffectManager;
-import com.goldsprite.solofight.core.game.Fighter;
-import com.goldsprite.solofight.core.game.ParallaxBackground;
-import com.goldsprite.solofight.core.game.ParticleManager;
-import com.goldsprite.solofight.core.game.Platform; // [新增]
-import com.goldsprite.solofight.core.input.ComboEngine;
-import com.goldsprite.solofight.core.input.CommandHistoryUI;
-import com.goldsprite.solofight.core.input.GestureProcessor;
-import com.goldsprite.solofight.core.input.InputContext;
-import com.goldsprite.solofight.core.input.InputDef;
-import com.goldsprite.solofight.core.input.KeyboardProcessor;
-import com.goldsprite.solofight.core.input.ToastUI;
-import com.goldsprite.solofight.core.input.VirtualJoystick;
-import com.goldsprite.solofight.core.ui.GameOverUI;
-import com.goldsprite.solofight.core.ui.H5SkewBar;
-import com.goldsprite.solofight.core.ui.HelpWindow;
+import com.goldsprite.gameframeworks.log.Debug;
+import com.goldsprite.solofight.game.FloatingTextManager;
+import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.solofight.game.TextDB;
+import com.goldsprite.solofight.game.EffectManager;
+import com.goldsprite.solofight.game.Fighter;
+import com.goldsprite.solofight.game.ParallaxBackground;
+import com.goldsprite.solofight.game.ParticleManager;
+import com.goldsprite.solofight.game.Platform; // [新增]
+import com.goldsprite.solofight.input.ComboEngine;
+import com.goldsprite.solofight.ui.widget.CommandHistoryUI;
+import com.goldsprite.solofight.input.GestureProcessor;
+import com.goldsprite.solofight.input.InputContext;
+import com.goldsprite.solofight.input.InputDef;
+import com.goldsprite.solofight.input.KeyboardProcessor;
+import com.goldsprite.solofight.ui.widget.ToastUI;
+import com.goldsprite.solofight.ui.widget.VirtualJoystick;
+import com.goldsprite.solofight.ui.widget.GestureTrail;
+import com.goldsprite.solofight.ui.window.GameOverUI;
+import com.goldsprite.solofight.core.ui.widget.H5SkewBar;
+import com.goldsprite.solofight.ui.window.HelpWindow;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.goldsprite.solofight.core.NeonStage;
+import com.goldsprite.solofight.core.neonbatch.NeonStage;
 
 public class GameScreen extends ExampleGScreen {
 
@@ -281,7 +280,7 @@ public class GameScreen extends ExampleGScreen {
 		neonBatch.drawLine(splitX, 0, splitX, getUIViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
 
 		// 手势轨迹
-		for (com.goldsprite.solofight.core.input.GestureTrail trail : gestureProcessor.getTrails()) {
+		for (GestureTrail trail : gestureProcessor.getTrails()) {
 			trail.draw(neonBatch);
 		}
 		neonBatch.end();

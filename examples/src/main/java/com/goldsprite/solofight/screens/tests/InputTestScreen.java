@@ -1,14 +1,19 @@
 package com.goldsprite.solofight.screens.tests;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.Debug;
-import com.goldsprite.solofight.core.NeonBatch;
-import com.goldsprite.solofight.core.input.*;
-import com.goldsprite.solofight.core.NeonStage;
+import com.goldsprite.gameframeworks.log.Debug;
+import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.solofight.core.neonbatch.NeonStage;
+import com.goldsprite.solofight.input.GestureProcessor;
+import com.goldsprite.solofight.input.InputContext;
+import com.goldsprite.solofight.input.InputDef;
+import com.goldsprite.solofight.input.KeyboardProcessor;
+import com.goldsprite.solofight.ui.widget.CommandHistoryUI;
+import com.goldsprite.solofight.ui.widget.GestureTrail;
+import com.goldsprite.solofight.ui.widget.ToastUI;
+import com.goldsprite.solofight.ui.widget.VirtualJoystick;
 
 public class InputTestScreen extends ExampleGScreen {
 

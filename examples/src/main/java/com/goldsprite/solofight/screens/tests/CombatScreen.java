@@ -2,24 +2,23 @@ package com.goldsprite.solofight.screens.tests;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.Debug;
-import com.goldsprite.solofight.core.NeonBatch;
-import com.goldsprite.solofight.core.game.Fighter;
-import com.goldsprite.solofight.core.input.ComboEngine;
-import com.goldsprite.solofight.core.input.CommandHistoryUI;
-import com.goldsprite.solofight.core.input.GestureProcessor;
-import com.goldsprite.solofight.core.input.InputContext;
-import com.goldsprite.solofight.core.input.InputDef;
-import com.goldsprite.solofight.core.input.KeyboardProcessor;
-import com.goldsprite.solofight.core.input.ToastUI;
-import com.goldsprite.solofight.core.input.VirtualJoystick;
-import com.goldsprite.solofight.core.ui.H5SkewBar;
-import com.goldsprite.solofight.core.NeonStage;
+import com.goldsprite.gameframeworks.log.Debug;
+import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.solofight.game.Fighter;
+import com.goldsprite.solofight.input.ComboEngine;
+import com.goldsprite.solofight.ui.widget.CommandHistoryUI;
+import com.goldsprite.solofight.input.GestureProcessor;
+import com.goldsprite.solofight.input.InputContext;
+import com.goldsprite.solofight.input.InputDef;
+import com.goldsprite.solofight.input.KeyboardProcessor;
+import com.goldsprite.solofight.ui.widget.ToastUI;
+import com.goldsprite.solofight.ui.widget.VirtualJoystick;
+import com.goldsprite.solofight.ui.widget.GestureTrail;
+import com.goldsprite.solofight.core.ui.widget.H5SkewBar;
+import com.goldsprite.solofight.core.neonbatch.NeonStage;
 
 public class CombatScreen extends ExampleGScreen {
 
@@ -196,7 +195,7 @@ public class CombatScreen extends ExampleGScreen {
 		neonBatch.begin();
 		float splitX = getUIViewport().getWorldWidth() * 0.5f;
 		neonBatch.drawLine(splitX, 0, splitX, getUIViewport().getWorldHeight(), 1, new Color(1,1,1,0.1f));
-		for (com.goldsprite.solofight.core.input.GestureTrail trail : gestureProcessor.getTrails()) {
+		for (GestureTrail trail : gestureProcessor.getTrails()) {
 			trail.draw(neonBatch);
 		}
 		neonBatch.end();

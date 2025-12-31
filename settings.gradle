@@ -8,3 +8,4 @@ include 'examples'
 
 
 include 'aaa'
+include 'tests'

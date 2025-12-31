@@ -1,0 +1,27 @@
+plugins {
+	id 'java'
+}
+
+group = 'com.goldsprite.solofight'
+version = '1.0'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// 官方提供的无头后端
+	testImplementation "com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion"
+	// 依然需要核心库
+	testImplementation "com.badlogicgames.gdx:gdx:$gdxVersion"
+	// 核心平台库 (natives)
+	testImplementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+	// JUnit (测试框架)
+	testImplementation "junit:junit:4.13.2"
+	// Mockito (用于模拟 OpenGL 显卡调用，防止报错)
+	testImplementation "org.mockito:mockito-core:5.21.0"
+}
+
+test {
+	useJUnitPlatform()
+}

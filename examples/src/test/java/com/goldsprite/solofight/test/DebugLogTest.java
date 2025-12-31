@@ -1,6 +1,6 @@
 package com.goldsprite.solofight.test;
 
-import com.goldsprite.solofight.core.Debug;
+import com.goldsprite.gameframeworks.log.Debug;
 
 public class DebugLogTest {
 

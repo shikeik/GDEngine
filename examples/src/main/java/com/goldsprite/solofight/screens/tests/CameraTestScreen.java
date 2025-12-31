@@ -17,9 +17,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.goldsprite.solofight.core.Debug;
-import com.goldsprite.solofight.core.SimpleCameraController;
-import com.goldsprite.solofight.core.SmartCameraController;
+import com.goldsprite.gameframeworks.log.Debug;
+import com.goldsprite.solofight.game.SimpleCameraController;
+import com.goldsprite.solofight.game.SmartCameraController;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.kotcrab.vis.ui.widget.VisCheckBox;
@@ -64,7 +64,7 @@ public class CameraTestScreen extends ExampleGScreen {
 
 		freeCam = new SimpleCameraController(getWorldCamera());
 		freeCam.setInputEnabled(false); // 默认关闭自由操作
-		
+
 		resetTargets();
 
 		initUI();
@@ -274,7 +274,7 @@ public class CameraTestScreen extends ExampleGScreen {
 		shapeRenderer.end();
 		Gdx.gl.glDisable(GL20.GL_BLEND);
 	}
-	
+
 	private void resetTargets() {
 		targets.clear();
 		Debug.log("相机size: %s", getWorldSize());
