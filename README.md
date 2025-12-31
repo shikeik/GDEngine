@@ -1,4 +1,4 @@
-# SoloFight V1.5.0-alpha1
+# SoloFight V1.5.0-beta
 
 ## 介绍:
 
