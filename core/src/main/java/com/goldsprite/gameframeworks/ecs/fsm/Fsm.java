@@ -43,7 +43,7 @@ public class Fsm {
 		return new ArrayList<>(states.values());
 	}
 
-    protected void changeState(State state) {
+    public void changeState(State state) {
         if (state == currentState) return;
 
         if(currentState != null){
@@ -53,6 +53,20 @@ public class Fsm {
         currentState = state;
         // Debug.logT("Fsm", "%s 进入 %s", getName(), currentState.getClass().getSimpleName());
         currentState.enter();
+    }
+	
+	/**
+     * [新增] 手动切换状态 (API)
+     * 通常在 State 内部逻辑中使用，例如：攻击结束切回 Idle
+     */
+    public void changeState(Class<? extends State> stateType) {
+        StateInfo info = states.get(stateType);
+        if (info != null) {
+            changeState(info.state);
+        } else {
+            // 可选：打印警告，说明试图切换到一个未注册的状态
+            // Debug.log("FSM Warning: 状态未注册 " + stateType.getSimpleName());
+        }
     }
 
     public void update(float delta) {

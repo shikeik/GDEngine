@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.screens.refactor.tests;
+package com.goldsprite.solofight.screens.ecs.tests;
 
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
