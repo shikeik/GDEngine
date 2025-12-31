@@ -236,10 +236,13 @@ public class GObject extends EcsObject {
     }
 
     public void destroyImmediate() {
-        // 1. 递归杀子
-        for (int i = children.size() - 1; i >= 0; i--) {
-            children.get(i).destroyImmediate();
-        }
+		// [新增] 即使没调过 destroy() (比如被父级递归销毁)，这里也要强制标记死亡状态
+		if (!isDestroyed) isDestroyed = true;
+
+		// 1. 先杀孩子 (倒序)
+		for (int i = children.size() - 1; i >= 0; i--) {
+			children.get(i).destroyImmediate();
+		}
         children.clear();
 
         // 2. 杀组件 (倒序安全)

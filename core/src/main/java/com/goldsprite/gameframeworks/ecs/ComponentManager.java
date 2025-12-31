@@ -283,10 +283,17 @@ public class ComponentManager {
         removeFromAllCaches(entity);
     }
 
-    /** 清空所有缓存 (通常用于场景切换或调试) */
-    public static void clearCache() {
-        entityCache.clear();
-    }
+	/**
+	 * [修复] 彻底重置管理器状态 (用于测试环境或游戏完全重启)
+	 * 清除所有 ID 映射、实体档案、组件池和查询缓存。
+	 */
+	public static void dispose() {
+		componentIds.clear();
+		componentPools.clear();
+		entityComponentMasks.clear();
+		entityCache.clear();
+		nextComponentId = 0; // ID 计数器归零，保证测试确定性
+	}
 
     public static void debugInfo() {
         Debug.log("=== ComponentManager Debug ===");

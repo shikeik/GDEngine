@@ -274,18 +274,20 @@ public class GameWorld {
     public static float getTotalTime() { return totalTime; }
 
     /** 资源释放与重置 */
-    public void dispose() {
-        Debug.log("GameWorld: Disposing...");
-        rootEntities.clear();
-        pendingAdds.clear();
-        pendingRemoves.clear();
+	public void dispose() {
+		Debug.log("GameWorld: Disposing...");
+		rootEntities.clear();
+		pendingAdds.clear();
+		pendingRemoves.clear();
 
-        systems.clear();
-        updateSystems.clear();
-        fixedUpdateSystems.clear();
-        systemMap.clear();
+		systems.clear();
+		updateSystems.clear();
+		fixedUpdateSystems.clear();
+		systemMap.clear();
 
-        ComponentManager.clearCache(); // 清理静态缓存
-        instance = null;
-    }
+		// [修复] 彻底销毁组件管理器状态，防止静态变量污染下一次运行
+		ComponentManager.dispose();
+
+		instance = null;
+	}
 }

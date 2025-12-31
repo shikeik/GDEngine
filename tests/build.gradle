@@ -7,21 +7,25 @@ version = '1.0'
 
 repositories {
 	mavenCentral()
+	maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+	maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
 }
 
 dependencies {
-	// 官方提供的无头后端
-	testImplementation "com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion"
-	// 依然需要核心库
-	testImplementation "com.badlogicgames.gdx:gdx:$gdxVersion"
-	// 核心平台库 (natives)
-	testImplementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
-	// JUnit (测试框架)
-	testImplementation "junit:junit:4.13.2"
-	// Mockito (用于模拟 OpenGL 显卡调用，防止报错)
-	testImplementation "org.mockito:mockito-core:5.21.0"
+	// 【核心修正1】引入你的游戏核心代码！
+	implementation project(':core')
+
+	// GDX 依赖 (Headless 后端)
+	implementation "com.badlogicgames.gdx:gdx-backend-headless:$gdxVersion"
+	implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
+	implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+
+	// 工具依赖
+	implementation "junit:junit:4.13.2"
+	implementation "org.mockito:mockito-core:5.21.0" // Mock 工具
 }
 
-test {
-	useJUnitPlatform()
-}
+// 【核心修正2】删除 useJUnitPlatform()，默认使用 JUnit 4 运行器
+// test {
+//    useJUnitPlatform()
+// }
