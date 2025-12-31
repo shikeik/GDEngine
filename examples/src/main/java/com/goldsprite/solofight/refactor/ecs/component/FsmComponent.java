@@ -4,33 +4,37 @@ import com.goldsprite.solofight.refactor.ecs.fsm.Fsm;
 import com.goldsprite.solofight.refactor.ecs.fsm.State;
 
 public class FsmComponent extends Component {
-	private Fsm fsm;
 
-	@Override
-	public void onAwake() {
-		super.awake();
-		// 初始化 FSM，注入 owner
-		fsm = new Fsm(getGObject());
-	}
+    private Fsm fsm;
 
-	@Override
-	public void update(float delta) {
-		super.update(delta);
-		if (fsm != null) {
-			fsm.updateFsm(delta);
-		}
-	}
-	
-	// --- API ---
-	
-	public void registerState(State state, int priority) {
-		if (fsm == null) fsm = new Fsm(getGObject()); // 容错
-		fsm.addState(state, priority);
-	}
-	
-	public String getCurrentStateName() {
-		return fsm != null ? fsm.getCurrentStateName() : "Null";
-	}
-	
-	public Fsm getFsm() { return fsm; }
+    @Override
+    protected void onAwake() {
+        // 创建 FSM 实例
+        fsm = new Fsm(getGObject());
+    }
+
+    @Override
+    public void update(float delta) {
+        if (fsm != null) {
+            fsm.update(delta);
+        }
+    }
+
+    // --- 代理方法 ---
+
+    public void addState(State state, int priority) {
+        if (fsm == null) fsm = new Fsm(getGObject());
+        fsm.addState(state, priority);
+    }
+
+    public Fsm getFsm() { return fsm; }
+
+    public String getCurrentStateName() {
+        return fsm != null ? fsm.getCurrentStateName() : "None";
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s [State:%s]", super.toString(), getCurrentStateName());
+    }
 }

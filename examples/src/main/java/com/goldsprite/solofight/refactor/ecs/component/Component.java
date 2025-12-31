@@ -33,21 +33,26 @@ public abstract class Component extends EcsObject {
     // ==========================================
     /** 
      * 引擎调用的入口：处理底层注册逻辑 
+     * 当组件被 addComponent 添加到物体时立即调用
      * 千万不要重写这个方法，去重写 onAwake()
      */
     public final void awake() { 
-        if (isAwake) return; // 只有第一次有效
+        if (isAwake) return;
         isAwake = true;
 
-        // 自动将自己注册到 ComponentManager，这样查询系统就能找到它了
         if (gameObject != null) {
             ComponentManager.registerComponent(gameObject, this.getClass(), this);
             ComponentManager.updateEntityComponentMask(gameObject);
         }
 
-        onAwake(); // -> 执行你的业务逻辑
+        onAwake();
 
-        // 如果出生时就是开启状态，顺便触发一次 OnEnable
+        // [新增] 主动向 SceneSystem 报名参加 Start 仪式
+        // 只有没 Start 过且启用的组件才需要 Start
+        if (!isStarted) {
+            GameWorld.inst().sceneSystem.registerStart(this);
+        }
+
         if (isEnabled) onEnable(); 
     }
 

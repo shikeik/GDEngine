@@ -1,43 +1,70 @@
 package com.goldsprite.solofight.refactor.ecs.system;
 
-import com.goldsprite.solofight.core.Debug;
 import com.goldsprite.solofight.refactor.ecs.GameSystemInfo;
 import com.goldsprite.solofight.refactor.ecs.GameWorld;
-import com.goldsprite.solofight.refactor.ecs.component.Component; // 注意引用新的 Component
+import com.goldsprite.solofight.refactor.ecs.component.Component;
 import com.goldsprite.solofight.refactor.ecs.entity.GObject;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 场景系统 (对应 Unity 的 PlayerLoop 核心循环)
+ * 场景系统 (对应 Unity 的核心驱动层)
  * 职责：
- * 1. 驱动所有 GameObject 的 Update/FixedUpdate (脚本逻辑)。
- * 2. 帧末统一处理销毁 (垃圾回收)。
+ * 1. <b>Start 管理</b>: 收集并执行组件的 Start 方法。
+ * 2. <b>Update 驱动</b>: 遍历所有 GObject 并调用其 Update。
+ * 3. <b>Destroy 管理</b>: 收集并执行销毁任务。
  */
-@GameSystemInfo(type = GameSystemInfo.SystemType.BOTH) // 既跑 Update 也跑 FixedUpdate
+@GameSystemInfo(type = GameSystemInfo.SystemType.BOTH)
 public class SceneSystem extends BaseSystem {
 
-    // 死亡名单 (缓存一帧内的销毁请求)
+    // 死亡名单
     private final List<GObject> destroyGObjects = new ArrayList<>();
     private final List<Component> destroyComponents = new ArrayList<>();
 
+    // 待 Start 名单
+    private final List<Component> pendingStarts = new ArrayList<>();
+
     // ==========================================
-    // 1. 驱动逻辑 (Driver)
+    // 1. Start 逻辑 (Unity Style)
+    // ==========================================
+
+    /** 注册需要执行 Start 的组件 (由 Component.awake 调用) */
+    public void registerStart(Component component) {
+        // 简单去重，防止同一个组件 Awake 多次导致多次 Start
+        if (!pendingStarts.contains(component)) {
+            pendingStarts.add(component);
+        }
+    }
+
+    /** 统一执行所有注册组件的 Start 方法 */
+    public void executeStartTask() {
+        if (pendingStarts.isEmpty()) return;
+
+        // 拷贝副本，因为 Start() 内部可能会 new 新物体，导致 pendingStarts 变动
+        // 避免 ConcurrentModificationException
+        List<Component> temp = new ArrayList<>(pendingStarts);
+        pendingStarts.clear();
+
+        for (Component c : temp) {
+            // 防御：组件可能在等待 Start 的过程中被销毁了，或者物体失活了
+            if (!c.isDestroyed() && c.getGObject() != null && c.getGObject().isActive()) {
+                c.start();
+            }
+        }
+    }
+
+    // ==========================================
+    // 2. Update 驱动 (遍历顶层实体)
     // ==========================================
 
     @Override
     public void fixedUpdate(float fixedDelta) {
-        // 获取所有顶层实体 (由 GameWorld 维护)
-        // 注意：我们只驱动顶层，GObject 内部会递归驱动子物体
-        List<GObject> roots = world.getAllEntities();
-
-        // 倒序遍历？不，Update通常正序。
-        // 为了防止 Update 过程中数组变动导致异常，通常建议用 CopyOnWriteArrayList (GameWorld里已用)
-        // 或者简单的 fori 循环
+        // 获取所有顶层实体 (子物体由父级递归驱动)
+        List<GObject> roots = world.getRootEntities();
         for (int i = 0; i < roots.size(); i++) {
             GObject obj = roots.get(i);
-            // 只有激活且未销毁的物体才执行逻辑
+            // 只有激活且未销毁的物体才执行
             if (obj.isActive() && !obj.isDestroyed()) {
                 obj.fixedUpdate(fixedDelta);
             }
@@ -46,7 +73,7 @@ public class SceneSystem extends BaseSystem {
 
     @Override
     public void update(float delta) {
-        List<GObject> roots = world.getAllEntities();
+        List<GObject> roots = world.getRootEntities();
         for (int i = 0; i < roots.size(); i++) {
             GObject obj = roots.get(i);
             if (obj.isActive() && !obj.isDestroyed()) {
@@ -56,62 +83,40 @@ public class SceneSystem extends BaseSystem {
     }
 
     // ==========================================
-    // 2. 生命周期管理 (Lifecycle)
+    // 3. 销毁管理 (收尸)
     // ==========================================
 
-    public void awakeScene() {
-        Debug.log("SceneSystem: Waking up all entities...");
-        List<GObject> roots = world.getAllEntities();
-        for (GObject obj : roots) {
-            obj.awake();
-        }
-    }
-
-    /**
-     * 执行销毁任务 (在 GameWorld.update 的最后调用)
-     */
+    /** 执行所有销毁请求 */
     public void executeDestroyTask() {
-        boolean hasDestroy = false;
-
         // 1. 销毁组件
         if (!destroyComponents.isEmpty()) {
-            hasDestroy = true;
-            // 倒序删除，安全
+            // 倒序遍历，防止索引问题
             for (int i = destroyComponents.size() - 1; i >= 0; i--) {
                 Component comp = destroyComponents.get(i);
-                // 二次检查：防止同一帧被重复销毁
-                if (comp != null) {
-                    comp.destroyImmediate();
-                }
+                if (comp != null) comp.destroyImmediate();
             }
             destroyComponents.clear();
         }
 
         // 2. 销毁物体
         if (!destroyGObjects.isEmpty()) {
-            hasDestroy = true;
             for (int i = destroyGObjects.size() - 1; i >= 0; i--) {
                 GObject obj = destroyGObjects.get(i);
-                if (obj != null) {
-                    // Debug.log("♻️ GC: " + obj.getName());
-                    obj.destroyImmediate();
-                }
+                if (obj != null) obj.destroyImmediate();
             }
             destroyGObjects.clear();
         }
-
-        // 如果有销毁发生，可能需要触发一次 GC (可选，通常交给 JVM)
     }
 
-    // --- 接口：接收销毁请求 ---
+    // --- 接收请求 ---
 
     public void addDestroyGObject(GObject gobject) {
-        if (!destroyGObjects.contains(gobject))
+        if (!destroyGObjects.contains(gobject)) 
             destroyGObjects.add(gobject);
     }
 
     public void addDestroyComponent(Component component) {
-        if (!destroyComponents.contains(component))
+        if (!destroyComponents.contains(component)) 
             destroyComponents.add(component);
     }
 }

@@ -43,7 +43,7 @@ public abstract class BaseSystem extends EcsObject {
         }
         // 如果没定义感兴趣的组件，默认返回所有(顶层)实体
         // 注意：这可能不是你想要的，通常建议 System 明确声明 interest
-        return world.getAllEntities();
+        return world.getRootEntities();
     }
 
     public void awake() {}

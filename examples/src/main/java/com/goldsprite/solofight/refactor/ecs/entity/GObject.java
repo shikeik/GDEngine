@@ -46,7 +46,7 @@ public class GObject extends EcsObject {
         addComponentInternal(this.transform);
 
         // 注册到世界
-        GameWorld.manageGObject(this, ManageMode.ADD);
+        GameWorld.registerGObject(this);
     }
 
     public GObject() {
@@ -155,18 +155,30 @@ public class GObject extends EcsObject {
     // ==========================================
     // 层级管理 (保持不变)
     // ==========================================
-    // ... setParent, addChild, removeChild ...
-    // 之前的逻辑（自动从 GameWorld 添加/移除顶层列表）是正确的。
-
     public void setParent(GObject newParent) {
         if (this.parent == newParent) return;
-        if (this.parent != null) this.parent.children.remove(this);
-        else GameWorld.manageGObject(this, ManageMode.REMOVE);
+
+        // 1. 从旧父级移除
+        if (this.parent != null) {
+            this.parent.children.remove(this);
+        } else {
+            // 之前是顶层 -> 现在要变成子级 -> 从世界顶层移除
+            // 旧: GameWorld.manageGObject(this, ManageMode.REMOVE);
+            // 新:
+            GameWorld.unregisterGObject(this);
+        }
 
         this.parent = newParent;
 
-        if (newParent != null) newParent.children.add(this);
-        else GameWorld.manageGObject(this, ManageMode.ADD);
+        // 2. 加入新父级
+        if (newParent != null) {
+            newParent.children.add(this);
+        } else {
+            // 现在没有父级 -> 变成顶层 -> 注册到世界
+            // 旧: GameWorld.manageGObject(this, ManageMode.ADD);
+            // 新:
+            GameWorld.registerGObject(this);
+        }
     }
 
     public void addChild(GObject child) { if (child != null) child.setParent(this); }
@@ -241,12 +253,16 @@ public class GObject extends EcsObject {
         }
         // components.clear(); // removeComponent 里会删，这里不需要了
 
-        // 3. 杀自己
+        // 3. 处理父级关系
         if (parent != null) {
             parent.children.remove(this);
         } else {
-            GameWorld.manageGObject(this, ManageMode.REMOVE);
+            // 顶层物体销毁，从世界注销
+            // 旧: GameWorld.manageGObject(this, ManageMode.REMOVE);
+            // 新:
+            GameWorld.unregisterGObject(this);
         }
+		
         parent = null;
     }
 
