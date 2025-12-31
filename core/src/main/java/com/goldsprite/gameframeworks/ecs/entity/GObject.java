@@ -201,23 +201,23 @@ public class GObject extends EcsObject {
     public void update(float delta) {
         if (!isActive || isDestroyed) return;
 
-        // [修正9] 并发修改保护
-        // 在遍历时如果有组件 destroy，它是安全的（因为它只是标记 flag）。
-        // 只有在遍历时 add/removeComponent 才会崩。
-        // 目前为了性能，我们假设用户不会在 Update 里疯狂做结构变更。
-        // 如果真要严谨，这里需要 new ArrayList<>(components.values())，但这太慢了。
-        // 遵守 ECS 规范：结构变更(Add/Remove)请延迟到下一帧，或者使用 System 处理。
+        // [新增] 1. 计算这一帧的变换矩阵
+        // 获取父级的 Transform 组件
+        TransformComponent parentTrans = (parent != null) ? parent.transform : null;
+        // 执行矩阵乘法
+        this.transform.updateWorldTransform(parentTrans);
 
+        // 2. 更新组件逻辑 (逻辑可能会修改 transform.local，下一帧生效)
         for (List<Component> list : components.values()) {
             for (int i = 0; i < list.size(); i++) {
                 Component c = list.get(i);
-                // 只有组件 Enable 且物体 Active (外层已判断) 时才运行
                 if (c.isEnable() && !c.isDestroyed()) {
                     c.update(delta);
                 }
             }
         }
 
+        // 3. 递归子物体 (子物体会拿到我刚刚算好的 transform 作为 parentTrans)
         for (int i = 0; i < children.size(); i++) {
             children.get(i).update(delta);
         }
