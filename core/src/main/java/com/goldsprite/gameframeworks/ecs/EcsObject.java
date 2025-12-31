@@ -19,10 +19,14 @@ public abstract class EcsObject {
     protected String name;
 
     public EcsObject() {
-        // 构造即分配 ID，永不重复
-        this.gid = GID_SEED.getAndAdd(1);
-        // 默认名字为类名 (例如 "TransformComponent")
-        this.name = getClass().getSimpleName();
+		// 构造即分配 ID，永不重复
+		this.gid = GID_SEED.getAndAdd(1);
+		// 默认名字为类名 (例如 "TransformComponent")
+		this.name = getClass().getSimpleName();
+	}
+    public EcsObject(String name) {
+		this();
+		setName(name);
     }
 
     // --- 核心属性 ---

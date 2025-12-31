@@ -36,8 +36,7 @@ public class GObject extends EcsObject {
     // 构造
     // ==========================================
     public GObject(String name) {
-        super();
-        setName(name);
+        super(name);
 
         // 核心组件初始化
         this.transform = new TransformComponent();
@@ -105,6 +104,15 @@ public class GObject extends EcsObject {
         // 这里只是单纯地把组件从物体上剥离。
         ComponentManager.unregisterComponent(this, component.getClass(), component);
     }
+
+	public boolean hasComponent(Class type) {
+		return components.containsKey(type);
+	}
+
+	public boolean hasComponent(Component component) {
+		if (!hasComponent(component.getClass())) return false;
+		return components.get(component.getClass()).contains(component);
+	}
 
     // ==========================================
     // 查找 (保持不变，省略部分代码以节省篇幅)

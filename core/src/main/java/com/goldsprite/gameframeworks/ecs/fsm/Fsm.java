@@ -1,7 +1,10 @@
 package com.goldsprite.gameframeworks.ecs.fsm;
 
 import com.goldsprite.gameframeworks.ecs.entity.GObject;
+
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Fsm {
@@ -35,6 +38,10 @@ public class Fsm {
         StateInfo info = states.get(key);
         return info != null ? (T)info.state : null;
     }
+
+	public List<StateInfo> getStates() {
+		return new ArrayList<>(states.values());
+	}
 
     protected void changeState(State state) {
         if (state == currentState) return;
@@ -105,7 +112,7 @@ public class Fsm {
         return currentState != null ? currentState.getClass().getSimpleName() : "None";
     }
 
-    private static class StateInfo {
+    public static class StateInfo {
         State state;
         int priority;
 
