@@ -314,7 +314,7 @@ public class Fighter {
 		if (state.equals("flash_slash") && animTimer < 6) {
 			float width = (6 - animTimer) * 400; float height = (6 - animTimer) * 2;
 			Color c = new Color(1, 1, 1, (6 - animTimer) / 6f);
-			batch.drawRect(cx, cy + h/2, width, height, 0, 0, c, true);
+			batch.drawRect(cx-width/2f, cy + h/2f, width, height, 0, 0, c, true);
 			return;
 		}
 
@@ -357,8 +357,8 @@ public class Fighter {
 			d.draw(-10, 40, -20, 0); d.draw(10, 40, 20, 0);
 		}
 
-		if (isCrouch) batch.drawRect(cx, cy + 45, 30, 30, 0, lineWidth, c, true);
-		else batch.drawRect(cx, cy + 60, 30, 40, 0, lineWidth, c, true);
+		if (isCrouch) batch.drawRect(cx-30/2f, cy + 45-30/2f, 30, 30, 0, lineWidth, c, true);
+		else batch.drawRect(cx-30/2f, cy + 60-40/2f, 30, 40, 0, lineWidth, c, true);
 
 		if (state.equals("ult_cast") || state.equals("ult_end")) {
 			d.draw(-10, 70, -30, 50); d.draw(10, 70, 30, 50);

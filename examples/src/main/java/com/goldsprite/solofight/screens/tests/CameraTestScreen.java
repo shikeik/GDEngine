@@ -55,6 +55,7 @@ public class CameraTestScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
+		autoCenterWorldCamera = true;
 		batch = new SpriteBatch();
 		shapeRenderer = new ShapeRenderer();
 		debugFont = new BitmapFont();

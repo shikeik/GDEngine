@@ -43,7 +43,7 @@ public class ParticleManager {
 			c.a = alpha;
 
 			if (type == Type.BOX) {
-				batch.drawRect(x, y, size, size, 0, 0, c, true); // Solid Box
+				batch.drawRect(x-size/2f, y-size/2f, size, size, 0, 0, c, true); // Solid Box
 			} else if (type == Type.SHARD) {
 				// Draw Triangle
 				// H5: moveTo(-size, size), lineTo(0, -size), lineTo(size, size)

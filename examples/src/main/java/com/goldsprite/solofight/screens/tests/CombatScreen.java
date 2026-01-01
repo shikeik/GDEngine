@@ -164,8 +164,8 @@ public class CombatScreen extends ExampleGScreen {
 
 			// 修正：直接画在相机中心 (cam.position.x, cam.position.y)
 			neonBatch.drawRect(
-				cam.position.x,      // 中心 X
-				cam.position.y,      // 中心 Y
+				cam.position.x - overlayW,      // 中心 X
+				cam.position.y - overlayH,      // 中心 Y
 				overlayW * 2,        // 宽 (2倍屏幕宽，防止震动漏边)
 				overlayH * 2,        // 高
 				0,

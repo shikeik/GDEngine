@@ -20,7 +20,7 @@ public class ParallaxBackground {
 		// H5: ctx.fillRect(-1000, this.logicH-100, ...)
 		// GDX Y=0 是地面。H5 logicH-100 是地面。
 		// 我们在 Y < 0 画深色块
-		batch.drawRect(cam.position.x - 2000, -500, 4000, 500, 0, 0, COL_BG_DARK, true);
+		batch.drawRect(cam.position.x - 2000 -4000/2f, -500 - 500/2f, 4000, 500, 0, 0, COL_BG_DARK, true);
 
 		// 2. 地平线发光线
 		batch.drawLine(-2000, 0, 3000, 0, 2f, COL_GRID);
@@ -50,13 +50,13 @@ public class ParallaxBackground {
 			// 绘制主柱体 (Y轴向上，地面是0)
 			// H5 rect: y = logicH - 100 - h.  So bottom is at logicH-100 (Ground).
 			// GDX: draw from y=0 upwards.
-			batch.drawRect(x, 0, 120, h, 0, 0, COL_BG_MAIN, true);
+			batch.drawRect(x - 120/2f, -h/2f, 120, h, 0, 0, COL_BG_MAIN, true);
 
 			// 绘制装饰小块 (Details)
 			Color detailColor = (i % 3 == 0) ? COL_COL_1 : ((i % 2 == 0) ? COL_COL_2 : COL_COL_3);
 			// H5: y = logicH-100-h+20. (Top offset 20)
 			// GDX: y = h - 20 - 10 (height 10)
-			batch.drawRect(x + 10, h - 30, 100, 10, 0, 0, detailColor, true);
+			batch.drawRect(x + 10-100/2f, h - 30-10/2f, 100, 10, 0, 0, detailColor, true);
 		}
 	}
 }

@@ -246,13 +246,13 @@ public class GameScreen extends ExampleGScreen {
 
 		// 绘制平台
 		for (Platform p : platforms) {
-			neonBatch.drawRect(p.x + p.w/2, p.y + p.h/2, p.w, p.h, 0, 0, Color.valueOf("333333"), true);
-			neonBatch.drawRect(p.x + p.w/2, p.y + p.h/2, p.w, p.h, 0, 2f, Color.valueOf("00eaff"), false);
+			neonBatch.drawRect(p.x, p.y, p.w, p.h, 0, 0, Color.valueOf("333333"), true);
+			neonBatch.drawRect(p.x, p.y, p.w, p.h, 0, 2f, Color.valueOf("00eaff"), false);
 		}
 
 		if (ultActive) {
 			OrthographicCamera cam = getWorldCamera();
-			neonBatch.drawRect(cam.position.x, cam.position.y, 10000, 10000, 0, 0, new Color(0,0,0,0.8f), true);
+			neonBatch.drawRect(cam.position.x - 10000/2f, cam.position.y-10000/2f, 10000, 10000, 0, 0, new Color(0,0,0,0.8f), true);
 		}
 
 		neonBatch.drawLine(-500, 0, 1500, 0, 2, Color.GRAY);

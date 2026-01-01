@@ -41,28 +41,19 @@ public abstract class GScreen implements IGScreen {
 	// [新增] UI 视口引用 (子类可覆盖)
 	protected Viewport uiViewport;
 	// [新增] 世界相机：用于游戏场景渲染，与 UI 分离
-	protected OrthographicCamera worldCamera;
+	protected OrthographicCamera worldCamera = new OrthographicCamera();
 	// [新增] 世界缩放比例 (默认 1:1，数值越小世界视野越小/像素感越强)
 	protected float worldScale = 1.0f;
+	
+	// [新增] 配置项：Resize 时是否自动将世界相机重置到中心
+	// 默认 true 保持向后兼容，SkeletonVisualScreen 可以设为 false
+	protected boolean autoCenterWorldCamera = true;
 
 	public GScreen() {
 	}
 
 	public GScreen(ScreenManager screenManager) {
 		this.screenManager = screenManager;
-	}
-
-	private static TextureRegion createColorTextureRegion(Color color) {
-		return new TextureRegion(createColorTexture(color));
-	}
-
-	private static Texture createColorTexture(Color color) {
-		Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-		pm.setColor(color);
-		pm.fill();
-		Texture tex = new Texture(pm);
-		pm.dispose();
-		return tex;
 	}
 
 	public void create() {
@@ -77,13 +68,11 @@ public abstract class GScreen implements IGScreen {
 
 	//初始化一些配置
 	private void init() {
-		shapeRenderer = new ShapeRenderer();int k;
+		shapeRenderer = new ShapeRenderer();
 
-		// [修改] 调用可重写的初始化方法，代替直接实例化
+		// 调用可重写的初始化方法，代替直接实例化
 		initViewport();
-		//Debug.log("3ui视口宽高: %s", getViewSize());
-		initWorldCamera(worldScale);
-		//Debug.log("4ui视口宽高: %s, 相机宽高: %s", getViewSize(), getWorldSize());
+		resizeWorldCamera(false);// 这里更新数据create才能拿到正确相机数据
 
 		create();
 	}
@@ -98,12 +87,6 @@ public abstract class GScreen implements IGScreen {
 		Viewport baseViewport = getScreenManager().getViewport();
 		uiViewport = new ExtendViewport(baseViewport.getWorldWidth(), baseViewport.getWorldHeight());
 		uiViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
-	}
-
-	protected void initWorldCamera(float worldScl) {
-		// 创建一个新的世界相机
-		worldCamera = new OrthographicCamera();
-		setWorldScale(worldScl);
 	}
 
 	@Override
@@ -154,7 +137,7 @@ public abstract class GScreen implements IGScreen {
 	 */
 	public void setWorldScale(float scale) {
 		this.worldScale = scale;
-		resizeWorldCamera(true);
+		resizeWorldCamera(autoCenterWorldCamera);
 	}
 
 	public Vector2 getViewSize() { return viewSize.set(getUIViewport().getWorldWidth(), getUIViewport().getWorldHeight()); }
@@ -258,17 +241,16 @@ public abstract class GScreen implements IGScreen {
 	}
 
 	protected void resizeWorldCamera(boolean centerCamera) {
-		// 同步 World 相机的尺寸 (保持宽高比一致，但数值受 worldScale 影响)
-		// 注意：不重置位置，不居中
 		if (worldCamera != null) {
+			// 只更新视口大小 (Zoom 也会被保留，因为 zoom 是 camera 的属性，不随 viewportWidth 改变)
 			worldCamera.viewportWidth = getUIViewport().getWorldWidth() * worldScale;
 			worldCamera.viewportHeight = getUIViewport().getWorldHeight() * worldScale;
-			//DebugUI.log("%s %s.重置世界相机: %s,%s", isWorldCameraInitialized?"切屏":"屏幕初始化", getClass().getSimpleName(), worldCamera.viewportWidth, worldCamera.viewportHeight);
+
 			if(centerCamera) {
+				// 只有明确要求居中时才重置位置
 				worldCamera.position.set(
 					worldCamera.viewportWidth/2f,
 					worldCamera.viewportHeight/2f, 0);
-				//DebugUI.log("初始化相机中心位置: %s", worldCamera.position);
 			}
 			worldCamera.update();
 		}
@@ -280,10 +262,7 @@ public abstract class GScreen implements IGScreen {
 			// 1. 更新 UI 视口 (自动居中 UI 相机), 左下角为0,0
 			getUIViewport().update(width, height, true);
 
-//			//更新世界相机视口参数, 仅初始化时自动居中
-//			if(!isWorldCameraInitialized) { resizeWorldCamera(true); isWorldCameraInitialized = true; }
-//			else resizeWorldCamera(false);
-			resizeWorldCamera(true);
+			resizeWorldCamera(autoCenterWorldCamera);
 		}
 	}
 
