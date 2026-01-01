@@ -1,7 +1,8 @@
 ignored: indentFix codeFormatFix
 
 # TODO   
-依次检查ecs结构所有类, 为每个关键逻辑创建测试场景并通过所有测试.
+
+限制变换组件为等比缩放
 
 
 
