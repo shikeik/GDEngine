@@ -11,65 +11,65 @@ import com.goldsprite.solofight.core.neonbatch.NeonBatch;
  */
 public class ShapeRendererComponent extends Component {
 
-    public enum ShapeType { BOX, CIRCLE, TRIANGLE }
+	public enum ShapeType { BOX, CIRCLE, TRIANGLE }
 
-    public ShapeType type = ShapeType.BOX;
-    public Color color = new Color(Color.WHITE); // 独立副本
-    public float size = 50f;
+	public ShapeType type = ShapeType.BOX;
+	public Color color = new Color(Color.WHITE); // 独立副本
+	public float size = 50f;
 
-    // 简单的自转速度 (测试 Update 驱动)
-    public float rotateSpeed = 0f;
+	// 简单的自转速度 (测试 Update 驱动)
+	public float rotateSpeed = 0f;
 
-    public ShapeRendererComponent set(ShapeType type, Color color, float size) {
-        this.type = type;
-        this.color.set(color);
-        this.size = size;
-        return this;
-    }
+	public ShapeRendererComponent set(ShapeType type, Color color, float size) {
+		this.type = type;
+		this.color.set(color);
+		this.size = size;
+		return this;
+	}
 
-    @Override
-    public void update(float delta) {
-        if (rotateSpeed != 0) {
-            transform.rotation += rotateSpeed * delta;
-        }
-    }
+	@Override
+	public void update(float delta) {
+		if (rotateSpeed != 0) {
+			transform.rotation += rotateSpeed * delta;
+		}
+	}
 
-    /**
-     * 核心验证点：
-     * 读取 transform.worldPosition 和 transform.worldRotation 来绘图。
-     */
-    public void draw(NeonBatch batch) {
-        float x = transform.worldPosition.x;
-        float y = transform.worldPosition.y;
-        float rot = transform.worldRotation;
+	/**
+	 * 核心验证点：
+	 * 读取 transform.worldPosition 和 transform.worldRotation 来绘图。
+	 */
+	public void draw(NeonBatch batch) {
+		float x = transform.worldPosition.x;
+		float y = transform.worldPosition.y;
+		float rot = transform.worldRotation;
 
-        // 简单取 X 轴缩放作为整体大小 (暂不支持非等比缩放的可视化)
-        float s = transform.scale.x; 
+		// 简单取 X 轴缩放作为整体大小 (暂不支持非等比缩放的可视化)
+		float s = transform.scale.x; 
 
-        // 如果我们没存 worldScale，且有父级，这里其实拿不到父级的缩放叠加。
-        // 但对于验证"位移跟随"和"旋转跟随"已经足够了。
-        // 若要完美验证缩放传递，NeonBatch 需要支持直接传入 Affine2 矩阵。
-        // 这里我们暂时只画位置和旋转。
+		// 如果我们没存 worldScale，且有父级，这里其实拿不到父级的缩放叠加。
+		// 但对于验证"位移跟随"和"旋转跟随"已经足够了。
+		// 若要完美验证缩放传递，NeonBatch 需要支持直接传入 Affine2 矩阵。
+		// 这里我们暂时只画位置和旋转。
 
-        float finalSize = size * s;
+		float finalSize = size * s;
 
-        switch (type) {
-            case BOX:
-                // 绘制以(x,y)为中心的矩形
-                batch.drawRect(x - finalSize/2, y - finalSize/2, finalSize, finalSize, rot, 2f, color, false);
-                break;
-            case CIRCLE:
-                batch.drawCircle(x, y, finalSize/2, 2f, color, 16, false);
-                break;
-            case TRIANGLE:
-                batch.drawRegularPolygon(x, y, finalSize/2, 3, rot, 2f, color, false);
-                break;
-        }
+		switch (type) {
+			case BOX:
+				// 绘制以(x,y)为中心的矩形
+				batch.drawRect(x - finalSize/2, y - finalSize/2, finalSize, finalSize, rot, 2f, color, false);
+				break;
+			case CIRCLE:
+				batch.drawCircle(x, y, finalSize/2, 2f, color, 16, false);
+				break;
+			case TRIANGLE:
+				batch.drawRegularPolygon(x, y, finalSize/2, 3, rot, 2f, color, false);
+				break;
+		}
 
-        // 画一根黄色指示线，方便看清楚旋转角度
-        float len = finalSize * 0.6f;
-        float cos = MathUtils.cosDeg(rot);
-        float sin = MathUtils.sinDeg(rot);
-        batch.drawLine(x, y, x + cos * len, y + sin * len, 2f, Color.YELLOW);
-    }
+		// 画一根黄色指示线，方便看清楚旋转角度
+		float len = finalSize * 0.6f;
+		float cos = MathUtils.cosDeg(rot);
+		float sin = MathUtils.sinDeg(rot);
+		batch.drawLine(x, y, x + cos * len, y + sin * len, 2f, Color.YELLOW);
+	}
 }
