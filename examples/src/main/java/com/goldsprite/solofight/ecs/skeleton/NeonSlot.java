@@ -1,4 +1,3 @@
-// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/NeonSlot.java
 package com.goldsprite.solofight.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.Color;

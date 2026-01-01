@@ -1,4 +1,3 @@
-// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/NeonSkeleton.java
 package com.goldsprite.solofight.ecs.skeleton;
 
 import com.badlogic.gdx.utils.Array;
@@ -7,7 +6,7 @@ import java.util.Map;
 
 /**
  * 骨架数据容器
- * 职责：管理所有的 Bone 和 Slot
+ * 职责：管理所有的 Bone 和 Slot，维护 drawOrder
  */
 public class NeonSkeleton {
 	// 逻辑根
@@ -53,11 +52,30 @@ public class NeonSkeleton {
 		return boneMap.get(name);
 	}
 
+	public NeonSlot getSlot(String name) {
+		for(NeonSlot slot : drawOrder) {
+			if(slot.name.equals(name)) return slot;
+		}
+		return null;
+	}
+
 	public void update() {
 		if (rootBone != null) rootBone.updateWorldTransform();
 	}
 
 	public Array<NeonSlot> getDrawOrder() {
 		return drawOrder;
+	}
+
+	/** 手动调整插槽渲染顺序 */
+	public void setSlotOrder(String slotName, int newIndex) {
+		NeonSlot target = null;
+		for(NeonSlot s : drawOrder) {
+			if(s.name.equals(slotName)) { target = s; break; }
+		}
+		if(target != null) {
+			drawOrder.removeValue(target, true);
+			drawOrder.insert(Math.min(newIndex, drawOrder.size), target);
+		}
 	}
 }

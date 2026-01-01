@@ -1,4 +1,3 @@
-// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/NeonBone.java
 package com.goldsprite.solofight.ecs.skeleton;
 
 import com.badlogic.gdx.math.Affine2;
@@ -21,7 +20,7 @@ public class NeonBone {
 	public float scaleX = 1f, scaleY = 1f;
 
 	// 固有属性 (长度，用于辅助绘图)
-	public float length; 
+	public float length;
 
 	// 矩阵缓存
 	public final Affine2 localTransform = new Affine2();

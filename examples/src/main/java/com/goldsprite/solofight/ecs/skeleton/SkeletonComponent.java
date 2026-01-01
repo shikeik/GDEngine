@@ -1,8 +1,11 @@
-// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/SkeletonComponent.java
 package com.goldsprite.solofight.ecs.skeleton;
 
 import com.goldsprite.gameframeworks.ecs.component.Component;
 
+/**
+ * 骨架组件
+ * 职责：将 NeonSkeleton 挂载到 ECS 实体上，并同步 Transform
+ */
 public class SkeletonComponent extends Component {
 
 	private final NeonSkeleton skeleton;

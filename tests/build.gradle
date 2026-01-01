@@ -11,14 +11,14 @@ repositories {
 
 dependencies {
     // 1. 核心代码
-    implementation project(':core')
-    
+    implementation project(':examples')
+
     // 2. 只需要 GDX 核心接口 (为了引用 Application 等接口)
     implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
-    
+
     // 3. 测试框架
     implementation "junit:junit:4.13.2"
-    
+
     // ❌ 删掉 headless
     // ❌ 删掉 natives
     // ❌ 删掉 mockito

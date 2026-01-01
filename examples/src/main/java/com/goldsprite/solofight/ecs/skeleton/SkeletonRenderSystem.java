@@ -1,9 +1,7 @@
-// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/SkeletonRenderSystem.java
 package com.goldsprite.solofight.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.goldsprite.gameframeworks.ecs.GameSystemInfo;
-import com.goldsprite.gameframeworks.ecs.GameWorld;
 import com.goldsprite.gameframeworks.ecs.entity.GObject;
 import com.goldsprite.gameframeworks.ecs.system.BaseSystem;
 import com.goldsprite.solofight.core.neonbatch.NeonBatch;
