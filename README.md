@@ -1,4 +1,4 @@
-# SoloFight V1.5.4-dev1
+# SoloFight V1.5.4.1-rc
 
 ## 介绍:
 

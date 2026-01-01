@@ -5,8 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 骨架数据容器
- * 职责：管理所有的 Bone 和 Slot，维护 drawOrder
+ * 骨架组件 (Data Container)
+ * 职责：持有 NeonSkeleton 数据。
+ * 注意：矩阵计算逻辑已移交至 SkeletonSystem，确保在所有逻辑更新后执行。
  */
 public class NeonSkeleton {
 	// 逻辑根
