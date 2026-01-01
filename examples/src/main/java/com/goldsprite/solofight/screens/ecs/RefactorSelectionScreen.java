@@ -4,6 +4,7 @@ import com.goldsprite.gameframeworks.screens.IGScreen;
 import com.goldsprite.gameframeworks.screens.basics.BaseSelectionScreen;
 import java.util.Map;
 import com.goldsprite.solofight.screens.ecs.tests.EcsVisualTestScreen;
+import com.goldsprite.solofight.screens.ecs.tests.skeleton.SkeletonVisualScreen;
 
 public class RefactorSelectionScreen extends BaseSelectionScreen {
 
@@ -15,5 +16,6 @@ public class RefactorSelectionScreen extends BaseSelectionScreen {
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends IGScreen>> map) {
 		map.put("可视化测试 (太阳系)", EcsVisualTestScreen.class);
+		map.put("骨骼动画集成测试 (NeonSkeleton)", SkeletonVisualScreen.class); // 新增入口
 	}
 }
