@@ -49,11 +49,14 @@ public class TestSkeletonFactory {
 
 		// Back Layer (Shadow)
 		buildLeg(skel, "Leg_Back", "root", hipY, C_SHADOW);
+		skel.getBone("Leg_Back_Up").rotation += 5;
+		
 		// 后手：LocalY 正向偏移 (视觉上的左侧/后侧)
 		buildArm(skel, "Arm_Back", "Body", shoulderY, shoulderOffset, C_SHADOW);
 
 		// Front Layer (Bright)
 		buildLeg(skel, "Leg_Front", "root", hipY, C_ARMOR);
+		skel.getBone("Leg_Front_Up").rotation -= 5;
 		// 前手：LocalY 负向偏移 (视觉上的右侧/前侧)
 		NeonBone handR = buildArm(skel, "Arm_Front", "Body", shoulderY, -shoulderOffset, C_SKIN);
 
@@ -114,6 +117,7 @@ public class TestSkeletonFactory {
 	private static void buildLeg(NeonSkeleton skel, String prefix, String parent, float parentY, Color color) {
 		NeonBone up = create(skel, prefix + "_Up", parent, 45, W_LIMB, color);
 		up.x = parentY;
+		up.rotation = -90;
 		NeonBone low = create(skel, prefix + "_Low", prefix + "_Up", 45, W_LIMB, color);
 		low.x = 45;
 		NeonBone foot = create(skel, prefix + "_Foot", prefix + "_Low", 15, W_LIMB, color);

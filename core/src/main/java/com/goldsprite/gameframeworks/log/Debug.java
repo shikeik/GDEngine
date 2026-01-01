@@ -24,6 +24,7 @@ public class Debug {
 		"拦截 N",
 		//Test
 		"TEST Y",
+		"VERIFY Y",
 		"Test1 Y",
 	};
 

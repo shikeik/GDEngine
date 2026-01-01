@@ -6,6 +6,7 @@ import java.util.Map;
 import com.goldsprite.solofight.screens.ecs.tests.EcsVisualTestScreen;
 import com.goldsprite.solofight.screens.ecs.tests.skeleton.SkeletonVisualScreen;
 import com.goldsprite.solofight.screens.ecs.tests.SpriteVisualScreen;
+import com.goldsprite.solofight.screens.ecs.tests.JsonLiveEditScreen;
 
 public class RefactorSelectionScreen extends BaseSelectionScreen {
 
@@ -19,5 +20,6 @@ public class RefactorSelectionScreen extends BaseSelectionScreen {
 		map.put("可视化测试 (太阳系)", EcsVisualTestScreen.class);
 		map.put("骨骼动画集成测试 (NeonSkeleton)", SkeletonVisualScreen.class);
 		map.put("帧动画测试 (Enma01)", SpriteVisualScreen.class);
+		map.put("JSON 实时编辑 (Live Editor)", JsonLiveEditScreen.class); // 新增
 	}
 }
