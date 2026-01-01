@@ -1,4 +1,4 @@
-// 文件: ./examples/src/main/java/com/goldsprite/solofight/screens/ecs/tests/SkeletonVisualScreen.java
+// 文件: ./examples/src/main/java/com/goldsprite/solofight/screens/ecs/tests/skeleton/SkeletonVisualScreen.java
 package com.goldsprite.solofight.screens.ecs.tests.skeleton;
 
 import com.badlogic.gdx.graphics.Color;
@@ -7,7 +7,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.gameframeworks.ecs.GameWorld;
 import com.goldsprite.gameframeworks.ecs.entity.GObject;
-import com.goldsprite.gameframeworks.ecs.system.SceneSystem;
 import com.goldsprite.gameframeworks.log.Debug;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
@@ -34,23 +33,24 @@ public class SkeletonVisualScreen extends ExampleGScreen {
 
 	@Override
 	public String getIntroduction() {
-		return "骨骼动画集成测试 (v1.5.6)\n[封装版]";
+		return "骨骼动画集成测试 (v1.5.6-Fix)\n[肢体修复版]";
 	}
 
 	@Override
 	public void create() {
 		neonBatch = new NeonBatch();
 
-		// 1. ECS Init
+		// 1. 初始化 ECS 世界
 		try { if (GameWorld.inst() != null) GameWorld.inst().dispose(); } catch(Exception ignored){}
 		world = new GameWorld();
 		world.setReferences(getUIViewport(), worldCamera);
 
-		world.registerSystem(new SceneSystem());
-		world.registerSystem(new SkeletonSystem());
-		world.registerSystem(new SkeletonRenderSystem(neonBatch, getWorldCamera()));
+		// [核心修复] 系统实例化即自动注册
+		// SceneSystem 已由 GameWorld 构造函数创建，无需重复 new
+		new SkeletonSystem();
+		new SkeletonRenderSystem(neonBatch, getWorldCamera());
 
-		// 2. Entity Init (使用工厂)
+		// 2. Entity Init
 		createTestEntity();
 
 		// 3. UI Init
@@ -59,19 +59,20 @@ public class SkeletonVisualScreen extends ExampleGScreen {
 
 	private void createTestEntity() {
 		GObject player = new GObject("Player");
-		player.transform.setPosition(0, -150);
+		// 角色放在原点下方一点，脚踩地面 (Y=0 是地面? 假设 -150 是脚底)
+		player.transform.setPosition(0, -100);
 		player.transform.setScale(1.5f);
 
 		SkeletonComponent skelComp = player.addComponent(SkeletonComponent.class);
 		playerAnimator = player.addComponent(NeonAnimatorComponent.class);
 
-		// 调用工厂方法填充数据
 		TestSkeletonFactory.buildStickman(skelComp.getSkeleton());
 		TestAnimationFactory.setupAnimations(playerAnimator);
 
 		playerAnimator.play("Idle");
 	}
 
+	// ... (initUI 方法保持不变，无需修改) ...
 	private void initUI() {
 		uiStage = new NeonStage(getUIViewport());
 		getImp().addProcessor(uiStage);
@@ -81,7 +82,6 @@ public class SkeletonVisualScreen extends ExampleGScreen {
 		root.left().top().pad(20);
 		uiStage.addActor(root);
 
-		// UI Controls
 		root.add(new VisLabel("Animation Controls")).colspan(2).left().padBottom(10).row();
 
 		Table btnTable = new Table();
@@ -134,20 +134,31 @@ public class SkeletonVisualScreen extends ExampleGScreen {
 	public void render0(float delta) {
 		world.update(delta);
 
-		worldCamera.position.set(0, 0, 0);
-		worldCamera.update();
+
+		// [核心修复] 强制重置世界相机位置到原点 (0,0)
+		// 配合角色位置 (0, -100)，保证画面居中
+		getWorldCamera().position.set(0, 0, 0);
+		getWorldCamera().update();
+
+		// [小优化] 每一帧都确保相机对准 (防止 Resize 把它重置回中心)
+		// 或者您可以在 Resize 里处理。这里简单起见，如果发现跑偏了可以强拉回来。
+		// 不过由于我们在 create 里设了 (0,0,0)，且 resize 默认逻辑只是 update viewport 尺寸，
+		// 应该不会改变 position。除非 ExampleGScreen 的 resize 逻辑有重置 position。
+		// 查看 ExampleGScreen 代码，resizeWorldCamera 有个 centerCamera 参数。
+		// 为了保险，我们在这里画参考线时确认一下矩阵。
 
 		neonBatch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
-		neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.GRAY);
+		neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.GRAY); // 地面
 		neonBatch.end();
 
+		// 渲染骨架
 		world.getSystem(SkeletonRenderSystem.class).update(delta);
 
 		uiStage.act(delta);
 		uiStage.draw();
 
-		Debug.info("Anim: State Switching Test");
+		Debug.info("Anim: Fix Test");
 	}
 
 	@Override

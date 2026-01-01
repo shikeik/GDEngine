@@ -1,3 +1,4 @@
+// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/NeonGeometrySkin.java
 package com.goldsprite.solofight.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.Color;
@@ -25,15 +26,12 @@ public class NeonGeometrySkin implements BoneSkin {
 
 	@Override
 	public void draw(NeonBatch batch, Affine2 t, float length, Color color) {
-		// 骨骼通常是从 (0,0) 指向 (length, 0)
-		// 我们根据这个局部坐标系画形状，然后应用矩阵 t
-
-		// 1. 从矩阵反解旋转和缩放 (假设无剪切)
-		float rotation = (float) Math.atan2(t.m10, t.m00) * 57.2957795f; // rad -> deg
+		// 1. 反解矩阵 (获取旋转和缩放)
+		float rotation = (float) Math.atan2(t.m10, t.m00) * 57.2957795f;
 		float sx = (float) Math.sqrt(t.m00 * t.m00 + t.m10 * t.m10);
 		float sy = (float) Math.sqrt(t.m01 * t.m01 + t.m11 * t.m11);
 
-		// 2. 计算几何中心点的世界坐标
+		// 2. 计算几何中心的世界坐标
 		// 局部中心: (length/2, 0)
 		float localCx = length / 2f;
 		float localCy = 0f;
@@ -47,9 +45,16 @@ public class NeonGeometrySkin implements BoneSkin {
 
 		// 3. 绘制
 		if (shape == Shape.BOX) {
-			batch.drawRect(worldCx, worldCy, finalW, finalH, rotation, strokeWidth, color, filled);
+			// [核心修复] NeonBatch.drawRect 的 (x,y) 是旋转前的左下角
+			// 我们算出了中心点 worldCx/Cy，需要减去半宽半高还原回去
+			batch.drawRect(
+				worldCx - finalW / 2f,
+				worldCy - finalH / 2f,
+				finalW, finalH,
+				rotation, strokeWidth, color, filled
+			);
 		} else if (shape == Shape.CIRCLE) {
-			// 圆形画在骨骼原点 (t.m02, t.m12) 作为关节
+			// 圆形画在骨骼原点 (关节处)
 			batch.drawCircle(t.m02, t.m12, width * sx, strokeWidth, color, 16, filled);
 		}
 	}
