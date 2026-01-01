@@ -17,3 +17,10 @@ sounds/power_up.wav
 sounds/power_up_0.wav
 sounds/shoot.wav
 sounds/synth.wav
+sprites/roles/Abaddon01.png
+sprites/roles/Enma01.png
+sprites/roles/Nocturne01.png
+sprites/roles/PitchBlack01.png
+sprites/roles/PitchBlack05.png
+sprites/roles/TobiDark01.png
+sprites/roles/TobiDark02.png
