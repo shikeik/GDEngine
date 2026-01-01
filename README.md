@@ -1,4 +1,4 @@
-# SoloFight V1.6.0-alpha
+# SoloFight V1.6.1-alpha
 
 ## 介绍:
 
