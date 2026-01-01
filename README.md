@@ -1,4 +1,4 @@
-# SoloFight V1.5.8-beta1
+# SoloFight V1.6.0-dev1
 
 ## 介绍:
 

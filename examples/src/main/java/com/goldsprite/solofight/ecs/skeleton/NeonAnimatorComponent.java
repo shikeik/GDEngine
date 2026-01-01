@@ -1,56 +1,48 @@
-// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/NeonAnimatorComponent.java
 package com.goldsprite.solofight.ecs.skeleton;
 
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.ObjectMap;
 import com.goldsprite.gameframeworks.ecs.component.Component;
 import com.goldsprite.solofight.ecs.skeleton.animation.NeonAnimation;
 import com.goldsprite.solofight.ecs.skeleton.animation.NeonTimeline;
 
-/**
- * 霓虹动画控制器 (v2: 支持 CrossFade)
- * 职责：管理动画状态机，驱动骨骼变换
- */
 public class NeonAnimatorComponent extends Component {
 
-	// 依赖
 	private SkeletonComponent skeletonComp;
+	// [新增] 引用 SpriteComponent
+	private SpriteComponent spriteComp;
 
-	// 动画库 (名字 -> 数据)
 	private final ObjectMap<String, NeonAnimation> animationLibrary = new ObjectMap<>();
 
-	// --- 主轨道 (Current) ---
 	private NeonAnimation currentAnim;
 	private float currentTime = 0f;
 
-	// --- 混合轨道 (Previous) ---
 	private NeonAnimation prevAnim;
 	private float prevTime = 0f;
 
-	// --- 混合控制 ---
 	private float mixTimer = 0f;
 	private float mixDuration = 0f;
-	private boolean inTransition = false; // 是否处于混合过程中
+	private boolean inTransition = false;
 
 	private float speed = 1.0f;
 	private boolean isPlaying = false;
 
 	@Override
 	protected void onAwake() {
-		// 获取同实体的骨架组件
 		skeletonComp = getComponent(SkeletonComponent.class);
+		// [新增] 获取 Sprite 组件 (它是可选的，不是所有物体都有)
+		spriteComp = getComponent(SpriteComponent.class);
 	}
 
 	public void addAnimation(NeonAnimation anim) {
 		animationLibrary.put(anim.name, anim);
 	}
 
-	/** 硬切播放 */
 	public void play(String name) {
 		startAnimation(name, 0f);
 	}
 
-	/** 混合播放 (CrossFade) */
 	public void crossFade(String name, float duration) {
 		startAnimation(name, duration);
 	}
@@ -61,19 +53,15 @@ public class NeonAnimatorComponent extends Component {
 		if (currentAnim == nextAnim && isPlaying && currentAnim.looping) return;
 
 		if (transitionTime <= 0 || currentAnim == null) {
-			// 无过渡：直接硬切
 			this.currentAnim = nextAnim;
 			this.currentTime = 0f;
 			this.inTransition = false;
 			this.prevAnim = null;
 		} else {
-			// 有过渡：将当前降级为旧动画，新动画上位
 			this.prevAnim = this.currentAnim;
-			this.prevTime = this.currentTime; // 记录旧动画停在哪一刻 (或者让它继续走? 通常继续走一点点更自然)
-
+			this.prevTime = this.currentTime;
 			this.currentAnim = nextAnim;
 			this.currentTime = 0f;
-
 			this.mixDuration = transitionTime;
 			this.mixTimer = 0f;
 			this.inTransition = true;
@@ -83,37 +71,27 @@ public class NeonAnimatorComponent extends Component {
 
 	@Override
 	public void update(float delta) {
-		if (!isPlaying || currentAnim == null || skeletonComp == null) return;
+		if (!isPlaying || currentAnim == null) return; // 移除 skeletonComp == null 的强制检查，因为它可能只驱动 Sprite
 
 		float dt = delta * speed;
-
-		// 1. 更新主动画时间
 		currentTime = updateTime(currentAnim, currentTime, dt);
 
-		// 2. 更新混合逻辑
-		float alpha = 1.0f; // 默认为 100% 新动画
+		float alpha = 1.0f;
 		if (inTransition) {
 			mixTimer += dt;
-			// 更新旧动画时间 (让旧动作惯性继续走一会，比定格更自然)
-			if (prevAnim != null) {
-				prevTime = updateTime(prevAnim, prevTime, dt);
-			}
+			if (prevAnim != null) prevTime = updateTime(prevAnim, prevTime, dt);
 
 			if (mixTimer >= mixDuration) {
-				// 混合结束
 				inTransition = false;
 				prevAnim = null;
 			} else {
-				// 计算权重 (0~1)
 				alpha = mixTimer / mixDuration;
 			}
 		}
 
-		// 3. 驱动骨骼
-		applyToSkeleton(alpha);
+		applyToEntity(alpha);
 	}
 
-	// 辅助：处理时间循环
 	private float updateTime(NeonAnimation anim, float time, float dt) {
 		time += dt;
 		if (time >= anim.duration) {
@@ -123,48 +101,54 @@ public class NeonAnimatorComponent extends Component {
 		return time;
 	}
 
-	private void applyToSkeleton(float alpha) {
-		NeonSkeleton skeleton = skeletonComp.getSkeleton();
-
-		// 策略：
-		// 1. 先计算 Prev 的值 (如果有)
-		// 2. 再计算 Curr 的值
-		// 3. 结果 = Lerp(Prev, Curr, alpha)
-
-		// 这里的难点是：Prev 和 Curr 可能控制不同的骨骼集合。
-		// 简单起见，我们假设它们控制相同的骨骼，或者以 Curr 为主。
-		// 为了健壮性，我们可以先遍历 Curr 的 Timeline。
-
+	private void applyToEntity(float alpha) {
+		// 遍历当前动画的所有时间轴
 		for (NeonTimeline timeline : currentAnim.timelines) {
-			NeonBone bone = skeleton.getBone(timeline.boneName);
-			if (bone == null) continue;
 
-			// 获取新动画的目标值
-			float valCurr = timeline.evaluate(currentTime);
-			float finalVal = valCurr;
+			// --- 分支 1: 处理浮点数属性 (骨骼) ---
+			if (timeline.property.isFloat()) {
+				if (skeletonComp == null) continue; // 没骨架就跳过
 
-			// 如果在混合，且旧动画也有这条轨道，则进行混合
-			if (inTransition && prevAnim != null) {
-				NeonTimeline prevLine = findTimeline(prevAnim, timeline.boneName, timeline.property); // 查找同名同属性轨道
-				if (prevLine != null) {
-					float valPrev = prevLine.evaluate(prevTime);
-					// 插值公式: prev + (curr - prev) * alpha
-					finalVal = MathUtils.lerp(valPrev, valCurr, alpha);
+				NeonSkeleton skeleton = skeletonComp.getSkeleton();
+				NeonBone bone = skeleton.getBone(timeline.boneName);
+				if (bone == null) continue;
+
+				float valCurr = timeline.evaluate(currentTime);
+				float finalVal = valCurr;
+
+				// 混合逻辑 (仅针对 float)
+				if (inTransition && prevAnim != null) {
+					NeonTimeline prevLine = findTimeline(prevAnim, timeline.boneName, timeline.property);
+					if (prevLine != null) {
+						float valPrev = prevLine.evaluate(prevTime);
+						finalVal = MathUtils.lerp(valPrev, valCurr, alpha);
+					}
 				}
-			}
 
-			// 写入
-			switch (timeline.property) {
-				case X: bone.x = finalVal; break;
-				case Y: bone.y = finalVal; break;
-				case ROTATION: bone.rotation = finalVal; break;
-				case SCALE_X: bone.scaleX = finalVal; break;
-				case SCALE_Y: bone.scaleY = finalVal; break;
+				switch (timeline.property) {
+					case X: bone.x = finalVal; break;
+					case Y: bone.y = finalVal; break;
+					case ROTATION: bone.rotation = finalVal; break;
+					case SCALE_X: bone.scaleX = finalVal; break;
+					case SCALE_Y: bone.scaleY = finalVal; break;
+				}
+			} 
+			// --- 分支 2: 处理对象属性 (Sprite) ---
+			else if (timeline.property == com.goldsprite.solofight.ecs.skeleton.animation.NeonProperty.SPRITE) {
+				if (spriteComp == null) continue; // 没 Sprite 组件就跳过
+
+				// 帧动画不支持混合，直接取当前值
+				// 只有当 alpha > 0.5 (或者是立即?) 时切换? 
+				// 通常帧动画是立即响应当前的 Animation，Prev Anim 的贴图不应该残留
+
+				Object val = timeline.evaluateObject(currentTime);
+				if (val instanceof TextureRegion) {
+					spriteComp.setRegion((TextureRegion) val);
+				}
 			}
 		}
 	}
 
-	// 简单的线性查找 (量少不慢，量多可优化为Map)
 	private NeonTimeline findTimeline(NeonAnimation anim, String bone, com.goldsprite.solofight.ecs.skeleton.animation.NeonProperty prop) {
 		for(NeonTimeline t : anim.timelines) {
 			if(t.boneName.equals(bone) && t.property == prop) return t;

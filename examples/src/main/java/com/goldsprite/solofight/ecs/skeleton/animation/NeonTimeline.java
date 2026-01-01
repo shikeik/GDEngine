@@ -8,7 +8,7 @@ import com.badlogic.gdx.utils.Array;
  * 控制 "某根骨头" 的 "某个属性" 随时间的变化
  */
 public class NeonTimeline {
-	public String boneName;
+	public String boneName; // 对于帧动画，这里可以是 "self" 或者组件名
 	public NeonProperty property;
 	public final Array<NeonKeyframe> frames = new Array<>();
 
@@ -17,54 +17,75 @@ public class NeonTimeline {
 		this.property = property;
 	}
 
+	// 添加 Float 帧
 	public void addKeyframe(float time, float value, NeonCurve curve) {
 		frames.add(new NeonKeyframe(time, value, curve));
-		frames.sort(); // 保证按时间排序，这是二分查找或遍历的前提
+		frames.sort();
+	}
+
+	// [新增] 添加 Object 帧
+	public void addKeyframe(float time, Object value) {
+		frames.add(new NeonKeyframe(time, value));
+		frames.sort();
 	}
 
 	/**
-	 * 核心逻辑：计算给定时间点的数值
-	 * @param time 当前动画时间
-	 * @return 插值计算后的结果
+	 * 计算浮点数值 (Lerp / Bezier)
 	 */
 	public float evaluate(float time) {
 		if (frames.size == 0) return 0;
-
-		// 1. 边界处理：时间小于第一帧，返回第一帧
 		NeonKeyframe first = frames.get(0);
-		if (time <= first.time) return first.value;
-
-		// 2. 边界处理：时间大于最后一帧，返回最后一帧
+		if (time <= first.time) return first.floatValue;
 		NeonKeyframe last = frames.get(frames.size - 1);
-		if (time >= last.time) return last.value;
+		if (time >= last.time) return last.floatValue;
 
-		// 3. 查找区间 (Frame A -> Frame B)
-		// 简单遍历 (对于单个动作一般不超过10-20帧，遍历足够快)
-		// 优化点：Animator 可以缓存 lastFrameIndex 避免每次从头找
+		// 查找区间
 		NeonKeyframe frameA = first;
 		NeonKeyframe frameB = last;
-
 		for (int i = 0; i < frames.size - 1; i++) {
-			NeonKeyframe curr = frames.get(i);
-			NeonKeyframe next = frames.get(i + 1);
-			if (time >= curr.time && time < next.time) {
-				frameA = curr;
-				frameB = next;
+			if (time >= frames.get(i).time && time < frames.get(i+1).time) {
+				frameA = frames.get(i);
+				frameB = frames.get(i+1);
 				break;
 			}
 		}
 
-		// 4. 插值计算
-		// 阶梯曲线特殊处理：直接返回 A 的值 (直到 time >= frameB.time 才会变)
-		if (frameA.curve == NeonCurve.STEPPED) return frameA.value;
+		if (frameA.curve == NeonCurve.STEPPED) return frameA.floatValue;
 
 		float duration = frameB.time - frameA.time;
-		if (duration <= 0) return frameA.value; // 防止除零
+		if (duration <= 0) return frameA.floatValue;
 
-		float t = (time - frameA.time) / duration; // 归一化进度 0~1
-		float easeT = frameA.curve.apply(t);       // 应用曲线 (慢进慢出)
+		float t = (time - frameA.time) / duration;
+		float easeT = frameA.curve.apply(t);
 
-		// Lerp 公式: a + (b - a) * t
-		return frameA.value + (frameB.value - frameA.value) * easeT;
+		return frameA.floatValue + (frameB.floatValue - frameA.floatValue) * easeT;
+	}
+
+	/**
+	 * [新增] 计算对象数值 (Stepped Only)
+	 * 逻辑：返回 "当前时间点之前最近的一帧" 的值
+	 */
+	public Object evaluateObject(float time) {
+		if (frames.size == 0) return null;
+
+		// 如果小于第一帧，返回第一帧 (或者 null? 通常返回第一帧作为默认状态)
+		if (time <= frames.get(0).time) return frames.get(0).objectValue;
+
+		// 倒序查找，找到第一个 time >= frame.time 的帧
+		// 或者正序查找最后一个 <= time 的帧
+		// 这里沿用正序逻辑
+		Object result = frames.get(frames.size - 1).objectValue; // 默认最后一帧
+
+		for (int i = 0; i < frames.size - 1; i++) {
+			NeonKeyframe curr = frames.get(i);
+			NeonKeyframe next = frames.get(i+1);
+
+			// 落在区间 [curr, next)
+			if (time >= curr.time && time < next.time) {
+				return curr.objectValue;
+			}
+		}
+
+		return result;
 	}
 }
