@@ -72,7 +72,6 @@ public class SkeletonVisualScreen extends ExampleGScreen {
 		playerAnimator.play("Idle");
 	}
 
-	// ... (initUI 方法保持不变，无需修改) ...
 	private void initUI() {
 		uiStage = new NeonStage(getUIViewport());
 		getImp().addProcessor(uiStage);
@@ -134,19 +133,6 @@ public class SkeletonVisualScreen extends ExampleGScreen {
 	public void render0(float delta) {
 		world.update(delta);
 
-
-		// [核心修复] 强制重置世界相机位置到原点 (0,0)
-		// 配合角色位置 (0, -100)，保证画面居中
-		getWorldCamera().position.set(0, 0, 0);
-		getWorldCamera().update();
-
-		// [小优化] 每一帧都确保相机对准 (防止 Resize 把它重置回中心)
-		// 或者您可以在 Resize 里处理。这里简单起见，如果发现跑偏了可以强拉回来。
-		// 不过由于我们在 create 里设了 (0,0,0)，且 resize 默认逻辑只是 update viewport 尺寸，
-		// 应该不会改变 position。除非 ExampleGScreen 的 resize 逻辑有重置 position。
-		// 查看 ExampleGScreen 代码，resizeWorldCamera 有个 centerCamera 参数。
-		// 为了保险，我们在这里画参考线时确认一下矩阵。
-
 		neonBatch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 		neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.GRAY); // 地面
@@ -159,6 +145,18 @@ public class SkeletonVisualScreen extends ExampleGScreen {
 		uiStage.draw();
 
 		Debug.info("Anim: Fix Test");
+	}
+
+	@Override
+	public void resize(int width, int height) {
+		super.resize(width, height);
+
+		// [修复] 每次窗口变化后，强制把世界相机拉回 (0,0) 中心点
+		// 这样可以抵消基类可能存在的重置逻辑，配合角色的 (0, -100) 初始位置
+		if (getWorldCamera() != null) {
+			getWorldCamera().position.set(0, 0, 0);
+			getWorldCamera().update();
+		}
 	}
 
 	@Override
