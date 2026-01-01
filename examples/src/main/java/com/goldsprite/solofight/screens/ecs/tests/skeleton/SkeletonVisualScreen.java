@@ -2,6 +2,7 @@
 package com.goldsprite.solofight.screens.ecs.tests.skeleton;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -13,8 +14,7 @@ import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.neonbatch.NeonBatch;
 import com.goldsprite.solofight.core.neonbatch.NeonStage;
 import com.goldsprite.solofight.ecs.skeleton.*;
-import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisSlider;
+import com.goldsprite.solofight.ecs.skeleton.animation.*;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class SkeletonVisualScreen extends ExampleGScreen {
@@ -23,139 +23,243 @@ public class SkeletonVisualScreen extends ExampleGScreen {
 	private NeonBatch neonBatch;
 	private NeonStage uiStage;
 
+	// 演员
+	private GObject player;
+	private GObject dummy;
 	private NeonAnimatorComponent playerAnimator;
-	private float mixDuration = 0.5f;
+
+	// 导演系统
+	private enum State { WAIT, RUN, LAUNCH, AIR_FIGHT, SMASH, LAND, POSE, END }
+	private State state = State.WAIT;
+	private float stateTimer = 0f;
+	private boolean isPlayingCutscene = false;
 
 	@Override
-	public ScreenManager.Orientation getOrientation() {
-		return ScreenManager.Orientation.Landscape;
-	}
+	public ScreenManager.Orientation getOrientation() { return ScreenManager.Orientation.Landscape; }
 
 	@Override
 	public String getIntroduction() {
-		return "骨骼动画集成测试 (v1.5.6-Fix)\n[肢体修复版]";
+		return "导演模式测试\n点击 [ACTION!] 开始演出\n展示：骨骼动画/位移/相机/混合 综合应用";
 	}
 
 	@Override
 	public void create() {
 		neonBatch = new NeonBatch();
 
-		// 1. 初始化 ECS 世界
 		try { if (GameWorld.inst() != null) GameWorld.inst().dispose(); } catch(Exception ignored){}
 		world = new GameWorld();
 		world.setReferences(getUIViewport(), worldCamera);
 
-		// [核心修复] 系统实例化即自动注册
-		// SceneSystem 已由 GameWorld 构造函数创建，无需重复 new
 		new SkeletonSystem();
 		new SkeletonRenderSystem(neonBatch, getWorldCamera());
 
-		// 2. Entity Init
-		createTestEntity();
-
-		// 3. UI Init
+		// 初始化演员
+		createActors();
 		initUI();
+
+		// 初始镜头
+		getWorldCamera().zoom = 1.2f;
+		getWorldCamera().position.set(400, 200, 0); // 放在中间偏上
 	}
 
-	private void createTestEntity() {
-		GObject player = new GObject("Player");
-		// 角色放在原点下方一点，脚踩地面 (Y=0 是地面? 假设 -150 是脚底)
-		player.transform.setPosition(0, -100);
+	private void createActors() {
+		// --- 主角 ---
+		player = new GObject("Player");
+		player.transform.setPosition(0, 0); // 地面
 		player.transform.setScale(1.5f);
-
 		SkeletonComponent skelComp = player.addComponent(SkeletonComponent.class);
 		playerAnimator = player.addComponent(NeonAnimatorComponent.class);
-
 		TestSkeletonFactory.buildStickman(skelComp.getSkeleton());
 		TestAnimationFactory.setupAnimations(playerAnimator);
-
 		playerAnimator.play("Idle");
+
+		// --- 木桩 (Target) ---
+		dummy = new GObject("Dummy");
+		dummy.transform.setPosition(800, 0); // 放在右边 800 处
+		SkeletonComponent dSkel = dummy.addComponent(SkeletonComponent.class);
+		// 给木桩一个简单的骨架 (Box Skin)
+		NeonBone box = dSkel.getSkeleton().createBone("Body", "root", 80,
+			new NeonGeometrySkin(NeonGeometrySkin.Shape.BOX, 40, true));
+		box.rotation = 90;
+		dSkel.getSkeleton().getSlot("Body").color.set(Color.WHITE);
 	}
 
 	private void initUI() {
 		uiStage = new NeonStage(getUIViewport());
 		getImp().addProcessor(uiStage);
-
 		Table root = new Table();
-		root.setFillParent(true);
-		root.left().top().pad(20);
+		root.setFillParent(true); root.top().pad(20);
 		uiStage.addActor(root);
 
-		root.add(new VisLabel("Animation Controls")).colspan(2).left().padBottom(10).row();
-
-		Table btnTable = new Table();
-		VisTextButton btnIdle = new VisTextButton("CrossFade: Idle");
-		btnIdle.addListener(new ChangeListener() {
+		VisTextButton btnAction = new VisTextButton(">>> ACTION! <<<");
+		btnAction.addListener(new ChangeListener() {
 			@Override public void changed(ChangeEvent event, Actor actor) {
-				playerAnimator.crossFade("Idle", mixDuration);
+				startCutscene();
 			}
 		});
+		root.add(btnAction).width(200).height(50);
+	}
 
-		VisTextButton btnAtk = new VisTextButton("CrossFade: Attack");
-		btnAtk.addListener(new ChangeListener() {
-			@Override public void changed(ChangeEvent event, Actor actor) {
-				playerAnimator.crossFade("Attack", mixDuration);
-			}
-		});
+	private void startCutscene() {
+		resetScene();
+		isPlayingCutscene = true;
+		state = State.WAIT;
+		stateTimer = 0f;
+	}
 
-		btnTable.add(btnIdle).width(150).padRight(10);
-		btnTable.add(btnAtk).width(150);
-		root.add(btnTable).colspan(2).left().padBottom(20).row();
-
-		root.add(new VisLabel("Mix Duration (s): ")).left();
-		VisLabel lblMixVal = new VisLabel("0.5");
-		VisSlider slMix = new VisSlider(0f, 2.0f, 0.1f, false);
-		slMix.setValue(0.5f);
-		slMix.addListener(new ChangeListener() {
-			@Override public void changed(ChangeEvent event, Actor actor) {
-				mixDuration = slMix.getValue();
-				lblMixVal.setText(String.format("%.1f", mixDuration));
-			}
-		});
-		root.add(lblMixVal).padRight(10);
-		root.add(slMix).width(200).row();
-
-		root.add(new VisLabel("Time Scale: ")).left();
-		VisLabel lblTimeVal = new VisLabel("1.0");
-		VisSlider slTime = new VisSlider(0f, 2.0f, 0.1f, false);
-		slTime.setValue(1.0f);
-		slTime.addListener(new ChangeListener() {
-			@Override public void changed(ChangeEvent event, Actor actor) {
-				GameWorld.timeScale = slTime.getValue();
-				lblTimeVal.setText(String.format("%.1f", GameWorld.timeScale));
-			}
-		});
-		root.add(lblTimeVal).padRight(10);
-		root.add(slTime).width(200).row();
+	private void resetScene() {
+		player.transform.setPosition(0, 0);
+		dummy.transform.setPosition(800, 0);
+		dummy.transform.rotation = 0;
+		playerAnimator.play("Idle");
+		GameWorld.timeScale = 1.0f;
 	}
 
 	@Override
 	public void render0(float delta) {
+		// 导演逻辑 Update
+		if (isPlayingCutscene) {
+			updateDirector(delta);
+		}
+
+		// ECS Update
 		world.update(delta);
 
+		// 绘制
 		neonBatch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
-		neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.GRAY); // 地面
+		neonBatch.drawLine(-1000, 0, 2000, 0, 2, Color.GRAY); // 地面
 		neonBatch.end();
 
-		// 渲染骨架
 		world.getSystem(SkeletonRenderSystem.class).update(delta);
 
 		uiStage.act(delta);
 		uiStage.draw();
 
-		Debug.info("Anim: Fix Test");
+		Debug.info("Director State: %s (%.1fs)", state, stateTimer);
+	}
+
+	/**
+	 * 核心导演逻辑
+	 */
+	private void updateDirector(float delta) {
+		stateTimer += delta;
+
+		switch (state) {
+			case WAIT: // 待机 1秒
+				if (stateTimer > 1.0f) {
+					changeState(State.RUN);
+					playerAnimator.crossFade("Run_Drag", 0.3f);
+				}
+				break;
+
+			case RUN: // 奔跑 2秒 (逼近敌人)
+				// 物理位移
+				player.transform.position.x += 400 * delta; // 速度 400
+
+				// 接近判断
+				if (player.transform.position.x >= 700) {
+					changeState(State.LAUNCH);
+					playerAnimator.crossFade("Atk_Launcher", 0.1f); // 极快切入
+					// 慢动作特写
+					GameWorld.timeScale = 0.5f;
+				}
+				break;
+
+			case LAUNCH: // 挑飞 (0.4s)
+				// 模拟挑飞物理
+				if (stateTimer > 0.2f) { // 动作挥出瞬间
+					dummy.transform.position.y += 600 * delta; // 木桩起飞
+					dummy.transform.position.x += 100 * delta;
+					dummy.transform.rotation -= 360 * delta;   // 旋转
+				}
+
+				if (stateTimer > 0.4f) {
+					changeState(State.AIR_FIGHT);
+					playerAnimator.crossFade("Atk_Air", 0.1f);
+					// 恢复速度
+					GameWorld.timeScale = 1.0f;
+				}
+				break;
+
+			case AIR_FIGHT: // 空中连斩 (1.5s)
+				// 玩家起跳跟上
+				player.transform.position.y = MathUtils.lerp(player.transform.position.y, 250, 5 * delta);
+				player.transform.position.x += 50 * delta;
+
+				// 木桩悬空受击
+				dummy.transform.position.y = MathUtils.lerp(dummy.transform.position.y, 300, 3 * delta);
+				dummy.transform.position.x = player.transform.position.x + 80;
+				dummy.transform.rotation += 720 * delta; // 疯狂旋转
+
+				// 屏幕震动模拟
+				getWorldCamera().position.add((MathUtils.random()-0.5f)*5, (MathUtils.random()-0.5f)*5, 0);
+
+				if (stateTimer > 1.5f) {
+					changeState(State.SMASH);
+					playerAnimator.crossFade("Atk_Smash", 0.1f);
+					GameWorld.timeScale = 0.2f; // 再次慢动作
+				}
+				break;
+
+			case SMASH: // 下劈 (0.5s)
+				if (stateTimer > 0.3f) { // 劈下瞬间
+					// 极速下坠
+					player.transform.position.y -= 800 * delta;
+					dummy.transform.position.y -= 1000 * delta;
+					dummy.transform.position.x += 200 * delta;
+				}
+
+				if (player.transform.position.y <= 0) {
+					player.transform.position.y = 0;
+					dummy.transform.position.y = 0;
+					dummy.transform.rotation = 90; // 躺平
+					changeState(State.LAND);
+					playerAnimator.crossFade("Idle", 0.1f); // 落地瞬间切回Idle或Land姿势
+					GameWorld.timeScale = 1.0f;
+
+					// 落地大震动
+					getWorldCamera().position.add((MathUtils.random()-0.5f)*20, (MathUtils.random()-0.5f)*20, 0);
+				}
+				break;
+
+			case LAND: // 落地缓冲 (0.5s)
+				if (stateTimer > 0.5f) {
+					changeState(State.POSE);
+					playerAnimator.crossFade("Pose_Back", 0.5f); // 帅气收刀
+				}
+				break;
+
+			case POSE: // 摆Pose
+				if (stateTimer > 2.0f) {
+					changeState(State.END);
+				}
+				break;
+		}
+
+		// 相机跟随 (始终看着玩家和木桩的中间)
+		float midX = (player.transform.position.x + dummy.transform.position.x) / 2f;
+		float midY = (player.transform.position.y + dummy.transform.position.y) / 2f + 100;
+
+		float camX = getWorldCamera().position.x;
+		float camY = getWorldCamera().position.y;
+
+		getWorldCamera().position.x += (midX - camX) * 5 * delta;
+		getWorldCamera().position.y += (midY - camY) * 5 * delta;
+		getWorldCamera().update();
+	}
+
+	private void changeState(State newState) {
+		state = newState;
+		stateTimer = 0f;
 	}
 
 	@Override
 	public void resize(int width, int height) {
 		super.resize(width, height);
-
-		// [修复] 每次窗口变化后，强制把世界相机拉回 (0,0) 中心点
-		// 这样可以抵消基类可能存在的重置逻辑，配合角色的 (0, -100) 初始位置
 		if (getWorldCamera() != null) {
-			getWorldCamera().position.set(0, 0, 0);
-			getWorldCamera().update();
+			// resize 后重置一下位置，避免跳变，但 updateDirector 会接管它
+			// 这里我们不需要强制置零，让 Director 控制即可
 		}
 	}
 
