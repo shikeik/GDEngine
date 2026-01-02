@@ -8,15 +8,11 @@ import com.goldsprite.gdengine.screens.ecs.editor.SceneGameEditorWrapper2;
 import com.goldsprite.gdengine.screens.ecs.skeleton.SkeletonVisualScreen;
 
 import java.util.Map;
-import com.goldsprite.gdengine.screens.ecs.editor.SceneViewDemoScreen;
-import com.goldsprite.gdengine.screens.ecs.editor.SceneGameEditorWrapper;
-import com.goldsprite.gdengine.screens.ecs.editor.SceneGameEditorWrapperFBO;
-import com.goldsprite.gdengine.screens.ecs.editor.FinalEditorTest;
+
 import com.goldsprite.gdengine.screens.ecs.editor.NuclearTest;
-import com.goldsprite.gdengine.screens.ecs.editor.FinalProduction;
 import com.goldsprite.gdengine.screens.ecs.editor.FinalCompleteEditor;
 
-public class GDEngineSelectionScreen extends BaseSelectionScreen {int k21;
+public class GDEngineSelectionScreen extends BaseSelectionScreen {
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("功能验证", null);
@@ -26,12 +22,8 @@ public class GDEngineSelectionScreen extends BaseSelectionScreen {int k21;
 		map.put("Ecs 骨骼动画 JSON 实时编辑 (Live Editor)", JsonLiveEditScreen.class); // 新增
 
 		map.put("编辑器开发", null);
-		map.put("裁剪世界视图开发", SceneViewDemoScreen.class);
-		map.put("ai编辑器视图", SceneGameEditorWrapper.class);
 		map.put("ai编辑器视图2", SceneGameEditorWrapper2.class);
-		map.put("ai编辑器视图3FBO!", SceneGameEditorWrapperFBO.class);
-		map.put("ai编辑器视图4FBO2!", FinalEditorTest.class);
 		map.put("ai编辑器视图5test", NuclearTest.class);
-		map.put("ai编辑器ekwk图7final remake", FinalCompleteEditor.class);int k;
+		map.put("ai编辑器ekwk图7final remake", FinalCompleteEditor.class);
 	}
 }

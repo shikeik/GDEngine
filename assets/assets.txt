@@ -1,3 +1,4 @@
+back.png
 fonts/HYSongYunLangHeiW-1.ttf
 fonts/NotoSansMonoCJKsc-Regular.otf
 fonts/ark-pixel-10px-monospaced-zh_cn.ttf

@@ -35,7 +35,7 @@ import com.kotcrab.vis.ui.widget.VisWindow;
 // ==========================================
 // 0. 入口
 // ==========================================
-public class FinalCompleteEditor extends GScreen {int k123;
+public class FinalCompleteEditor extends GScreen {
     private EditorController controller;
 
     @Override
@@ -90,7 +90,7 @@ class GameWorld {
     // 纯粹的绘制 (不知道视口，不知道FBO)
     public void render(Batch batch) {
         // 画背景 (假设图很大，或者是重复贴图)
-        batch.draw(bgTex, -bgTex.getWidth()/2f, -bgTex.getHeight()/2f); 
+        batch.draw(bgTex, -bgTex.getWidth()/2f, -bgTex.getHeight()/2f);
         // 画玩家 (居中绘制)
         batch.draw(playerTex, playerX - playerTex.getWidth()/2f, playerY - playerTex.getHeight()/2f);
     }
@@ -157,7 +157,7 @@ class ViewTarget {
 
         batch = new SpriteBatch();
         camera = new OrthographicCamera();
-        viewport = new FitViewport(w, h, camera); 
+        viewport = new FitViewport(w, h, camera);
         camera.position.set(0, 0, 0); // 默认看世界中心
     }
 
