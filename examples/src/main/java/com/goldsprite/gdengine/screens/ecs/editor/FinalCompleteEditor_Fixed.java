@@ -406,6 +406,23 @@ class EditorController {
 		stack.add(uiTable);
 
 		win.add(stack).grow();
+
+		// 强制刷新一次布局，确保数值已计算
+		win.pack();
+		win.layout();
+
+		Gdx.app.log("Padding", "Top(Title): " + win.getPadTop());
+		Gdx.app.log("Padding", "Bottom: " + win.getPadBottom());
+		Gdx.app.log("Padding", "Left: " + win.getPadLeft());
+		Gdx.app.log("Padding", "Right: " + win.getPadRight());
+		Gdx.app.log("Padding", "Window Size: " + win.getWidth() + "x" + win.getHeight());
+		Gdx.app.log("Padding", "Widget Size: " + gameWidget.getWidth() + "x" + gameWidget.getHeight());
+
+// 简单的数学验证：
+// WidgetHeight 应该等于 WindowHeight - PadTop - PadBottom
+		float expectedH = win.getHeight() - win.getPadTop() - win.getPadBottom();
+		Gdx.app.log("Padding", "预期 Widget 高度: " + expectedH + " (实际: " + gameWidget.getHeight() + ")");
+
 		stage.addActor(win);
 	}
 
