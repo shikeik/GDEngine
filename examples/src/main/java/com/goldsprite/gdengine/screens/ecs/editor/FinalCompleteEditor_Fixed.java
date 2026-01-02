@@ -14,7 +14,6 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -37,7 +36,7 @@ import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisWindow;
 
-public class FinalCompleteEditor_Step2 extends GScreen {
+public class FinalCompleteEditor_Fixed extends GScreen {
 	private EditorController controller;
 
 	@Override
@@ -69,7 +68,6 @@ public class FinalCompleteEditor_Step2 extends GScreen {
 // 1. 业务逻辑层 (Model)
 // ==========================================
 class GameWorld {
-	// 逻辑世界大小
 	public static final float WORLD_WIDTH = 480;
 	public static final float WORLD_HEIGHT = 320;
 
@@ -90,7 +88,7 @@ class GameWorld {
 	}
 
 	public void render(Batch batch) {
-		// 背景画大一点
+		// 画大背景
 		batch.draw(bgTex, -1000, -1000, 2000, 2000);
 		batch.draw(playerTex, playerX - playerTex.getWidth()/2f, playerY - playerTex.getHeight()/2f);
 	}
@@ -99,7 +97,7 @@ class GameWorld {
 		debugRenderer.setProjectionMatrix(camera.combined);
 		debugRenderer.begin(ShapeRenderer.ShapeType.Line);
 
-		// 黄色框：设计分辨率边界 (480x320)
+		// 黄色框：世界边界
 		debugRenderer.setColor(Color.YELLOW);
 		debugRenderer.rect(-WORLD_WIDTH/2, -WORLD_HEIGHT/2, WORLD_WIDTH, WORLD_HEIGHT);
 
@@ -109,10 +107,10 @@ class GameWorld {
 		debugRenderer.setColor(Color.GREEN);
 		debugRenderer.line(0, -1000, 0, 1000);
 
-		// 鼠标点击目标点
+		// 目标点
 		debugRenderer.setColor(Color.CYAN);
-		debugRenderer.line(targetX - 10, targetY, targetX + 10, targetY);
-		debugRenderer.line(targetX, targetY - 10, targetX, targetY + 10);
+		debugRenderer.line(targetX - 20, targetY, targetX + 20, targetY);
+		debugRenderer.line(targetX, targetY - 20, targetX, targetY + 20);
 
 		debugRenderer.end();
 	}
@@ -142,7 +140,6 @@ class GameWorld {
 // 2. 渲染核心层 (Producer)
 // ==========================================
 class ViewTarget {
-	// 支持的视口模式
 	public enum ViewportMode { FIT, EXTEND, STRETCH }
 
 	public FrameBuffer fbo;
@@ -159,12 +156,12 @@ class ViewTarget {
 
 		fbo = new FrameBuffer(Pixmap.Format.RGBA8888, w, h, false);
 		fboRegion = new TextureRegion(fbo.getColorBufferTexture());
+		// FBO 纹理翻转
 		fboRegion.flip(false, true);
 
 		batch = new SpriteBatch();
 		camera = new OrthographicCamera();
 
-		// 默认 Fit
 		setViewportMode(ViewportMode.FIT);
 		camera.position.set(0, 0, 0);
 	}
@@ -176,7 +173,6 @@ class ViewTarget {
 			case STRETCH: viewport = new StretchViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam); break;
 			case EXTEND: viewport = new ExtendViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam); break;
 		}
-		// 更新视口，告诉它 FBO 的物理大小
 		viewport.update(fboW, fboH, false);
 	}
 
@@ -203,20 +199,17 @@ class ViewTarget {
 }
 
 // ==========================================
-// 3. UI 展示层 (Consumer)
+// 3. UI 展示层 (Consumer) - 重点修复区域
 // ==========================================
 class ViewWidget extends Widget {
-	// 对应 UI 上的显示模式：
-	// FIT: Letterbox
-	// STRETCH: 强行拉伸填满
-	// EXTEND: 模拟填充 (Crop)
-	public enum DisplayMode { FIT, STRETCH, EXTEND }
+	// 对应显示策略
+	public enum DisplayMode { FIT, STRETCH, COVER }
 
 	private ViewTarget target;
 	private Texture bgTexture;
 	private DisplayMode displayMode = DisplayMode.FIT;
 
-	// 记录画面参数供 Input 使用
+	// 记录绘制参数
 	private float drawX, drawY, drawW, drawH;
 
 	public ViewWidget(ViewTarget target) {
@@ -233,90 +226,101 @@ class ViewWidget extends Widget {
 		float x = getX(); float y = getY();
 		float w = getWidth(); float h = getHeight();
 
-		// 1. 画 Widget 背景
+		// 1. 画背景
 		batch.draw(bgTexture, x, y, w, h);
 
-		// 2. 根据模式计算绘制区域
+		// 2. 【修复显示逻辑】：处理拉伸和铺满
+		float widgetRatio = w / h;
+		// FBO 的比例固定是 1280/720
+		float fboRatio = (float)target.viewport.getScreenWidth() / target.viewport.getScreenHeight();
+
 		if (displayMode == DisplayMode.STRETCH) {
-			// 拉伸模式：直接填满
+			// STRETCH: 强行填满，无视比例
 			drawX = x; drawY = y;
 			drawW = w; drawH = h;
-		} else if (displayMode == DisplayMode.FIT) {
-			// Fit 模式：Letterbox
-			calculateFit(x, y, w, h);
-		} else if (displayMode == DisplayMode.EXTEND) {
-			// Extend 模式 (这里简单处理为 Fit，如果想做 ZoomIn 效果需要改这里)
-			// 通常编辑器里的 Extend 意味着 "看到更多"，这取决于 ViewTarget 的 ExtendViewport，
-			// 而不是 Widget 把 FBO 放大。所以 Widget 还是保持 Fit 展示最合理。
-			calculateFit(x, y, w, h);
+		}
+		else if (displayMode == DisplayMode.COVER) {
+			// COVER (模拟Extend): 保持比例，填满窗口 (会有裁切)
+			if (widgetRatio > fboRatio) {
+				// 窗口更宽，匹配宽度，高度溢出
+				drawW = w;
+				drawH = drawW / fboRatio;
+			} else {
+				// 窗口更高，匹配高度，宽度溢出
+				drawH = h;
+				drawW = drawH * fboRatio;
+			}
+			// 居中
+			drawX = x + (w - drawW) / 2;
+			drawY = y + (h - drawH) / 2;
+		}
+		else {
+			// FIT: 保持比例，全部显示 (有黑边)
+			if (widgetRatio > fboRatio) {
+				drawH = h; drawW = drawH * fboRatio;
+			} else {
+				drawW = w; drawH = drawW / fboRatio;
+			}
+			drawX = x + (w - drawW) / 2;
+			drawY = y + (h - drawH) / 2;
 		}
 
 		// 3. 贴 FBO
 		batch.draw(target.fboRegion, drawX, drawY, drawW, drawH);
 	}
 
-	private void calculateFit(float x, float y, float w, float h) {
-		float widgetRatio = w / h;
-		float fboRatio = (float)target.viewport.getScreenWidth() / target.viewport.getScreenHeight();
-
-		if (widgetRatio > fboRatio) {
-			drawH = h; drawW = drawH * fboRatio;
-		} else {
-			drawW = w; drawH = drawW / fboRatio;
-		}
-		drawX = x + (w - drawW) / 2;
-		drawY = y + (h - drawH) / 2;
-	}
-
-	// 【终极坐标转换】：Widget点击 -> 游戏世界
-	// 不依赖 viewport.unproject，纯数学硬算，解决所有缩放/拉伸问题
+	// 【终极坐标转换】：纯数学硬算，修复Y轴反转，支持所有缩放
 	public Vector2 screenToWorld(float localX, float localY) {
-		// A. 第一层：UI -> FBO 像素
-		float fboX, fboY;
+		// 1. 算出相对于绘制区域(drawX, drawY)的偏移比例
+		// 也就是：点击点在图片上的百分比位置 (0.0 ~ 1.0)
+		float percentX = (localX - (drawX - getX())) / drawW;
+		float percentY = (localY - (drawY - getY())) / drawH;
 
-		if (displayMode == DisplayMode.STRETCH) {
-			// 拉伸模式下，直接按比例映射
-			fboX = localX * (target.viewport.getScreenWidth() / getWidth());
-			fboY = localY * (target.viewport.getScreenHeight() / getHeight());
-		} else {
-			// Fit 模式下，要排除黑边
-			float contentX = drawX - getX();
-			float contentY = drawY - getY();
+		// 2. 【修复Y轴反转】
+		// 关键点：FBO纹理绘制时翻转了，所以 LocalY 越大(向上)，对应 TextureV 越小(向下)？
+		// 实际上，因为 fboRegion.flip(false, true)，绘制出来的图像是正的。
+		// 但是！这意味着 drawY (底部) 对应的是 FBO 纹理的 Top (因为翻转了绘制)
+		// 简单粗暴的数学事实：
+		// 屏幕点击越靠上，percentY 越大。
+		// 在 FBO 内部，percentY 越大，应该对应 WorldY 越大。
 
-			// 点在黑边上
-			if (localX < contentX || localX > contentX + drawW) return null;
-			if (localY < contentY || localY > contentY + drawH) return null;
+		// 3. 计算 FBO 内部的像素坐标
+		// FBO 总大小
+		float fboTotalW = target.viewport.getScreenWidth();
+		float fboTotalH = target.viewport.getScreenHeight();
 
-			float scaleX = target.viewport.getScreenWidth() / drawW;
-			float scaleY = target.viewport.getScreenHeight() / drawH;
+		// 像素位置
+		float fboPixelX = percentX * fboTotalW;
+		float fboPixelY = percentY * fboTotalH;
 
-			fboX = (localX - contentX) * scaleX;
-			fboY = (localY - contentY) * scaleY;
-		}
-
-		// B. 第二层：FBO 像素 -> 游戏世界 (手动 Unproject)
-		// 这一步必须考虑 ViewTarget 内部 Viewport 的黑边和缩放
+		// 4. 处理 FBO 内部 Viewport 的黑边 (Fit模式下)
+		// FitViewport 在 FBO 内部也有 screenX/Y/W/H
 		Viewport vp = target.viewport;
+		float vpX = vp.getScreenX();
+		float vpY = vp.getScreenY();
+		float vpW = vp.getScreenWidth();
+		float vpH = vp.getScreenHeight();
 
-		// 1. 归一化设备坐标 (NDC): -1 到 1
-		// 注意：FBO 内部 Viewport 有它自己的 screenX/Y/W/H (用于 FBO 内部的 Fit/Letterbox)
-		float viewportX = vp.getScreenX();
-		float viewportY = vp.getScreenY();
-		float viewportW = vp.getScreenWidth();
-		float viewportH = vp.getScreenHeight();
+		// 归一化设备坐标 (NDC) -1 ~ 1
+		float ndcX = (fboPixelX - vpX) / vpW * 2.0f - 1.0f;
+		float ndcY = (fboPixelY - vpY) / vpH * 2.0f - 1.0f;
 
-		// FBO 像素坐标 y 是 Bottom-Up 的，LibGDX Viewport 也是 Bottom-Up 的 (在 update(w,h,false) 模式下)
-		// 所以这里直接用 fboY 即可，不需要翻转，因为我们没有用 Gdx.input
+		// 5. 【修正】Y轴再次翻转？
+		// 如果你觉得 Fit/Extend 都反了，那就反转 ndcY
+		// 经过之前的测试，如果不反转是错的，那我们就反转！
+		// 因为 TextureRegion.flip(false, true) 让纹理坐标 V 翻转了
+		// 所以视觉上的 Top 其实是数据上的 Bottom
+		ndcY = -ndcY;
 
-		// 手动计算 World 坐标
-		// 公式：World = CameraPos + (Pixel - ViewportCenter) * Zoom
+		// 6. 映射到世界坐标
+		OrthographicCamera cam = (OrthographicCamera) target.camera;
+		float worldW = vp.getWorldWidth() * cam.zoom;
+		float worldH = vp.getWorldHeight() * cam.zoom;
 
-		// 但 FitViewport 内部可能有黑边，用 unproject 最稳，但不能用 Gdx.graphics.getHeight
-		// 我们用 Viewport 提供的纯数学 unproject
-		Vector3 vec = new Vector3(fboX, fboY, 0);
-		vp.unproject(vec);
+		float worldX = cam.position.x + ndcX * (worldW / 2f);
+		float worldY = cam.position.y + ndcY * (worldH / 2f);
 
-		return new Vector2(vec.x, vec.y);
+		return new Vector2(worldX, worldY);
 	}
 
 	public void dispose() {
@@ -340,8 +344,10 @@ class EditorController {
 		gameWorld = new GameWorld();
 		gameWorld.init();
 
-		// 默认分辨率 FBO
+		// 默认配置
 		gameTarget = new ViewTarget(1280, 720);
+		gameTarget.setViewportMode(ViewTarget.ViewportMode.FIT);
+
 		sceneTarget = new ViewTarget(1280, 720);
 		sceneTarget.setViewportMode(ViewTarget.ViewportMode.EXTEND);
 
@@ -384,7 +390,6 @@ class EditorController {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
 				String mode = box.getSelected();
-				// 两个层级都要切换，保证逻辑和显示一致
 				if (mode.equals("FIT")) {
 					gameTarget.setViewportMode(ViewTarget.ViewportMode.FIT);
 					gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
@@ -393,11 +398,12 @@ class EditorController {
 					gameWidget.setDisplayMode(ViewWidget.DisplayMode.STRETCH);
 				} else if (mode.equals("EXTEND")) {
 					gameTarget.setViewportMode(ViewTarget.ViewportMode.EXTEND);
-					// Extend 逻辑下，Widget 依然保持 Fit 显示（看到更多 FBO 内容），而不是拉伸 Widget
-					gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
+					// 编辑器里的 Extend 效果通常是铺满窗口 (Cover)
+					gameWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 				}
 			}
 		});
+
 		// 强制初始化
 		gameTarget.setViewportMode(ViewTarget.ViewportMode.FIT);
 		gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
@@ -425,11 +431,15 @@ class EditorController {
 		win.setPosition(600, 50);
 
 		sceneWidget = new ViewWidget(sceneTarget);
+		// Scene 默认也用 Cover 模式看全景
+		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
+
 		sceneWidget.addListener(new DragListener() {
 			@Override
 			public void drag(InputEvent event, float x, float y, int pointer) {
 				float dx = getDeltaX(); float dy = getDeltaY();
 				float zoom = ((OrthographicCamera)sceneTarget.camera).zoom;
+				// 反向移动相机
 				sceneTarget.camera.translate(-dx * 2 * zoom, -dy * 2 * zoom, 0);
 				sceneTarget.camera.update();
 			}
@@ -443,6 +453,7 @@ class EditorController {
 				return true;
 			}
 		});
+
 		win.add(sceneWidget).grow();
 		stage.addActor(win);
 	}
