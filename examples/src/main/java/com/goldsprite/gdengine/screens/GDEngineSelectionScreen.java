@@ -11,8 +11,9 @@ import java.util.Map;
 import com.goldsprite.gdengine.screens.ecs.editor.SceneViewDemoScreen;
 import com.goldsprite.gdengine.screens.ecs.editor.SceneGameEditorWrapper;
 import com.goldsprite.gdengine.screens.ecs.editor.SceneGameEditorWrapperFBO;
+import com.goldsprite.gdengine.screens.ecs.editor.FinalEditorTest;
 
-public class GDEngineSelectionScreen extends BaseSelectionScreen {int k10;
+public class GDEngineSelectionScreen extends BaseSelectionScreen {int k11;
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("功能验证", null);
@@ -26,5 +27,6 @@ public class GDEngineSelectionScreen extends BaseSelectionScreen {int k10;
 		map.put("ai编辑器视图", SceneGameEditorWrapper.class);
 		map.put("ai编辑器视图2", SceneGameEditorWrapper2.class);
 		map.put("ai编辑器视图3FBO!", SceneGameEditorWrapperFBO.class);
+		map.put("ai编辑器视图4FBO2!", FinalEditorTest.class);
 	}
 }

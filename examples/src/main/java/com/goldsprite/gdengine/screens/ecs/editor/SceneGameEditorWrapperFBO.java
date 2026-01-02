@@ -124,59 +124,57 @@ class GameWorld {
 // 3. 核心黑科技：FBO 渲染容器 (虚拟机显示器)
 // ==========================================
 class FboRenderTarget extends Widget {
-    // 渲染回调接口
     public interface WorldRenderer {
         void render(Batch batch, Camera camera);
     }
 
     private FrameBuffer fbo;
-    private TextureRegion fboRegion; // 用于翻转纹理坐标
+    private TextureRegion fboRegion;
     private WorldRenderer renderer;
-    private Viewport internalViewport; // FBO 内部的视口逻辑 (比如 Fit/Extend)
-    private SpriteBatch internalBatch; // 专门用于画 FBO 内部的 Batch，与 UI 隔离
-
-    // 虚拟分辨率
+    private Viewport internalViewport;
+    private SpriteBatch internalBatch;
     private final int fboWidth, fboHeight;
+
+    // 【新增】用于画背景底色的纯白纹理
+    private Texture bgTexture; 
 
     public FboRenderTarget(int virtualWidth, int virtualHeight) {
         this.fboWidth = virtualWidth;
         this.fboHeight = virtualHeight;
 
-        // 1. 创建 FrameBuffer (RGB888, 不带深度，如果做3D需要带深度)
-        // 这就是我们的“显存画布”
+        // FBO 初始化
         fbo = new FrameBuffer(Pixmap.Format.RGBA8888, fboWidth, fboHeight, false);
-
-        // FBO 的纹理在内存里是上下颠倒的，需要包装成 Region 并翻转
         fboRegion = new TextureRegion(fbo.getColorBufferTexture());
         fboRegion.flip(false, true);
 
-        // 2. 内部渲染工具
         internalBatch = new SpriteBatch();
-        // 默认内部使用 Fit 模式，保证游戏逻辑分辨率一致
         internalViewport = new FitViewport(virtualWidth, virtualHeight);
         ((OrthographicCamera)internalViewport.getCamera()).setToOrtho(false, virtualWidth, virtualHeight);
+
+        // 【新增】生成一个纯白色的 1x1 纹理，用来画背景框
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(1, 1, 1, 1);
+        pixmap.fill();
+        bgTexture = new Texture(pixmap);
+        pixmap.dispose();
     }
 
     public void setRenderer(WorldRenderer renderer) {
         this.renderer = renderer;
     }
 
-    // 切换内部视口策略 (Extend, Fit, Stretch)
     public void setViewportType(ViewportType type) {
         Camera oldCam = internalViewport.getCamera();
         switch (type) {
             case FIT: internalViewport = new FitViewport(fboWidth, fboHeight, oldCam); break;
             case EXTEND: internalViewport = new ExtendViewport(fboWidth, fboHeight, oldCam); break;
-            case STRETCH: internalViewport = new FixedStretchViewport(fboWidth, fboHeight, oldCam); break; // 自定义Stretch
+            case STRETCH: internalViewport = new FixedStretchViewport(fboWidth, fboHeight, oldCam); break;
         }
-        // 切换后需要 update 一次，设为 FBO 的物理大小
         internalViewport.update(fboWidth, fboHeight, true);
     }
 
-    // 为了方便演示 Stretch 模式写的一个简单 Viewport
     public static class FixedStretchViewport extends FitViewport {
         public FixedStretchViewport(float w, float h, Camera c) { super(w, h, c); }
-        // 这里的逻辑通常直接用 StretchViewport 即可，为了保持代码整洁直接复用逻辑
     }
 
     public enum ViewportType { FIT, EXTEND, STRETCH }
@@ -187,13 +185,17 @@ class FboRenderTarget extends Widget {
 
     @Override
     public void draw(Batch uiBatch, float parentAlpha) {
+        // validate(); // 如果是Widget通常需要validate，但这里尺寸通常由外部layout控制
         if (renderer == null) return;
 
-        // --- 阶段 A: FBO 内部渲染 (保持不变) ---
-        uiBatch.end();
+        // ==============================================
+        // 阶段 A: 虚拟机内部渲染 (画到 FBO 显存里)
+        // ==============================================
+        uiBatch.end(); // 暂停外部绘制
+
         fbo.begin();
         Gdx.gl.glViewport(0, 0, fboWidth, fboHeight);
-        Gdx.gl.glClearColor(0.15f, 0.15f, 0.15f, 1); // 这种灰色是 FBO 的底色
+        Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1); // FBO 内部的清除颜色
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         internalBatch.setProjectionMatrix(internalViewport.getCamera().combined);
@@ -202,45 +204,52 @@ class FboRenderTarget extends Widget {
         internalBatch.end();
 
         fbo.end();
+        // 恢复全屏视口
         HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        // --- 阶段 B: 绘制 FBO 到 UI (修复拉伸的核心) ---
-        uiBatch.begin();
+        // ==============================================
+        // 阶段 B: 把 FBO 贴到编辑器窗口上
+        // ==============================================
+        uiBatch.begin(); // 恢复外部绘制
 
-        // 1. 获取窗口(Widget)的宽高
+        float widgetX = getX();
+        float widgetY = getY();
         float widgetW = getWidth();
         float widgetH = getHeight();
 
-        // 2. 计算按比例缩放后的尺寸 (Letterboxing 算法)
-        // 目标是让 FBO 纹理 (1280x720) 能够塞进 widgetW x widgetH 里，且不走形
+        // 【关键修复 1】：先画一个实心的底色背景框
+        // 这相当于“擦除”了上一帧遗留在屏幕上的像素，解决了“拖影”问题
+        uiBatch.setColor(0.1f, 0.1f, 0.1f, 1); // 深灰色背景
+        uiBatch.draw(bgTexture, widgetX, widgetY, widgetW, widgetH);
+        uiBatch.setColor(1, 1, 1, 1); // 恢复白色，准备画 FBO
+
+        // 【关键修复 2】：计算 Letterbox (黑边) 逻辑，解决拉伸问题
         float fboRatio = (float)fboWidth / fboHeight;
         float widgetRatio = widgetW / widgetH;
 
         float drawW, drawH;
-
         if (widgetRatio > fboRatio) {
-            // 窗口比 FBO 更宽（扁），以高度为基准
+            // 窗口太宽，以高为准，左右留空
             drawH = widgetH;
             drawW = drawH * fboRatio;
         } else {
-            // 窗口比 FBO 更窄（瘦），以宽度为基准
+            // 窗口太高，以宽为准，上下留空
             drawW = widgetW;
             drawH = drawW / fboRatio;
         }
 
-        // 3. 居中计算
-        float drawX = getX() + (widgetW - drawW) / 2;
-        float drawY = getY() + (widgetH - drawH) / 2;
+        // 居中显示
+        float drawX = widgetX + (widgetW - drawW) / 2;
+        float drawY = widgetY + (widgetH - drawH) / 2;
 
-        // 4. 绘制 (只画在计算出的区域里，周围留下的空白就是 Widget 的底色)
+        // 画出最终的游戏画面
         uiBatch.draw(fboRegion, drawX, drawY, drawW, drawH);
-
-        // (可选) 可以在 drawX, drawY 周围画一个边框，假装是电视机边框
     }
 
     public void dispose() {
         fbo.dispose();
         internalBatch.dispose();
+        bgTexture.dispose(); // 记得销毁背景图
     }
 }
 
