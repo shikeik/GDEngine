@@ -8,6 +8,7 @@ import com.goldsprite.gameframeworks.PlatformImpl;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.solofight.BuildConfig;
 import com.goldsprite.solofight.GdxLauncher;
+import com.goldsprite.solofight.screens.editor.tests.EditorScene2D;
 
 /**
  * Launches the desktop (LWJGL3) application.
@@ -36,7 +37,8 @@ public class Lwjgl3Launcher {
 			}
 		};*/
 		// ---------------------------------------------
-		return new Lwjgl3Application(new GdxLauncher(), getDefaultConfiguration());
+//		return new Lwjgl3Application(new GdxLauncher(), getDefaultConfiguration());
+		return new Lwjgl3Application(new EditorScene2D(), getDefaultConfiguration());
 	}
 
 	private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
