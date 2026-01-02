@@ -1,12 +1,15 @@
 package com.goldsprite.gameframeworks;
 
 import com.badlogic.gdx.Gdx;
+import com.goldsprite.gameframeworks.screens.ScreenManager;
 
 import java.util.function.Consumer;
 
 public class PlatformImpl {
 	public static Consumer<Boolean> showSoftInputKeyBoard;
 	public static Consumer<Boolean> fullScreenEvent;
+
+	public static ScreenManager.Orientation defaultOrientaion = ScreenManager.Orientation.Portrait;
 
 	public static int getTouchCount() {
 		int count = 0;

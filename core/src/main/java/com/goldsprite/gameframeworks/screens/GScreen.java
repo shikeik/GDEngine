@@ -4,15 +4,13 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.goldsprite.gameframeworks.PlatformImpl;
 
 
 /**
@@ -44,10 +42,20 @@ public abstract class GScreen implements IGScreen {
 	protected OrthographicCamera worldCamera = new OrthographicCamera();
 	// [新增] 世界缩放比例 (默认 1:1，数值越小世界视野越小/像素感越强)
 	protected float worldScale = 1.0f;
-	
+
 	// [新增] 配置项：Resize 时是否自动将世界相机重置到中心
 	// 默认 true 保持向后兼容，SkeletonVisualScreen 可以设为 false
 	protected boolean autoCenterWorldCamera = true;
+
+	//ExampleGScreen Logic
+	// 1. 定义基准尺寸 (540p)
+	protected float uiViewportScale = 1.2f; // 保持原本的缩放系数
+	protected float viewSizeShort = 540f;
+	protected float viewSizeLong = 960f;
+
+	public ScreenManager.Orientation getOrientation() {
+		return PlatformImpl.defaultOrientaion;
+	}
 
 	public GScreen() {
 	}
@@ -78,15 +86,33 @@ public abstract class GScreen implements IGScreen {
 	}
 
 
-	/**
-	 * 初始化视口
-	 * 子类可重写此方法以提供自定义的 Viewport 实例
-	 * 默认视口分辨率为管理器分辨率
-	 */
+	// 3. 智能初始化视口 (接管 GScreen 的 initViewport)
 	protected void initViewport() {
-		Viewport baseViewport = getScreenManager().getViewport();
-		uiViewport = new ExtendViewport(baseViewport.getWorldWidth(), baseViewport.getWorldHeight());
-		uiViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
+		float w, h;
+		int screenW, screenH;
+		screenW = Gdx.graphics.getWidth();
+		screenH = Gdx.graphics.getHeight();
+		int sLong = Math.max(screenW, screenH);
+		int sShort = Math.min(screenW, screenH);
+		if (getOrientation() == ScreenManager.Orientation.Landscape) {
+			w = viewSizeLong;
+			h = viewSizeShort;
+			screenW = sLong;
+			screenH = sShort;
+		} else {
+			w = viewSizeShort;
+			h = viewSizeLong;
+			screenW = sShort;
+			screenH = sLong;
+		}
+
+		// 自动应用缩放系数
+		uiViewport = new ExtendViewport(w * uiViewportScale, h * uiViewportScale);
+		//Debug.log("1ui视口宽高: %s", getViewSize());
+
+		uiViewport.update(screenW, screenH, true);
+		//Debug.log("2ui视口宽高: %s", getViewSize());int k5;
+
 	}
 
 	@Override
@@ -278,6 +304,9 @@ public abstract class GScreen implements IGScreen {
 	public void show() {
 		visible = true;
 		getScreenManager().enableInput(getImp());
+
+		getScreenManager().setOrientation(getOrientation());
+
 		//切换时刷新屏幕视口
 		resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 	}

@@ -1,6 +1,7 @@
 package com.goldsprite.solofight.android;
 
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
@@ -14,6 +15,7 @@ import android.widget.RelativeLayout;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.goldsprite.gameframeworks.PlatformImpl;
+import com.goldsprite.gameframeworks.log.Debug;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 
 import java.util.HashMap;
@@ -54,6 +56,10 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		ctx = this;
 		ScreenUtils.hideBlackBar(this);
 		UncaughtExceptionActivity.setUncaughtExceptionHandler(this, AndroidGdxLauncher.class);
+
+		//注入默认朝向
+		boolean isPortrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
+		PlatformImpl.defaultOrientaion = isPortrait ? ScreenManager.Orientation.Portrait : ScreenManager.Orientation.Landscape;
 
 		setupViewportListener();
 		initKeyMap();
