@@ -116,63 +116,59 @@ abstract class GameRenderWidget extends Widget {
 		}
 	}
 
+	// 在 GameRenderWidget 类中
 	@Override
 	public void draw(Batch uiBatch, float parentAlpha) {
 		validate();
 
-		// 1. 获取 Widget 在屏幕上的实际位置和大小
+		// 1. 计算位置 (保持不变)
 		tempCoords.set(0, 0);
 		localToStageCoordinates(tempCoords);
-
 		int screenX = (int) tempCoords.x;
 		int screenY = (int) tempCoords.y;
 		int screenW = (int) getWidth();
 		int screenH = (int) getHeight();
 
-		// 2. 暂停 UI 绘制
+		if (screenW <= 0 || screenH <= 0) return;
+
 		uiBatch.end();
 
-		// ================== 核心修改开始 ==================
-
-		// A. 开启裁剪测试 (Scissor Test)
-		// 这一步很重要：先把绘图限制在 Widget 范围内。
-		// 这样如果 FitViewport 留了黑边，或者我们在“黑边”区域清屏，就不会涂到别的窗口上去。
+		// 2. 剪裁 (保持不变)
 		Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
 		HdpiUtils.glScissor(screenX, screenY, screenW, screenH);
 
-		// B. 清除 Widget 背景 (这就形成了 Fit 模式下的“黑边”颜色)
-		// 我们可以设成灰色，方便看清边界
 		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		// C. 配置 Viewport
-		// 告诉 Viewport：“你的屏幕不是全屏，而是只有 screenX,Y,W,H 这么大”
-		viewport.setScreenBounds(screenX, screenY, screenW, screenH);
+		// ================== 核心修正点 ==================
 
-		// D. 更新 Viewport
-		// 这会根据当前 Widget 的大小计算相机的 zoom 和 projection
-		// centerCamera = true (通常游戏视图希望相机对准中心，或者你需要手动控制相机位置)
+		// 错误顺序 (旧代码):
+		// viewport.setScreenBounds(screenX, screenY, screenW, screenH);
+		// viewport.update(screenW, screenH, false); // 这句会把 x,y 重置为 0,0 ！！！
+
+		// 正确顺序 (新代码):
+
+		// 第一步：先 update，计算内部比例 (这会默认设 x=0, y=0)
 		viewport.update(screenW, screenH, false);
 
-		// E. 应用 Viewport
-		// 这一步内部会调用 HdpiUtils.glViewport()，把 OpenGL 绘制区设置到正确的位置
-		// 如果是 Fit 模式，这里设置的区域可能会比 Widget 小（居中）
+		// 第二步：再覆盖 ScreenBounds，把位置设为 Widget 在屏幕上的真实位置
+		viewport.setScreenBounds(screenX, screenY, screenW, screenH);
+
+		// 第三步：最后应用到 OpenGL
 		viewport.apply();
 
-		// ================== 核心修改结束 ==================
+		// ==============================================
 
-		// 3. 绘制游戏世界
+		// 3. 绘制
 		worldBatch.setProjectionMatrix(viewport.getCamera().combined);
 		worldBatch.begin();
 		renderWorld(worldBatch);
 		worldBatch.end();
 
-		// 4. 恢复现场
+		// 4. 恢复
 		Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
-		// 恢复全屏视口给 UI 使用
 		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-		// 5. 恢复 UI 绘制
 		uiBatch.begin();
 	}
 
@@ -214,67 +210,57 @@ class DualViewEditor extends ApplicationAdapter {
 	private void createGameWindow() {
 		VisWindow window = new VisWindow("Game View");
 		window.setResizable(true);
-		window.setSize(500, 400); // 稍微大点方便看 Fit 效果
+		window.setSize(500, 400);
 		window.setPosition(50, 50);
 
-		// 1. 创建渲染层
-		// 假设我们的游戏设计分辨率是 480x320 (像素风游戏常用)
-		// 如果 Widget 比例和这个不一致，Fit 模式就会出现黑边
+		// 1. 渲染层 (Widget)
 		final GameRenderWidget gameWidget = new GameRenderWidget(worldBatch, 480, 320) {
 			@Override
 			public void renderWorld(Batch batch) {
-				// 简单跟随
 				getCamera().position.set(playerX, playerY, 0);
 				getCamera().update();
-				// 注意：batch 的 projection matrix 已经在 Widget 里设置好了，这里不需要再 set
-
-				// 画背景和人
 				batch.draw(bgTexture, -500, -500, 1000, 1000);
 				batch.draw(playerTexture, playerX, playerY);
-
-				// 画一个红框表示“世界边界”，方便调试 Fit 效果
-				// (实际项目中用 ShapeRenderer，这里偷懒不做演示)
 			}
 		};
 
-		// 2. 创建 UI 层
+		// 2. UI层 (摇杆 + 下拉框)
 		Table uiLayer = new Table();
-		uiLayer.setFillParent(true); // 填满 Stack
+		// 关键：让UI层只作为容器，不拦截空白处的点击，否则可能影响底层游戏交互
+		// (不过摇杆和下拉框作为子元素依然可以被点击)
+		uiLayer.setFillParent(true);
 
 		// --- 摇杆 (左下) ---
 		Touchpad.TouchpadStyle style = VisUI.getSkin().get(Touchpad.TouchpadStyle.class);
 		joystick = new Touchpad(10, style);
-		Table joystickTable = new Table();
-		joystickTable.bottom().left().pad(20);
-		joystickTable.add(joystick).size(100);
 
 		// --- 视口切换器 (右上) ---
-		VisSelectBox<String> viewSelector = new VisSelectBox<>();
+		final VisSelectBox<String> viewSelector = new VisSelectBox<>();
 		viewSelector.setItems("Extend", "Fit", "Stretch");
-
 		viewSelector.addListener(new ChangeListener() {
 			@Override
-			public void changed(ChangeListener.ChangeEvent event, Actor actor) {
+			public void changed(ChangeEvent event, Actor actor) {
 				String selected = viewSelector.getSelected();
-				if("Fit".equals(selected)) {
-					gameWidget.setViewportType(GameRenderWidget.ViewportType.FIT);
-				} else if ("Stretch".equals(selected)) {
-					gameWidget.setViewportType(GameRenderWidget.ViewportType.STRETCH);
-				} else {
-					gameWidget.setViewportType(GameRenderWidget.ViewportType.EXTEND);
-				}
+				if("Fit".equals(selected)) gameWidget.setViewportType(GameRenderWidget.ViewportType.FIT);
+				else if ("Stretch".equals(selected)) gameWidget.setViewportType(GameRenderWidget.ViewportType.STRETCH);
+				else gameWidget.setViewportType(GameRenderWidget.ViewportType.EXTEND);
 			}
 		});
 
-		Table selectorTable = new Table();
-		selectorTable.top().right().pad(10);
-		selectorTable.add(viewSelector).width(100);
+		// --- 布局组装 ---
+		// 第一行：右上角放下拉框
+		uiLayer.top(); // 整个 Table 内容靠上
+		uiLayer.add(viewSelector).expandX().right().pad(5);
+		uiLayer.row(); // 换行
 
-		// 把它们加到 UI 层
-		uiLayer.add(joystickTable).expand().bottom().left(); // 占用左下角
-		uiLayer.addActor(selectorTable); // addActor 直接覆盖在上面，或者你也用 Table 布局
+		// 第二行：中间占位 (把摇杆挤到下面去)
+		uiLayer.add().expand().fill();
+		uiLayer.row();
 
-		// 3. 组装 Stack
+		// 第三行：左下角放摇杆
+		uiLayer.add(joystick).left().bottom().pad(20).size(100);
+
+		// 3. Stack 组合
 		Stack stack = new Stack();
 		stack.add(gameWidget); // 底层
 		stack.add(uiLayer);    // 顶层
