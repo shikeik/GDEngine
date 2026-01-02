@@ -276,14 +276,6 @@ class ViewWidget extends Widget {
 		float percentX = (localX - (drawX - getX())) / drawW;
 		float percentY = (localY - (drawY - getY())) / drawH;
 
-		// 2. 【修复Y轴反转】
-		// 关键点：FBO纹理绘制时翻转了，所以 LocalY 越大(向上)，对应 TextureV 越小(向下)？
-		// 实际上，因为 fboRegion.flip(false, true)，绘制出来的图像是正的。
-		// 但是！这意味着 drawY (底部) 对应的是 FBO 纹理的 Top (因为翻转了绘制)
-		// 简单粗暴的数学事实：
-		// 屏幕点击越靠上，percentY 越大。
-		// 在 FBO 内部，percentY 越大，应该对应 WorldY 越大。
-
 		// 3. 计算 FBO 内部的像素坐标
 		// FBO 总大小
 		float fboTotalW = target.viewport.getScreenWidth();
@@ -304,13 +296,6 @@ class ViewWidget extends Widget {
 		// 归一化设备坐标 (NDC) -1 ~ 1
 		float ndcX = (fboPixelX - vpX) / vpW * 2.0f - 1.0f;
 		float ndcY = (fboPixelY - vpY) / vpH * 2.0f - 1.0f;
-
-		// 5. 【修正】Y轴再次翻转？
-		// 如果你觉得 Fit/Extend 都反了，那就反转 ndcY
-		// 经过之前的测试，如果不反转是错的，那我们就反转！
-		// 因为 TextureRegion.flip(false, true) 让纹理坐标 V 翻转了
-		// 所以视觉上的 Top 其实是数据上的 Bottom
-		ndcY = -ndcY;
 
 		// 6. 映射到世界坐标
 		OrthographicCamera cam = (OrthographicCamera) target.camera;
