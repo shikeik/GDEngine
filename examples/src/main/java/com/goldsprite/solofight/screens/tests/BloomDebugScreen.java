@@ -4,8 +4,8 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.neonbatch.BloomRenderer;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.BloomRenderer;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
 
 public class BloomDebugScreen extends ExampleGScreen {
 

@@ -3,8 +3,8 @@ package com.goldsprite.solofight.game;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
-import com.goldsprite.solofight.core.audio.SynthAudio;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.audio.SynthAudio;
 import com.goldsprite.solofight.input.InputContext;
 
 import java.util.List;

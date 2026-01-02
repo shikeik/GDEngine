@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.screens.ecs.tests;
+package com.goldsprite.solofight.screens.ecs;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -14,14 +14,14 @@ import com.goldsprite.gameframeworks.ecs.entity.GObject;
 import com.goldsprite.gameframeworks.ecs.fsm.State;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
-import com.goldsprite.solofight.core.neonbatch.NeonStage;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonStage;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSlider;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 import java.util.List;
-import com.goldsprite.gameframeworks.ecs.component.TransformComponent;
+
 import com.goldsprite.solofight.ecs.tests.ShapeRendererComponent;
 
 public class EcsVisualTestScreen extends ExampleGScreen {
@@ -30,7 +30,7 @@ public class EcsVisualTestScreen extends ExampleGScreen {
 	private SpriteBatch uiBatch;
 	private BitmapFont font;
 	private Stage uiStage;
-	
+
 	private GameWorld world;
 
 	@Override
@@ -47,8 +47,8 @@ public class EcsVisualTestScreen extends ExampleGScreen {
 	public void create() {
 		neonBatch = new NeonBatch();
 		uiBatch = new SpriteBatch();
-		font = new BitmapFont(); 
-		
+		font = new BitmapFont();
+
 		// 1. 初始化世界 (每次进入先清理)
 		try { if (GameWorld.inst() != null) GameWorld.inst().dispose(); } catch(Exception ignored){}
 		world = new GameWorld();
@@ -77,16 +77,16 @@ public class EcsVisualTestScreen extends ExampleGScreen {
 		GObject earth = new GObject("Earth");
 		earth.setParent(sun); // 【关键】设置父级
 		// 局部坐标：在太阳右边 300 像素
-		earth.transform.setPosition(300, 0); 
+		earth.transform.setPosition(300, 0);
 		earth.addComponent(ShapeRendererComponent.class)
 			 .set(ShapeRendererComponent.ShapeType.BOX, Color.CYAN, 50f);
 		// 地球自转更快
 		earth.getComponent(ShapeRendererComponent.class).rotateSpeed = 180f;
-		
+
 		// 给地球加 FSM (测试状态机)
 		FsmComponent fsm = earth.addComponent(FsmComponent.class);
 		fsm.addState(new IdleState(), 0);
-		fsm.addState(new FastSpinState(), 10); 
+		fsm.addState(new FastSpinState(), 10);
 
 		// --- 3. 月球 (Child of Earth) ---
 		GObject moon = new GObject("Moon");
@@ -139,7 +139,7 @@ public class EcsVisualTestScreen extends ExampleGScreen {
 
 		// 2. 渲染 (手动遍历 ShapeComponent)
 		List<GObject> renderables = ComponentManager.getEntitiesWithComponents(ShapeRendererComponent.class);
-		
+
 		neonBatch.setProjectionMatrix(getWorldCamera().combined);
 		neonBatch.begin();
 		drawGrid();
@@ -196,7 +196,7 @@ public class EcsVisualTestScreen extends ExampleGScreen {
 	}
 
 	public static class FastSpinState extends State {
-		public static boolean trigger = false; 
+		public static boolean trigger = false;
 		@Override public boolean canEnter() { return trigger; }
 
 		@Override public void enter() {

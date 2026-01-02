@@ -1,7 +1,7 @@
 package com.goldsprite.solofight.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.Color;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
 
 /**
  * 渲染插槽 (渲染层)

@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.core.neonbatch;
+package com.goldsprite.gameframeworks.neonbatch;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;

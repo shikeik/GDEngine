@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.screens.ecs.tests.skeleton;
+package com.goldsprite.solofight.screens.ecs.skeleton;
 
 import com.goldsprite.solofight.ecs.skeleton.NeonAnimatorComponent;
 import com.goldsprite.solofight.ecs.skeleton.animation.NeonAnimation;

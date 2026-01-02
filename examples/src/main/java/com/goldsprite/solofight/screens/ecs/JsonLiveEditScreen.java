@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.screens.ecs.tests;
+package com.goldsprite.solofight.screens.ecs;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
@@ -6,12 +6,11 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.gameframeworks.ecs.GameWorld;
 import com.goldsprite.gameframeworks.ecs.entity.GObject;
-import com.goldsprite.gameframeworks.ecs.system.SceneSystem;
 import com.goldsprite.gameframeworks.log.Debug;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
-import com.goldsprite.solofight.core.neonbatch.NeonStage;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonStage;
 import com.goldsprite.solofight.ecs.skeleton.*;
 import com.goldsprite.solofight.ecs.skeleton.animation.NeonAnimation;
 import com.goldsprite.solofight.ecs.skeleton.data.NeonJsonUtils;
@@ -19,7 +18,7 @@ import com.goldsprite.solofight.ui.widget.BioCodeEditor;
 import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.goldsprite.solofight.screens.ecs.tests.skeleton.TestSkeletonFactory;
+import com.goldsprite.solofight.screens.ecs.skeleton.TestSkeletonFactory;
 
 public class JsonLiveEditScreen extends ExampleGScreen {
 
@@ -107,7 +106,7 @@ public class JsonLiveEditScreen extends ExampleGScreen {
 
         // 相机调整 (给左边留出位置)
 		autoCenterWorldCamera = false;
-        getWorldCamera().position.set(-150, 0, 0); 
+        getWorldCamera().position.set(-150, 0, 0);
         getWorldCamera().update();
     }
 
@@ -184,7 +183,7 @@ public class JsonLiveEditScreen extends ExampleGScreen {
     @Override
     public void render0(float delta) {
         world.update(delta);
-		
+
         neonBatch.setProjectionMatrix(getWorldCamera().combined);
         neonBatch.begin();
         neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.GRAY);

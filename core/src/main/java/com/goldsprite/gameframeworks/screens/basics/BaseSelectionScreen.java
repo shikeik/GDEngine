@@ -6,7 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup;
 import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.goldsprite.gameframeworks.screens.IGScreen;
+import com.goldsprite.gameframeworks.screens.GScreen;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -16,7 +16,7 @@ import java.util.Map;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 
 public abstract class BaseSelectionScreen extends ExampleGScreen {
-	protected final Map<String, Class<? extends IGScreen>> screenMapping = new LinkedHashMap<>();
+	protected final Map<String, Class<? extends GScreen>> screenMapping = new LinkedHashMap<>();
 	private final float layout_padding = 40;
 	private final float cell_margin = 20;
 	private final float cell_height = 80;
@@ -40,7 +40,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 	}
 
 	// 子类只需实现这个方法来填充列表
-	protected abstract void initScreenMapping(Map<String, Class<? extends IGScreen>> map);
+	protected abstract void initScreenMapping(Map<String, Class<? extends GScreen>> map);
 
 	@Override
 	public void create() {
@@ -67,7 +67,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 		btnGroup.setUncheckLast(true);
 
 		for (String title : screenMapping.keySet()) {
-			Class<? extends IGScreen> key = screenMapping.get(title);
+			Class<? extends GScreen> key = screenMapping.get(title);
 
 			if (key == null) {
 				VisLabel lbl = new VisLabel(title);

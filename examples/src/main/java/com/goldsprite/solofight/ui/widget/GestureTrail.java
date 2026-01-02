@@ -3,7 +3,7 @@ package com.goldsprite.solofight.ui.widget;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
 
 public class GestureTrail {
 	public Vector2 start = new Vector2();

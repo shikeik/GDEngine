@@ -2,6 +2,7 @@ package com.goldsprite.gameframeworks.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -18,7 +19,7 @@ import com.goldsprite.gameframeworks.PlatformImpl;
  * <br/>- 设置视口, 重写该方法: initViewport(){ setViewport(...) }
  * <br/>- 添加事件处理器: getImp().addInputProcessor(...)
  */
-public abstract class GScreen implements IGScreen {
+public abstract class GScreen extends ScreenAdapter {
 	private final Vector2 viewSize = new Vector2();
 	private final Vector2 viewCenter = new Vector2();
 	private final Vector2 worldSize = new Vector2();
@@ -67,7 +68,6 @@ public abstract class GScreen implements IGScreen {
 	public void create() {
 	}
 
-	@Override
 	public void initialize() {
 		if (initialized) return;
 		init();
@@ -111,11 +111,10 @@ public abstract class GScreen implements IGScreen {
 		//Debug.log("1ui视口宽高: %s", getViewSize());
 
 		uiViewport.update(screenW, screenH, true);
-		//Debug.log("2ui视口宽高: %s", getViewSize());int k5;
+		//Debug.log("2ui视口宽高: %s", getViewSize());
 
 	}
 
-	@Override
 	public boolean isInitialized() {
 		return initialized;
 	}
@@ -136,11 +135,7 @@ public abstract class GScreen implements IGScreen {
 		this.imp = imp;
 	}
 
-	@Override
 	public Viewport getUIViewport() {
-		// [!!! 核心修复 !!!]
-		// 必须返回本地的 uiViewport 字段，而不是 getScreenManager().getViewport()
-		// 这样子类注入的自定义视口才能生效
 		return uiViewport;
 	}
 

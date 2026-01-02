@@ -1,9 +1,9 @@
-package com.goldsprite.solofight.core.ui.widget;
+package com.goldsprite.gameframeworks.ui.widget;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
-import com.goldsprite.solofight.core.neonbatch.NeonActor;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonActor;
 
 /**
  * 通用赛博朋克风格血条组件 (H5复刻版 v2.0)
@@ -13,7 +13,7 @@ import com.goldsprite.solofight.core.neonbatch.NeonActor;
  * - 支持任意角度倾斜 (Skew Degrees)
  * - 支持双向填充 (Left-to-Right / Right-to-Left)
  */
-public class H5SkewBar extends NeonActor {
+public class SkewBar extends NeonActor {
 
 	// --- 样式定义 ---
 	public static class BarStyle {
@@ -65,7 +65,7 @@ public class H5SkewBar extends NeonActor {
 	 * @param min 最小值
 	 * @param max 最大值
 	 */
-	public H5SkewBar(float min, float max, BarStyle style) {
+	public SkewBar(float min, float max, BarStyle style) {
 		this.min = min;
 		this.max = max;
 		this.value = max;

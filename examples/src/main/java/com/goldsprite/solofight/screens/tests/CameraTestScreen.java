@@ -118,7 +118,7 @@ public class CameraTestScreen extends ExampleGScreen {
 		root.top().left().pad(20);
 		uiStage.addActor(root);
 
-		Table panel = new Table();int k;
+		Table panel = new Table();
 		panel.setBackground(createColorDrawable(new Color(0, 0, 0, 0.5f)));
 		panel.pad(15);
 		panel.defaults().width(220).padBottom(5).left();

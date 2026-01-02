@@ -1,5 +1,5 @@
 // 文件: ./examples/src/main/java/com/goldsprite/solofight/screens/ecs/tests/skeleton/SkeletonVisualScreen.java
-package com.goldsprite.solofight.screens.ecs.tests.skeleton;
+package com.goldsprite.solofight.screens.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
@@ -11,10 +11,9 @@ import com.goldsprite.gameframeworks.ecs.entity.GObject;
 import com.goldsprite.gameframeworks.log.Debug;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
-import com.goldsprite.solofight.core.neonbatch.NeonStage;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonStage;
 import com.goldsprite.solofight.ecs.skeleton.*;
-import com.goldsprite.solofight.ecs.skeleton.animation.*;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class SkeletonVisualScreen extends ExampleGScreen {

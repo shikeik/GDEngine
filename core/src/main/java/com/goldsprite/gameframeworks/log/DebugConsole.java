@@ -45,7 +45,7 @@ public class DebugConsole extends Group {
 	private final float LERP_SPEED = 15f; // 插值速度
 
 	// 数据刷新
-	private float updateTimer = 0;int k;
+	private float updateTimer = 0;
 	private final float REFRESH_RATE = 1/60f; // UI 刷新频率
 
 	float resizeHandleHeight = 20;

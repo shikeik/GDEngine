@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.core.neonbatch;
+package com.goldsprite.gameframeworks.neonbatch;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.graphics.g2d.Batch;
 

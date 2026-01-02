@@ -7,8 +7,8 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.goldsprite.solofight.input.InputContext;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
-import com.goldsprite.solofight.core.neonbatch.NeonActor;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonActor;
 
 public class VirtualJoystick extends NeonActor {
 	private final float baseRadius = 70f;

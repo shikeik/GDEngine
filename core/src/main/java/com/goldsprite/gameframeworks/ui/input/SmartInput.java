@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.core.ui.input;
+package com.goldsprite.gameframeworks.ui.input;
 
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.kotcrab.vis.ui.widget.VisLabel;

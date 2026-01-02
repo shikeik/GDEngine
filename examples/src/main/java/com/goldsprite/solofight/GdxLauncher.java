@@ -12,10 +12,10 @@ import com.goldsprite.gameframeworks.assets.VisUIHelper;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.solofight.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
-import com.goldsprite.solofight.core.audio.SynthAudio;
+import com.goldsprite.gameframeworks.audio.SynthAudio;
 import com.badlogic.gdx.utils.viewport.Viewport;
 
-public class GdxLauncher extends Game {int k16;
+public class GdxLauncher extends Game {
 	private Application.ApplicationType userType;
 
 	public SpriteBatch batch;

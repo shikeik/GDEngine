@@ -1,7 +1,7 @@
-package com.goldsprite.solofight.screens.tests;
+package com.goldsprite.solofight.screens;
 import com.goldsprite.gameframeworks.screens.GScreen;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
 import com.badlogic.gdx.graphics.Color;
 
 public class TempTestScreen extends GScreen {

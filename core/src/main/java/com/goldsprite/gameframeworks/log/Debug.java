@@ -102,7 +102,7 @@ public class Debug {
 		StringBuilder sb = new StringBuilder();
 		sb.append(BuildConfig.PROJECT_NAME).append(": V").append(BuildConfig.DEV_VERSION);
 		sb.append("\nHeap: ").append(Gdx.app.getJavaHeap() / 1024 / 1024).append("MB");
-		sb.append("\nFPS: ").append(Gdx.graphics.getFramesPerSecond());int k;
+		sb.append("\nFPS: ").append(Gdx.graphics.getFramesPerSecond());
 
 		if (!getInstance().logInfos.isEmpty()) {
 			sb.append("\n--- Monitors ---\n");
@@ -207,7 +207,7 @@ public class Debug {
 		// [修改] 如果 UI 还没初始化，直接跳过渲染，但数据收集依然正常工作
 		if (!showDebugUI || stage == null) return;
 
-		stage.getViewport().apply(true);int k;
+		stage.getViewport().apply(true);
 		stage.act();
 		stage.draw();
 	}

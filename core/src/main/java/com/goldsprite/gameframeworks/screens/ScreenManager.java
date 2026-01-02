@@ -34,12 +34,12 @@ public class ScreenManager implements Disposable {
 	public static Consumer<Orientation> orientationChanger;
 	public static List<Runnable> exitGame = new ArrayList<>();//声明退出游戏事件回调，需要在各平台自身实现
 	private static ScreenManager instance;
-	private final Map<Class<?>, IGScreen> screens = new HashMap<>();
+	private final Map<Class<?>, GScreen> screens = new HashMap<>();
 	private InputMultiplexer imp;
 	//屏幕历史堆栈
-	private final Stack<IGScreen> screenHistory = new Stack<>();
-	private IGScreen curScreen;
-	private IGScreen launchScreen;
+	private final Stack<GScreen> screenHistory = new Stack<>();
+	private GScreen curScreen;
+	private GScreen launchScreen;
 	private boolean popping;//用于标记是否为弹出历史屏幕状态
 	private Viewport viewport;//统一视口
 
@@ -53,7 +53,7 @@ public class ScreenManager implements Disposable {
 	public ScreenManager(Viewport viewport) {
 		this(viewport, new InputMultiplexer());
 	}
-	
+
 	public ScreenManager(Viewport viewport, InputMultiplexer imp) {
 		instance = this;
 		this.viewport = viewport;
@@ -61,7 +61,7 @@ public class ScreenManager implements Disposable {
 		viewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
 		initInputHandler(imp);
 	}
-	
+
 
 	/**
 	 * 单例屏幕管理器
@@ -81,7 +81,7 @@ public class ScreenManager implements Disposable {
 
 	private void initInputHandler(InputMultiplexer imp) {
 		this.imp = imp;
-		
+
 		//设置到gdx输入管线
 		if (Gdx.input.getInputProcessor() == null) Gdx.input.setInputProcessor(imp);
 		//创建默认处理器
@@ -130,7 +130,7 @@ public class ScreenManager implements Disposable {
 	 */
 	public void render() {
 		if (!curScreen.isInitialized()) return;
-		
+
 		float delta = Gdx.graphics.getDeltaTime();
 		curScreen.getUIViewport().apply();
 		curScreen.render(delta);
@@ -141,7 +141,7 @@ public class ScreenManager implements Disposable {
 	 */
 	@Override
 	public void dispose() {
-		for (IGScreen screen : screens.values()) {
+		for (GScreen screen : screens.values()) {
 			if (screen.isInitialized())
 				screen.dispose();
 		}
@@ -154,7 +154,7 @@ public class ScreenManager implements Disposable {
 	/**
 	 * 添加并配置游戏屏幕
 	 */
-	public ScreenManager addScreen(IGScreen screen) {
+	public ScreenManager addScreen(GScreen screen) {
 		Class<?> key = screen.getClass();
 		if (!screens.containsKey(key)) {
 			screens.put(key, screen);
@@ -167,7 +167,7 @@ public class ScreenManager implements Disposable {
 	/**
 	 * 通过键获取游戏屏幕
 	 */
-	public IGScreen getScreen(Class<?> key) {
+	public GScreen getScreen(Class<?> key) {
 		if (!screens.containsKey(key)) throw new RuntimeException("未找到此屏幕." + key.getSimpleName());
 		return screens.get(key);
 	}
@@ -179,15 +179,15 @@ public class ScreenManager implements Disposable {
 	/**
 	 * 获取当前屏幕
 	 */
-	public IGScreen getCurScreen() {
+	public GScreen getCurScreen() {
 		return curScreen;
 	}
 
-	public void setCurScreen(Class<? extends IGScreen> key) {
+	public void setCurScreen(Class<? extends GScreen> key) {
 		setCurScreen(key, false);
 	}
 
-	public void setCurScreen(IGScreen screen) {
+	public void setCurScreen(GScreen screen) {
 		//如果屏幕未准备则初始化屏幕
 		screen.initialize();
 		//隐藏上个屏幕并切换到目标屏幕
@@ -200,7 +200,7 @@ public class ScreenManager implements Disposable {
 		this.curScreen.show();
 	}
 
-	public void setCurScreen(Class<? extends IGScreen> key, boolean autoCreate) {
+	public void setCurScreen(Class<? extends GScreen> key, boolean autoCreate) {
 		//自动加入管理屏幕中
 		if (autoCreate && !existsScreen(key)) {
 			try {
@@ -215,22 +215,22 @@ public class ScreenManager implements Disposable {
 	//回到上个屏幕
 	public boolean popLastScreen() {
 		if (screenHistory.isEmpty()) return false;
-		IGScreen lastScreen = screenHistory.pop();
+		GScreen lastScreen = screenHistory.pop();
 		popping = true;
 		setCurScreen(lastScreen);
 		popping = false;
 		return true;
 	}
-	
-	public IGScreen getLaunchScreen() {
+
+	public GScreen getLaunchScreen() {
 		return launchScreen;
 	}
 
-	public void setLaunchScreen(Class<? extends IGScreen> key) {
+	public void setLaunchScreen(Class<? extends GScreen> key) {
 		setLaunchScreen(getScreen(key));
 	}
 
-	public void setLaunchScreen(IGScreen screen) {
+	public void setLaunchScreen(GScreen screen) {
 		launchScreen = screen;
 		if (!screen.isInitialized())
 			setCurScreen(launchScreen);

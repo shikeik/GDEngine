@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.screens.ecs.tests;
+package com.goldsprite.solofight.screens.ecs;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
@@ -10,12 +10,11 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gameframeworks.ecs.GameWorld;
 import com.goldsprite.gameframeworks.ecs.entity.GObject;
-import com.goldsprite.gameframeworks.ecs.system.SceneSystem;
 import com.goldsprite.gameframeworks.log.Debug;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
-import com.goldsprite.solofight.core.neonbatch.NeonStage;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonStage;
 import com.goldsprite.solofight.ecs.skeleton.*;
 import com.goldsprite.solofight.ecs.skeleton.animation.*;
 import com.kotcrab.vis.ui.widget.VisLabel;
@@ -24,7 +23,7 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 public class SpriteVisualScreen extends ExampleGScreen {
 
     private GameWorld world;
-    private NeonBatch neonBatch; 
+    private NeonBatch neonBatch;
     private NeonStage uiStage;
 
     private Texture texture;
@@ -59,7 +58,7 @@ public class SpriteVisualScreen extends ExampleGScreen {
         initUI();
 
 		autoCenterWorldCamera = false;
-        getWorldCamera().zoom = 0.8f; 
+        getWorldCamera().zoom = 0.8f;
         getWorldCamera().update();
     }
 

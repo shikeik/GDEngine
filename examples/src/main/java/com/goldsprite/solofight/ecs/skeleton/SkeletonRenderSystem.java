@@ -4,7 +4,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.goldsprite.gameframeworks.ecs.GameSystemInfo;
 import com.goldsprite.gameframeworks.ecs.entity.GObject;
 import com.goldsprite.gameframeworks.ecs.system.BaseSystem;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
 import java.util.List;
 
 /**

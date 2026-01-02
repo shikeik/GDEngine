@@ -7,8 +7,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.core.audio.SynthAudio;
-import com.goldsprite.solofight.core.audio.SynthAudio.WaveType;
+import com.goldsprite.gameframeworks.audio.SynthAudio;
+import com.goldsprite.gameframeworks.audio.SynthAudio.WaveType;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class AudioTestScreen extends ExampleGScreen {
@@ -19,7 +19,7 @@ public class AudioTestScreen extends ExampleGScreen {
 	public String getIntroduction() {
 		return "SynthAudio 合成器测试\n(无资源文件，数学生成)";
 	}
-	
+
 	@Override
 	public ScreenManager.Orientation getOrientation() {
 		return ScreenManager.Orientation.Portrait;

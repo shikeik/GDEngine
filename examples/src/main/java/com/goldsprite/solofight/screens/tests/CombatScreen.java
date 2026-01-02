@@ -6,7 +6,7 @@ import com.badlogic.gdx.math.MathUtils;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.gameframeworks.log.Debug;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
 import com.goldsprite.solofight.game.Fighter;
 import com.goldsprite.solofight.input.ComboEngine;
 import com.goldsprite.solofight.ui.widget.CommandHistoryUI;
@@ -17,8 +17,8 @@ import com.goldsprite.solofight.input.KeyboardProcessor;
 import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.goldsprite.solofight.ui.widget.VirtualJoystick;
 import com.goldsprite.solofight.ui.widget.GestureTrail;
-import com.goldsprite.solofight.core.ui.widget.H5SkewBar;
-import com.goldsprite.solofight.core.neonbatch.NeonStage;
+import com.goldsprite.gameframeworks.ui.widget.SkewBar;
+import com.goldsprite.gameframeworks.neonbatch.NeonStage;
 
 public class CombatScreen extends ExampleGScreen {
 
@@ -29,7 +29,7 @@ public class CombatScreen extends ExampleGScreen {
 	private GestureProcessor gestureProcessor;
 	private CommandHistoryUI historyUI;
 	private ToastUI toastUI;
-	private H5SkewBar barP1, barP2;
+	private SkewBar barP1, barP2;
 
 	private Fighter p1;
 	private Fighter p2;
@@ -71,13 +71,13 @@ public class CombatScreen extends ExampleGScreen {
 		historyUI = new CommandHistoryUI(); historyUI.setPosition(10, getUIViewport().getWorldHeight() * 0.4f); uiStage.addActor(historyUI);
 		toastUI = new ToastUI(); toastUI.setPosition(getUIViewport().getWorldWidth() / 2 - 50, 100); uiStage.addActor(toastUI);
 
-		H5SkewBar.BarStyle style1 = new H5SkewBar.BarStyle();
+		SkewBar.BarStyle style1 = new SkewBar.BarStyle();
 		style1.gradientStart = Color.valueOf("00eaff"); style1.gradientEnd = Color.valueOf("0088aa"); style1.skewDeg = -20f;
-		barP1 = new H5SkewBar(0, 500, style1); barP1.setSize(350, 25); barP1.setPosition(20, getUIViewport().getWorldHeight() - 50); uiStage.addActor(barP1);
+		barP1 = new SkewBar(0, 500, style1); barP1.setSize(350, 25); barP1.setPosition(20, getUIViewport().getWorldHeight() - 50); uiStage.addActor(barP1);
 
-		H5SkewBar.BarStyle style2 = new H5SkewBar.BarStyle();
+		SkewBar.BarStyle style2 = new SkewBar.BarStyle();
 		style2.gradientStart = Color.valueOf("ff0055"); style2.gradientEnd = Color.valueOf("aa0033"); style2.skewDeg = 20f;
-		barP2 = new H5SkewBar(0, 500, style2); barP2.setSize(350, 25); barP2.setFillFromRight(true);
+		barP2 = new SkewBar(0, 500, style2); barP2.setSize(350, 25); barP2.setFillFromRight(true);
 		barP2.setPosition(getUIViewport().getWorldWidth() - 350 - 20, getUIViewport().getWorldHeight() - 50); uiStage.addActor(barP2);
 
 		gestureProcessor = new GestureProcessor(getUIViewport());

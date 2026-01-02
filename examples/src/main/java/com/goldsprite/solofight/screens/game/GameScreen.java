@@ -11,7 +11,7 @@ import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.gameframeworks.log.Debug;
 import com.goldsprite.solofight.game.FloatingTextManager;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
 import com.goldsprite.solofight.game.TextDB;
 import com.goldsprite.solofight.game.EffectManager;
 import com.goldsprite.solofight.game.Fighter;
@@ -28,13 +28,13 @@ import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.goldsprite.solofight.ui.widget.VirtualJoystick;
 import com.goldsprite.solofight.ui.widget.GestureTrail;
 import com.goldsprite.solofight.ui.window.GameOverUI;
-import com.goldsprite.solofight.core.ui.widget.H5SkewBar;
+import com.goldsprite.gameframeworks.ui.widget.SkewBar;
 import com.goldsprite.solofight.ui.window.HelpWindow;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.goldsprite.solofight.core.neonbatch.NeonStage;
+import com.goldsprite.gameframeworks.neonbatch.NeonStage;
 
 public class GameScreen extends ExampleGScreen {
 
@@ -46,7 +46,7 @@ public class GameScreen extends ExampleGScreen {
 	private GestureProcessor gestureProcessor;
 	private CommandHistoryUI historyUI;
 	private ToastUI toastUI;
-	private H5SkewBar barP1, barP2;
+	private SkewBar barP1, barP2;
 	private HelpWindow helpWindow;
 	private GameOverUI gameOverUI;
 
@@ -67,7 +67,7 @@ public class GameScreen extends ExampleGScreen {
 	}
 
 	@Override
-	protected void initViewport() {int k2;
+	protected void initViewport() {
 		float scl = 0.9f;
 		uiViewport = new ExtendViewport(960, 540);
 		setWorldScale(0.8f);
@@ -154,15 +154,15 @@ public class GameScreen extends ExampleGScreen {
 		uiStage.addActor(joystick);
 
 		// 血条 (手动定位，因为要倾斜特效，放 Table 里容易被裁切)
-		H5SkewBar.BarStyle s1 = new H5SkewBar.BarStyle();
+		SkewBar.BarStyle s1 = new SkewBar.BarStyle();
 		s1.gradientStart = Color.valueOf("00eaff"); s1.gradientEnd = Color.valueOf("0088aa"); s1.skewDeg = -20f;
-		barP1 = new H5SkewBar(0, 500, s1);
+		barP1 = new SkewBar(0, 500, s1);
 		barP1.setSize(350, 25);
 		uiStage.addActor(barP1); // 在 resize 中定位
 
-		H5SkewBar.BarStyle s2 = new H5SkewBar.BarStyle();
+		SkewBar.BarStyle s2 = new SkewBar.BarStyle();
 		s2.gradientStart = Color.valueOf("ff0055"); s2.gradientEnd = Color.valueOf("aa0033"); s2.skewDeg = 20f;
-		barP2 = new H5SkewBar(0, 500, s2);
+		barP2 = new SkewBar(0, 500, s2);
 		barP2.setSize(350, 25);
 		barP2.setFillFromRight(true);
 		uiStage.addActor(barP2); // 在 resize 中定位

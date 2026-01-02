@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.core.ui.input;
+package com.goldsprite.gameframeworks.ui.input;
 
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -6,7 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane; // 必须引用这个基类
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
-import com.goldsprite.solofight.core.ui.widget.SimpleNumPad;
+import com.goldsprite.gameframeworks.ui.widget.SimpleNumPad;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;

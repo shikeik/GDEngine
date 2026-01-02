@@ -3,7 +3,7 @@ package com.goldsprite.solofight.ecs.tests;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.MathUtils;
 import com.goldsprite.gameframeworks.ecs.component.Component;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
 
 /**
  * 测试专用：简单的形状渲染组件
@@ -44,7 +44,7 @@ public class ShapeRendererComponent extends Component {
 		float rot = transform.worldRotation;
 
 		// 简单取 X 轴缩放作为整体大小 (暂不支持非等比缩放的可视化)
-		float s = transform.scale.x; 
+		float s = transform.scale.x;
 
 		// 如果我们没存 worldScale，且有父级，这里其实拿不到父级的缩放叠加。
 		// 但对于验证"位移跟随"和"旋转跟随"已经足够了。

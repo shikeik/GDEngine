@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.core.audio;
+package com.goldsprite.gameframeworks.audio;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.AudioDevice;

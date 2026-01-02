@@ -1,5 +1,5 @@
 // 文件: ./examples/src/main/java/com/goldsprite/solofight/screens/ecs/tests/TestSkeletonFactory.java
-package com.goldsprite.solofight.screens.ecs.tests.skeleton;
+package com.goldsprite.solofight.screens.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.Color;
 import com.goldsprite.solofight.ecs.skeleton.NeonBone;
@@ -50,7 +50,7 @@ public class TestSkeletonFactory {
 		// Back Layer (Shadow)
 		buildLeg(skel, "Leg_Back", "root", hipY, C_SHADOW);
 		skel.getBone("Leg_Back_Up").rotation += 5;
-		
+
 		// 后手：LocalY 正向偏移 (视觉上的左侧/后侧)
 		buildArm(skel, "Arm_Back", "Body", shoulderY, shoulderOffset, C_SHADOW);
 

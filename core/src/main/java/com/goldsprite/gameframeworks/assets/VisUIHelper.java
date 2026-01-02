@@ -28,7 +28,7 @@ public class VisUIHelper {
 
 			// 2. 生成支持中文的字体 (使用 FontUtils 现有的逻辑)
 			// 大小设为 24，清晰度较高
-			cnFont = FontUtils.generateAutoClarity(40);int k2;
+			cnFont = FontUtils.generateAutoClarity(40);
 			cnFont.getData().setScale(cnFont.getData().scaleX * 0.7f);
 			BitmapFont smFont = FontUtils.generate(40);
 			smFont.getData().setScale(smFont.getData().scaleX * 0.56f);
@@ -52,7 +52,7 @@ public class VisUIHelper {
 			skin.get(VisTextField.VisTextFieldStyle.class).font = cnFont;
 
 			Debug.log("VisUI 中文字体调整成功.");
-			
+
 			fixSplitPaneHandle();
 		} catch (Exception e) {
 			e.printStackTrace();

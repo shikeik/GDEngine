@@ -3,7 +3,7 @@ package com.goldsprite.solofight.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Affine2;
-import com.goldsprite.solofight.core.neonbatch.NeonBatch;
+import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
 
 /**
  * 骨骼皮肤接口
