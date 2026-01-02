@@ -33,7 +33,7 @@ import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisWindow;
 
 // ==========================================
-// 0. 入口 (Entry Point)
+// 0. 入口
 // ==========================================
 public class FinalEditorTest extends GScreen {
     private EditorLogic logic;
@@ -64,23 +64,19 @@ public class FinalEditorTest extends GScreen {
 }
 
 // ==========================================
-// 1. 游戏核心 (Game World) - 纯逻辑与绘制
+// 1. 游戏核心
 // ==========================================
 class GameWorld {
     public Texture playerTex, bgTex;
     public float playerX = 0, playerY = 0;
-
-    // 简单的辅助线绘制工具
     private ShapeRenderer debugRenderer;
 
     public void init() {
-        // 模拟资源 (白色方块代替图片，防止你没有素材报错)
         playerTex = createSolidTexture(32, 32, Color.CORAL);
-        bgTex = createSolidTexture(512, 512, Color.TEAL); // 地板
+        bgTex = createSolidTexture(512, 512, Color.TEAL);
         debugRenderer = new ShapeRenderer();
     }
 
-    // 生成纯色纹理的辅助方法
     private Texture createSolidTexture(int w, int h, Color c) {
         Pixmap p = new Pixmap(w, h, Pixmap.Format.RGBA8888);
         p.setColor(c);
@@ -95,22 +91,18 @@ class GameWorld {
         playerY += dy;
     }
 
-    // 纯粹的绘制，不知道视口，不知道FBO
     public void render(Batch batch) {
-        // 画背景 (在 0,0 处)
         batch.draw(bgTex, -256, -256); 
-        // 画玩家
         batch.draw(playerTex, playerX, playerY);
     }
 
-    // 画辅助线 (世界原点)
     public void renderDebug(Camera camera) {
         debugRenderer.setProjectionMatrix(camera.combined);
         debugRenderer.begin(ShapeRenderer.ShapeType.Line);
         debugRenderer.setColor(Color.RED);
-        debugRenderer.line(-1000, 0, 1000, 0); // X轴
+        debugRenderer.line(-1000, 0, 1000, 0); 
         debugRenderer.setColor(Color.GREEN);
-        debugRenderer.line(0, -1000, 0, 1000); // Y轴
+        debugRenderer.line(0, -1000, 0, 1000); 
         debugRenderer.end();
     }
 
@@ -122,10 +114,9 @@ class GameWorld {
 }
 
 // ==========================================
-// 2. FBO 视图控件 (The Clean Widget)
+// 2. FBO 视图控件 (分离了生产与消费)
 // ==========================================
 class FboViewWidget extends Widget {
-    // 内部渲染的回调接口
     public interface Renderer {
         void render(Batch batch, Camera camera);
     }
@@ -133,29 +124,23 @@ class FboViewWidget extends Widget {
     private FrameBuffer fbo;
     private TextureRegion fboRegion;
     private SpriteBatch internalBatch;
-    private Viewport internalViewport; // 内部相机的视口
-
+    private Viewport internalViewport;
     private Renderer renderer;
-    private Texture bgSolidTexture; // 用来“刷墙”的纹理
-
+    private Texture bgSolidTexture; 
     private final int fboW, fboH;
 
     public FboViewWidget(int virtualW, int virtualH) {
         this.fboW = virtualW;
         this.fboH = virtualH;
 
-        // 1. 初始化 FBO
         fbo = new FrameBuffer(Pixmap.Format.RGBA8888, fboW, fboH, false);
         fboRegion = new TextureRegion(fbo.getColorBufferTexture());
-        fboRegion.flip(false, true); // 翻转Y轴
+        fboRegion.flip(false, true);
 
-        // 2. 内部工具
         internalBatch = new SpriteBatch();
-        // 默认 internalViewport
         internalViewport = new FitViewport(fboW, fboH);
-        ((OrthographicCamera)internalViewport.getCamera()).position.set(0, 0, 0); // 默认看世界原点
+        ((OrthographicCamera)internalViewport.getCamera()).position.set(0, 0, 0);
 
-        // 3. 创建一个纯白色 1x1 纹理，用于画背景底色
         Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         p.setColor(Color.WHITE);
         p.fill();
@@ -178,69 +163,77 @@ class FboViewWidget extends Widget {
         } else {
             internalViewport = new FitViewport(fboW, fboH, old);
         }
-        internalViewport.update(fboW, fboH, false); // 保持相机位置不变
+        internalViewport.update(fboW, fboH, false); 
     }
 
+    // 【新方法】：专门用于生成这一帧的图像
+    // 这个方法必须在 Stage.draw() 之前调用，处于纯净的 GL 环境中
+    // 【关键修正】：这是 FBO 绘制的入口
+    public void renderFrame() {
+        if (renderer == null) return;
+
+        // ============================================================
+        // CRITICAL FIX 1: 强行关闭剪裁测试
+        // 现象原因：上一帧 UI 绘制留下的 "剪裁框" 还在生效。
+        // 如果不关掉，FBO 的 glClear 只能清除那个小框框里的颜色，
+        // 导致 FBO 其他区域全是上一帧的残影（涂鸦/拖尾）。
+        // ============================================================
+        Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+
+        // ============================================================
+        // CRITICAL FIX 2: 绑定 FBO 并设置视口
+        // ============================================================
+        fbo.begin();
+
+        // 显式设置 FBO 的视口 (虽然 fbo.begin() 通常会自动做，但为了保险)
+        // 必须是 FBO 的物理尺寸
+        Gdx.gl.glViewport(0, 0, fboW, fboH);
+
+        // ============================================================
+        // CRITICAL FIX 3: 彻底清屏
+        // 既然剪裁关了，视口对了，这一步就能把整个 FBO 刷干净
+        // ============================================================
+        Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1f); 
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        // 开始绘制游戏内容
+        internalBatch.setProjectionMatrix(internalViewport.getCamera().combined);
+        internalBatch.begin();
+        renderer.render(internalBatch, internalViewport.getCamera());
+        internalBatch.end();
+
+        // 解绑
+        fbo.end();
+
+        // ============================================================
+        // 善后：恢复剪裁状态（可选，但推荐）
+        // 虽然 Stage 会自己管理，但为了不破坏后续逻辑，可以不用管，
+        // 因为 Stage.draw 开始时会自动处理 ScissorStack。
+        // 但这里最重要的是：一定要在 begin 之前 Disable 掉它。
+        // ============================================================
+    }
+
+    // 【Draw方法】：现在只负责贴图，不做任何复杂的 GL 操作
     @Override
     public void draw(Batch uiBatch, float parentAlpha) {
-        // === 步骤 A: 渲染 FBO (虚拟机内部) ===
-        if (renderer != null) {
-            uiBatch.end(); // 暂停 UI 绘制
-
-            // 【核心修复开始】==========================================
-            // 检查当前是否开启了剪裁（VisWindow 肯定开了）
-            boolean wasScissorEnabled = Gdx.gl.glIsEnabled(GL20.GL_SCISSOR_TEST);
-			wasScissorEnabled = true;
-			
-            // 必须暂时关闭剪裁！
-            // 否则 FBO 里的 glClear 和 draw 都会被限制在“屏幕上窗口的那个矩形里”
-            // 这就是导致“涂鸦”和“画面残缺”的元凶
-            if (wasScissorEnabled) Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
-            // ========================================================
-
-            fbo.begin();
-
-            // FBO 内部清屏 (现在没有剪裁限制了，这里会真正清除整个 FBO)
-            Gdx.gl.glViewport(0, 0, fboW, fboH);
-            Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1f); 
-            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
-
-            internalBatch.setProjectionMatrix(internalViewport.getCamera().combined);
-            internalBatch.begin();
-            renderer.render(internalBatch, internalViewport.getCamera());
-            internalBatch.end();
-
-            fbo.end();
-
-            // 【核心修复结束】==========================================
-            // 恢复现场：如果之前开了剪裁，现在要开回来，否则 VisWindow 的边框会被画坏
-            if (wasScissorEnabled) Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
-
-            // 恢复 UI 视口
-            HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-            uiBatch.begin(); // 恢复 UI 绘制
-        }
-
-        // === 步骤 B: 绘制 Widget (贴到墙上) ===
-
         float x = getX();
         float y = getY();
         float w = getWidth();
         float h = getHeight();
 
-        // 画背景底色 (这一步依然保留，作为双重保险，且美观)
+        // 1. 画背景框
         uiBatch.setColor(0.2f, 0.2f, 0.2f, 1); 
         uiBatch.draw(bgSolidTexture, x, y, w, h);
         uiBatch.setColor(Color.WHITE);
 
-        // 计算 Letterbox
-        float scale = Math.min(w / fboW, h / fboH);
+        // 2. 计算 Letterbox
+        float scale = Math.min(w / fboW, h / fboH); 
         float drawW = fboW * scale;
         float drawH = fboH * scale;
         float drawX = x + (w - drawW) / 2;
         float drawY = y + (h - drawH) / 2;
 
-        // 画 FBO 画面
+        // 3. 贴上刚才 renderFrame 生成的图
         uiBatch.draw(fboRegion, drawX, drawY, drawW, drawH);
     }
 
@@ -252,7 +245,7 @@ class FboViewWidget extends Widget {
 }
 
 // ==========================================
-// 3. 编辑器逻辑组装 (Editor Logic)
+// 3. 编辑器逻辑
 // ==========================================
 class EditorLogic {
     Stage stage;
@@ -265,7 +258,6 @@ class EditorLogic {
         gameWorld = new GameWorld();
         gameWorld.init();
 
-        // 编辑器 UI
         stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
 
@@ -279,18 +271,13 @@ class EditorLogic {
         win.setSize(500, 350);
         win.setPosition(50, 50);
 
-        // 1. 创建 FBO Widget (1280x720)
         gameView = new FboViewWidget(1280, 720);
-
-        // 2. 注入渲染逻辑
         gameView.setRenderer((batch, cam) -> {
-            // Game 视图：相机跟随玩家
             cam.position.set(gameWorld.playerX, gameWorld.playerY, 0);
             cam.update();
             gameWorld.render(batch);
         });
 
-        // 3. UI 布局
         Touchpad.TouchpadStyle style = VisUI.getSkin().get(Touchpad.TouchpadStyle.class);
         joystick = new Touchpad(10, style);
 
@@ -305,30 +292,17 @@ class EditorLogic {
 
         Table uiTable = new Table();
         uiTable.setFillParent(true);
-
-        // 第一行：右上角的下拉框
-        // .expandX() 让这一格在水平方向占满，.right() 让内容靠右
         uiTable.add(box).expandX().top().right().width(80).pad(5);
-
-        // 换行
         uiTable.row();
-
-        // 第二行：中间占位符
-        // 添加一个空的 Actor，让它 expand() fill() 撑开中间的空间，把上面的顶上去，下面的挤下来
         uiTable.add().expand().fill();
-
-        // 换行
         uiTable.row();
-
-        // 第三行：左下角的摇杆
-        // 修正点：先 add(joystick)，再设置它的对齐方式
         uiTable.add(joystick).bottom().left().pad(10);
-			
+
         Stack stack = new Stack();
         stack.add(gameView);
         stack.add(uiTable);
 
-        win.add(stack).grow(); // 填满窗口
+        win.add(stack).grow();
         stage.addActor(win);
     }
 
@@ -338,28 +312,21 @@ class EditorLogic {
         win.setSize(400, 300);
         win.setPosition(600, 50);
 
-        // Scene 视图
         sceneView = new FboViewWidget(1280, 720);
-        sceneView.setViewportType(true); // 默认 Extend 看更多
+        sceneView.setViewportType(true);
 
-        // 【关键】Scene 视图的渲染
         sceneView.setRenderer((batch, cam) -> {
-            // 这里相机不跟随，只负责画
             gameWorld.render(batch);
-            // 额外画辅助线，证明这是 Scene 视图
             batch.end();
             gameWorld.renderDebug(cam);
             batch.begin();
         });
 
-        // 拖拽控制
         sceneView.addListener(new DragListener() {
 				@Override
 				public void drag(InputEvent event, float x, float y, int pointer) {
 					float dx = getDeltaX();
 					float dy = getDeltaY();
-					// 简单的反向移动相机
-					// *2 是为了让拖动感觉快一点
 					sceneView.getInternalCamera().translate(-dx * 2, -dy * 2, 0);
 					sceneView.getInternalCamera().update();
 				}
@@ -370,15 +337,24 @@ class EditorLogic {
     }
 
     public void render(float delta) {
-        // 简单的输入更新
+        // 1. 更新逻辑
         float speed = 200 * delta;
         gameWorld.update(joystick.getKnobPercentX() * speed, joystick.getKnobPercentY() * speed);
+
+        // 2. 【先】渲染 FBO (Off-screen)
+        // 此时我们加上了 glDisable(SCISSOR)，所以这里是干净的
+        gameView.renderFrame();
+        sceneView.renderFrame();
+
+        // 3. 【后】渲染屏幕 UI
+        // 这一步必须恢复屏幕视口，否则 UI 会画错位置
+        HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         stage.act(delta);
-        stage.draw();
+        stage.draw(); 
     }
 
     public void resize(int w, int h) {
