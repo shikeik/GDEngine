@@ -18,7 +18,7 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	protected void initScreenMapping(Map<String, Class<? extends IGScreen>> map) {
 		map.put("场景列表\n", null);
 
-		//map.put("临时测试", TempTestScreen.class);
+		map.put("临时测试", TempTestScreen.class);
 		
 		map.put(">>> 新ECS场景 <<<", RefactorSelectionScreen.class);
 		map.put(">>> 编辑器开发 (Tools) <<<", EditorSelectionScreen.class);
