@@ -119,54 +119,61 @@ abstract class GameRenderWidget extends Widget {
 	// 在 GameRenderWidget 类中
 	@Override
 	public void draw(Batch uiBatch, float parentAlpha) {
-		validate();
+		validate(); // 确保布局刷新
 
-		// 1. 计算位置 (保持不变)
+		// 1. 获取 Widget 在屏幕上的绝对位置 (窗口的左下角)
 		tempCoords.set(0, 0);
 		localToStageCoordinates(tempCoords);
-		int screenX = (int) tempCoords.x;
-		int screenY = (int) tempCoords.y;
-		int screenW = (int) getWidth();
-		int screenH = (int) getHeight();
+		int widgetScreenX = (int) tempCoords.x;
+		int widgetScreenY = (int) tempCoords.y;
+		int widgetW = (int) getWidth();
+		int widgetH = (int) getHeight();
 
-		if (screenW <= 0 || screenH <= 0) return;
+		// 避免无效绘制
+		if (widgetW <= 0 || widgetH <= 0) return;
 
 		uiBatch.end();
 
-		// 2. 剪裁 (保持不变)
+		// 2. 剪裁 (Scissor Test)
+		// 这一步保证我们只在这个 Widget 的矩形范围内画图
+		// 即使 glViewport 设置偏了，或者 FitViewport 留了黑边，也不能画出这个框
 		Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
-		HdpiUtils.glScissor(screenX, screenY, screenW, screenH);
+		HdpiUtils.glScissor(widgetScreenX, widgetScreenY, widgetW, widgetH);
 
+		// 3. 清除背景
+		// 这会清除整个 Widget 区域（包括 Fit 模式下的黑边）
 		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		// ================== 核心修正点 ==================
+		// ================== 核心修正开始 ==================
 
-		// 错误顺序 (旧代码):
-		// viewport.setScreenBounds(screenX, screenY, screenW, screenH);
-		// viewport.update(screenW, screenH, false); // 这句会把 x,y 重置为 0,0 ！！！
+		// A. 让 Viewport 计算它认为的最佳尺寸和局部偏移
+		// 例如 Fit 模式下，它可能会算出 screenX=0, screenY=20 (留黑边)
+		viewport.update(widgetW, widgetH, false);
 
-		// 正确顺序 (新代码):
+		// B. 手动计算最终在屏幕上的 glViewport 位置
+		// 最终位置 = Widget在屏幕的位置 + Viewport算出的内部偏移
+		int finalX = widgetScreenX + viewport.getScreenX();
+		int finalY = widgetScreenY + viewport.getScreenY();
+		int finalW = viewport.getScreenWidth();
+		int finalH = viewport.getScreenHeight();
 
-		// 第一步：先 update，计算内部比例 (这会默认设 x=0, y=0)
-		viewport.update(screenW, screenH, false);
+		// C. 应用这个修正后的位置
+		// 我们不调用 viewport.apply()，因为那会把位置重置回 (0,0) + offset
+		// 我们直接告诉 OpenGL 画哪里
+		HdpiUtils.glViewport(finalX, finalY, finalW, finalH);
 
-		// 第二步：再覆盖 ScreenBounds，把位置设为 Widget 在屏幕上的真实位置
-		viewport.setScreenBounds(screenX, screenY, screenW, screenH);
+		// ================== 核心修正结束 ==================
 
-		// 第三步：最后应用到 OpenGL
-		viewport.apply();
-
-		// ==============================================
-
-		// 3. 绘制
+		// 4. 绘制游戏世界
 		worldBatch.setProjectionMatrix(viewport.getCamera().combined);
 		worldBatch.begin();
 		renderWorld(worldBatch);
 		worldBatch.end();
 
-		// 4. 恢复
+		// 5. 恢复现场
 		Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+		// 恢复全屏视口给 UI 使用
 		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
 		uiBatch.begin();
