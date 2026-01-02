@@ -4,6 +4,7 @@ import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
 import com.goldsprite.gdengine.screens.ecs.EcsVisualTestScreen;
 import com.goldsprite.gdengine.screens.ecs.JsonLiveEditScreen;
 import com.goldsprite.gdengine.screens.ecs.SpriteVisualScreen;
+import com.goldsprite.gdengine.screens.ecs.editor.SceneGameEditorWrapper2;
 import com.goldsprite.gdengine.screens.ecs.skeleton.SkeletonVisualScreen;
 
 import java.util.Map;
@@ -22,5 +23,6 @@ public class GDEngineSelectionScreen extends BaseSelectionScreen {int k2;
 		map.put("编辑器开发", null);
 		map.put("裁剪世界视图开发", SceneViewDemoScreen.class);
 		map.put("ai编辑器视图", SceneGameEditorWrapper.class);
+		map.put("ai编辑器视图2", SceneGameEditorWrapper2.class);
 	}
 }
