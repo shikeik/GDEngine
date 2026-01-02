@@ -187,54 +187,55 @@ class FboRenderTarget extends Widget {
 
     @Override
     public void draw(Batch uiBatch, float parentAlpha) {
-        // 不需要 validate，因为 FBO 大小是固定的
         if (renderer == null) return;
 
-        // ==============================================
-        // 阶段 A: 渲染游戏世界到 FBO (Off-screen Rendering)
-        // ==============================================
-
-        // 1. 暂停外部 UI 绘制
+        // --- 阶段 A: FBO 内部渲染 (保持不变) ---
         uiBatch.end();
-
-        // 2. 绑定 FBO，开始“作画”
         fbo.begin();
-
-        // 3. 【关键】：设置 OpenGL 视口为 FBO 的大小
-        // 无论外部窗口多小，这里永远是 1280x720 (或者你设定的虚拟分辨率)
         Gdx.gl.glViewport(0, 0, fboWidth, fboHeight);
-
-        // 4. 清理 FBO 画布
-        Gdx.gl.glClearColor(0.15f, 0.15f, 0.15f, 1);
+        Gdx.gl.glClearColor(0.15f, 0.15f, 0.15f, 1); // 这种灰色是 FBO 的底色
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // 5. 调用游戏渲染逻辑
         internalBatch.setProjectionMatrix(internalViewport.getCamera().combined);
         internalBatch.begin();
         renderer.render(internalBatch, internalViewport.getCamera());
         internalBatch.end();
 
-        // 6. 解绑 FBO，恢复到屏幕
         fbo.end();
-
-        // 7. 恢复外部视口 (这一步通过 HdpiUtils 自动找回全屏视口)
         HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
-        // ==============================================
-        // 阶段 B: 将 FBO 当作一张图画到 UI 上
-        // ==============================================
-
+        // --- 阶段 B: 绘制 FBO 到 UI (修复拉伸的核心) ---
         uiBatch.begin();
 
-        // 计算按比例缩放 (Letterboxing)：让 FBO 保持比例显示在 Widget 区域内
-        // 这就是实机画面在编辑器里的“投影”
+        // 1. 获取窗口(Widget)的宽高
         float widgetW = getWidth();
         float widgetH = getHeight();
 
-        // 简单的 Fit 算法，让 FBO 纹理居中显示，保持比例
-        // 如果想要 Stretch 填满，直接用 widgetW, widgetH 即可
-        // 这里演示简单的填满 (可能会拉伸显示，但不影响内部逻辑)
-        uiBatch.draw(fboRegion, getX(), getY(), widgetW, widgetH);
+        // 2. 计算按比例缩放后的尺寸 (Letterboxing 算法)
+        // 目标是让 FBO 纹理 (1280x720) 能够塞进 widgetW x widgetH 里，且不走形
+        float fboRatio = (float)fboWidth / fboHeight;
+        float widgetRatio = widgetW / widgetH;
+
+        float drawW, drawH;
+
+        if (widgetRatio > fboRatio) {
+            // 窗口比 FBO 更宽（扁），以高度为基准
+            drawH = widgetH;
+            drawW = drawH * fboRatio;
+        } else {
+            // 窗口比 FBO 更窄（瘦），以宽度为基准
+            drawW = widgetW;
+            drawH = drawW / fboRatio;
+        }
+
+        // 3. 居中计算
+        float drawX = getX() + (widgetW - drawW) / 2;
+        float drawY = getY() + (widgetH - drawH) / 2;
+
+        // 4. 绘制 (只画在计算出的区域里，周围留下的空白就是 Widget 的底色)
+        uiBatch.draw(fboRegion, drawX, drawY, drawW, drawH);
+
+        // (可选) 可以在 drawX, drawY 周围画一个边框，假装是电视机边框
     }
 
     public void dispose() {
@@ -347,28 +348,35 @@ class EditorLogic {
         window.setSize(400, 300);
         window.setPosition(600, 50);
 
-        // Scene 视图也可以有自己的分辨率，或者跟 Game 一样
+		// Scene 视图也可以有自己的分辨率
         sceneViewTarget = new FboRenderTarget(1280, 720);
-        sceneViewTarget.setViewportType(FboRenderTarget.ViewportType.EXTEND); // 编辑器看全景
+        sceneViewTarget.setViewportType(FboRenderTarget.ViewportType.EXTEND);
+
+        // 【新增修正】：手动把相机挪到世界中心，否则它默认看的是 (640, 360)
+        // 这里的 0,0 对应你 GameWorld.render 里画图的中心点
+        ((OrthographicCamera)sceneViewTarget.getInternalCamera()).position.set(0, 0, 0);
+        sceneViewTarget.getInternalCamera().update();
 
         sceneViewTarget.setRenderer((batch, camera) -> {
-            // Scene 视图：相机位置由拖拽控制，不跟随
+			// ... 不变 ...
+			// 为了方便调试，我们可以在 Scene 视图里画个明显的参考线
+			// 比如画个很小的红点在 0,0，证明这是中心
             gameWorld.render(batch);
-            // 可以在这里画网格线 DebugLines
         });
 
-        // Scene 相机控制 (拖拽)
-        // 注意：这里的拖拽修改的是 sceneViewTarget 内部的相机
+        // ... 拖拽监听器部分 ...
         sceneViewTarget.addListener(new DragListener() {
 				@Override
 				public void drag(InputEvent event, float x, float y, int pointer) {
 					float dx = getDeltaX();
 					float dy = getDeltaY();
-					// 简单的反向移动
-					// 注意：这里需要根据 FBO 分辨率和 Widget 大小的比例来缩放 dx/dy 才能达到完美手感
-					// 暂时简单处理
-					float ratio = 1280f / sceneViewTarget.getWidth(); 
-					sceneViewTarget.getInternalCamera().translate(-dx * ratio, -dy * ratio, 0);
+
+					// 【手感修正】：拖拽速度要适配 FBO 缩放比例
+					// 因为现在 FBO 可能是被缩放显示的，鼠标动 1 像素，相机可能要动 2 像素
+					float scaleX = 1280f / sceneViewTarget.getWidth(); 
+
+					// 简单的移动逻辑
+					sceneViewTarget.getInternalCamera().translate(-dx * scaleX, -dy * scaleX, 0);
 					sceneViewTarget.getInternalCamera().update();
 				}
 			});

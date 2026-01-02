@@ -12,7 +12,7 @@ import com.goldsprite.gdengine.screens.ecs.editor.SceneViewDemoScreen;
 import com.goldsprite.gdengine.screens.ecs.editor.SceneGameEditorWrapper;
 import com.goldsprite.gdengine.screens.ecs.editor.SceneGameEditorWrapperFBO;
 
-public class GDEngineSelectionScreen extends BaseSelectionScreen {int k9;
+public class GDEngineSelectionScreen extends BaseSelectionScreen {int k10;
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("功能验证", null);
