@@ -1,7 +1,6 @@
 package com.goldsprite.gdengine.screens.ecs.editor;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -18,7 +17,6 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -27,6 +25,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Widget;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -66,24 +65,18 @@ public class FinalCompleteEditor_Step2 extends GScreen {
 }
 
 // ==========================================
-// 1. 业务逻辑层 (Model) - 还原了真实素材加载
+// 1. 业务逻辑层 (Model)
 // ==========================================
 class GameWorld {
 	public Texture playerTex, bgTex;
 	public float playerX = 0, playerY = 0;
-
-	// 用于演示“点击移动”的目标点
 	public float targetX = 0, targetY = 0;
-
 	private ShapeRenderer debugRenderer;
 
 	public void init() {
-		// 【还原内容】：这里直接加载你的真实图片
-		// 请确保 android/assets 目录下有这两个文件，否则会崩
-		// 如果想回退到色块模式，把这两行注释掉，打开下面的 tryLoadTexture
-		playerTex = new Texture(Gdx.files.internal("role.png"));
-		bgTex = new Texture(Gdx.files.internal("back.png")); // 注意：原本你写的是 back.png
-
+		// 如果没有图片，会自动生成色块
+		playerTex = tryLoadTexture("role.png", 32, 32, Color.CORAL);
+		bgTex = tryLoadTexture("back.png", 512, 512, Color.TEAL);
 		debugRenderer = new ShapeRenderer();
 	}
 
@@ -93,8 +86,10 @@ class GameWorld {
 	}
 
 	public void render(Batch batch) {
-		// 画背景 (平铺或居中，这里演示居中)
-		batch.draw(bgTex, -bgTex.getWidth()/2f, -bgTex.getHeight()/2f);
+		// 【修复2】：背景图强行画大一点 (2000x2000)，保证填满屏幕
+		// 假设背景图是重复纹理，或者就是一张大图
+		batch.draw(bgTex, -1000, -1000, 2000, 2000);
+
 		// 画玩家
 		batch.draw(playerTex, playerX - playerTex.getWidth()/2f, playerY - playerTex.getHeight()/2f);
 	}
@@ -103,18 +98,34 @@ class GameWorld {
 		debugRenderer.setProjectionMatrix(camera.combined);
 		debugRenderer.begin(ShapeRenderer.ShapeType.Line);
 
-		// 坐标轴
 		debugRenderer.setColor(Color.RED);
 		debugRenderer.line(-1000, 0, 1000, 0);
 		debugRenderer.setColor(Color.GREEN);
 		debugRenderer.line(0, -1000, 0, 1000);
 
-		// 【第二步演示】：画出鼠标点击的目标点（十字）
 		debugRenderer.setColor(Color.CYAN);
 		debugRenderer.line(targetX - 10, targetY, targetX + 10, targetY);
 		debugRenderer.line(targetX, targetY - 10, targetX, targetY + 10);
 
 		debugRenderer.end();
+	}
+
+	private Texture tryLoadTexture(String path, int w, int h, Color fallbackColor) {
+		try {
+			return new Texture(Gdx.files.internal(path));
+		} catch (Exception e) {
+			return createSolidTexture(w, h, fallbackColor);
+		}
+	}
+
+	// 辅助：生成纯色纹理
+	public static Texture createSolidTexture(int w, int h, Color c) {
+		Pixmap p = new Pixmap(w, h, Pixmap.Format.RGBA8888);
+		p.setColor(c);
+		p.fill();
+		Texture t = new Texture(p);
+		p.dispose();
+		return t;
 	}
 
 	public void dispose() {
@@ -125,7 +136,7 @@ class GameWorld {
 }
 
 // ==========================================
-// 2. 渲染核心层 (Producer) - 增加了坐标逆转换
+// 2. 渲染核心层 (Producer)
 // ==========================================
 class ViewTarget {
 	public FrameBuffer fbo;
@@ -172,13 +183,15 @@ class ViewTarget {
 		fbo.end();
 	}
 
-	// 【第二步核心】：将 FBO 内部的像素坐标转换为游戏世界坐标
 	public Vector2 unproject(float fboX, float fboY) {
-		// viewport.unproject 需要一个 Vector3
-		// 注意：FBO 的坐标系 Y 是向上的，不需要翻转，直接传给 viewport
-		Vector3 vec = new Vector3(fboX, fboY, 0);
-		viewport.unproject(vec);
-		return new Vector2(vec.x, vec.y);
+		OrthographicCamera cam = (OrthographicCamera) camera;
+		float halfW = viewport.getScreenWidth() / 2f;
+		float halfH = viewport.getScreenHeight() / 2f;
+		float centeredX = fboX - halfW;
+		float centeredY = fboY - halfH;
+		float worldX = cam.position.x + centeredX * cam.zoom;
+		float worldY = cam.position.y + centeredY * cam.zoom;
+		return new Vector2(worldX, worldY);
 	}
 
 	public void dispose() {
@@ -188,22 +201,17 @@ class ViewTarget {
 }
 
 // ==========================================
-// 3. UI 展示层 (Consumer) - 增加了点击事件映射
+// 3. UI 展示层 (Consumer)
 // ==========================================
 class ViewWidget extends Widget {
 	private ViewTarget target;
 	private Texture bgTexture;
-
-	// 保存绘制参数，供 Input 使用
 	private float drawX, drawY, drawW, drawH;
 
 	public ViewWidget(ViewTarget target) {
 		this.target = target;
-		Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-		p.setColor(0.1f, 0.1f, 0.1f, 1);
-		p.fill();
-		bgTexture = new Texture(p);
-		p.dispose();
+		// 【修复3】：把背景改成深紫红色，方便看清 Widget 的边界
+		bgTexture = GameWorld.createSolidTexture(1, 1, new Color(0.3f, 0.0f, 0.1f, 1));
 	}
 
 	@Override
@@ -211,10 +219,10 @@ class ViewWidget extends Widget {
 		float x = getX(); float y = getY();
 		float w = getWidth(); float h = getHeight();
 
-		// 1. 画底框
+		// 1. 画紫红色背景底框 (占位区)
 		batch.draw(bgTexture, x, y, w, h);
 
-		// 2. 计算比例 (Letterboxing)
+		// 2. 计算 Letterbox
 		float widgetRatio = w / h;
 		float fboRatio = (float)target.viewport.getWorldWidth() / target.viewport.getWorldHeight();
 
@@ -227,51 +235,21 @@ class ViewWidget extends Widget {
 		drawX = x + (w - drawW) / 2;
 		drawY = y + (h - drawH) / 2;
 
-		// 3. 贴 FBO
+		// 3. 贴 FBO (游戏画面)
 		batch.draw(target.fboRegion, drawX, drawY, drawW, drawH);
 	}
 
-	// 【第二步核心】：坐标转换工具
-	// 将 Widget 上的触摸点 (localX, localY) 转换为 游戏世界坐标
-	// 【修正版】坐标转换工具
-	// 【终极修正版】坐标转换工具
 	public Vector2 screenToWorld(float localX, float localY) {
-		// 1. 判断点击是否在画面内 (排除 Letterbox 黑边)
 		float contentX = drawX - getX();
 		float contentY = drawY - getY();
-
 		if (localX < contentX || localX > contentX + drawW) return null;
 		if (localY < contentY || localY > contentY + drawH) return null;
 
-		// 2. 转为 FBO 内部的像素坐标 (相对于左下角)
 		float offsetX = localX - contentX;
 		float offsetY = localY - contentY;
-
-		// 缩放比例 (FBO像素 / UI像素)
 		float scaleX = target.viewport.getScreenWidth() / drawW;
 		float scaleY = target.viewport.getScreenHeight() / drawH;
-
-		// FBO 内部坐标 (Bottom-Up)
-		float fboX = offsetX * scaleX;
-		float fboY = offsetY * scaleY;
-
-		// 3. 【手动计算世界坐标】 (Bypass Gdx.graphics.getHeight bug)
-		// 既然我们知道 FBO 是 1280x720，且相机是正交相机，我们可以直接算
-
-		OrthographicCamera cam = (OrthographicCamera) target.camera;
-
-		// 计算相对于 FBO 中心的偏移量
-		float halfW = target.viewport.getScreenWidth() / 2f;
-		float halfH = target.viewport.getScreenHeight() / 2f;
-
-		float centeredX = fboX - halfW;
-		float centeredY = fboY - halfH;
-
-		// 应用相机的 Zoom 和 Position
-		float worldX = cam.position.x + centeredX * cam.zoom;
-		float worldY = cam.position.y + centeredY * cam.zoom;
-
-		return new Vector2(worldX, worldY);
+		return target.unproject(offsetX * scaleX, offsetY * scaleY);
 	}
 
 	public void dispose() {
@@ -314,27 +292,27 @@ class EditorController {
 
 		gameWidget = new ViewWidget(gameTarget);
 
-		// 【第二步验证】：点击 Game 视图，设置目标点
+		// 点击测试
 		gameWidget.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				// 调用我们在 Widget 里写的转换方法
 				Vector2 worldPos = gameWidget.screenToWorld(x, y);
-
 				if (worldPos != null) {
-					Gdx.app.log("Input", "Click World: " + worldPos);
-					// 设置到游戏世界里，验证是否准确
 					gameWorld.targetX = worldPos.x;
 					gameWorld.targetY = worldPos.y;
-
-					// (可选) 瞬移玩家到点击位置，方便测试
-					// gameWorld.playerX = worldPos.x;
-					// gameWorld.playerY = worldPos.y;
 				}
 			}
 		});
 
-		Touchpad.TouchpadStyle style = VisUI.getSkin().get(Touchpad.TouchpadStyle.class);
+		// 【修复1】：手搓一个摇杆样式，确保一定能显示
+		// 1. 底座：深灰色圆
+		Texture bg = GameWorld.createSolidTexture(100, 100, Color.DARK_GRAY);
+		// 2. 摇杆头：浅灰色圆
+		Texture knob = GameWorld.createSolidTexture(30, 30, Color.LIGHT_GRAY);
+		Touchpad.TouchpadStyle style = new Touchpad.TouchpadStyle();
+		style.background = new TextureRegionDrawable(new TextureRegion(bg));
+		style.knob = new TextureRegionDrawable(new TextureRegion(knob));
+
 		joystick = new Touchpad(10, style);
 
 		VisSelectBox<String> box = new VisSelectBox<>();
@@ -345,6 +323,9 @@ class EditorController {
 				gameTarget.setViewportType(box.getSelected().equals("Extend"));
 			}
 		});
+
+		// 【修复4】：开局强制刷新一次 Fit 模式，防止黑屏
+		gameTarget.setViewportType(false);
 
 		Table uiTable = new Table();
 		uiTable.setFillParent(true);
@@ -398,15 +379,12 @@ class EditorController {
 		float speed = 200 * delta;
 		gameWorld.update(delta, joystick.getKnobPercentX() * speed, joystick.getKnobPercentY() * speed);
 
-		// Render Pass (FBO)
 		Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 
 		gameTarget.renderToFbo(() -> {
 			gameTarget.camera.position.set(gameWorld.playerX, gameWorld.playerY, 0);
 			gameTarget.camera.update();
 			gameWorld.render(gameTarget.batch);
-
-			// 在 Game 视图也画一下点击点，验证坐标
 			gameTarget.batch.end();
 			gameWorld.renderDebug(gameTarget.camera);
 			gameTarget.batch.begin();
@@ -419,7 +397,6 @@ class EditorController {
 			sceneTarget.batch.begin();
 		});
 
-		// UI Pass
 		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
