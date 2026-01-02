@@ -82,7 +82,12 @@ class DualViewEditor {
 		if (!VisUI.isLoaded()) VisUI.load();
 
 		worldBatch = new SpriteBatch();
-		stage = new Stage(new ScreenViewport());
+		// [修改这里] -------------------------------------------------------
+        // 原来是: stage = new Stage(new ScreenViewport());
+        // 改为下面这样 (设定设计分辨率为 1280x720，UI 会自动缩放):
+		float scl = 0.9f;
+        stage = new Stage(new ExtendViewport(960*scl, 540*scl));
+        // ----------------------------------------------------------------
 		Gdx.input.setInputProcessor(stage);
 
 		loadAssets();
@@ -95,7 +100,7 @@ class DualViewEditor {
 	private void loadAssets() {
 		// 简单加载，实际请用 AssetManager
 		playerTexture = new Texture(Gdx.files.internal("role.png"));
-		bgTexture = new Texture(Gdx.files.internal("role.png"));
+		bgTexture = new Texture(Gdx.files.internal("back.png"));
 	}
 
 	// --- 构建 Game 视图窗口 (含 UI 覆盖层) ---
@@ -283,53 +288,71 @@ class GameViewportWidget extends Widget {
 	}
 
 	@Override
-	public void draw(Batch uiBatch, float parentAlpha) {
-		validate();
+    public void draw(Batch uiBatch, float parentAlpha) {
+        validate();
 
-		// 1. 获取屏幕坐标
-		tempCoords.set(0, 0);
-		localToStageCoordinates(tempCoords);
-		int x = (int) tempCoords.x;
-		int y = (int) tempCoords.y;
-		int w = (int) getWidth();
-		int h = (int) getHeight();
+        // [核心修改开始] =======================================================
+        // 我们不能再简单地把 tempCoords.x 当作屏幕坐标了
+        // 必须经过 Stage 的视口投影转换，才能应对 UI 缩放的情况
 
-		if (w <= 0 || h <= 0) return;
+        if (getStage() == null) return;
 
-		uiBatch.end();
+        // 1. 获取 Widget 左下角和右上角在 Stage 中的逻辑坐标
+        Vector2 bottomLeft = new Vector2(0, 0);
+        Vector2 topRight = new Vector2(getWidth(), getHeight());
 
-		// 2. 裁剪区域 (防止画出界)
-		Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
-		HdpiUtils.glScissor(x, y, w, h);
+        localToStageCoordinates(bottomLeft);
+        localToStageCoordinates(topRight);
 
-		// 3. 清理背景 (Widget 内部的背景)
-		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
-		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+        // 2. 将 Stage 逻辑坐标投影转换为真实的屏幕坐标 (Screen Coordinates)
+        // project 方法会把 world(stage) 坐标转为 OpenGL 窗口坐标
+        getStage().getViewport().project(bottomLeft);
+        getStage().getViewport().project(topRight);
 
-		// 4. 计算并应用视口 (核心修正逻辑)
-		viewport.update(w, h, false); // 计算尺寸
+        // 3. 计算最终的物理像素位置和尺寸
+        int screenX = (int) bottomLeft.x;
+        int screenY = (int) bottomLeft.y;
+        int screenW = (int) (topRight.x - bottomLeft.x);
+        int screenH = (int) (topRight.y - bottomLeft.y);
+        // [核心修改结束] =======================================================
 
-		// 叠加偏移量：Widget在屏幕的位置 + Viewport计算出的内部黑边偏移
-		int finalX = x + viewport.getScreenX();
-		int finalY = y + viewport.getScreenY();
-		int finalW = viewport.getScreenWidth();
-		int finalH = viewport.getScreenHeight();
+        if (screenW <= 0 || screenH <= 0) return;
 
-		HdpiUtils.glViewport(finalX, finalY, finalW, finalH);
+        uiBatch.end();
 
-		// 5. 渲染回调
-		if (renderer != null) {
-			batch.setProjectionMatrix(viewport.getCamera().combined);
-			batch.begin();
-			renderer.render(batch, viewport.getCamera());
-			batch.end();
-		}
+        // 4. 裁剪区域 (使用计算出的物理坐标)
+        Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
+        HdpiUtils.glScissor(screenX, screenY, screenW, screenH);
 
-		// 6. 恢复
-		Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
-		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		uiBatch.begin();
-	}
+        // 5. 清理背景
+        Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+        // 6. 计算并应用内部视口
+        // 注意：update 传入的是物理像素尺寸，这样内部渲染清晰度会跟随屏幕分辨率，而不是设计分辨率
+        viewport.update(screenW, screenH, false); 
+
+        // 叠加偏移量：屏幕绝对位置 + 内部视口计算出的偏移
+        int finalX = screenX + viewport.getScreenX();
+        int finalY = screenY + viewport.getScreenY();
+        int finalW = viewport.getScreenWidth();
+        int finalH = viewport.getScreenHeight();
+
+        HdpiUtils.glViewport(finalX, finalY, finalW, finalH);
+
+        // 7. 渲染回调
+        if (renderer != null) {
+            batch.setProjectionMatrix(viewport.getCamera().combined);
+            batch.begin();
+            renderer.render(batch, viewport.getCamera());
+            batch.end();
+        }
+
+        // 8. 恢复
+        Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+        HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        uiBatch.begin();
+    }
 }
 
 // ==========================================
