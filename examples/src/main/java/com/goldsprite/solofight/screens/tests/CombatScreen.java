@@ -3,11 +3,11 @@ package com.goldsprite.solofight.screens.tests;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.math.MathUtils;
-import com.goldsprite.gameframeworks.screens.ScreenManager;
-import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.gameframeworks.log.Debug;
-import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
-import com.goldsprite.solofight.game.Fighter;
+import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
+import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import com.goldsprite.solofight.modules.Fighter;
 import com.goldsprite.solofight.input.ComboEngine;
 import com.goldsprite.solofight.ui.widget.CommandHistoryUI;
 import com.goldsprite.solofight.input.GestureProcessor;
@@ -17,8 +17,8 @@ import com.goldsprite.solofight.input.KeyboardProcessor;
 import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.goldsprite.solofight.ui.widget.VirtualJoystick;
 import com.goldsprite.solofight.ui.widget.GestureTrail;
-import com.goldsprite.gameframeworks.ui.widget.SkewBar;
-import com.goldsprite.gameframeworks.neonbatch.NeonStage;
+import com.goldsprite.gdengine.ui.widget.SkewBar;
+import com.goldsprite.gdengine.neonbatch.NeonStage;
 
 public class CombatScreen extends ExampleGScreen {
 

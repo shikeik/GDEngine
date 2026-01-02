@@ -12,7 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Align;
-import com.goldsprite.gameframeworks.assets.FontUtils;
+import com.goldsprite.gdengine.assets.FontUtils;
 
 /**
  * 指令历史 UI (v3.0 视觉复刻版)

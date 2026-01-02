@@ -1,10 +1,11 @@
 package com.goldsprite.solofight.android;
 
 import com.badlogic.gdx.ApplicationListener;
+import com.goldsprite.GdxLauncher;
 
 public class GdxLauncherProvider {
-	public static Class<? extends ApplicationListener> gdxLauncher = 
-	com.goldsprite.solofight.GdxLauncher.class;
+	public static Class<? extends ApplicationListener> gdxLauncher =
+	GdxLauncher.class;
 
 	public static ApplicationListener launcherGame() {
 		try {

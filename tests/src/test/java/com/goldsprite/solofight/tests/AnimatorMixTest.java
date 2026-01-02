@@ -1,12 +1,18 @@
 // 文件: ./tests/src/test/java/com/goldsprite/solofight/tests/AnimatorMixTest.java
 package com.goldsprite.solofight.tests;
 
-import com.goldsprite.gameframeworks.ecs.GameWorld;
-import com.goldsprite.gameframeworks.ecs.entity.GObject;
+import com.goldsprite.gdengine.ecs.GameWorld;
+import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.ecs.component.NeonAnimatorComponent;
+import com.goldsprite.gdengine.ecs.skeleton.NeonBone;
+import com.goldsprite.gdengine.ecs.component.SkeletonComponent;
+import com.goldsprite.gdengine.ecs.system.SkeletonSystem;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonAnimation;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonCurve;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonProperty;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonTimeline;
 import com.goldsprite.solofight.CLogAssert;
 import com.goldsprite.solofight.GdxTestRunner;
-import com.goldsprite.solofight.ecs.skeleton.*;
-import com.goldsprite.solofight.ecs.skeleton.animation.*;
 
 import org.junit.After;
 import org.junit.Before;

@@ -3,9 +3,9 @@ package com.goldsprite.solofight.tests;
 
 import com.goldsprite.solofight.CLogAssert;
 import com.goldsprite.solofight.GdxTestRunner;
-import com.goldsprite.solofight.ecs.skeleton.animation.NeonCurve;
-import com.goldsprite.solofight.ecs.skeleton.animation.NeonProperty;
-import com.goldsprite.solofight.ecs.skeleton.animation.NeonTimeline;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonCurve;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonProperty;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonTimeline;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,7 +33,7 @@ public class GenericAnimationTest {
         System.out.println(">>> 验证: 对象关键帧跳变 (Object Value)");
 
         NeonTimeline timeline = new NeonTimeline("Sprite", NeonProperty.SPRITE);
-        
+
         // 模拟帧动画数据 (String 代表图片对象)
         // 0.0s -> "Frame_1"
         // 0.5s -> "Frame_2"
@@ -53,7 +53,7 @@ public class GenericAnimationTest {
         // 3. 测试区间内 (0.51 ~ 0.99) -> 应该是 Frame_2
         Object v3 = timeline.evaluateObject(0.9f);
         CLogAssert.assertEquals("0.9s 应保持 Frame_2", "Frame_2", v3);
-        
+
         // 4. 测试结束 (1.5) -> 应该是 Frame_3
         Object v4 = timeline.evaluateObject(1.5f);
         CLogAssert.assertEquals("超时应保持 Frame_3", "Frame_3", v4);

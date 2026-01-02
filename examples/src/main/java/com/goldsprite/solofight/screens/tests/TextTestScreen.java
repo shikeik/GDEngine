@@ -10,9 +10,9 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.goldsprite.gameframeworks.screens.ScreenManager;
-import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.solofight.game.FloatingTextManager;
+import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
+import com.goldsprite.solofight.modules.FloatingTextManager;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class TextTestScreen extends ExampleGScreen {

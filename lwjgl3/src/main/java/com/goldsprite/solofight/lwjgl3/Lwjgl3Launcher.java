@@ -4,10 +4,10 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
-import com.goldsprite.gameframeworks.PlatformImpl;
-import com.goldsprite.gameframeworks.screens.ScreenManager;
+import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.solofight.BuildConfig;
-import com.goldsprite.solofight.GdxLauncher;
+import com.goldsprite.GdxLauncher;
 
 /**
  * Launches the desktop (LWJGL3) application.

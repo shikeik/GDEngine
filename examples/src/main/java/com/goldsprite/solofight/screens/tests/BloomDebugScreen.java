@@ -2,10 +2,10 @@ package com.goldsprite.solofight.screens.tests;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-import com.goldsprite.gameframeworks.screens.ScreenManager;
-import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.gameframeworks.neonbatch.BloomRenderer;
-import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
+import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
+import com.goldsprite.gdengine.neonbatch.BloomRenderer;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
 
 public class BloomDebugScreen extends ExampleGScreen {
 

@@ -3,9 +3,9 @@ package com.goldsprite.solofight.tests;
 import com.badlogic.gdx.math.MathUtils;
 import com.goldsprite.solofight.CLogAssert;
 import com.goldsprite.solofight.GdxTestRunner;
-import com.goldsprite.solofight.ecs.skeleton.NeonBone;
-import com.goldsprite.solofight.ecs.skeleton.NeonSkeleton;
-import com.goldsprite.solofight.ecs.skeleton.NeonSlot;
+import com.goldsprite.gdengine.ecs.skeleton.NeonBone;
+import com.goldsprite.gdengine.ecs.skeleton.NeonSkeleton;
+import com.goldsprite.gdengine.ecs.skeleton.NeonSlot;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

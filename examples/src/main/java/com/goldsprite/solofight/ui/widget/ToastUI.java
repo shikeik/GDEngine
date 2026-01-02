@@ -3,7 +3,7 @@ package com.goldsprite.solofight.ui.widget;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.goldsprite.gameframeworks.assets.FontUtils;
+import com.goldsprite.gdengine.assets.FontUtils;
 
 public class ToastUI extends Label {
 

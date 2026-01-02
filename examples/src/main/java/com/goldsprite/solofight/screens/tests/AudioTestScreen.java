@@ -5,10 +5,10 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.goldsprite.gameframeworks.screens.ScreenManager;
-import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.gameframeworks.audio.SynthAudio;
-import com.goldsprite.gameframeworks.audio.SynthAudio.WaveType;
+import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
+import com.goldsprite.gdengine.audio.SynthAudio;
+import com.goldsprite.gdengine.audio.SynthAudio.WaveType;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class AudioTestScreen extends ExampleGScreen {

@@ -1,11 +1,11 @@
 package com.goldsprite.solofight.screens.tests;
 
 import com.badlogic.gdx.graphics.Color;
-import com.goldsprite.gameframeworks.screens.ScreenManager;
-import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
-import com.goldsprite.gameframeworks.log.Debug;
-import com.goldsprite.gameframeworks.neonbatch.NeonBatch;
-import com.goldsprite.gameframeworks.neonbatch.NeonStage;
+import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
+import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import com.goldsprite.gdengine.neonbatch.NeonStage;
 import com.goldsprite.solofight.input.GestureProcessor;
 import com.goldsprite.solofight.input.InputContext;
 import com.goldsprite.solofight.input.InputDef;

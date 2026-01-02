@@ -14,9 +14,8 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
-import com.goldsprite.gameframeworks.PlatformImpl;
-import com.goldsprite.gameframeworks.log.Debug;
-import com.goldsprite.gameframeworks.screens.ScreenManager;
+import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.screens.ScreenManager;
 
 import java.util.HashMap;
 import java.util.Map;

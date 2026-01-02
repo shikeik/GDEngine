@@ -8,7 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.goldsprite.gameframeworks.assets.FontUtils;
+import com.goldsprite.gdengine.assets.FontUtils;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -22,9 +22,9 @@ import com.kotcrab.vis.ui.widget.VisTextField;
  */
 public class BioCodeEditor extends VisTable {
 
-    private CodeTextArea textArea; 
+    private CodeTextArea textArea;
     private VisScrollPane scrollPane;
-    private VisTable popupMenu; 
+    private VisTable popupMenu;
 
     // 交互状态标记
     private boolean isSelectionMode = false; // 是否处于拖拽选区模式
@@ -51,7 +51,7 @@ public class BioCodeEditor extends VisTable {
         scrollPane = new VisScrollPane(container);
         scrollPane.setScrollBarPositions(false, false);
         scrollPane.setFadeScrollBars(false);
-        scrollPane.setFlickScroll(false); 
+        scrollPane.setFlickScroll(false);
         scrollPane.setOverscroll(false, false);
         scrollPane.setCancelTouchFocus(false);
 
@@ -69,7 +69,7 @@ public class BioCodeEditor extends VisTable {
             popupMenu.setBackground(VisUI.getSkin().getDrawable("button"));
         }
 
-        String btnStyle = "default"; 
+        String btnStyle = "default";
 
         VisTextButton btnCopy = new VisTextButton("复制", btnStyle);
         btnCopy.addListener(new ClickListener() {
@@ -121,7 +121,7 @@ public class BioCodeEditor extends VisTable {
 					textArea.selectAll();
 					hidePopupMenu();
 					// 全选后允许直接拖动选区
-					isSelectionMode = true; 
+					isSelectionMode = true;
 				}
 			});
 
@@ -129,7 +129,7 @@ public class BioCodeEditor extends VisTable {
         popupMenu.add(btnPaste).pad(5);
         popupMenu.add(btnCut).pad(5);
         popupMenu.add(btnAll).pad(5);
-        popupMenu.pack(); 
+        popupMenu.pack();
         popupMenu.setVisible(false);
     }
 
@@ -153,7 +153,7 @@ public class BioCodeEditor extends VisTable {
             menuX = getStage().getWidth() - popupMenu.getWidth();
         }
         if (menuY + popupMenu.getHeight() > getStage().getHeight()) {
-            menuY = stagePos.y - 50; 
+            menuY = stagePos.y - 50;
         }
 
         popupMenu.setPosition(menuX, menuY);
@@ -162,7 +162,7 @@ public class BioCodeEditor extends VisTable {
     private void hidePopupMenu() {
         if (popupMenu != null) {
             popupMenu.setVisible(false);
-            popupMenu.remove(); 
+            popupMenu.remove();
         }
         // 注意：关闭菜单时不要重置 isSelectionMode，
         // 否则用户想再次拖动选区时会变成滚动页面
@@ -224,8 +224,8 @@ public class BioCodeEditor extends VisTable {
         float topEdge = scrollPane.localToStageCoordinates(new Vector2(0, scrollPane.getHeight())).y;
         float bottomEdge = scrollPane.localToStageCoordinates(new Vector2(0, 0)).y;
 
-        float threshold = 60f; 
-        float maxSpeed = 15f; 
+        float threshold = 60f;
+        float maxSpeed = 15f;
 
         if (stageY > topEdge - threshold) {
             float ratio = (stageY - (topEdge - threshold)) / threshold;
@@ -253,10 +253,10 @@ public class BioCodeEditor extends VisTable {
 
     private void refreshLayout() {
         Gdx.app.postRunnable(() -> {
-            scrollPane.validate(); 
-            textArea.forceCalc(); 
+            scrollPane.validate();
+            textArea.forceCalc();
             textArea.invalidateHierarchy();
-            scrollPane.layout(); 
+            scrollPane.layout();
         });
     }
 

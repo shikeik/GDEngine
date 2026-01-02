@@ -1,9 +1,9 @@
 package com.goldsprite.solofight.tests;
 
-import com.goldsprite.gameframeworks.ecs.GameWorld;
-import com.goldsprite.gameframeworks.ecs.component.FsmComponent;
-import com.goldsprite.gameframeworks.ecs.entity.GObject;
-import com.goldsprite.gameframeworks.ecs.fsm.State;
+import com.goldsprite.gdengine.ecs.GameWorld;
+import com.goldsprite.gdengine.ecs.component.FsmComponent;
+import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.ecs.fsm.State;
 import com.goldsprite.solofight.CLogAssert; // 引用你提取的工具类
 import com.goldsprite.solofight.GdxTestRunner;
 
@@ -22,8 +22,8 @@ public class FsmUnitTestSuite {
 	@Before
 	public void setUp() {
 		// 1. 重置世界
-		try { 
-			if (GameWorld.inst() != null) GameWorld.inst().dispose(); 
+		try {
+			if (GameWorld.inst() != null) GameWorld.inst().dispose();
 		} catch (Exception ignored) {}
 		world = new GameWorld();
 
@@ -114,7 +114,7 @@ public class FsmUnitTestSuite {
 
 		// 1. 进入技能状态，并开启霸体 (canExit = false)
 		skill.setCondition(true);
-		skill.setLocked(true); 
+		skill.setLocked(true);
 		world.update(0.016f);
 		CLogAssert.assertEquals("当前是 Skill", "Skill", fsm.getCurrentStateName());
 

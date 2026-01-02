@@ -1,12 +1,11 @@
 // 文件: ./tests/src/test/java/com/goldsprite/solofight/tests/AnimationDataTest.java
 package com.goldsprite.solofight.tests;
 
-import com.badlogic.gdx.math.MathUtils;
 import com.goldsprite.solofight.CLogAssert;
 import com.goldsprite.solofight.GdxTestRunner;
-import com.goldsprite.solofight.ecs.skeleton.animation.NeonCurve;
-import com.goldsprite.solofight.ecs.skeleton.animation.NeonProperty;
-import com.goldsprite.solofight.ecs.skeleton.animation.NeonTimeline;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonCurve;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonProperty;
+import com.goldsprite.gdengine.ecs.skeleton.animation.NeonTimeline;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

@@ -1,10 +1,10 @@
 package com.goldsprite.solofight.tests; // 确认包名和你的一致
 
-import com.goldsprite.gameframeworks.ecs.ComponentManager;
-import com.goldsprite.gameframeworks.ecs.GameWorld;
-import com.goldsprite.gameframeworks.ecs.component.Component;
-import com.goldsprite.gameframeworks.ecs.component.TransformComponent;
-import com.goldsprite.gameframeworks.ecs.entity.GObject;
+import com.goldsprite.gdengine.ecs.ComponentManager;
+import com.goldsprite.gdengine.ecs.GameWorld;
+import com.goldsprite.gdengine.ecs.component.Component;
+import com.goldsprite.gdengine.ecs.component.TransformComponent;
+import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.solofight.CLogAssert;
 import com.goldsprite.solofight.GdxTestRunner;
 
