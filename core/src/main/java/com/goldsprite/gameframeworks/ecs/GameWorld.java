@@ -273,6 +273,11 @@ public class GameWorld {
 	public static float getUnscaledDeltaTime() { return unscaledDelta; }
 	public static float getTotalTime() { return totalTime; }
 
+	
+	public static void autoDispose() {
+		if(inst() == null) return;
+		inst().dispose();
+	}
 	/** 资源释放与重置 */
 	public void dispose() {
 		Debug.log("GameWorld: Disposing...");

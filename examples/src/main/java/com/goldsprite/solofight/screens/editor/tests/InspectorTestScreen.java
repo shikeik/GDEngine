@@ -1,107 +1,134 @@
 package com.goldsprite.solofight.screens.editor.tests;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.goldsprite.gameframeworks.log.Debug;
+import com.goldsprite.gameframeworks.ecs.ComponentManager;
+import com.goldsprite.gameframeworks.ecs.GameWorld;
+import com.goldsprite.gameframeworks.ecs.entity.GObject;
 import com.goldsprite.gameframeworks.screens.ScreenManager;
 import com.goldsprite.gameframeworks.screens.basics.ExampleGScreen;
 import com.goldsprite.solofight.core.neonbatch.NeonBatch;
 import com.goldsprite.solofight.core.neonbatch.NeonStage;
+import com.goldsprite.solofight.ecs.tests.ShapeRendererComponent;
 import com.goldsprite.solofight.tool.editor.InspectorGenerator;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
-import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.kotcrab.vis.ui.widget.VisWindow;
+import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
+import java.util.List;
 
 public class InspectorTestScreen extends ExampleGScreen {
 
-    private NeonStage stage;
-    private TestObject testObj; // 我们的小白鼠
+    private NeonStage uiStage;
+    private GameWorld world;
+    private NeonBatch neonBatch;
 
-    // --- 1. 定义一个用于测试反射的数据类 (POJO) ---
-    public static class TestObject {
-        public String name = "Hero";
-        public boolean isBoss = false;
-        public int hp = 100;
-        public float speed = 5.5f;
-        public Color skinColor = new Color(Color.CYAN);
-        public Vector2 position = new Vector2(100, 200);
-
-        // private 字段不应显示
-        private int secret = 999;
-
-        @Override
-        public String toString() {
-            return "Name:" + name + ", Boss:" + isBoss + ", HP:" + hp + 
-				", Spd:" + speed + ", Pos:" + position + ", Col:" + skinColor;
-        }
-    }
+    private GObject testEntity;
 
     @Override
     public ScreenManager.Orientation getOrientation() { return ScreenManager.Orientation.Landscape; }
 
     @Override
     public void create() {
-        stage = new NeonStage(getUIViewport());
-        getImp().addProcessor(stage);
+		autoCenterWorldCamera = false;
+		worldCamera.position.set(200, 0, 0);
+		worldCamera.update();
+		
+        neonBatch = new NeonBatch();
 
-        testObj = new TestObject();
+        // 1. 初始化 ECS 世界
+        try { if (GameWorld.inst() != null) GameWorld.inst().dispose(); } catch(Exception ignored){}
+        world = new GameWorld();
+        world.setReferences(getUIViewport(), worldCamera);
+
+        // 2. 创建测试实体 (用于被编辑)
+        createTestEntity();
+
+        // 3. 构建编辑器 UI
+        initEditorUI();
+    }
+
+    private void createTestEntity() {
+        testEntity = new GObject("Hero");
+        testEntity.transform.setPosition(200, 0); // 放在视野内
+
+        // 挂载两个组件，测试堆栈显示
+        testEntity.addComponent(ShapeRendererComponent.class)
+			.set(ShapeRendererComponent.ShapeType.TRIANGLE, Color.CYAN, 80f);
+
+        // 挂载一个带自转逻辑的组件，测试 Enable 开关
+        testEntity.getComponent(ShapeRendererComponent.class).rotateSpeed = 45f;
+    }
+
+    private void initEditorUI() {
+        uiStage = new NeonStage(getUIViewport());
+        getImp().addProcessor(uiStage);
 
         Table root = new Table();
         root.setFillParent(true);
-        stage.addActor(root);
+        uiStage.addActor(root);
 
-        // --- 左侧：生成的属性面板 ---
-        VisWindow window = new VisWindow("Inspector (Auto Generated)");
-        window.setResizable(true);
-        window.setMovable(true);
+        // --- 核心布局：SplitPane ---
 
-        // 核心调用：生成 UI
-        Table inspectorTable = InspectorGenerator.generate(testObj);
+        // 左侧：场景视图 (这里放个 Label 占位，实际上我们会直接画在背景上)
+        VisTable sceneViewPlaceholder = new VisTable();
+        sceneViewPlaceholder.add(new VisLabel("Scene View Area")).top().left().pad(10);
 
-        VisScrollPane scrollPane = new VisScrollPane(inspectorTable);
+        // 右侧：属性面板容器
+        VisTable inspectorContainer = new VisTable();
+        inspectorContainer.setBackground("window-bg"); // 给个深色背景
+
+        // 生成 Inspector 内容
+        Table inspectorContent = InspectorGenerator.generateGObjectInspector(testEntity);
+
+        VisScrollPane scrollPane = new VisScrollPane(inspectorContent);
         scrollPane.setFadeScrollBars(false);
-		scrollPane.setCancelTouchFocus(false);
-		scrollPane.setScrollingDisabled(true, false); 
-        window.add(scrollPane).grow();
+        scrollPane.setScrollingDisabled(true, false); // 【关键】禁用X轴滚动，强制填满
 
-        root.add(window).left().pad(50);
+        inspectorContainer.add(new VisLabel("Inspector")).pad(5).row();
+        inspectorContainer.add(scrollPane).grow();
 
-        // --- 右侧：验证区域 ---
-        VisTable verifyArea = new VisTable();
-        VisLabel lblInfo = new VisLabel(testObj.toString());
+        // 组装 SplitPane (分界线在 70% 处)
+        VisSplitPane splitPane = new VisSplitPane(sceneViewPlaceholder, inspectorContainer, false);
+        splitPane.setSplitAmount(0.7f); 
 
-        VisTextButton btnPrint = new VisTextButton("Print Object Data");
-        btnPrint.addListener(new ChangeListener() {
-				@Override public void changed(ChangeEvent event, Actor actor) {
-					// 打印当前对象数据，验证反射修改是否生效
-					Debug.log("Current Data: " + testObj.toString());
-					lblInfo.setText(testObj.toString()); // 刷新显示
-				}
-			});
-
-        verifyArea.add(new VisLabel("Try changing values on the left,\nthen click Print.")).row();
-        verifyArea.add(btnPrint).pad(20).row();
-        verifyArea.add(lblInfo).pad(10);
-
-        root.add(verifyArea).expand().center();
-
-        window.setPosition(50, 50); // 初始位置
+        root.add(splitPane).grow();
     }
 
     @Override
     public void render0(float delta) {
-        stage.act(delta);
-        stage.draw();
+        // 1. 驱动 ECS
+        world.update(delta);
+
+        // 2. 渲染场景 (真实的 GameWorld 渲染)
+        // 这里手动调用 ShapeRendererComponent 的 draw，模拟 RenderSystem
+        List<GObject> renderables = ComponentManager.getEntitiesWithComponents(ShapeRendererComponent.class);
+
+        neonBatch.setProjectionMatrix(getWorldCamera().combined);
+        neonBatch.begin();
+        // 画个网格当参考
+        neonBatch.setColor(Color.DARK_GRAY);
+        neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.DARK_GRAY);
+        neonBatch.drawLine(0, -1000, 0, 1000, 2, Color.DARK_GRAY);
+        neonBatch.setColor(Color.WHITE);
+
+        for (GObject obj : renderables) {
+            ShapeRendererComponent shape = obj.getComponent(ShapeRendererComponent.class);
+            if (shape != null && shape.isEnable()) {
+                shape.draw(neonBatch);
+            }
+        }
+        neonBatch.end();
+
+        // 3. 渲染 UI (编辑器覆盖层)
+        uiStage.act(delta);
+        uiStage.draw();
     }
 
     @Override
     public void dispose() {
-        if(stage!=null) stage.dispose();
+        if(world!=null) world.dispose();
+        if(neonBatch!=null) neonBatch.dispose();
+        if(uiStage!=null) uiStage.dispose();
     }
 }

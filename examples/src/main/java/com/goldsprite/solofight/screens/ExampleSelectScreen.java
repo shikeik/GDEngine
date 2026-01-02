@@ -9,6 +9,7 @@ import com.goldsprite.solofight.screens.menus.TestSelectionScreen;
 import com.goldsprite.solofight.screens.ecs.RefactorSelectionScreen;
 import com.goldsprite.solofight.screens.tests.TempTestScreen;
 import com.goldsprite.solofight.screens.editor.EditorSelectionScreen;
+import com.goldsprite.solofight.screens.editor.tests.SceneEditorScreen;
 
 // [修改] 继承 BaseSelectionScreen
 public class ExampleSelectScreen extends BaseSelectionScreen {
@@ -21,6 +22,8 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 		
 		map.put(">>> 新ECS场景 <<<", RefactorSelectionScreen.class);
 		map.put(">>> 编辑器开发 (Tools) <<<", EditorSelectionScreen.class);
+
+		map.put("编辑器", SceneEditorScreen.class);
 
 		map.put("H5轮子场景", TestSelectionScreen.class);
 

@@ -3,11 +3,13 @@ package com.goldsprite.gameframeworks.assets;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.SplitPane;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.goldsprite.gameframeworks.log.Debug;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
+import com.kotcrab.vis.ui.widget.VisTree;
 
 public class VisUIHelper {
 	public static BitmapFont cnFont;
@@ -50,10 +52,24 @@ public class VisUIHelper {
 			skin.get(VisTextField.VisTextFieldStyle.class).font = cnFont;
 
 			Debug.log("VisUI 中文字体调整成功.");
-
+			
+			fixSplitPaneHandle();
 		} catch (Exception e) {
 			e.printStackTrace();
 			Debug.log("VisUI Font Inject Failed: " + e.getMessage());
 		}
+	}
+
+	private static void fixSplitPaneHandle() {
+		float size = 20f;
+		Skin skin = VisUI.getSkin();
+		skin.get("default-vertical", SplitPane.SplitPaneStyle.class).handle.setMinHeight(size);
+		skin.get("default-horizontal", SplitPane.SplitPaneStyle.class).handle.setMinWidth(size);
+
+		size = 12f;
+		skin.get("default", VisTree.TreeStyle.class).plus.setMinWidth(size);
+		skin.get("default", VisTree.TreeStyle.class).plus.setMinHeight(size);
+		skin.get("default", VisTree.TreeStyle.class).minus.setMinWidth(size);
+		skin.get("default", VisTree.TreeStyle.class).minus.setMinHeight(size);
 	}
 }
