@@ -149,6 +149,10 @@ class ViewTarget {
 	public Camera camera;
 
 	private int fboW, fboH;
+	
+	// 添加到 ViewTarget 类中
+	public int getFboWidth() { return fboW; }
+	public int getFboHeight() { return fboH; }
 
 	public ViewTarget(int w, int h) {
 		this.fboW = w;
@@ -199,118 +203,139 @@ class ViewTarget {
 }
 
 // ==========================================
-// 3. UI 展示层 (Consumer) - 重点修复区域
+// 3. UI 展示层 (Consumer) - 深度修复版
 // ==========================================
 class ViewWidget extends Widget {
-	// 对应显示策略
-	public enum DisplayMode { FIT, STRETCH, COVER }
+    public enum DisplayMode { FIT, STRETCH, COVER }
 
-	private ViewTarget target;
-	private Texture bgTexture;
-	private DisplayMode displayMode = DisplayMode.FIT;
+    private ViewTarget target;
+    private Texture bgTexture; // 用于显示Widget自身的底色(调试用)
+    private DisplayMode displayMode = DisplayMode.FIT;
 
-	// 记录绘制参数
-	private float drawX, drawY, drawW, drawH;
+    // --- 绘制参数缓存 (用于坐标逆向推导) ---
+    // 这些变量描述了：FBO图片到底被画在了Widget里的什么位置、多大尺寸？
+    private float drawnImageX, drawnImageY; // 图片绘制的左下角 (相对于 Widget 自身 (0,0))
+    private float drawnImageW, drawnImageH; // 图片绘制的实际宽、高 (像素)
 
-	public ViewWidget(ViewTarget target) {
-		this.target = target;
-		bgTexture = GameWorld.createSolidTexture(1, 1, new Color(0.3f, 0.0f, 0.1f, 1));
-	}
+    public ViewWidget(ViewTarget target) {
+        this.target = target;
+        // 深灰色背景，如果能看到它，说明 Widget 这一层有黑边
+        bgTexture = GameWorld.createSolidTexture(1, 1, new Color(0.15f, 0.15f, 0.15f, 1));
+    }
 
-	public void setDisplayMode(DisplayMode mode) {
-		this.displayMode = mode;
-	}
+    public void setDisplayMode(DisplayMode mode) {
+        this.displayMode = mode;
+    }
 
-	@Override
-	public void draw(Batch batch, float parentAlpha) {
-		float x = getX(); float y = getY();
-		float w = getWidth(); float h = getHeight();
+    @Override
+    public void draw(Batch batch, float parentAlpha) {
+        validate(); // 确保 Scene2D 布局已计算
 
-		// 1. 画背景
-		batch.draw(bgTexture, x, y, w, h);
+        // 1. 获取 Widget 在屏幕上的绝对位置和大小
+        // getX()/getY() 是相对于父容器的坐标
+        float widgetX = getX();
+        float widgetY = getY();
+        float widgetW = getWidth();
+        float widgetH = getHeight();
 
-		// 2. 【修复显示逻辑】：处理拉伸和铺满
-		float widgetRatio = w / h;
-		// FBO 的比例固定是 1280/720
-		float fboRatio = (float)target.viewport.getScreenWidth() / target.viewport.getScreenHeight();
+        // 画 Widget 的底色
+        batch.setColor(1, 1, 1, parentAlpha);
+        batch.draw(bgTexture, widgetX, widgetY, widgetW, widgetH);
 
-		if (displayMode == DisplayMode.STRETCH) {
-			// STRETCH: 强行填满，无视比例
-			drawX = x; drawY = y;
-			drawW = w; drawH = h;
-		}
-		else if (displayMode == DisplayMode.COVER) {
-			// COVER (模拟Extend): 保持比例，填满窗口 (会有裁切)
-			if (widgetRatio > fboRatio) {
-				// 窗口更宽，匹配宽度，高度溢出
-				drawW = w;
-				drawH = drawW / fboRatio;
-			} else {
-				// 窗口更高，匹配高度，宽度溢出
-				drawH = h;
-				drawW = drawH * fboRatio;
-			}
-			// 居中
-			drawX = x + (w - drawW) / 2;
-			drawY = y + (h - drawH) / 2;
-		}
-		else {
-			// FIT: 保持比例，全部显示 (有黑边)
-			if (widgetRatio > fboRatio) {
-				drawH = h; drawW = drawH * fboRatio;
-			} else {
-				drawW = w; drawH = drawW / fboRatio;
-			}
-			drawX = x + (w - drawW) / 2;
-			drawY = y + (h - drawH) / 2;
-		}
+        // 2. 准备计算：FBO 原始比例 vs Widget 比例
+        // 【关键】必须用 getFboWidth (物理尺寸)，不能用 viewport.getScreenWidth (逻辑尺寸)
+        float fboW = target.getFboWidth();
+        float fboH = target.getFboHeight();
+        float fboRatio = fboW / fboH;
+        float widgetRatio = (widgetH == 0) ? 1 : widgetW / widgetH;
 
-		// 3. 贴 FBO
-		batch.draw(target.fboRegion, drawX, drawY, drawW, drawH);
-	}
+        // 3. 计算图片应该画多大、画哪里 (计算第一层黑边)
+        if (displayMode == DisplayMode.STRETCH) {
+            drawnImageW = widgetW;
+            drawnImageH = widgetH;
+            drawnImageX = 0; // 铺满，无偏移
+            drawnImageY = 0;
+        } else {
+            boolean scaleByWidth;
+            if (displayMode == DisplayMode.COVER) {
+                scaleByWidth = widgetRatio > fboRatio; // 类似 ExtendViewport
+            } else {
+                scaleByWidth = widgetRatio < fboRatio; // 类似 FitViewport
+            }
 
-	// 【终极坐标转换】：纯数学硬算，修复Y轴反转，支持所有缩放
-	public Vector2 screenToWorld(float localX, float localY) {
-		// 1. 算出相对于绘制区域(drawX, drawY)的偏移比例
-		// 也就是：点击点在图片上的百分比位置 (0.0 ~ 1.0)
-		float percentX = (localX - (drawX - getX())) / drawW;
-		float percentY = (localY - (drawY - getY())) / drawH;
+            if (scaleByWidth) {
+                // 宽度对齐，高度自动计算
+                drawnImageW = widgetW;
+                drawnImageH = widgetW / fboRatio;
+            } else {
+                // 高度对齐，宽度自动计算
+                drawnImageH = widgetH;
+                drawnImageW = widgetH * fboRatio;
+            }
 
-		// 3. 计算 FBO 内部的像素坐标
-		// FBO 总大小
-		float fboTotalW = target.viewport.getScreenWidth();
-		float fboTotalH = target.viewport.getScreenHeight();
+            // 居中计算：算出相对于 Widget 左下角的偏移量
+            drawnImageX = (widgetW - drawnImageW) / 2f;
+            drawnImageY = (widgetH - drawnImageH) / 2f;
+        }
 
-		// 像素位置
-		float fboPixelX = percentX * fboTotalW;
-		float fboPixelY = percentY * fboTotalH;
+        // 4. 正式绘制
+        // draw 的时候需要绝对坐标，所以加上 widgetX/Y
+        batch.draw(target.fboRegion, 
+                   widgetX + drawnImageX, 
+                   widgetY + drawnImageY, 
+                   drawnImageW, 
+                   drawnImageH);
+    }
 
-		// 4. 处理 FBO 内部 Viewport 的黑边 (Fit模式下)
-		// FitViewport 在 FBO 内部也有 screenX/Y/W/H
-		Viewport vp = target.viewport;
-		float vpX = vp.getScreenX();
-		float vpY = vp.getScreenY();
-		float vpW = vp.getScreenWidth();
-		float vpH = vp.getScreenHeight();
+    /**
+     * 将 UI 触摸点 (Local Coordinates) 转换为 游戏世界坐标 (World Coordinates)
+     * 对应步骤：UI点击 -> 相对图片位置 -> FBO像素位置 -> NDC坐标 -> 世界坐标
+     */
+    public Vector2 screenToWorld(float localX, float localY) {
+        // localX/Y 是 Scene2D 传进来的，原点是 Widget 左下角 (0,0)
+        // 已经自动处理了 Window 的 Padding，不需要我们操心
 
-		// 归一化设备坐标 (NDC) -1 ~ 1
-		float ndcX = (fboPixelX - vpX) / vpW * 2.0f - 1.0f;
-		float ndcY = (fboPixelY - vpY) / vpH * 2.0f - 1.0f;
+        // [Step 1] 计算点击点在“FBO图片区域”内的归一化坐标 (0.0 ~ 1.0)
+        // 我们需要减去 Widget 层的黑边偏移 (drawnImageX/Y)
+        float percentX = (localX - drawnImageX) / drawnImageW;
+        float percentY = (localY - drawnImageY) / drawnImageH;
 
-		// 6. 映射到世界坐标
-		OrthographicCamera cam = (OrthographicCamera) target.camera;
-		float worldW = vp.getWorldWidth() * cam.zoom;
-		float worldH = vp.getWorldHeight() * cam.zoom;
+        // [Step 2] 还原到 FBO 的物理像素位置
+        // 如果点在正中心 (0.5)，且 FBO 宽 1280，那就是第 640 个像素
+        float fboPixelX = percentX * target.getFboWidth();
+        float fboPixelY = percentY * target.getFboHeight();
 
-		float worldX = cam.position.x + ndcX * (worldW / 2f);
-		float worldY = cam.position.y + ndcY * (worldH / 2f);
+        // [Step 3] FBO 内部 Viewport 映射 (处理第二层黑边)
+        // 获取 Viewport 在 FBO 内部实际占用的矩形区域
+        Viewport vp = target.viewport;
+        float vpX = vp.getScreenX();      // FBO 内部黑边的宽度
+        float vpY = vp.getScreenY();      // FBO 内部黑边的高度
+        float vpW = vp.getScreenWidth();  // 游戏画面在 FBO 里的实际宽度
+        float vpH = vp.getScreenHeight(); // 游戏画面在 FBO 里的实际高度
 
-		return new Vector2(worldX, worldY);
-	}
+        // 计算 NDC (归一化设备坐标: -1 ~ 1)
+        // 公式含义：(当前像素 - 起始像素) / 总宽度 -> 得到 0~1 -> 映射到 -1~1
+        float ndcX = (fboPixelX - vpX) / vpW * 2.0f - 1.0f;
+        float ndcY = (fboPixelY - vpY) / vpH * 2.0f - 1.0f;
 
-	public void dispose() {
-		bgTexture.dispose();
-	}
+        // [Step 4] 投影到世界坐标 (利用 Camera 的能力)
+        OrthographicCamera cam = (OrthographicCamera) target.camera;
+
+        // 既然我们有了 NDC，就可以利用 Camera 的 Zoom 和 Position 算出世界坐标
+        // 世界宽度的一半 = (视口世界宽 * 缩放) / 2
+        float halfWorldW = (vp.getWorldWidth() * cam.zoom) / 2f;
+        float halfWorldH = (vp.getWorldHeight() * cam.zoom) / 2f;
+
+        // 最终坐标 = 相机位置 + (偏离中心的比例 * 世界的一半宽)
+        float worldX = cam.position.x + ndcX * halfWorldW;
+        float worldY = cam.position.y + ndcY * halfWorldH;
+
+        return new Vector2(worldX, worldY);
+    }
+
+    public void dispose() {
+        bgTexture.dispose();
+    }
 }
 
 // ==========================================
