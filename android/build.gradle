@@ -95,13 +95,13 @@ dependencies {
 
 	implementation "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
 	implementation project(':examples')
-	
+
 	// 1. Eclipse Java Compiler (负责把 .java 变成 .class)
-    implementation 'org.eclipse.jdt.core.compiler:ecj:4.6.1'
-    
+	implementation 'org.eclipse.jdt.core.compiler:ecj:4.6.1'
+
     // 2. Android DX (负责把 .class 变成 .dex)
     // 这里使用 JakeWharton 打包好的版本，方便 Gradle 引用
-    implementation 'com.jakewharton.android.repackaged:dalvik-dx:1'
+	implementation 'com.jakewharton.android.repackaged:dalvik-dx:16.0.1'
 
 	natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a"
 	natives "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a"
