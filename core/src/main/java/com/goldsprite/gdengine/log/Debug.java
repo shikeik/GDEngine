@@ -22,11 +22,12 @@ public class Debug {
 	public static String[] showTags = {
 		"Default Y",
 		"拦截 N",
-		"Engine Y",
 		//Test
 		"TEST Y",
 		"VERIFY Y",
 		"Test1 Y",
+		"Engine Y",
+		"Compiler Y",
 	};
 
 	public static String LOG_TAG = BuildConfig.PROJECT_NAME;

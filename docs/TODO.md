@@ -8,6 +8,8 @@ ignored: indentFix codeFormatFix
 gameworld内部逻辑自己完成摇杆绘制与相机跟随和玩家移动
 GScreen的输入多路复用要接上
 
+LogErr得做了
+
 
 
 

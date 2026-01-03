@@ -99,16 +99,16 @@ public class GdxLauncher extends Game {
 	
 	
 	private void testAndroidScript() {
-        new Thread(() -> {
+        //new Thread(() -> {
             try {
-                // 简单的测试脚本
-                String code = 
-                    "package com.test;" +
-                    "public class HelloAndroid {" +
-                    "    public String greet() {" +
-                    "        return \"Hello from Dynamic Dex!\";" +
-                    "    }" +
-                    "}";
+				// 注意：使用转义的双引号 \"
+				String code = 
+					"package com.test;" +
+					"public class HelloAndroid {" +
+					"    public String greet() {" +
+					"        return \"Hello from Dynamic Dex! Time: " + System.currentTimeMillis() + "\";" + 
+					"    }" +
+					"}";
 
                 // 编译！
                 Class<?> cls = Gd.compiler.compile("com.test.HelloAndroid", code);
@@ -125,7 +125,8 @@ public class GdxLauncher extends Game {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+				Debug.log("testCode编译异常: "+e.getCause());
             }
-        }).start();
+        //}).start();
     }
 }
