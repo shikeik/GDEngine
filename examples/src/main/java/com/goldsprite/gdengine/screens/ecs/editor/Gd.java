@@ -7,35 +7,29 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
-import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.GL31;
 import com.badlogic.gdx.graphics.GL32;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.glutils.GLVersion;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.StretchViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
-import org.lwjgl.opengl.DisplayMode;
 
 // ==========================================
-// 5. 全局代理层 (Global Delegate) - LibGDX 1.12.1 适配版
+// 5. 全局代理层 (Global Delegate) - 配置驱动版
 // ==========================================
 public class Gd {
-	// 其他模块透传
+	// 基础模块透传
 	public static final Files files = Gdx.files;
 	public static final Application app = Gdx.app;
-	// 音频模块通常也需要透传
 	public static final Audio audio = Gdx.audio;
-	public static Input input;       // 替换 Gdx.input
-	public static Graphics graphics; // 替换 Gdx.graphics
 
-	// 【新增】视口与相机管理器
-	public static ViewportManager view;
+	// 核心代理
+	public static Input input;
+	public static Graphics graphics;
+
+	// 【新增】项目配置中心 (单例数据)
+	public static final Config config = new Config();
 
 	public static void init(Mode mode, ViewWidget widget, ViewTarget target) {
 		if (mode == Mode.RELEASE) {
@@ -45,94 +39,23 @@ public class Gd {
 			input = new EditorGameInput(widget);
 			graphics = new EditorGameGraphics(target);
 		}
-		// 初始化视口管理器 (默认配置 960x540, FIT)
-		view = new ViewportManager(960, 540);
 	}
-	// ---------------------------------------------------------
-	// 视口管理器：配置驱动 + 相机劫持核心
-	// ---------------------------------------------------------
-	public static class ViewportManager {
-	// 【修复】改为 float，适配 GameWorld 的定义
-		private float logicWidth, logicHeight;
 
-		private Viewport gameViewport;
-		private Camera gameCamera;
-		private Camera activeCamera;
-		private boolean isHijacked = false;
-		private Type viewportType = Type.FIT;
+	public enum Mode { RELEASE, EDITOR }
 
-		public enum Type {FIT, EXTEND, STRETCH}
+	// ==========================================
+	// 配置数据定义
+	// ==========================================
+	public static class Config {
+		// 逻辑设计分辨率 (默认 960x540)
+		public float logicWidth = 960;
+		public float logicHeight = 540;
 
-			// 【修复】构造函数参数改为 float
-			public ViewportManager(float w, float h) {
-			this.logicWidth = w;
-			this.logicHeight = h;
-			this.gameCamera = new OrthographicCamera();
-			setConfig(w, h, viewportType);
-		this.gameCamera.position.set(0, 0, 0);
-		useGameCamera();
-		}
-
-			// 【修复】setConfig 参数改为 float
-			public void setConfig(float w, float h, Type type) {
-			this.logicWidth = w;
-		this.logicHeight = h;
-		this.viewportType = type;
-		recreateViewport();
-			}
-
-					private void recreateViewport() {
-					switch (viewportType) {
-				case FIT:
-					gameViewport = new FitViewport(logicWidth, logicHeight, gameCamera);
-					break;
-				case STRETCH:
-					gameViewport = new StretchViewport(logicWidth, logicHeight, gameCamera);
-					break;
-			case EXTEND:
-			gameViewport = new ExtendViewport(logicWidth, logicHeight, gameCamera);
-			break;
-			}
-			// 更新视口时使用当前的物理屏幕大小 (Gdx.graphics)
-		// 注意：这里需要强转回 int 传给 Viewport.update，因为屏幕像素必须是 int
-		gameViewport.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
-
-			// 如果当前是游戏模式，重新激活一下确保正确
-			if (!isHijacked) {
-			useGameCamera();
-				}
-				}
-
-		public void update(int screenW, int screenH) {
-		gameViewport.update(screenW, screenH, true);
-		}
-
-			public void useGameCamera() {
-		this.activeCamera = gameCamera;
-		this.isHijacked = false;
-		}
-
-			public void useEditorCamera(Camera sceneCamera) {
-		this.activeCamera = sceneCamera;
-		this.isHijacked = true;
-		}
-
-		public Camera getCamera() {
-		return activeCamera;
-		}
-
-				public void apply() {
-			if (!isHijacked) {
-		gameViewport.apply();
-		}
-		}
-
-	public Viewport getGameViewport() {
-	return gameViewport;
+		// 视口适配策略
+		public ViewportType viewportType = ViewportType.FIT;
 	}
-}
 
-	public enum Mode {RELEASE, EDITOR}
+	public enum ViewportType { FIT, EXTEND, STRETCH }
 }
 
 /**

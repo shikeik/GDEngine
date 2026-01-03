@@ -4,6 +4,10 @@ ignored: indentFix codeFormatFix
 
 限制变换组件为等比缩放
 
+现在编辑器只是渲染，而没有跑真的gameworld逻辑或者gameworld没有自己的逻辑
+gameworld内部逻辑自己完成摇杆绘制与相机跟随和玩家移动
+GScreen的输入多路复用要接上
+
 
 
 

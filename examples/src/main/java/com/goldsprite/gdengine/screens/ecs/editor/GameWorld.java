@@ -1,83 +1,111 @@
 package com.goldsprite.gdengine.screens.ecs.editor;
 
-// ==========================================
-// 1. 业务逻辑层 (Model)
-// ==========================================
-// ==========================================
-// GameWorld 的关键修改 (请确保 GameWorld 类已按我们之前的讨论更新)
-// 1. 移除了私有的 Camera, Viewport
-// 2. GameWorld.init() 不再创建 Camera/Viewport
-// 3. GameWorld.render() 使用 Gd.view.getCamera() 和 Gd.view.apply()
-// 4. Gd.input/Gd.graphics 被正确使用
-// ==========================================
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.StretchViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
+// ==========================================
+// 1. 业务逻辑层 (Model) - 配置驱动 & 依赖注入版
+// ==========================================
 public class GameWorld {
-	public static final float WORLD_WIDTH = 960; // 配合 Gd.view 的默认逻辑分辨率
-	public static final float WORLD_HEIGHT = 540;
+	// 不再写死静态常量，而是从 Gd.config 读取
+	// public static final float WORLD_WIDTH = 960; 
 
 	public Texture playerTex, bgTex;
 	public float playerX = 0, playerY = 0;
 	public float targetX = 0, targetY = 0;
 	private ShapeRenderer debugRenderer;
+	private SpriteBatch batch;
 
-	// 【修改】移除私有 Camera 和 Viewport
-	// private Viewport viewport;
-	// private Camera camera;
-
-	private SpriteBatch batch; // 游戏自己管理 Batch
+	// 【核心】游戏自己的相机和视口
+	private Camera gameCamera;
+	private Viewport viewport;
 
 	public void init() {
 		playerTex = tryLoadTexture("role.png", 32, 32, Color.CORAL);
 		bgTex = tryLoadTexture("back.png", 512, 512, Color.TEAL);
 		debugRenderer = new ShapeRenderer();
+		batch = new SpriteBatch();
 
-		// 【修改】不再自己 new Camera/Viewport
-		// camera = new OrthographicCamera();
-		// viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
-		// camera.position.set(0, 0, 0);
+		// 初始化时，根据 Gd 配置创建视口
+		reloadConfig();
+	}
 
-		batch = new SpriteBatch(); // 游戏自己管理 Batch
+	/**
+	 * 【新增】热重载配置
+	 * 当编辑器修改分辨率或视口类型时调用
+	 */
+	public void reloadConfig() {
+		Gd.Config conf = Gd.config;
+
+		// 如果相机还没创建，先创建
+		if (gameCamera == null) {
+			gameCamera = new OrthographicCamera();
+			gameCamera.position.set(0, 0, 0);
+		}
+
+		// 根据配置工厂化视口
+		switch (conf.viewportType) {
+			case FIT:
+				viewport = new FitViewport(conf.logicWidth, conf.logicHeight, gameCamera);
+				break;
+			case STRETCH:
+				viewport = new StretchViewport(conf.logicWidth, conf.logicHeight, gameCamera);
+				break;
+			case EXTEND:
+				viewport = new ExtendViewport(conf.logicWidth, conf.logicHeight, gameCamera);
+				break;
+		}
+
+		// 立即应用一次更新 (使用当前屏幕/FBO大小)
+		// 注意：Gd.graphics.getWidth() 会根据实机/编辑器模式返回正确的值
+		viewport.update(Gd.graphics.getWidth(), Gd.graphics.getHeight(), true);
 	}
 
 	public void update(float delta, float moveX, float moveY) {
 		playerX += moveX;
 		playerY += moveY;
+
+		// 【核心】逻辑更新永远只驱动“游戏相机”
+		// 无论渲染时用哪个相机看，游戏逻辑认为主角就在屏幕中间
+		gameCamera.position.set(playerX, playerY, 0);
+		gameCamera.update();
 	}
 
-	// 【修改】render 方法签名，不再需要外部传入 Batch
-	// 而是自己获取 Gd.view 的相机和应用视口
-	public void render() {
-		// 1. 应用视口 (Gd.view 会根据是否被劫持来决定是否加黑边)
-		Gd.view.apply();
-
-		// 2. 获取当前相机 (可能是玩家相机，也可能是编辑器相机)
-		Camera cam = Gd.view.getCamera();
-		batch.setProjectionMatrix(cam.combined);
+	/**
+	 * 【核心】依赖注入式渲染
+	 * @param targetCamera 使用哪个相机来观察世界
+	 */
+	public void render(Camera targetCamera) {
+		// 设置矩阵
+		batch.setProjectionMatrix(targetCamera.combined);
 
 		batch.begin();
-		// 画大背景
+		// 画背景
 		batch.draw(bgTex, -1000, -1000, 2000, 2000);
+		// 画角色
 		batch.draw(playerTex, playerX - playerTex.getWidth() / 2f, playerY - playerTex.getHeight() / 2f);
 		batch.end();
 	}
 
-	// Debug 渲染也需要获取相机
-	public void renderDebug() {
-		// 【修改】获取 Gd.view 的相机
-		Camera cam = Gd.view.getCamera();
-		debugRenderer.setProjectionMatrix(cam.combined);
-
+	public void renderDebug(Camera targetCamera) {
+		debugRenderer.setProjectionMatrix(targetCamera.combined);
 		debugRenderer.begin(ShapeRenderer.ShapeType.Line);
 
+		// 画世界边界 (读取配置的大小)
+		float w = Gd.config.logicWidth;
+		float h = Gd.config.logicHeight;
+
 		debugRenderer.setColor(Color.YELLOW);
-		// 使用 GameWorld 的分辨率来画边界
-		debugRenderer.rect(-WORLD_WIDTH / 2, -WORLD_HEIGHT / 2, WORLD_WIDTH, WORLD_HEIGHT);
+		debugRenderer.rect(-w / 2, -h / 2, w, h);
 
 		debugRenderer.setColor(Color.RED);
 		debugRenderer.line(-1000, 0, 1000, 0);
@@ -91,13 +119,13 @@ public class GameWorld {
 		debugRenderer.end();
 	}
 
+	// 暴露给外部使用 (比如 RealGame resize 时需要 update)
+	public Viewport getViewport() { return viewport; }
+	public Camera getGameCamera() { return gameCamera; }
+
 	private Texture tryLoadTexture(String path, int w, int h, Color c) {
-		try {
-			// 【修改】使用 Gd.files
-			return new Texture(Gd.files.internal(path));
-		} catch (Exception e) {
-			return createSolidTexture(w, h, c);
-		}
+		try { return new Texture(Gd.files.internal(path)); } 
+		catch (Exception e) { return createSolidTexture(w, h, c); }
 	}
 
 	public static Texture createSolidTexture(int w, int h, Color c) {
@@ -113,6 +141,6 @@ public class GameWorld {
 		if (playerTex != null) playerTex.dispose();
 		if (bgTex != null) bgTex.dispose();
 		debugRenderer.dispose();
-		batch.dispose(); // 释放自己的 Batch
+		batch.dispose();
 	}
 }
