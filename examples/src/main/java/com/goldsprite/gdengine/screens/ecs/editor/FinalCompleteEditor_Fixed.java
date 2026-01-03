@@ -183,10 +183,16 @@ class ViewTarget {
 	public void renderToFbo(Runnable renderLogic) {
 		Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 		fbo.begin();
-		Gdx.gl.glViewport(0, 0, fboW, fboH);
 
-		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1f);
+		// 【第1步】先清空整个 FBO（画出黑边背景）
+		Gdx.gl.glViewport(0, 0, fboW, fboH);
+		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1f); // 这里的颜色就是 FBO 内部黑边的颜色
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+		// 【第2步 - 核心修复】应用 Viewport 的实际渲染区域
+		// 不要用 (0,0,fboW,fboH)，要用 viewport 计算出来的区域！
+		// 这样 FIT 模式下，画面才会保持比例，左右留出黑边，而不是被拉伸填满
+		viewport.apply(); 
 
 		batch.setProjectionMatrix(camera.combined);
 		batch.begin();
@@ -194,6 +200,11 @@ class ViewTarget {
 		batch.end();
 
 		fbo.end();
+	}
+	
+	public void resize(int w, int h) {
+		// 这一步至关重要，如果 FBO 内部视口没更新，黑边数据(vpX, vpY)就是错的
+		viewport.update(w, h, true); // true 表示居中相机
 	}
 
 	public void dispose() {
@@ -361,7 +372,10 @@ class EditorController {
 		sceneTarget = new ViewTarget(1280, 720);
 		sceneTarget.setViewportMode(ViewTarget.ViewportMode.EXTEND);
 
-		stage = new Stage(new ScreenViewport());
+		float scl = 1f;
+		stage = new Stage(new ExtendViewport(960*scl, 540*scl));
+		//stage = new Stage(new ScreenViewport());
+		
 		Gdx.input.setInputProcessor(stage);
 
 		createGameWindow();
@@ -431,22 +445,6 @@ class EditorController {
 		stack.add(uiTable);
 
 		win.add(stack).grow();
-
-		// 强制刷新一次布局，确保数值已计算
-		win.pack();
-		win.layout();
-
-		Gdx.app.log("Padding", "Top(Title): " + win.getPadTop());
-		Gdx.app.log("Padding", "Bottom: " + win.getPadBottom());
-		Gdx.app.log("Padding", "Left: " + win.getPadLeft());
-		Gdx.app.log("Padding", "Right: " + win.getPadRight());
-		Gdx.app.log("Padding", "Window Size: " + win.getWidth() + "x" + win.getHeight());
-		Gdx.app.log("Padding", "Widget Size: " + gameWidget.getWidth() + "x" + gameWidget.getHeight());
-
-// 简单的数学验证：
-// WidgetHeight 应该等于 WindowHeight - PadTop - PadBottom
-		float expectedH = win.getHeight() - win.getPadTop() - win.getPadBottom();
-		Gdx.app.log("Padding", "预期 Widget 高度: " + expectedH + " (实际: " + gameWidget.getHeight() + ")");
 
 		stage.addActor(win);
 	}
