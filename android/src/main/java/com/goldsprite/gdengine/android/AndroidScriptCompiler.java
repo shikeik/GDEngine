@@ -1,6 +1,7 @@
 package com.goldsprite.gdengine.android;
 
 import android.content.Context;
+import android.os.Build;
 import com.android.tools.r8.CompilationFailedException;
 import com.android.tools.r8.CompilationMode;
 import com.android.tools.r8.D8;
@@ -11,8 +12,10 @@ import com.android.tools.r8.OutputMode;
 import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 import com.goldsprite.gdengine.log.Debug;
 import dalvik.system.DexClassLoader;
+import dalvik.system.InMemoryDexClassLoader; // 新增引用
 
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -29,11 +32,20 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 
 	public AndroidScriptCompiler(Context context) {
 		this.context = context;
-		// 源码和临时Class文件目录
-		this.cacheDir = new File(context.getCacheDir(), "compiler_cache");
-		// Dex加载优化目录 (必须是私有目录)
+
+		// 【修复 1】路径修正
+		// Android 10+ 禁止在 getCacheDir() 执行代码。
+		// getCodeCacheDir() 是系统专门预留给动态代码生成的目录，拥有执行权限。
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+			this.cacheDir = new File(context.getCodeCacheDir(), "compiler_cache");
+		} else {
+			this.cacheDir = new File(context.getCacheDir(), "compiler_cache");
+		}
+
+		// DexClassLoader 需要的解压目录（仅在旧版本Android使用）
 		this.dexOutputDir = context.getDir("dex", Context.MODE_PRIVATE);
-		// android.jar 路径
+
+		// android.jar 依然放普通缓存即可，因为它只是读取依赖，不执行
 		this.androidJarFile = new File(context.getCacheDir(), "android.jar");
 
 		if (!cacheDir.exists()) cacheDir.mkdirs();
@@ -42,55 +54,70 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		prepareAndroidJar();
 	}
 
-	/**
-	 * 核心编译方法
-	 */
 	@Override
 	public Class<?> compile(String className, String sourceCode) {
 		try {
 			Debug.logT("Compiler", "=== 开始编译流程: %s ===", className);
 
-			// 1. 准备目录 (清理旧文件)
 			File srcDir = new File(cacheDir, "src");
 			File classDir = new File(cacheDir, "classes");
 			recreateDir(srcDir);
 			recreateDir(classDir);
 
-			// 2. 将源码保存为 .java 文件
 			String simpleName = className.substring(className.lastIndexOf('.') + 1);
 			File javaFile = new File(srcDir, simpleName + ".java");
 			try (FileWriter writer = new FileWriter(javaFile)) {
 				writer.write(sourceCode);
 			}
 
-			// 3. ECJ 编译 (Java -> Class)
 			if (!runEcjCompile(javaFile, classDir)) {
 				return null;
 			}
 
-			// 4. D8 转换 (Class -> Dex/Jar)
 			Debug.logT("Compiler", "3. D8 转换...");
 
-			// 【关键修改】文件名后缀改成 .jar
-			// D8 会自动在里面生成 classes.dex，DexClassLoader 能完美识别它
-			File dexFile = new File(cacheDir, "script.jar");
-			if (dexFile.exists()) dexFile.delete();
+			// 输出文件：script.jar
+			File dexJarFile = new File(cacheDir, "script.jar");
+			if (dexJarFile.exists()) dexJarFile.delete();
 
-			if (!runD8Dexing(classDir, dexFile)) {
+			if (!runD8Dexing(classDir, dexJarFile)) {
 				return null;
 			}
 
-			// 5. 加载 Dex
-			Debug.logT("Compiler", "4. 加载 Dex...");
-			DexClassLoader loader = new DexClassLoader(
-				dexFile.getAbsolutePath(), // 这里传入 .jar 路径即可
-				dexOutputDir.getAbsolutePath(),
-				null,
-				getClass().getClassLoader()
-			);
+			// 【修复 2】加载策略分流
+			ClassLoader classLoader;
 
-			Class<?> cls = loader.loadClass(className);
-			Debug.logT("Compiler", "✅ 编译并加载成功!");
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+				// 方案 A: Android 8.0+ (API 26+) -> 内存加载
+				// 直接读取 jar 字节流加载，无需写入“可执行文件”，完美规避 W^X 权限崩溃
+				Debug.logT("Compiler", "4. 内存加载 (InMemoryDexClassLoader)...");
+
+				byte[] dexBytes = Files.readAllBytes(dexJarFile.toPath());
+				ByteBuffer buffer = ByteBuffer.wrap(dexBytes);
+
+				classLoader = new InMemoryDexClassLoader(
+					buffer,
+					getClass().getClassLoader()
+				);
+
+			} else {
+				// 方案 B: 老版本 Android -> 文件加载
+				// 只要文件在 getCodeCacheDir() 中，系统通常允许执行
+				Debug.logT("Compiler", "4. 文件加载 (DexClassLoader)...");
+
+				// 设置只读是个好习惯，部分系统会检查这个
+				dexJarFile.setReadOnly();
+
+				classLoader = new DexClassLoader(
+					dexJarFile.getAbsolutePath(),
+					dexOutputDir.getAbsolutePath(),
+					null,
+					getClass().getClassLoader()
+				);
+			}
+
+			Class<?> cls = classLoader.loadClass(className);
+			Debug.logT("Compiler", "✅ 编译加载成功!");
 			return cls;
 
 		} catch (Exception e) {
@@ -100,9 +127,8 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		}
 	}
 
-	/**
-	 * 步骤 3: 运行 ECJ 编译器
-	 */
+	// --- 保持不变的辅助方法 ---
+
 	private boolean runEcjCompile(File javaFile, File classDir) {
 		Debug.logT("Compiler", "2. ECJ 编译中...");
 		StringWriter ecjLog = new StringWriter();
@@ -111,15 +137,14 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		org.eclipse.jdt.internal.compiler.batch.Main ecjCompiler =
 			new org.eclipse.jdt.internal.compiler.batch.Main(ecjWriter, ecjWriter, false, null, null);
 
-		// 设置编译参数
 		String[] ecjArgs = {
-			"-source", "1.8", // D8 支持 Java 8，可以使用 1.8
+			"-source", "1.8",
 			"-target", "1.8",
 			"-nowarn",
 			"-proc:none",
-			"-d", classDir.getAbsolutePath(), // 输出目录
-			"-classpath", androidJarFile.getAbsolutePath(), // 依赖库
-			javaFile.getAbsolutePath() // 输入文件
+			"-d", classDir.getAbsolutePath(),
+			"-classpath", androidJarFile.getAbsolutePath(),
+			javaFile.getAbsolutePath()
 		};
 
 		boolean success = ecjCompiler.compile(ecjArgs);
@@ -127,7 +152,6 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		if (!success) {
 			Debug.logT("Compiler", "ECJ 编译失败. 日志:\n%s", ecjLog.toString());
 		} else {
-			// 检查是否有 Class 文件生成
 			File[] files = classDir.listFiles();
 			if (files == null || files.length == 0) {
 				Debug.logT("Compiler", "ECJ 似乎成功了，但没有生成 Class 文件。");
@@ -137,14 +161,8 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		return success;
 	}
 
-	/**
-	 * 步骤 4: 运行 D8 转换器
-	 */
 	private boolean runD8Dexing(File classDir, File outputDexFile) {
-		Debug.logT("Compiler", "3. D8 转换中...");
-
 		try {
-			// 扫描所有 .class 文件
 			List<Path> classFiles = new ArrayList<>();
 			try (Stream<Path> walk = Files.walk(Paths.get(classDir.getAbsolutePath()))) {
 				classFiles = walk
@@ -157,35 +175,26 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 				return false;
 			}
 
-			// 【修正 1】先定义日志处理器
 			DiagnosticsHandler handler = new DiagnosticsHandler() {
 				@Override
 				public void error(Diagnostic diagnostic) {
 					Debug.logT("Compiler", "[D8 Error] %s", diagnostic.getDiagnosticMessage());
 				}
-
 				@Override
 				public void warning(Diagnostic diagnostic) {
 					Debug.logT("Compiler", "[D8 Warn] %s", diagnostic.getDiagnosticMessage());
 				}
-
 				@Override
-				public void info(Diagnostic diagnostic) {
-					// ignore
-				}
+				public void info(Diagnostic diagnostic) {}
 			};
 
-			// 【修正 2】在创建 builder 时直接传入 handler
 			D8Command.Builder builder = D8Command.builder(handler);
-
-			// --- 配置 ---
 			builder.setMode(CompilationMode.DEBUG);
 			builder.setMinApiLevel(19);
 			builder.addProgramFiles(classFiles);
 			builder.addLibraryFiles(Paths.get(androidJarFile.getAbsolutePath()));
 			builder.setOutput(Paths.get(outputDexFile.getAbsolutePath()), OutputMode.DexIndexed);
 
-			// 运行
 			D8.run(builder.build());
 
 			return outputDexFile.exists();
@@ -199,18 +208,13 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		}
 	}
 
-	// --- 辅助方法 ---
-
 	private void prepareAndroidJar() {
 		if (androidJarFile.exists() && androidJarFile.length() > 0) return;
-
-		Debug.logT("Compiler", "正在从 Assets 解压 android.jar...");
 		try (InputStream is = context.getAssets().open("android.jar");
 			 FileOutputStream fos = new FileOutputStream(androidJarFile)) {
 			byte[] buffer = new byte[2048];
 			int length;
 			while ((length = is.read(buffer)) > 0) fos.write(buffer, 0, length);
-			Debug.logT("Compiler", "android.jar 解压完成");
 		} catch (IOException e) {
 			Debug.logT("Compiler", "Fatal: Assets 中找不到 android.jar!");
 			e.printStackTrace();
