@@ -66,13 +66,15 @@ public class FinalCompleteEditor_Fixed extends GScreen {
 // 1. 业务逻辑层 (Model)
 // ==========================================
 class GameWorld {
-	public static final float WORLD_WIDTH = 480;
-	public static final float WORLD_HEIGHT = 320;
+	public static final float WORLD_WIDTH = 960; // 对应 Gd 的默认配置
+	public static final float WORLD_HEIGHT = 540;
 
 	public Texture playerTex, bgTex;
 	public float playerX = 0, playerY = 0;
 	public float targetX = 0, targetY = 0;
 	private ShapeRenderer debugRenderer;
+	// 【修改】新增 Batch，游戏自己管理绘制
+	private SpriteBatch batch;
 
 	public static Texture createSolidTexture(int w, int h, Color c) {
 		Pixmap p = new Pixmap(w, h, Pixmap.Format.RGBA8888);
@@ -87,6 +89,7 @@ class GameWorld {
 		playerTex = tryLoadTexture("role.png", 32, 32, Color.CORAL);
 		bgTex = tryLoadTexture("back.png", 512, 512, Color.TEAL);
 		debugRenderer = new ShapeRenderer();
+		batch = new SpriteBatch();
 	}
 
 	public void update(float delta, float moveX, float moveY) {
@@ -94,14 +97,27 @@ class GameWorld {
 		playerY += moveY;
 	}
 
-	public void render(Batch batch) {
-		// 画大背景
+	public void render() { // 参数不再需要传入 external batch
+		// 1. 告诉 Gd 我要开始画了，请应用视口 (处理黑边)
+		Gd.view.apply();
+
+		// 2. 获取当前生效的相机 (可能是游戏相机，也可能是编辑器相机)
+		Camera cam = Gd.view.getCamera();
+
+		// 3. 开始绘制
+		batch.setProjectionMatrix(cam.combined);
+		batch.begin();
+
 		batch.draw(bgTex, -1000, -1000, 2000, 2000);
-		batch.draw(playerTex, playerX - playerTex.getWidth() / 2f, playerY - playerTex.getHeight() / 2f);
+		batch.draw(playerTex, playerX - playerTex.getWidth()/2f, playerY - playerTex.getHeight()/2f);
+
+		batch.end();
 	}
 
-	public void renderDebug(Camera camera) {
-		debugRenderer.setProjectionMatrix(camera.combined);
+	// Debug 同理
+	public void renderDebug() {
+		Camera cam = Gd.view.getCamera();
+		debugRenderer.setProjectionMatrix(cam.combined);
 		debugRenderer.begin(ShapeRenderer.ShapeType.Line);
 
 		// 黄色框：世界边界
@@ -133,18 +149,21 @@ class GameWorld {
 		if (playerTex != null) playerTex.dispose();
 		if (bgTex != null) bgTex.dispose();
 		debugRenderer.dispose();
+		batch.dispose();
 	}
 }
 
 // ==========================================
 // 2. 渲染核心层 (Producer)
 // ==========================================
+// 替换整个 ViewTarget 类
+
 class ViewTarget {
 	public FrameBuffer fbo;
 	public TextureRegion fboRegion;
-	public SpriteBatch batch;
-	public Viewport viewport;
-	public Camera camera;
+	// Batch 移除，不再由 Target 管理渲染流程，它只提供环境
+	// public SpriteBatch batch;
+
 	private final int fboW;
 	private final int fboH;
 
@@ -154,74 +173,33 @@ class ViewTarget {
 
 		fbo = new FrameBuffer(Pixmap.Format.RGBA8888, w, h, false);
 		fboRegion = new TextureRegion(fbo.getColorBufferTexture());
-		// FBO 纹理翻转
 		fboRegion.flip(false, true);
-
-		batch = new SpriteBatch();
-		camera = new OrthographicCamera();
-
-		setViewportMode(ViewportMode.FIT);
-		camera.position.set(0, 0, 0);
 	}
 
-	// 添加到 ViewTarget 类中
-	public int getFboWidth() {
-		return fboW;
-	}
+	public int getFboWidth() { return fboW; }
+	public int getFboHeight() { return fboH; }
 
-	public int getFboHeight() {
-		return fboH;
-	}
-
-	public void setViewportMode(ViewportMode mode) {
-		Camera oldCam = (viewport != null) ? viewport.getCamera() : camera;
-		switch (mode) {
-			case FIT:
-				viewport = new FitViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam);
-				break;
-			case STRETCH:
-				viewport = new StretchViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam);
-				break;
-			case EXTEND:
-				viewport = new ExtendViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam);
-				break;
-		}
-		viewport.update(fboW, fboH, false);
-	}
-
+	/**
+	 * 纯粹的 FBO 环境准备
+	 * 只负责 bind, clear, unbind
+	 */
 	public void renderToFbo(Runnable renderLogic) {
-		Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
 		fbo.begin();
 
-		// 【第1步】先清空整个 FBO（画出黑边背景）
+		// 1. 默认铺满清屏
 		Gdx.gl.glViewport(0, 0, fboW, fboH);
-		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1f); // 这里的颜色就是 FBO 内部黑边的颜色
+		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-		// 【第2步 - 核心修复】应用 Viewport 的实际渲染区域
-		// 不要用 (0,0,fboW,fboH)，要用 viewport 计算出来的区域！
-		// 这样 FIT 模式下，画面才会保持比例，左右留出黑边，而不是被拉伸填满
-		viewport.apply();
-
-		batch.setProjectionMatrix(camera.combined);
-		batch.begin();
+		// 2. 执行渲染逻辑 (GameWorld 内部会自己处理 batch 和 matrix)
 		renderLogic.run();
-		batch.end();
 
 		fbo.end();
 	}
 
-	public void resize(int w, int h) {
-		// 这一步至关重要，如果 FBO 内部视口没更新，黑边数据(vpX, vpY)就是错的
-		viewport.update(w, h, true); // true 表示居中相机
-	}
-
 	public void dispose() {
 		fbo.dispose();
-		batch.dispose();
 	}
-
-	public enum ViewportMode {FIT, EXTEND, STRETCH}
 }
 
 // ==========================================
@@ -332,7 +310,7 @@ class ViewWidget extends Widget {
 		float fboPixelY = fboPos.y;
 
 		// 2. FBO 内部 Viewport 映射 (NDC转换)
-		Viewport vp = target.viewport;
+		Viewport vp = Gd.view.getGameViewport();
 		// 必须拿到 FBO 内部视口的实际偏移和大小
 		float vpX = vp.getScreenX();
 		float vpY = vp.getScreenY();
@@ -344,7 +322,7 @@ class ViewWidget extends Widget {
 		float ndcY = (fboPixelY - vpY) / vpH * 2.0f - 1.0f;
 
 		// 3. 投影到世界坐标
-		OrthographicCamera cam = (OrthographicCamera) target.camera;
+		OrthographicCamera cam = (OrthographicCamera) Gd.view.getCamera();
 		float halfWorldW = (vp.getWorldWidth() * cam.zoom) / 2f;
 		float halfWorldH = (vp.getWorldHeight() * cam.zoom) / 2f;
 
@@ -371,33 +349,37 @@ class EditorController {
 	ViewWidget gameWidget, sceneWidget;
 	Touchpad joystick;
 
+	// 【修改】场景编辑器专用的上帝相机 (不再放在 ViewTarget 里)
+	private OrthographicCamera sceneCamera;
+
 	public void create() {
 		if (!VisUI.isLoaded()) VisUI.load();
 
 		gameWorld = new GameWorld();
-		// 【修改点 1】注意：GameWorld.init() 里如果用了 Gdx.graphics，可能会报错，
-		// 所以建议把 init 放在 Gd 初始化之后，或者确保 init 里只加载资源
+		// 【修改点 1】 Gd 初始化前不调用 gameWorld.init()
+		// Gd.init() 会创建 ViewportManager，GameWorld.init() 会用到它
 
-		// 默认配置
-		gameTarget = new ViewTarget(1280, 720);
-		gameTarget.setViewportMode(ViewTarget.ViewportMode.FIT);
+		// --- FBO 和 Stage 设置 ---
+		gameTarget = new ViewTarget(1280, 720); // FBO 模拟手机屏幕分辨率
+		sceneTarget = new ViewTarget(1280, 720); // FBO 模拟手机屏幕分辨率
 
-		sceneTarget = new ViewTarget(1280, 720);
-		sceneTarget.setViewportMode(ViewTarget.ViewportMode.EXTEND);
-
-		float scl = 1.2f;
+		float scl = 1.2f; // UI 缩放因子
+		// Stage 使用 ExtendViewport，将 UI 缩放到 960x540 逻辑分辨率
 		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
-		createGameWindow();  // 这里面创建了 gameWidget
+		// --- 创建 UI 窗口 ---
+		createGameWindow();
 		createSceneWindow();
 
-		// 【修改点 2】初始化全局代理 (Editor模式)
+		// --- 初始化代理 ---
+		// Gd.init 需要 widget 和 target 来设置编辑器模式下的代理
 		Gd.init(Gd.Mode.EDITOR, gameWidget, gameTarget);
 
-		// 【修改点 3】现在可以安全初始化游戏逻辑了
+		// 【修改点 2】GameWorld 在 Gd 初始化后初始化
+		// GameWorld 现在会从 Gd 获取相机和视口
 		gameWorld.init();
 
-		// 输入处理链：Stage (UI) -> Gd (游戏逻辑注入)
+		// 输入处理链：Stage (UI) -> Gd (代理游戏输入)
 		Gdx.input.setInputProcessor(stage);
 	}
 
@@ -407,38 +389,28 @@ class EditorController {
 		win.setSize(500, 350);
 		win.setPosition(50, 50);
 
-		// ... 前面的代码不变 ...
 		gameWidget = new ViewWidget(gameTarget);
 
-		// 【新增】输入注入：将 UI 触摸事件透传给游戏
+		// --- Game View 输入处理 ---
 		gameWidget.addListener(new InputListener() {
 			@Override
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-				// ---------------------------------------------------------
-				// 1. 输入注入 (保持不变)
-				// ---------------------------------------------------------
-				// 通知代理：屏幕被触摸了
+				// 1. 输入注入给 Gd (通知游戏有输入)
 				((EditorGameInput) Gd.input).setTouched(true, pointer);
 
-				// 如果游戏有 InputProcessor，转发事件
+				// 2. 转发给游戏的 InputProcessor (如果游戏有的话)
 				if (Gd.input.getInputProcessor() != null) {
+					// 必须用全局屏幕坐标去转 FBO 坐标
 					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
 					Gd.input.getInputProcessor().touchDown((int) fboPos.x, (int) fboPos.y, pointer, button);
 				}
 
-				// ---------------------------------------------------------
-				// 2. 【补回】编辑器逻辑：点击设置目标点 (用于验证坐标映射)
-				// ---------------------------------------------------------
-				// 注意：screenToWorld 需要传入全局屏幕坐标，不能用参数里的 x,y (本地坐标)
+				// 3. 编辑器逻辑：点击设置目标点 (验证坐标映射)
+				//    使用 gameWidget.screenToWorld 获取游戏世界坐标
 				Vector2 worldPos = gameWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY());
-
-				// 更新游戏世界的目标点
 				gameWorld.targetX = worldPos.x;
 				gameWorld.targetY = worldPos.y;
-
-				// 打印日志方便调试
-				Gdx.app.log("Editor", "Clicked Screen: " + Gdx.input.getX() + "," + Gdx.input.getY()
-					+ " -> World: " + worldPos.x + "," + worldPos.y);
+				Gdx.app.log("Editor", "GameView Clicked World: " + worldPos);
 
 				return true;
 			}
@@ -454,7 +426,7 @@ class EditorController {
 
 			@Override
 			public void touchDragged(InputEvent event, float x, float y, int pointer) {
-				// 拖拽时也更新目标点，实现“拖拽跟随”效果，体验更好
+				// 拖拽更新目标点
 				Vector2 worldPos = gameWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY());
 				gameWorld.targetX = worldPos.x;
 				gameWorld.targetY = worldPos.y;
@@ -466,6 +438,7 @@ class EditorController {
 			}
 		});
 
+		// --- 摇杆设置 ---
 		Texture bg = GameWorld.createSolidTexture(100, 100, Color.DARK_GRAY);
 		Texture knob = GameWorld.createSolidTexture(30, 30, Color.LIGHT_GRAY);
 		Touchpad.TouchpadStyle style = new Touchpad.TouchpadStyle();
@@ -473,6 +446,7 @@ class EditorController {
 		style.knob = new TextureRegionDrawable(new TextureRegion(knob));
 		joystick = new Touchpad(10, style);
 
+		// --- 视口模式选择器 ---
 		VisSelectBox<String> box = new VisSelectBox<>();
 		box.setItems("FIT", "STRETCH", "EXTEND");
 		box.addListener(new ChangeListener() {
@@ -480,23 +454,20 @@ class EditorController {
 			public void changed(ChangeEvent event, Actor actor) {
 				String mode = box.getSelected();
 				if (mode.equals("FIT")) {
-					gameTarget.setViewportMode(ViewTarget.ViewportMode.FIT);
+					// 【修改】不再直接设置 target 的 viewportMode，而是更新 Gd 的配置
+					Gd.view.setConfig(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, Gd.ViewportManager.Type.FIT);
 					gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
 				} else if (mode.equals("STRETCH")) {
-					gameTarget.setViewportMode(ViewTarget.ViewportMode.STRETCH);
+					Gd.view.setConfig(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, Gd.ViewportManager.Type.STRETCH);
 					gameWidget.setDisplayMode(ViewWidget.DisplayMode.STRETCH);
 				} else if (mode.equals("EXTEND")) {
-					gameTarget.setViewportMode(ViewTarget.ViewportMode.EXTEND);
-					// 编辑器里的 Extend 效果通常是铺满窗口 (Cover)
+					Gd.view.setConfig(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, Gd.ViewportManager.Type.EXTEND);
 					gameWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 				}
 			}
 		});
 
-		// 强制初始化
-		gameTarget.setViewportMode(ViewTarget.ViewportMode.FIT);
-		gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
-
+		// --- UI 布局 ---
 		Table uiTable = new Table();
 		uiTable.setFillParent(true);
 		uiTable.add(box).expandX().top().right().width(80).pad(5);
@@ -510,7 +481,6 @@ class EditorController {
 		stack.add(uiTable);
 
 		win.add(stack).grow();
-
 		stage.addActor(win);
 	}
 
@@ -521,27 +491,26 @@ class EditorController {
 		win.setPosition(600, 50);
 
 		sceneWidget = new ViewWidget(sceneTarget);
-		// Scene 默认也用 Cover 模式看全景
-		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
+		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER); // Scene 通常铺满
 
+		// --- Scene View 输入处理 (拖拽缩放) ---
 		sceneWidget.addListener(new DragListener() {
 			@Override
 			public void drag(InputEvent event, float x, float y, int pointer) {
-				float dx = getDeltaX();
-				float dy = getDeltaY();
-				float zoom = ((OrthographicCamera) sceneTarget.camera).zoom;
-				// 反向移动相机
-				sceneTarget.camera.translate(-dx * 2 * zoom, -dy * 2 * zoom, 0);
-				sceneTarget.camera.update();
+				// 【修改】使用 sceneCamera
+				float dx = getDeltaX(); float dy = getDeltaY();
+				float zoom = sceneCamera.zoom;
+				sceneCamera.translate(-dx * 2 * zoom, -dy * 2 * zoom, 0);
+				sceneCamera.update();
 			}
 
 			@Override
 			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-				OrthographicCamera cam = (OrthographicCamera) sceneTarget.camera;
-				cam.zoom += amountY * 0.1f;
-				if (cam.zoom < 0.1f) cam.zoom = 0.1f;
-				if (cam.zoom > 5f) cam.zoom = 5f;
-				cam.update();
+				// 【修改】使用 sceneCamera
+				sceneCamera.zoom += amountY * 0.1f;
+				if (sceneCamera.zoom < 0.1f) sceneCamera.zoom = 0.1f;
+				if (sceneCamera.zoom > 5f) sceneCamera.zoom = 5f;
+				sceneCamera.update();
 				return true;
 			}
 		});
@@ -551,29 +520,40 @@ class EditorController {
 	}
 
 	public void render(float delta) {
+		// --- 更新游戏逻辑 ---
 		float speed = 200 * delta;
+		// 摇杆输入被 Gd 代理，最终驱动 gameWorld
 		gameWorld.update(delta, joystick.getKnobPercentX() * speed, joystick.getKnobPercentY() * speed);
 
-		Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
+		// --- 渲染 Game View (玩家视角) ---
+		// 1. 告诉 Gd 使用游戏相机
+		Gd.view.useGameCamera();
+		// 2. 告诉 Gd 屏幕大小，让它更新游戏视口 (Fit/Extend...)
+		Gd.view.update(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
+		// 3. GameTarget 渲染游戏逻辑
 		gameTarget.renderToFbo(() -> {
-			gameTarget.camera.position.set(gameWorld.playerX, gameWorld.playerY, 0);
-			gameTarget.camera.update();
-			gameWorld.render(gameTarget.batch);
-			gameTarget.batch.end();
-			gameWorld.renderDebug(gameTarget.camera);
-			gameTarget.batch.begin();
+			// GameWorld 内部会自己用 Gd.view.getCamera() 和 Gd.view.apply()
+			gameWorld.render();
+			gameWorld.renderDebug(); // GameWorld 内部会自己设置 ProjectionMatrix
 		});
 
+		// --- 渲染 Scene View (上帝视角) ---
 		sceneTarget.renderToFbo(() -> {
-			gameWorld.render(sceneTarget.batch);
-			sceneTarget.batch.end();
-			gameWorld.renderDebug(sceneTarget.camera);
-			sceneTarget.batch.begin();
+			// 1. 告诉 Gd 使用编辑器相机 (劫持)
+			Gd.view.useEditorCamera(sceneCamera);
+			// 2. Scene View 不需要模拟游戏视口，直接铺满 FBO
+			//    (GameWorld.render() 内部的 Gd.view.apply() 会被跳过)
+
+			// 3. 渲染 GameWorld 内容 (使用 sceneCamera)
+			gameWorld.render();
+			gameWorld.renderDebug();
 		});
 
+		// --- 绘制编辑器 UI ---
+		// 确保 GL 状态正确 (防止游戏逻辑乱改)
 		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		Gdx.gl.glClearColor(0, 0, 0, 1);
+		Gdx.gl.glClearColor(0, 0, 0, 1); // 清除 Stage 背景
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 		stage.act(delta);
@@ -582,6 +562,8 @@ class EditorController {
 
 	public void resize(int width, int height) {
 		stage.getViewport().update(width, height, true);
+		// 【重要】屏幕尺寸变化时，也要通知 Gd.view 更新游戏视口
+		Gd.view.update(width, height);
 	}
 
 	public void dispose() {
@@ -612,33 +594,17 @@ class RealGame extends ApplicationAdapter {
 
 	@Override
 	public void create() {
-		// 【核心验证 1】初始化代理为 RELEASE 模式
-		// 传入 null，证明实机根本不需要 Widget 和 Target
+		// 初始化 Release 模式
 		Gd.init(Gd.Mode.RELEASE, null, null);
 
-		// 初始化原生组件 (实机这一层需要自己管理相机和Batch)
-		batch = new SpriteBatch();
-		camera = new OrthographicCamera();
-
-		// 【修改点 2】创建真实的 FitViewport
-		// 使用 GameWorld 定义的逻辑分辨率
-		viewport = new FitViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, camera);
-
-		// 让相机居中 (Viewport 内部会自动处理，但显示设置一下是个好习惯)
-		camera.position.set(0, 0, 0);
-
-		// 【核心验证 2】初始化游戏逻辑
 		gameWorld = new GameWorld();
 		gameWorld.init();
-
-		System.out.println("RealGame Started in RELEASE Mode");
 	}
 
 	@Override
 	public void resize(int width, int height) {
-		// 【修改点 3】响应屏幕大小变化
-		// 这决定了黑边怎么留
-		viewport.update(width, height, true); // true 表示居中
+		// 【关键】实机屏幕变化时，通知 Gd 更新视口
+		Gd.view.update(width, height);
 	}
 
 	@Override
@@ -674,21 +640,16 @@ class RealGame extends ApplicationAdapter {
 		camera.position.set(gameWorld.playerX, gameWorld.playerY, 0);
 		camera.update();
 
-		// --- 渲染 (直接画到屏幕) ---
-		// 这里的颜色就是“黑边”的颜色
+		// 清屏 (实机全屏清)
 		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 		// 应用视口 (虽然 resize 里 apply 过，但为了防止其他 FBO 干扰，每帧 apply 也可以)
 		viewport.apply();
 
-		batch.setProjectionMatrix(camera.combined);
-		batch.begin();
-		gameWorld.render(batch);
-		batch.end();
-
-		// Debug 渲染
-		gameWorld.renderDebug(camera);
+		// 渲染 (RealGame 不需要 useGameCamera，因为默认就是)
+		gameWorld.render();
+		gameWorld.renderDebug();
 	}
 
 	@Override
@@ -711,14 +672,94 @@ class Gd {
 	public static Input input;       // 替换 Gdx.input
 	public static Graphics graphics; // 替换 Gdx.graphics
 
+	// 【新增】视口与相机管理器
+	public static ViewportManager view;
+
 	public static void init(Mode mode, ViewWidget widget, ViewTarget target) {
 		if (mode == Mode.RELEASE) {
-			input = Gdx.input;       // 实机直接用原生
-			graphics = Gdx.graphics; // 实机直接用原生
+			input = Gdx.input;
+			graphics = Gdx.graphics;
 		} else {
 			input = new EditorGameInput(widget);
 			graphics = new EditorGameGraphics(target);
 		}
+		// 初始化视口管理器 (默认配置 960x540, FIT)
+		view = new ViewportManager(960, 540);
+	}
+
+	// ---------------------------------------------------------
+	// 视口管理器：配置驱动 + 相机劫持核心
+	// ---------------------------------------------------------
+	public static class ViewportManager {
+		// 配置数据
+		private int logicWidth, logicHeight;
+
+		// 游戏标准视口 (Game View 用)
+		private Viewport gameViewport;
+		private Camera gameCamera;
+
+		// 当前激活的相机 (可能是游戏相机，也可能是编辑器上帝相机)
+		private Camera activeCamera;
+
+		// 状态标记：是否被编辑器劫持
+		private boolean isHijacked = false;
+
+		public ViewportManager(int w, int h) {
+			this.logicWidth = w;
+			this.logicHeight = h;
+			this.gameCamera = new OrthographicCamera();
+			// 默认策略：FitViewport (可扩展为支持配置切换 Stretch/Extend)
+			this.gameViewport = new FitViewport(logicWidth, logicHeight, gameCamera);
+			this.gameCamera.position.set(0, 0, 0); // 居中
+
+			// 默认状态
+			useGameCamera();
+		}
+
+		/**
+		 * 实机/编辑器 响应窗口大小变化
+		 */
+		public void update(int screenW, int screenH) {
+			// 更新游戏视口的物理尺寸计算
+			gameViewport.update(screenW, screenH, true);
+		}
+
+		/**
+		 * 【模式 A】使用游戏原生相机 (Game View / RealGame)
+		 */
+		public void useGameCamera() {
+			this.activeCamera = gameCamera;
+			this.isHijacked = false;
+		}
+
+		/**
+		 * 【模式 B】劫持：使用编辑器的上帝相机 (Scene View)
+		 */
+		public void useEditorCamera(Camera sceneCamera) {
+			this.activeCamera = sceneCamera;
+			this.isHijacked = true;
+		}
+
+		/**
+		 * 获取当前应该使用的相机
+		 */
+		public Camera getCamera() {
+			return activeCamera;
+		}
+
+		/**
+		 * 应用视口 (设置 glViewport)
+		 * 只有在非劫持模式下，才应用 Fit/BlackBars 逻辑。
+		 * 如果被劫持(SceneView)，通常希望铺满窗口，由 ViewTarget 的 clear 逻辑处理即可。
+		 */
+		public void apply() {
+			if (!isHijacked) {
+				gameViewport.apply();
+			}
+		}
+
+		// 供游戏逻辑获取原始视口 (如果需要做射线检测等)
+		public Viewport getGameViewport() { return gameViewport; }
 	}
 
 	public enum Mode {RELEASE, EDITOR}
