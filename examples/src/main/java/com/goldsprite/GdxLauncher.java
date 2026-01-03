@@ -22,7 +22,7 @@ public class GdxLauncher extends Game {
 
 	public SpriteBatch batch;
 	public Debug debug;
-	
+
 	// 【新增】保存编译器引用
     private final IScriptCompiler scriptCompiler;
 
@@ -34,7 +34,7 @@ public class GdxLauncher extends Game {
     public GdxLauncher(IScriptCompiler scriptCompiler) {
         this.scriptCompiler = scriptCompiler;
     }
-	
+
 	@Override
 	public void create() {
 		userType = Gdx.app.getType();
@@ -54,7 +54,7 @@ public class GdxLauncher extends Game {
         Gd.init(Gd.Mode.RELEASE, null, null, scriptCompiler);
 		Debug.logT("Engine", "Gd initialized. Compiler available: %b", (scriptCompiler != null));
 		testAndroidScript();
-		
+
 		// 4. 设置全局视口
 		float scl = 1.2f;
 		Viewport uiViewport = new ExtendViewport(540*scl, 960*scl, new OrthographicCamera());
@@ -85,7 +85,7 @@ public class GdxLauncher extends Game {
 		ScreenManager.getInstance().resize(width, height);
 		if(debug != null) debug.resize(width, height);
 		// 【补漏】视口变化时通知 Gd 配置 (虽然 Release 模式下由 GameWorld 自己管，但保持同步是个好习惯)
-		// Gd.config.logicWidth = ...; 
+		// Gd.config.logicWidth = ...;
 	}
 
 	@Override
@@ -96,17 +96,17 @@ public class GdxLauncher extends Game {
 		VisUI.dispose();
 		SynthAudio.dispose(); // [新增] 关闭线程和设备
 	}
-	
-	
+
+
 	private void testAndroidScript() {
-        //new Thread(() -> {
+        new Thread(() -> {
             try {
 				// 注意：使用转义的双引号 \"
-				String code = 
+				String code =
 					"package com.test;" +
 					"public class HelloAndroid {" +
 					"    public String greet() {" +
-					"        return \"Hello from Dynamic Dex! Time: " + System.currentTimeMillis() + "\";" + 
+					"        return \"Hello from Dynamic Dex! Time: " + System.currentTimeMillis() + "\";" +
 					"    }" +
 					"}";
 
@@ -127,6 +127,6 @@ public class GdxLauncher extends Game {
                 e.printStackTrace();
 				Debug.log("testCode编译异常: "+e.getCause());
             }
-        //}).start();
+        }).start();
     }
 }
