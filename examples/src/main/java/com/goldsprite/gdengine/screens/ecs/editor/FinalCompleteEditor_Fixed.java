@@ -30,13 +30,14 @@ import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisWindow;
-import org.lwjgl.opengl.DisplayMode;
 
 public class FinalCompleteEditor_Fixed extends GScreen {
 	private EditorController controller;
 
 	@Override
-	public ScreenManager.Orientation getOrientation() { return ScreenManager.Orientation.Landscape; }
+	public ScreenManager.Orientation getOrientation() {
+		return ScreenManager.Orientation.Landscape;
+	}
 
 	@Override
 	public void create() {
@@ -72,6 +73,15 @@ class GameWorld {
 	public float targetX = 0, targetY = 0;
 	private ShapeRenderer debugRenderer;
 
+	public static Texture createSolidTexture(int w, int h, Color c) {
+		Pixmap p = new Pixmap(w, h, Pixmap.Format.RGBA8888);
+		p.setColor(c);
+		p.fill();
+		Texture t = new Texture(p);
+		p.dispose();
+		return t;
+	}
+
 	public void init() {
 		playerTex = tryLoadTexture("role.png", 32, 32, Color.CORAL);
 		bgTex = tryLoadTexture("back.png", 512, 512, Color.TEAL);
@@ -86,7 +96,7 @@ class GameWorld {
 	public void render(Batch batch) {
 		// 画大背景
 		batch.draw(bgTex, -1000, -1000, 2000, 2000);
-		batch.draw(playerTex, playerX - playerTex.getWidth()/2f, playerY - playerTex.getHeight()/2f);
+		batch.draw(playerTex, playerX - playerTex.getWidth() / 2f, playerY - playerTex.getHeight() / 2f);
 	}
 
 	public void renderDebug(Camera camera) {
@@ -95,7 +105,7 @@ class GameWorld {
 
 		// 黄色框：世界边界
 		debugRenderer.setColor(Color.YELLOW);
-		debugRenderer.rect(-WORLD_WIDTH/2, -WORLD_HEIGHT/2, WORLD_WIDTH, WORLD_HEIGHT);
+		debugRenderer.rect(-WORLD_WIDTH / 2, -WORLD_HEIGHT / 2, WORLD_WIDTH, WORLD_HEIGHT);
 
 		// 坐标轴
 		debugRenderer.setColor(Color.RED);
@@ -112,22 +122,16 @@ class GameWorld {
 	}
 
 	private Texture tryLoadTexture(String path, int w, int h, Color c) {
-		try { return new Texture(Gdx.files.internal(path)); }
-		catch (Exception e) { return createSolidTexture(w, h, c); }
-	}
-
-	public static Texture createSolidTexture(int w, int h, Color c) {
-		Pixmap p = new Pixmap(w, h, Pixmap.Format.RGBA8888);
-		p.setColor(c);
-		p.fill();
-		Texture t = new Texture(p);
-		p.dispose();
-		return t;
+		try {
+			return new Texture(Gdx.files.internal(path));
+		} catch (Exception e) {
+			return createSolidTexture(w, h, c);
+		}
 	}
 
 	public void dispose() {
-		if(playerTex != null) playerTex.dispose();
-		if(bgTex != null) bgTex.dispose();
+		if (playerTex != null) playerTex.dispose();
+		if (bgTex != null) bgTex.dispose();
 		debugRenderer.dispose();
 	}
 }
@@ -136,19 +140,13 @@ class GameWorld {
 // 2. 渲染核心层 (Producer)
 // ==========================================
 class ViewTarget {
-	public enum ViewportMode { FIT, EXTEND, STRETCH }
-
 	public FrameBuffer fbo;
 	public TextureRegion fboRegion;
 	public SpriteBatch batch;
 	public Viewport viewport;
 	public Camera camera;
-
-	private int fboW, fboH;
-
-	// 添加到 ViewTarget 类中
-	public int getFboWidth() { return fboW; }
-	public int getFboHeight() { return fboH; }
+	private final int fboW;
+	private final int fboH;
 
 	public ViewTarget(int w, int h) {
 		this.fboW = w;
@@ -166,12 +164,27 @@ class ViewTarget {
 		camera.position.set(0, 0, 0);
 	}
 
+	// 添加到 ViewTarget 类中
+	public int getFboWidth() {
+		return fboW;
+	}
+
+	public int getFboHeight() {
+		return fboH;
+	}
+
 	public void setViewportMode(ViewportMode mode) {
 		Camera oldCam = (viewport != null) ? viewport.getCamera() : camera;
 		switch (mode) {
-			case FIT: viewport = new FitViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam); break;
-			case STRETCH: viewport = new StretchViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam); break;
-			case EXTEND: viewport = new ExtendViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam); break;
+			case FIT:
+				viewport = new FitViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam);
+				break;
+			case STRETCH:
+				viewport = new StretchViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam);
+				break;
+			case EXTEND:
+				viewport = new ExtendViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, oldCam);
+				break;
 		}
 		viewport.update(fboW, fboH, false);
 	}
@@ -207,94 +220,88 @@ class ViewTarget {
 		fbo.dispose();
 		batch.dispose();
 	}
+
+	public enum ViewportMode {FIT, EXTEND, STRETCH}
 }
 
 // ==========================================
 // 3. UI 展示层 (Consumer) - 深度修复版
 // ==========================================
 class ViewWidget extends Widget {
-    public enum DisplayMode { FIT, STRETCH, COVER }
+	private final ViewTarget target;
+	private final Texture bgTexture; // 用于显示Widget自身的底色(调试用)
+	private DisplayMode displayMode = DisplayMode.FIT;
+	// --- 绘制参数缓存 (用于坐标逆向推导) ---
+	// 这些变量描述了：FBO图片到底被画在了Widget里的什么位置、多大尺寸？
+	private float drawnImageX, drawnImageY; // 图片绘制的左下角 (相对于 Widget 自身 (0,0))
+	private float drawnImageW, drawnImageH; // 图片绘制的实际宽、高 (像素)
+	public ViewWidget(ViewTarget target) {
+		this.target = target;
+		// 深灰色背景，如果能看到它，说明 Widget 这一层有黑边
+		bgTexture = GameWorld.createSolidTexture(1, 1, new Color(0.15f, 0.15f, 0.15f, 1));
+	}
 
-    private ViewTarget target;
-    private Texture bgTexture; // 用于显示Widget自身的底色(调试用)
-    private DisplayMode displayMode = DisplayMode.FIT;
+	public void setDisplayMode(DisplayMode mode) {
+		this.displayMode = mode;
+	}
 
-    // --- 绘制参数缓存 (用于坐标逆向推导) ---
-    // 这些变量描述了：FBO图片到底被画在了Widget里的什么位置、多大尺寸？
-    private float drawnImageX, drawnImageY; // 图片绘制的左下角 (相对于 Widget 自身 (0,0))
-    private float drawnImageW, drawnImageH; // 图片绘制的实际宽、高 (像素)
+	@Override
+	public void draw(Batch batch, float parentAlpha) {
+		validate(); // 确保 Scene2D 布局已计算
 
-    public ViewWidget(ViewTarget target) {
-        this.target = target;
-        // 深灰色背景，如果能看到它，说明 Widget 这一层有黑边
-        bgTexture = GameWorld.createSolidTexture(1, 1, new Color(0.15f, 0.15f, 0.15f, 1));
-    }
+		// 1. 获取 Widget 在屏幕上的绝对位置和大小
+		// getX()/getY() 是相对于父容器的坐标
+		float widgetX = getX();
+		float widgetY = getY();
+		float widgetW = getWidth();
+		float widgetH = getHeight();
 
-    public void setDisplayMode(DisplayMode mode) {
-        this.displayMode = mode;
-    }
+		// 画 Widget 的底色
+		batch.setColor(1, 1, 1, parentAlpha);
+		batch.draw(bgTexture, widgetX, widgetY, widgetW, widgetH);
 
-    @Override
-    public void draw(Batch batch, float parentAlpha) {
-        validate(); // 确保 Scene2D 布局已计算
+		// 2. 准备计算：FBO 原始比例 vs Widget 比例
+		// 【关键】必须用 getFboWidth (物理尺寸)，不能用 viewport.getScreenWidth (逻辑尺寸)
+		float fboW = target.getFboWidth();
+		float fboH = target.getFboHeight();
+		float fboRatio = fboW / fboH;
+		float widgetRatio = (widgetH == 0) ? 1 : widgetW / widgetH;
 
-        // 1. 获取 Widget 在屏幕上的绝对位置和大小
-        // getX()/getY() 是相对于父容器的坐标
-        float widgetX = getX();
-        float widgetY = getY();
-        float widgetW = getWidth();
-        float widgetH = getHeight();
+		// 3. 计算图片应该画多大、画哪里 (计算第一层黑边)
+		if (displayMode == DisplayMode.STRETCH) {
+			drawnImageW = widgetW;
+			drawnImageH = widgetH;
+			drawnImageX = 0; // 铺满，无偏移
+			drawnImageY = 0;
+		} else {
+			boolean scaleByWidth;
+			if (displayMode == DisplayMode.COVER) {
+				scaleByWidth = widgetRatio > fboRatio; // 类似 ExtendViewport
+			} else {
+				scaleByWidth = widgetRatio < fboRatio; // 类似 FitViewport
+			}
 
-        // 画 Widget 的底色
-        batch.setColor(1, 1, 1, parentAlpha);
-        batch.draw(bgTexture, widgetX, widgetY, widgetW, widgetH);
+			if (scaleByWidth) {
+				// 宽度对齐，高度自动计算
+				drawnImageW = widgetW;
+				drawnImageH = widgetW / fboRatio;
+			} else {
+				// 高度对齐，宽度自动计算
+				drawnImageH = widgetH;
+				drawnImageW = widgetH * fboRatio;
+			}
 
-        // 2. 准备计算：FBO 原始比例 vs Widget 比例
-        // 【关键】必须用 getFboWidth (物理尺寸)，不能用 viewport.getScreenWidth (逻辑尺寸)
-        float fboW = target.getFboWidth();
-        float fboH = target.getFboHeight();
-        float fboRatio = fboW / fboH;
-        float widgetRatio = (widgetH == 0) ? 1 : widgetW / widgetH;
+			// 居中计算：算出相对于 Widget 左下角的偏移量
+			drawnImageX = (widgetW - drawnImageW) / 2f;
+			drawnImageY = (widgetH - drawnImageH) / 2f;
+		}
 
-        // 3. 计算图片应该画多大、画哪里 (计算第一层黑边)
-        if (displayMode == DisplayMode.STRETCH) {
-            drawnImageW = widgetW;
-            drawnImageH = widgetH;
-            drawnImageX = 0; // 铺满，无偏移
-            drawnImageY = 0;
-        } else {
-            boolean scaleByWidth;
-            if (displayMode == DisplayMode.COVER) {
-                scaleByWidth = widgetRatio > fboRatio; // 类似 ExtendViewport
-            } else {
-                scaleByWidth = widgetRatio < fboRatio; // 类似 FitViewport
-            }
+		// 4. 正式绘制
+		// draw 的时候需要绝对坐标，所以加上 widgetX/Y
+		batch.draw(target.fboRegion, widgetX + drawnImageX, widgetY + drawnImageY, drawnImageW, drawnImageH);
+	}
 
-            if (scaleByWidth) {
-                // 宽度对齐，高度自动计算
-                drawnImageW = widgetW;
-                drawnImageH = widgetW / fboRatio;
-            } else {
-                // 高度对齐，宽度自动计算
-                drawnImageH = widgetH;
-                drawnImageW = widgetH * fboRatio;
-            }
-
-            // 居中计算：算出相对于 Widget 左下角的偏移量
-            drawnImageX = (widgetW - drawnImageW) / 2f;
-            drawnImageY = (widgetH - drawnImageH) / 2f;
-        }
-
-        // 4. 正式绘制
-        // draw 的时候需要绝对坐标，所以加上 widgetX/Y
-        batch.draw(target.fboRegion,
-                   widgetX + drawnImageX,
-                   widgetY + drawnImageY,
-                   drawnImageW,
-                   drawnImageH);
-    }
-
-    /**
+	/**
 	 * [新方法] 将 屏幕物理坐标 (Gdx.input.getX) 转换为 FBO 像素坐标
 	 * 供 Gd.input 使用，实现“无感化”输入的基石
 	 */
@@ -347,9 +354,11 @@ class ViewWidget extends Widget {
 		return new Vector2(worldX, worldY);
 	}
 
-    public void dispose() {
-        bgTexture.dispose();
-    }
+	public void dispose() {
+		bgTexture.dispose();
+	}
+
+	public enum DisplayMode {FIT, STRETCH, COVER}
 }
 
 // ==========================================
@@ -377,7 +386,7 @@ class EditorController {
 		sceneTarget.setViewportMode(ViewTarget.ViewportMode.EXTEND);
 
 		float scl = 1f;
-		stage = new Stage(new ExtendViewport(960*scl, 540*scl));
+		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
 		createGameWindow();  // 这里面创建了 gameWidget
 		createSceneWindow();
@@ -403,43 +412,43 @@ class EditorController {
 
 		// 【新增】输入注入：将 UI 触摸事件透传给游戏
 		gameWidget.addListener(new InputListener() {
-				@Override
-				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-					// 将 Scene2D 的事件注入到 Gd 代理中
-					// event.getStageX() 是屏幕坐标吗？不，是 Stage 坐标。
-					// 这里的 x, y 是 Widget 本地坐标。
-					// 为了准确，我们直接用 Gdx.input.getX() 获取原始数据给 Gd 处理，
-					// 或者利用 Gd.input.injectInput 方法。
+			@Override
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				// 将 Scene2D 的事件注入到 Gd 代理中
+				// event.getStageX() 是屏幕坐标吗？不，是 Stage 坐标。
+				// 这里的 x, y 是 Widget 本地坐标。
+				// 为了准确，我们直接用 Gdx.input.getX() 获取原始数据给 Gd 处理，
+				// 或者利用 Gd.input.injectInput 方法。
 
-					// 简单粗暴方案：直接通知 Gd "被摸了"，坐标由 Gd.input.getX() 自动计算
-					((EditorGameInput)Gd.input).setTouched(true, pointer);
+				// 简单粗暴方案：直接通知 Gd "被摸了"，坐标由 Gd.input.getX() 自动计算
+				((EditorGameInput) Gd.input).setTouched(true, pointer);
 
-					// 触发游戏的 InputProcessor
-					if(Gd.input.getInputProcessor() != null) {
-						// 计算出 FBO 坐标
-						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-						Gd.input.getInputProcessor().touchDown((int)fboPos.x, (int)fboPos.y, pointer, button);
-					}
-					return true;
+				// 触发游戏的 InputProcessor
+				if (Gd.input.getInputProcessor() != null) {
+					// 计算出 FBO 坐标
+					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+					Gd.input.getInputProcessor().touchDown((int) fboPos.x, (int) fboPos.y, pointer, button);
 				}
+				return true;
+			}
 
-				@Override
-				public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-					((EditorGameInput)Gd.input).setTouched(false, pointer);
-					if(Gd.input.getInputProcessor() != null) {
-						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-						Gd.input.getInputProcessor().touchUp((int)fboPos.x, (int)fboPos.y, pointer, button);
-					}
+			@Override
+			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+				((EditorGameInput) Gd.input).setTouched(false, pointer);
+				if (Gd.input.getInputProcessor() != null) {
+					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+					Gd.input.getInputProcessor().touchUp((int) fboPos.x, (int) fboPos.y, pointer, button);
 				}
+			}
 
-				@Override
-				public void touchDragged(InputEvent event, float x, float y, int pointer) {
-					if(Gd.input.getInputProcessor() != null) {
-						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-						Gd.input.getInputProcessor().touchDragged((int)fboPos.x, (int)fboPos.y, pointer);
-					}
+			@Override
+			public void touchDragged(InputEvent event, float x, float y, int pointer) {
+				if (Gd.input.getInputProcessor() != null) {
+					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+					Gd.input.getInputProcessor().touchDragged((int) fboPos.x, (int) fboPos.y, pointer);
 				}
-			});
+			}
+		});
 
 		Texture bg = GameWorld.createSolidTexture(100, 100, Color.DARK_GRAY);
 		Texture knob = GameWorld.createSolidTexture(30, 30, Color.LIGHT_GRAY);
@@ -502,18 +511,20 @@ class EditorController {
 		sceneWidget.addListener(new DragListener() {
 			@Override
 			public void drag(InputEvent event, float x, float y, int pointer) {
-				float dx = getDeltaX(); float dy = getDeltaY();
-				float zoom = ((OrthographicCamera)sceneTarget.camera).zoom;
+				float dx = getDeltaX();
+				float dy = getDeltaY();
+				float zoom = ((OrthographicCamera) sceneTarget.camera).zoom;
 				// 反向移动相机
 				sceneTarget.camera.translate(-dx * 2 * zoom, -dy * 2 * zoom, 0);
 				sceneTarget.camera.update();
 			}
+
 			@Override
 			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-				OrthographicCamera cam = (OrthographicCamera)sceneTarget.camera;
+				OrthographicCamera cam = (OrthographicCamera) sceneTarget.camera;
 				cam.zoom += amountY * 0.1f;
-				if(cam.zoom < 0.1f) cam.zoom = 0.1f;
-				if(cam.zoom > 5f) cam.zoom = 5f;
+				if (cam.zoom < 0.1f) cam.zoom = 0.1f;
+				if (cam.zoom > 5f) cam.zoom = 5f;
 				cam.update();
 				return true;
 			}
@@ -572,16 +583,13 @@ class EditorController {
 // 5. 全局代理层 (Global Delegate) - LibGDX 1.12.1 适配版
 // ==========================================
 class Gd {
-	public enum Mode { RELEASE, EDITOR }
-
-	public static Input input;       // 替换 Gdx.input
-	public static Graphics graphics; // 替换 Gdx.graphics
-
 	// 其他模块透传
 	public static final Files files = Gdx.files;
 	public static final Application app = Gdx.app;
 	// 音频模块通常也需要透传
 	public static final Audio audio = Gdx.audio;
+	public static Input input;       // 替换 Gdx.input
+	public static Graphics graphics; // 替换 Gdx.graphics
 
 	public static void init(Mode mode, ViewWidget widget, ViewTarget target) {
 		if (mode == Mode.RELEASE) {
@@ -592,6 +600,8 @@ class Gd {
 			graphics = new EditorGameGraphics(target);
 		}
 	}
+
+	public enum Mode {RELEASE, EDITOR}
 }
 
 /**
@@ -599,52 +609,26 @@ class Gd {
  * 负责将 全局屏幕坐标 修正为 FBO 像素坐标
  */
 class EditorGameInput implements Input {
-	private ViewWidget widget;
+	private final ViewWidget widget;
 	private InputProcessor processor;
 	private boolean isTouched = false;
 
 	public EditorGameInput(ViewWidget widget) { this.widget = widget; }
-
 	public void setTouched(boolean touched, int pointer) { this.isTouched = touched; }
-
 	// 【修复 1】接口要求返回 int，必须强制转换
-	@Override
-	public int getX() { return getX(0); }
-
-	@Override
-	public int getX(int pointer) {
+	@Override public int getX() { return getX(0); }
+	@Override public int getX(int pointer) {
 		// mapScreenToFbo 返回的是 float，转为 int 以符合接口定义
 		return (int) widget.mapScreenToFbo(Gdx.input.getX(pointer), Gdx.input.getY(pointer)).x;
 	}
-
-	@Override
-	public int getY() { return getY(0); }
-
-	@Override
-	public int getY(int pointer) {
-		return (int) widget.mapScreenToFbo(Gdx.input.getX(pointer), Gdx.input.getY(pointer)).y;
-	}
-
-	@Override
-	public boolean isTouched() { return isTouched || Gdx.input.isTouched(); }
-
-	@Override
-	public boolean isTouched(int pointer) { return Gdx.input.isTouched(pointer); }
-
-	@Override
-	public boolean justTouched() { return Gdx.input.justTouched(); }
-
-	@Override
-	public void setInputProcessor(InputProcessor processor) { this.processor = processor; }
-
-	@Override
-	public InputProcessor getInputProcessor() { return processor; }
-
-	@Override
-	public boolean isPeripheralAvailable(Peripheral peripheral) {
-		return false;
-	}
-
+	@Override public int getY() { return getY(0); }
+	@Override public int getY(int pointer) { return (int) widget.mapScreenToFbo(Gdx.input.getX(pointer), Gdx.input.getY(pointer)).y; }
+	@Override public boolean isTouched() { return isTouched || Gdx.input.isTouched(); }
+	@Override public boolean isTouched(int pointer) { return Gdx.input.isTouched(pointer); }
+	@Override public boolean justTouched() { return Gdx.input.justTouched(); }
+	@Override public InputProcessor getInputProcessor() { return processor; }
+	@Override public void setInputProcessor(InputProcessor processor) { this.processor = processor; }
+	@Override public boolean isPeripheralAvailable(Peripheral peripheral) { return false; }
 	// --- 透传 Gdx.input ---
 	@Override public int getDeltaX() { return Gdx.input.getDeltaX(); }
 	@Override public int getDeltaX(int pointer) { return Gdx.input.getDeltaX(pointer); }
@@ -654,45 +638,27 @@ class EditorGameInput implements Input {
 	@Override public boolean isButtonJustPressed(int button) { return Gdx.input.isButtonJustPressed(button); }
 	@Override public boolean isKeyPressed(int key) { return Gdx.input.isKeyPressed(key); }
 	@Override public boolean isKeyJustPressed(int key) { return Gdx.input.isKeyJustPressed(key); }
-
 	// --- 文本输入相关 ---
-	@Override public void getTextInput(TextInputListener listener, String title, String text, String hint) {
-		Gdx.input.getTextInput(listener, title, text, hint);
-	}
-
+	@Override public void getTextInput(TextInputListener listener, String title, String text, String hint) { Gdx.input.getTextInput(listener, title, text, hint); }
 	// 【修复 2】实现 1.12.1 新增的接口方法
 	@Override
-	public void getTextInput(TextInputListener listener, String title, String text, String hint, OnscreenKeyboardType type) {
-		Gdx.input.getTextInput(listener, title, text, hint, type);
-	}
-
+	public void getTextInput(TextInputListener listener, String title, String text, String hint, OnscreenKeyboardType type) { Gdx.input.getTextInput(listener, title, text, hint, type); }
 	@Override public void setOnscreenKeyboardVisible(boolean visible) { Gdx.input.setOnscreenKeyboardVisible(visible); }
 	@Override public void setOnscreenKeyboardVisible(boolean visible, OnscreenKeyboardType type) { Gdx.input.setOnscreenKeyboardVisible(visible, type); }
-
 	// --- 传感器与杂项 ---
 	@Override public void vibrate(int milliseconds) { }
-
-	@Override
-	public void vibrate(int milliseconds, boolean fallback) {
-	}
-
-	@Override
-	public void vibrate(int milliseconds, int amplitude, boolean fallback) {
-	}
-
-	@Override
-	public void vibrate(VibrationType vibrationType) {
-	}
-
+	@Override public void vibrate(int milliseconds, boolean fallback) { }
+	@Override public void vibrate(int milliseconds, int amplitude, boolean fallback) { }
+	@Override public void vibrate(VibrationType vibrationType) { }
 	@Override public float getAzimuth() { return 0; }
 	@Override public float getPitch() { return 0; }
 	@Override public float getRoll() { return 0; }
-	@Override public void getRotationMatrix(float[] matrix) { }
+	@Override public void getRotationMatrix(float[] matrix) {}
 	@Override public long getCurrentEventTime() { return Gdx.input.getCurrentEventTime(); }
-	@Override public void setCatchBackKey(boolean catchBack) { }
 	@Override public boolean isCatchBackKey() { return false; }
-	@Override public void setCatchMenuKey(boolean catchMenu) { }
+	@Override public void setCatchBackKey(boolean catchBack) { }
 	@Override public boolean isCatchMenuKey() { return false; }
+	@Override public void setCatchMenuKey(boolean catchMenu) { }
 	@Override public void setCatchKey(int keycode, boolean catchKey) { }
 	@Override public boolean isCatchKey(int keycode) { return false; }
 	@Override public float getAccelerometerX() { return 0; }
@@ -704,8 +670,8 @@ class EditorGameInput implements Input {
 	@Override public int getMaxPointers() { return Gdx.input.getMaxPointers(); }
 	@Override public int getRotation() { return 0; }
 	@Override public Orientation getNativeOrientation() { return Orientation.Landscape; }
-	@Override public void setCursorCatched(boolean catched) { }
 	@Override public boolean isCursorCatched() { return false; }
+	@Override public void setCursorCatched(boolean catched) { }
 	@Override public void setCursorPosition(int x, int y) { }
 	@Override public float getPressure() { return 0; }
 	@Override public float getPressure(int pointer) { return 0; }
@@ -716,57 +682,31 @@ class EditorGameInput implements Input {
  * 负责欺骗游戏：屏幕只有 FBO 那么大
  */
 class EditorGameGraphics implements Graphics {
-	private ViewTarget target;
-	public EditorGameGraphics(ViewTarget target) { this.target = target; }
+	private final ViewTarget target;
 
+	public EditorGameGraphics(ViewTarget target) { this.target = target; }
 	@Override public int getWidth() { return target.getFboWidth(); }
 	@Override public int getHeight() { return target.getFboHeight(); }
 	@Override public int getBackBufferWidth() { return target.getFboWidth(); }
 	@Override public int getBackBufferHeight() { return target.getFboHeight(); }
-
-	@Override
-	public float getBackBufferScale() {
-		return 0;
-	}
-
+	@Override public float getBackBufferScale() { return 0; }
 	@Override public float getDeltaTime() { return Gdx.graphics.getDeltaTime(); }
 	@Override public float getRawDeltaTime() { return Gdx.graphics.getRawDeltaTime(); }
 	@Override public int getFramesPerSecond() { return Gdx.graphics.getFramesPerSecond(); }
-
-	@Override
-	public GraphicsType getType() {
-		return null;
-	}
-
+	@Override public GraphicsType getType() { return null; }
 	// --- GL 版本支持 (1.12.1 新增) ---
 	@Override public boolean isGL30Available() { return Gdx.graphics.isGL30Available(); }
-
 	// 【修复 3】补充 GL31 支持
 	@Override public boolean isGL31Available() { return Gdx.graphics.isGL31Available(); }
-
-	@Override
-	public boolean isGL32Available() {
-		return false;
-	}
-
+	@Override public boolean isGL32Available() { return false; }
 	@Override public GL20 getGL20() { return Gdx.graphics.getGL20(); }
-	@Override public GL30 getGL30() { return Gdx.graphics.getGL30(); }
-	@Override public GL31 getGL31() { return Gdx.graphics.getGL31(); }
-
-	@Override
-	public GL32 getGL32() {
-		return null;
-	}
-
 	@Override public void setGL20(GL20 gl20) { Gdx.graphics.setGL20(gl20); }
+	@Override public GL30 getGL30() { return Gdx.graphics.getGL30(); }
 	@Override public void setGL30(GL30 gl30) { Gdx.graphics.setGL30(gl30); }
+	@Override public GL31 getGL31() { return Gdx.graphics.getGL31(); }
 	@Override public void setGL31(GL31 gl31) { Gdx.graphics.setGL31(gl31); }
-
-	@Override
-	public void setGL32(GL32 gl32) {
-
-	}
-
+	@Override public GL32 getGL32() { return null; }
+	@Override public void setGL32(GL32 gl32) {  }
 	@Override public long getFrameId() { return Gdx.graphics.getFrameId(); }
 	@Override public float getPpiX() { return Gdx.graphics.getPpiX(); }
 	@Override public float getPpiY() { return Gdx.graphics.getPpiY(); }
@@ -790,19 +730,15 @@ class EditorGameGraphics implements Graphics {
 	@Override public void setForegroundFPS(int fps) { }
 	@Override public BufferFormat getBufferFormat() { return Gdx.graphics.getBufferFormat(); }
 	@Override public boolean supportsExtension(String extension) { return Gdx.graphics.supportsExtension(extension); }
-	@Override public void setContinuousRendering(boolean isContinuous) { Gdx.graphics.setContinuousRendering(isContinuous); }
 	@Override public boolean isContinuousRendering() { return Gdx.graphics.isContinuousRendering(); }
+	@Override public void setContinuousRendering(boolean isContinuous) { Gdx.graphics.setContinuousRendering(isContinuous); }
 	@Override public void requestRendering() { Gdx.graphics.requestRendering(); }
 	@Override public boolean isFullscreen() { return false; }
-
 	@Override public Cursor newCursor(Pixmap pixmap, int xHotspot, int yHotspot) { return Gdx.graphics.newCursor(pixmap, xHotspot, yHotspot); }
-
 	// 【修复 4】SystemCursor 引用问题
 	@Override public void setSystemCursor(Cursor.SystemCursor systemCursor) { }
 	@Override public void setCursor(Cursor cursor) { }
-
 	@Override public GLVersion getGLVersion() { return Gdx.graphics.getGLVersion(); }
-
 	// 【修复 5】刘海屏适配方法 (1.12.x 新增)
 	@Override public int getSafeInsetLeft() { return 0; }
 	@Override public int getSafeInsetTop() { return 0; }
