@@ -68,18 +68,22 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 				return null;
 			}
 
-			// 4. D8 转换 (Class -> Dex)
-			File dexFile = new File(cacheDir, "script.dex");
+			// 4. D8 转换 (Class -> Dex/Jar)
+			Debug.logT("Compiler", "3. D8 转换...");
+
+			// 【关键修改】文件名后缀改成 .jar
+			// D8 会自动在里面生成 classes.dex，DexClassLoader 能完美识别它
+			File dexFile = new File(cacheDir, "script.jar");
 			if (dexFile.exists()) dexFile.delete();
 
 			if (!runD8Dexing(classDir, dexFile)) {
 				return null;
 			}
 
-			// 5. 加载 Dex (Dex -> Class)
+			// 5. 加载 Dex
 			Debug.logT("Compiler", "4. 加载 Dex...");
 			DexClassLoader loader = new DexClassLoader(
-				dexFile.getAbsolutePath(),
+				dexFile.getAbsolutePath(), // 这里传入 .jar 路径即可
 				dexOutputDir.getAbsolutePath(),
 				null,
 				getClass().getClassLoader()
