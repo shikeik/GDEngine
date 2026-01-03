@@ -10,6 +10,7 @@ import com.badlogic.gdx.graphics.glutils.GLVersion;
 import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
@@ -32,7 +33,7 @@ import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisWindow;
 
 public class FinalCompleteEditor_Fixed extends GScreen {
-	private EditorController controller;
+	private RealGame realGame;
 
 	@Override
 	public ScreenManager.Orientation getOrientation() {
@@ -41,23 +42,23 @@ public class FinalCompleteEditor_Fixed extends GScreen {
 
 	@Override
 	public void create() {
-		controller = new EditorController();
-		controller.create();
+		realGame = new RealGame();
+		realGame.create();
 	}
 
 	@Override
 	public void render(float delta) {
-		controller.render(delta);
+		realGame.render();
 	}
 
 	@Override
 	public void resize(int width, int height) {
-		controller.resize(width, height);
+		realGame.resize(width, height);
 	}
 
 	@Override
 	public void dispose() {
-		controller.dispose();
+		realGame.dispose();
 	}
 }
 
@@ -122,11 +123,10 @@ class GameWorld {
 	}
 
 	private Texture tryLoadTexture(String path, int w, int h, Color c) {
-		try {
-			return new Texture(Gdx.files.internal(path));
-		} catch (Exception e) {
-			return createSolidTexture(w, h, c);
-		}
+		// 【修改点】将 Gdx.files 替换为 Gd.files
+		// 虽然实机模式下它俩一样，但这是为了统一规范
+		try { return new Texture(Gd.files.internal(path)); }
+		catch (Exception e) { return createSolidTexture(w, h, c); }
 	}
 
 	public void dispose() {
@@ -591,6 +591,94 @@ class EditorController {
 		sceneTarget.dispose();
 		gameWidget.dispose();
 		stage.dispose();
+	}
+}
+
+// ==========================================
+// 6. 实机运行入口 (The Acid Test)
+// 用于验证游戏逻辑是否彻底解耦，不依赖编辑器也能跑
+// ==========================================
+class RealGame extends ApplicationAdapter {
+	SpriteBatch batch;
+	OrthographicCamera camera;
+	GameWorld gameWorld;
+
+	// 模拟手机屏幕的逻辑分辨率 (通常由 FitViewport 或 ExtendViewport 管理)
+	// 这里为了演示简单，直接用 960x540
+	final float VIEW_WIDTH = 960;
+	final float VIEW_HEIGHT = 540;
+
+	@Override
+	public void create() {
+		// 【核心验证 1】初始化代理为 RELEASE 模式
+		// 传入 null，证明实机根本不需要 Widget 和 Target
+		Gd.init(Gd.Mode.RELEASE, null, null);
+
+		// 初始化原生组件 (实机这一层需要自己管理相机和Batch)
+		batch = new SpriteBatch();
+		camera = new OrthographicCamera();
+		camera.setToOrtho(false, VIEW_WIDTH, VIEW_HEIGHT);
+		// 让相机居中
+		camera.position.set(0, 0, 0);
+
+		// 【核心验证 2】初始化游戏逻辑
+		gameWorld = new GameWorld();
+		gameWorld.init();
+
+		System.out.println("RealGame Started in RELEASE Mode");
+	}
+
+	@Override
+	public void render() {
+		float delta = Gd.graphics.getDeltaTime();
+
+		// --- 输入处理 (实机逻辑) ---
+		// 在编辑器里我们用 UI 摇杆，实机里我们用键盘模拟 (或者手机屏幕触摸)
+		float speed = 200 * delta;
+		float moveX = 0, moveY = 0;
+
+		// 验证 Gd.input 是否透传成功
+		if (Gd.input.isKeyPressed(Input.Keys.A)) moveX -= speed;
+		if (Gd.input.isKeyPressed(Input.Keys.D)) moveX += speed;
+		if (Gd.input.isKeyPressed(Input.Keys.W)) moveY += speed;
+		if (Gd.input.isKeyPressed(Input.Keys.S)) moveY -= speed;
+
+		// --- 坐标点击测试 ---
+		if (Gd.input.isTouched()) {
+			// 实机模式下：
+			// Gd.input.getX() 返回的是真实屏幕像素坐标
+			// 我们需要用相机 unproject 转换成世界坐标
+			Vector3 touchPos = new Vector3(Gd.input.getX(), Gd.input.getY(), 0);
+			camera.unproject(touchPos);
+
+			gameWorld.targetX = touchPos.x;
+			gameWorld.targetY = touchPos.y;
+		}
+
+		// 更新逻辑
+		gameWorld.update(delta, moveX, moveY);
+
+		// 更新相机跟随
+		camera.position.set(gameWorld.playerX, gameWorld.playerY, 0);
+		camera.update();
+
+		// --- 渲染 (直接画到屏幕) ---
+		Gdx.gl.glClearColor(0, 0, 0, 1);
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+		batch.setProjectionMatrix(camera.combined);
+		batch.begin();
+		gameWorld.render(batch);
+		batch.end();
+
+		// Debug 渲染
+		gameWorld.renderDebug(camera);
+	}
+
+	@Override
+	public void dispose() {
+		batch.dispose();
+		gameWorld.dispose();
 	}
 }
 
