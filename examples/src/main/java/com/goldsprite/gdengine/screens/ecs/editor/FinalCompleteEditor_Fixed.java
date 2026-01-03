@@ -1,9 +1,14 @@
 package com.goldsprite.gdengine.screens.ecs.editor;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Graphics;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.GL30;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -16,18 +21,17 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.scenes.scene2d.ui.Widget;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -35,6 +39,7 @@ import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisWindow;
+import org.lwjgl.opengl.DisplayMode;
 
 public class FinalCompleteEditor_Fixed extends GScreen {
 	private EditorController controller;
@@ -299,50 +304,57 @@ class ViewWidget extends Widget {
     }
 
     /**
-     * 将 UI 触摸点 (Local Coordinates) 转换为 游戏世界坐标 (World Coordinates)
-     * 对应步骤：UI点击 -> 相对图片位置 -> FBO像素位置 -> NDC坐标 -> 世界坐标
-     */
-    public Vector2 screenToWorld(float localX, float localY) {
-        // localX/Y 是 Scene2D 传进来的，原点是 Widget 左下角 (0,0)
-        // 已经自动处理了 Window 的 Padding，不需要我们操心
+	 * [新方法] 将 屏幕物理坐标 (Gdx.input.getX) 转换为 FBO 像素坐标
+	 * 供 Gd.input 使用，实现“无感化”输入的基石
+	 */
+	public Vector2 mapScreenToFbo(float screenX, float screenY) {
+		// 1. 利用 Scene2D 自带功能，将 全局屏幕坐标 -> Widget 本地坐标
+		Vector2 local = new Vector2(screenX, screenY);
+		this.screenToLocalCoordinates(local); // 这一步处理了 Viewport、Camera、Window Padding 等所有 Scene2D 层级的变换
 
-        // [Step 1] 计算点击点在“FBO图片区域”内的归一化坐标 (0.0 ~ 1.0)
-        // 我们需要减去 Widget 层的黑边偏移 (drawnImageX/Y)
-        float percentX = (localX - drawnImageX) / drawnImageW;
-        float percentY = (localY - drawnImageY) / drawnImageH;
+		// 2. Widget 本地坐标 -> FBO 像素坐标
+		// (local.x - 图片绘制偏移) / 图片绘制宽 * FBO实际宽
+		float percentX = (local.x - drawnImageX) / drawnImageW;
+		// 注意：Scene2D Y轴向上，而 local.y 也是向上的，所以直接算即可
+		float percentY = (local.y - drawnImageY) / drawnImageH;
 
-        // [Step 2] 还原到 FBO 的物理像素位置
-        // 如果点在正中心 (0.5)，且 FBO 宽 1280，那就是第 640 个像素
-        float fboPixelX = percentX * target.getFboWidth();
-        float fboPixelY = percentY * target.getFboHeight();
+		float fboPixelX = percentX * target.getFboWidth();
+		float fboPixelY = percentY * target.getFboHeight();
 
-        // [Step 3] FBO 内部 Viewport 映射 (处理第二层黑边)
-        // 获取 Viewport 在 FBO 内部实际占用的矩形区域
-        Viewport vp = target.viewport;
-        float vpX = vp.getScreenX();      // FBO 内部黑边的宽度
-        float vpY = vp.getScreenY();      // FBO 内部黑边的高度
-        float vpW = vp.getScreenWidth();  // 游戏画面在 FBO 里的实际宽度
-        float vpH = vp.getScreenHeight(); // 游戏画面在 FBO 里的实际高度
+		return local.set(fboPixelX, fboPixelY); // 复用 Vector2 返回
+	}
 
-        // 计算 NDC (归一化设备坐标: -1 ~ 1)
-        // 公式含义：(当前像素 - 起始像素) / 总宽度 -> 得到 0~1 -> 映射到 -1~1
-        float ndcX = (fboPixelX - vpX) / vpW * 2.0f - 1.0f;
-        float ndcY = (fboPixelY - vpY) / vpH * 2.0f - 1.0f;
+	/**
+	 * [修改后] 原有的 screenToWorld 现在复用上面的逻辑
+	 */
+	public Vector2 screenToWorld(float screenX, float screenY) {
+		// 1. 先拿到 FBO 像素坐标
+		Vector2 fboPos = mapScreenToFbo(screenX, screenY);
+		float fboPixelX = fboPos.x;
+		float fboPixelY = fboPos.y;
 
-        // [Step 4] 投影到世界坐标 (利用 Camera 的能力)
-        OrthographicCamera cam = (OrthographicCamera) target.camera;
+		// 2. FBO 内部 Viewport 映射 (NDC转换)
+		Viewport vp = target.viewport;
+		// 必须拿到 FBO 内部视口的实际偏移和大小
+		float vpX = vp.getScreenX(); 
+		float vpY = vp.getScreenY();
+		float vpW = vp.getScreenWidth(); 
+		float vpH = vp.getScreenHeight();
 
-        // 既然我们有了 NDC，就可以利用 Camera 的 Zoom 和 Position 算出世界坐标
-        // 世界宽度的一半 = (视口世界宽 * 缩放) / 2
-        float halfWorldW = (vp.getWorldWidth() * cam.zoom) / 2f;
-        float halfWorldH = (vp.getWorldHeight() * cam.zoom) / 2f;
+		// 转换为 NDC (-1 ~ 1)
+		float ndcX = (fboPixelX - vpX) / vpW * 2.0f - 1.0f;
+		float ndcY = (fboPixelY - vpY) / vpH * 2.0f - 1.0f;
 
-        // 最终坐标 = 相机位置 + (偏离中心的比例 * 世界的一半宽)
-        float worldX = cam.position.x + ndcX * halfWorldW;
-        float worldY = cam.position.y + ndcY * halfWorldH;
+		// 3. 投影到世界坐标
+		OrthographicCamera cam = (OrthographicCamera) target.camera;
+		float halfWorldW = (vp.getWorldWidth() * cam.zoom) / 2f;
+		float halfWorldH = (vp.getWorldHeight() * cam.zoom) / 2f;
 
-        return new Vector2(worldX, worldY);
-    }
+		float worldX = cam.position.x + ndcX * halfWorldW;
+		float worldY = cam.position.y + ndcY * halfWorldH;
+
+		return new Vector2(worldX, worldY);
+	}
 
     public void dispose() {
         bgTexture.dispose();
@@ -363,7 +375,8 @@ class EditorController {
 		if (!VisUI.isLoaded()) VisUI.load();
 
 		gameWorld = new GameWorld();
-		gameWorld.init();
+		// 【修改点 1】注意：GameWorld.init() 里如果用了 Gdx.graphics，可能会报错，
+		// 所以建议把 init 放在 Gd 初始化之后，或者确保 init 里只加载资源
 
 		// 默认配置
 		gameTarget = new ViewTarget(1280, 720);
@@ -374,12 +387,18 @@ class EditorController {
 
 		float scl = 1f;
 		stage = new Stage(new ExtendViewport(960*scl, 540*scl));
-		//stage = new Stage(new ScreenViewport());
 		
-		Gdx.input.setInputProcessor(stage);
-
-		createGameWindow();
+		createGameWindow();  // 这里面创建了 gameWidget
 		createSceneWindow();
+
+		// 【修改点 2】初始化全局代理 (Editor模式)
+		Gd.init(Gd.Mode.EDITOR, gameWidget, gameTarget);
+
+		// 【修改点 3】现在可以安全初始化游戏逻辑了
+		gameWorld.init();
+
+		// 输入处理链：Stage (UI) -> Gd (游戏逻辑注入)
+		Gdx.input.setInputProcessor(stage);
 	}
 
 	private void createGameWindow() {
@@ -388,18 +407,48 @@ class EditorController {
 		win.setSize(500, 350);
 		win.setPosition(50, 50);
 
+		// ... 前面的代码不变 ...
 		gameWidget = new ViewWidget(gameTarget);
 
-		gameWidget.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				Vector2 worldPos = gameWidget.screenToWorld(x, y);
-				if (worldPos != null) {
-					gameWorld.targetX = worldPos.x;
-					gameWorld.targetY = worldPos.y;
+		// 【新增】输入注入：将 UI 触摸事件透传给游戏
+		gameWidget.addListener(new InputListener() {
+				@Override
+				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+					// 将 Scene2D 的事件注入到 Gd 代理中
+					// event.getStageX() 是屏幕坐标吗？不，是 Stage 坐标。
+					// 这里的 x, y 是 Widget 本地坐标。
+					// 为了准确，我们直接用 Gdx.input.getX() 获取原始数据给 Gd 处理，
+					// 或者利用 Gd.input.injectInput 方法。
+
+					// 简单粗暴方案：直接通知 Gd "被摸了"，坐标由 Gd.input.getX() 自动计算
+					((EditorGameInput)Gd.input).setTouched(true, pointer);
+
+					// 触发游戏的 InputProcessor
+					if(Gd.input.getInputProcessor() != null) {
+						// 计算出 FBO 坐标
+						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+						Gd.input.getInputProcessor().touchDown((int)fboPos.x, (int)fboPos.y, pointer, button);
+					}
+					return true;
 				}
-			}
-		});
+
+				@Override
+				public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+					((EditorGameInput)Gd.input).setTouched(false, pointer);
+					if(Gd.input.getInputProcessor() != null) {
+						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+						Gd.input.getInputProcessor().touchUp((int)fboPos.x, (int)fboPos.y, pointer, button);
+					}
+				}
+
+				@Override
+				public void touchDragged(InputEvent event, float x, float y, int pointer) {
+					if(Gd.input.getInputProcessor() != null) {
+						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+						Gd.input.getInputProcessor().touchDragged((int)fboPos.x, (int)fboPos.y, pointer);
+					}
+				}
+			});
 
 		Texture bg = GameWorld.createSolidTexture(100, 100, Color.DARK_GRAY);
 		Texture knob = GameWorld.createSolidTexture(30, 30, Color.LIGHT_GRAY);
@@ -525,4 +574,171 @@ class EditorController {
 		gameWidget.dispose();
 		stage.dispose();
 	}
+}
+
+// ==========================================
+// 5. 全局代理层 (Global Delegate) - 核心架构
+// ==========================================
+class Gd {
+    public enum Mode { RELEASE, EDITOR }
+
+    public static Input input;       // 替换 Gdx.input
+    public static Graphics graphics; // 替换 Gdx.graphics
+
+    // 其他模块透传
+    public static final com.badlogic.gdx.Files files = Gdx.files;
+    public static final com.badlogic.gdx.Application app = Gdx.app;
+
+    public static void init(Mode mode, ViewWidget widget, ViewTarget target) {
+        if (mode == Mode.RELEASE) {
+            input = Gdx.input;       // 实机直接用原生
+            graphics = Gdx.graphics; // 实机直接用原生
+        } else {
+            input = new EditorGameInput(widget);
+            graphics = new EditorGameGraphics(target);
+        }
+    }
+}
+
+/**
+ * 编辑器模式下的 Input 代理
+ * 负责将 全局屏幕坐标 修正为 FBO 像素坐标
+ */
+class EditorGameInput implements Input {
+    private ViewWidget widget;
+    private InputProcessor processor;
+    private boolean isTouched = false; // 简单模拟单点，多点需扩展
+
+    public EditorGameInput(ViewWidget widget) { this.widget = widget; }
+
+    // 供外部注入状态
+    public void setTouched(boolean touched, int pointer) { this.isTouched = touched; }
+
+    @Override
+    public float getX() { return getX(0); }
+
+    @Override
+    public float getX(int pointer) {
+        // 获取真实鼠标在屏幕的位置 -> 转为 Widget 内 FBO 的位置
+        return widget.mapScreenToFbo(Gdx.input.getX(pointer), Gdx.input.getY(pointer)).x;
+    }
+
+    @Override
+    public float getY() { return getY(0); }
+
+    @Override
+    public float getY(int pointer) {
+        return widget.mapScreenToFbo(Gdx.input.getX(pointer), Gdx.input.getY(pointer)).y;
+    }
+
+    @Override
+    public boolean isTouched() { return isTouched || Gdx.input.isTouched(); }
+
+    @Override
+    public boolean isTouched(int pointer) { return Gdx.input.isTouched(pointer); }
+
+    @Override
+    public boolean justTouched() { return Gdx.input.justTouched(); }
+
+    @Override
+    public void setInputProcessor(InputProcessor processor) { this.processor = processor; }
+
+    @Override
+    public InputProcessor getInputProcessor() { return processor; }
+
+    // --- 以下方法直接透传 Gdx.input (或根据需求屏蔽) ---
+    @Override public int getDeltaX() { return Gdx.input.getDeltaX(); }
+    @Override public int getDeltaX(int pointer) { return Gdx.input.getDeltaX(pointer); }
+    @Override public int getDeltaY() { return Gdx.input.getDeltaY(); }
+    @Override public int getDeltaY(int pointer) { return Gdx.input.getDeltaY(pointer); }
+    @Override public boolean isButtonPressed(int button) { return Gdx.input.isButtonPressed(button); }
+    @Override public boolean isButtonJustPressed(int button) { return Gdx.input.isButtonJustPressed(button); }
+    @Override public boolean isKeyPressed(int key) { return Gdx.input.isKeyPressed(key); }
+    @Override public boolean isKeyJustPressed(int key) { return Gdx.input.isKeyJustPressed(key); }
+    @Override public void getTextInput(TextInputListener listener, String title, String text, String hint) { Gdx.input.getTextInput(listener, title, text, hint); }
+    @Override public void setOnscreenKeyboardVisible(boolean visible) { Gdx.input.setOnscreenKeyboardVisible(visible); }
+    @Override public void vibrate(int milliseconds) { /* 屏蔽震动 */ }
+    @Override public void vibrate(long[] pattern, int repeat) { /* 屏蔽震动 */ }
+    @Override public void cancelVibrate() { }
+    @Override public float getAzimuth() { return 0; }
+    @Override public float getPitch() { return 0; }
+    @Override public float getRoll() { return 0; }
+    @Override public void getRotationMatrix(float[] matrix) { }
+    @Override public long getCurrentEventTime() { return Gdx.input.getCurrentEventTime(); }
+    @Override public void setCatchBackKey(boolean catchBack) { } // 屏蔽按键捕获
+    @Override public boolean isCatchBackKey() { return false; }
+    @Override public void setCatchMenuKey(boolean catchMenu) { }
+    @Override public boolean isCatchMenuKey() { return false; }
+    @Override public void setCatchKey(int keycode, boolean catchKey) { }
+    @Override public boolean isCatchKey(int keycode) { return false; }
+    @Override public float getAccelerometerX() { return 0; }
+    @Override public float getAccelerometerY() { return 0; }
+    @Override public float getAccelerometerZ() { return 0; }
+    @Override public float getGyroscopeX() { return 0; }
+    @Override public float getGyroscopeY() { return 0; }
+    @Override public float getGyroscopeZ() { return 0; }
+    @Override public int getMaxPointers() { return Gdx.input.getMaxPointers(); }
+    @Override public int getRotation() { return 0; }
+    @Override public Orientation getNativeOrientation() { return Orientation.Landscape; }
+    @Override public void setCursorCatched(boolean catched) { /* 屏蔽光标锁定 */ }
+    @Override public boolean isCursorCatched() { return false; }
+    @Override public void setCursorPosition(int x, int y) { }
+    @Override public float getPressure() { return 0; }
+    @Override public float getPressure(int pointer) { return 0; }
+}
+
+/**
+ * 编辑器模式下的 Graphics 代理
+ * 负责欺骗游戏：屏幕只有 FBO 那么大
+ */
+class EditorGameGraphics implements Graphics {
+    private ViewTarget target;
+    public EditorGameGraphics(ViewTarget target) { this.target = target; }
+
+    @Override public int getWidth() { return target.getFboWidth(); }
+    @Override public int getHeight() { return target.getFboHeight(); }
+    @Override public int getBackBufferWidth() { return target.getFboWidth(); }
+    @Override public int getBackBufferHeight() { return target.getFboHeight(); }
+
+    // 透传时间流逝
+    @Override public float getDeltaTime() { return Gdx.graphics.getDeltaTime(); }
+    @Override public float getRawDeltaTime() { return Gdx.graphics.getRawDeltaTime(); }
+    @Override public int getFramesPerSecond() { return Gdx.graphics.getFramesPerSecond(); }
+
+    // 其他方法按需透传或 Mock
+    @Override public boolean isGL30Available() { return Gdx.graphics.isGL30Available(); }
+    @Override public GL20 getGL20() { return Gdx.graphics.getGL20(); }
+    @Override public GL30 getGL30() { return Gdx.graphics.getGL30(); }
+    @Override public void setGL20(GL20 gl20) { Gdx.graphics.setGL20(gl20); }
+    @Override public void setGL30(GL30 gl30) { Gdx.graphics.setGL30(gl30); }
+    @Override public long getFrameId() { return Gdx.graphics.getFrameId(); }
+    @Override public float getPpiX() { return Gdx.graphics.getPpiX(); }
+    @Override public float getPpiY() { return Gdx.graphics.getPpiY(); }
+    @Override public float getPpcX() { return Gdx.graphics.getPpcX(); }
+    @Override public float getPpcY() { return Gdx.graphics.getPpcY(); }
+    @Override public float getDensity() { return Gdx.graphics.getDensity(); }
+    @Override public boolean supportsDisplayModeChange() { return false; }
+    @Override public Monitor getPrimaryMonitor() { return Gdx.graphics.getPrimaryMonitor(); }
+    @Override public Monitor getMonitor() { return Gdx.graphics.getMonitor(); }
+    @Override public Monitor[] getMonitors() { return Gdx.graphics.getMonitors(); }
+    @Override public DisplayMode[] getDisplayModes() { return Gdx.graphics.getDisplayModes(); }
+    @Override public DisplayMode[] getDisplayModes(Monitor monitor) { return Gdx.graphics.getDisplayModes(monitor); }
+    @Override public DisplayMode getDisplayMode() { return Gdx.graphics.getDisplayMode(); }
+    @Override public DisplayMode getDisplayMode(Monitor monitor) { return Gdx.graphics.getDisplayMode(monitor); }
+    @Override public boolean setFullscreenMode(DisplayMode displayMode) { return false; }
+    @Override public boolean setWindowedMode(int width, int height) { return false; }
+    @Override public void setTitle(String title) { }
+    @Override public void setUndecorated(boolean undecorated) { }
+    @Override public void setResizable(boolean resizable) { }
+    @Override public void setVSync(boolean vsync) { }
+    @Override public void setForegroundFPS(int fps) { }
+    @Override public BufferFormat getBufferFormat() { return Gdx.graphics.getBufferFormat(); }
+    @Override public boolean supportsExtension(String extension) { return Gdx.graphics.supportsExtension(extension); }
+    @Override public void setContinuousRendering(boolean isContinuous) { Gdx.graphics.setContinuousRendering(isContinuous); }
+    @Override public boolean isContinuousRendering() { return Gdx.graphics.isContinuousRendering(); }
+    @Override public void requestRendering() { Gdx.graphics.requestRendering(); }
+    @Override public boolean isFullscreen() { return false; }
+    @Override public Cursor newCursor(Pixmap pixmap, int xHotspot, int yHotspot) { return Gdx.graphics.newCursor(pixmap, xHotspot, yHotspot); }
+    @Override public void setSystemCursor(SystemCursor systemCursor) { }
+    @Override public void setCursor(Cursor cursor) { }
 }
