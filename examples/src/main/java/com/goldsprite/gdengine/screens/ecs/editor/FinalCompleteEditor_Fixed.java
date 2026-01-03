@@ -385,7 +385,7 @@ class EditorController {
 		sceneTarget = new ViewTarget(1280, 720);
 		sceneTarget.setViewportMode(ViewTarget.ViewportMode.EXTEND);
 
-		float scl = 1f;
+		float scl = 1.2f;
 		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
 		createGameWindow();  // 这里面创建了 gameWidget
@@ -414,21 +414,32 @@ class EditorController {
 		gameWidget.addListener(new InputListener() {
 			@Override
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-				// 将 Scene2D 的事件注入到 Gd 代理中
-				// event.getStageX() 是屏幕坐标吗？不，是 Stage 坐标。
-				// 这里的 x, y 是 Widget 本地坐标。
-				// 为了准确，我们直接用 Gdx.input.getX() 获取原始数据给 Gd 处理，
-				// 或者利用 Gd.input.injectInput 方法。
-
-				// 简单粗暴方案：直接通知 Gd "被摸了"，坐标由 Gd.input.getX() 自动计算
+				// ---------------------------------------------------------
+				// 1. 输入注入 (保持不变)
+				// ---------------------------------------------------------
+				// 通知代理：屏幕被触摸了
 				((EditorGameInput) Gd.input).setTouched(true, pointer);
 
-				// 触发游戏的 InputProcessor
+				// 如果游戏有 InputProcessor，转发事件
 				if (Gd.input.getInputProcessor() != null) {
-					// 计算出 FBO 坐标
 					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
 					Gd.input.getInputProcessor().touchDown((int) fboPos.x, (int) fboPos.y, pointer, button);
 				}
+
+				// ---------------------------------------------------------
+				// 2. 【补回】编辑器逻辑：点击设置目标点 (用于验证坐标映射)
+				// ---------------------------------------------------------
+				// 注意：screenToWorld 需要传入全局屏幕坐标，不能用参数里的 x,y (本地坐标)
+				Vector2 worldPos = gameWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY());
+
+				// 更新游戏世界的目标点
+				gameWorld.targetX = worldPos.x;
+				gameWorld.targetY = worldPos.y;
+
+				// 打印日志方便调试
+				Gdx.app.log("Editor", "Clicked Screen: " + Gdx.input.getX() + "," + Gdx.input.getY()
+					+ " -> World: " + worldPos.x + "," + worldPos.y);
+
 				return true;
 			}
 
@@ -443,6 +454,11 @@ class EditorController {
 
 			@Override
 			public void touchDragged(InputEvent event, float x, float y, int pointer) {
+				// 拖拽时也更新目标点，实现“拖拽跟随”效果，体验更好
+				Vector2 worldPos = gameWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY());
+				gameWorld.targetX = worldPos.x;
+				gameWorld.targetY = worldPos.y;
+
 				if (Gd.input.getInputProcessor() != null) {
 					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
 					Gd.input.getInputProcessor().touchDragged((int) fboPos.x, (int) fboPos.y, pointer);
