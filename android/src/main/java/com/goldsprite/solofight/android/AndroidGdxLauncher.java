@@ -7,18 +7,29 @@ import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.*;
+import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import com.badlogic.gdx.ApplicationListener;
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.android.AndroidScriptCompiler;
+import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 import com.goldsprite.gdengine.screens.ScreenManager;
-
+import com.goldsprite.gdengine.screens.ecs.editor.Gd;
+import com.goldsprite.gdengine.screens.ecs.editor.RealGame;
 import java.util.HashMap;
 import java.util.Map;
+import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.GdxLauncher;
 
 public class AndroidGdxLauncher extends AndroidApplication {
 	private static AndroidGdxLauncher ctx;
@@ -70,9 +81,25 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
 		cfg.useImmersiveMode = true;
 		cfg.numSamples = 2; // Android端通常设为2以平衡性能
+		
+		ApplicationListener main;
+		
+		//测试=============================
+		
+		// 1. 创建 Android 专用的编译器
+        // 注意：这里需要传入 context (this)
+        AndroidScriptCompiler androidCompiler = new AndroidScriptCompiler(this);
+        
+		// 2. 启动游戏 (实机模式 或 编辑器模式)
+        // 注意：这里需要传入 compiler
+		main = new GdxLauncher(androidCompiler);
+		//测试=============================
+		
+		//main = GdxLauncherProvider.launcherGame();
+		
 		// 关键：防止 SurfaceView 遮挡普通 View，虽然 FrameLayout 顺序通常能保证，但加保险
 		// cfg.r = 8; cfg.g = 8; cfg.b = 8; cfg.a = 8; // 如果需要透明背景可开启
-		gameView = initializeForView(GdxLauncherProvider.launcherGame(), cfg);
+		gameView = initializeForView(main, cfg);
 
 		rootFrame.addView(gameView, new FrameLayout.LayoutParams(
 			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -94,6 +121,9 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		gameView.setFocusableInTouchMode(true);
 		gameView.requestFocus();
 	}
+	
+	
+	
 
 	private void initOverlayUI() {
 		// [v19.5] 创建一个全屏透明的 RelativeLayout 作为 UI 层

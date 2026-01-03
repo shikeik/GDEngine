@@ -7,20 +7,34 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.goldsprite.gdengine.log.Debug;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.assets.VisUIHelper;
+import com.goldsprite.gdengine.audio.SynthAudio;
+import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.screens.ecs.editor.Gd;
 import com.goldsprite.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
-import com.goldsprite.gdengine.audio.SynthAudio;
-import com.badlogic.gdx.utils.viewport.Viewport;
+import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 
 public class GdxLauncher extends Game {
 	private Application.ApplicationType userType;
 
 	public SpriteBatch batch;
 	public Debug debug;
+	
+	// 【新增】保存编译器引用
+    private final IScriptCompiler scriptCompiler;
 
+	public GdxLauncher() {
+		this(null);
+	}
+	// 【新增】构造函数，强制要求传入编译器
+    // 如果是纯实机运行不需要编译功能，可以传 null
+    public GdxLauncher(IScriptCompiler scriptCompiler) {
+        this.scriptCompiler = scriptCompiler;
+    }
+	
 	@Override
 	public void create() {
 		userType = Gdx.app.getType();
@@ -35,6 +49,12 @@ public class GdxLauncher extends Game {
 
 		SynthAudio.init(); // [新增] 启动音频线程
 
+		// 2. 【核心】初始化引擎全局代理 (Gd)
+        // 启动时默认为 RELEASE 模式，传入我们从 Launcher 带来的编译器
+        Gd.init(Gd.Mode.RELEASE, null, null, scriptCompiler);
+		Debug.logT("Engine", "Gd initialized. Compiler available: %b", (scriptCompiler != null));
+		testAndroidScript();
+		
 		// 4. 设置全局视口
 		float scl = 1.2f;
 		Viewport uiViewport = new ExtendViewport(540*scl, 960*scl, new OrthographicCamera());
@@ -64,6 +84,8 @@ public class GdxLauncher extends Game {
 	public void resize(int width, int height) {
 		ScreenManager.getInstance().resize(width, height);
 		if(debug != null) debug.resize(width, height);
+		// 【补漏】视口变化时通知 Gd 配置 (虽然 Release 模式下由 GameWorld 自己管，但保持同步是个好习惯)
+		// Gd.config.logicWidth = ...; 
 	}
 
 	@Override
@@ -74,4 +96,36 @@ public class GdxLauncher extends Game {
 		VisUI.dispose();
 		SynthAudio.dispose(); // [新增] 关闭线程和设备
 	}
+	
+	
+	private void testAndroidScript() {
+        new Thread(() -> {
+            try {
+                // 简单的测试脚本
+                String code = 
+                    "package com.test;" +
+                    "public class HelloAndroid {" +
+                    "    public String greet() {" +
+                    "        return \"Hello from Dynamic Dex!\";" +
+                    "    }" +
+                    "}";
+
+                // 编译！
+                Class<?> cls = Gd.compiler.compile("com.test.HelloAndroid", code);
+
+                if (cls != null) {
+                    Object obj = cls.newInstance();
+                    // 反射调用方法
+                    java.lang.reflect.Method m = cls.getMethod("greet");
+                    String result = (String) m.invoke(obj);
+
+                    Gdx.app.postRunnable(() -> {
+                        Debug.log("SCRIPT: 脚本运行结果: " + result);
+                    });
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
 }

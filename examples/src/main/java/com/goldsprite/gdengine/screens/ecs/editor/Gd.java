@@ -14,6 +14,7 @@ import com.badlogic.gdx.graphics.GL31;
 import com.badlogic.gdx.graphics.GL32;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.glutils.GLVersion;
+import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 
 // ==========================================
 // 5. 全局代理层 (Global Delegate) - 配置驱动版
@@ -31,6 +32,9 @@ public class Gd {
 	// 【新增】项目配置中心 (单例数据)
 	public static final Config config = new Config();
 
+    // 【新增】脚本编译器接口
+    public static IScriptCompiler compiler;
+	
 	public static void init(Mode mode, ViewWidget widget, ViewTarget target) {
 		if (mode == Mode.RELEASE) {
 			input = Gdx.input;
@@ -40,6 +44,22 @@ public class Gd {
 			graphics = new EditorGameGraphics(target);
 		}
 	}
+	
+	// 修改 init 方法，允许注入编译器
+    public static void init(Mode mode, ViewWidget widget, ViewTarget target, IScriptCompiler scriptCompiler) {
+        if (mode == Mode.RELEASE) {
+            input = Gdx.input;
+            graphics = Gdx.graphics;
+        } else {
+            input = new EditorGameInput(widget);
+            graphics = new EditorGameGraphics(target);
+        }
+        // 初始化视口...
+        // view = new ViewportManager(...);
+
+        // 【新增】注入编译器
+        compiler = scriptCompiler;
+    }
 
 	public enum Mode { RELEASE, EDITOR }
 
