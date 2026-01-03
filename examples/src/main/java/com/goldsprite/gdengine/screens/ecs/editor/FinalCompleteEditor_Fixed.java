@@ -599,6 +599,8 @@ class EditorController {
 // 用于验证游戏逻辑是否彻底解耦，不依赖编辑器也能跑
 // ==========================================
 class RealGame extends ApplicationAdapter {
+	// 【修改点 1】引入 Viewport
+	Viewport viewport;
 	SpriteBatch batch;
 	OrthographicCamera camera;
 	GameWorld gameWorld;
@@ -617,8 +619,12 @@ class RealGame extends ApplicationAdapter {
 		// 初始化原生组件 (实机这一层需要自己管理相机和Batch)
 		batch = new SpriteBatch();
 		camera = new OrthographicCamera();
-		camera.setToOrtho(false, VIEW_WIDTH, VIEW_HEIGHT);
-		// 让相机居中
+
+		// 【修改点 2】创建真实的 FitViewport
+		// 使用 GameWorld 定义的逻辑分辨率
+		viewport = new FitViewport(GameWorld.WORLD_WIDTH, GameWorld.WORLD_HEIGHT, camera);
+
+		// 让相机居中 (Viewport 内部会自动处理，但显示设置一下是个好习惯)
 		camera.position.set(0, 0, 0);
 
 		// 【核心验证 2】初始化游戏逻辑
@@ -626,6 +632,13 @@ class RealGame extends ApplicationAdapter {
 		gameWorld.init();
 
 		System.out.println("RealGame Started in RELEASE Mode");
+	}
+
+	@Override
+	public void resize(int width, int height) {
+		// 【修改点 3】响应屏幕大小变化
+		// 这决定了黑边怎么留
+		viewport.update(width, height, true); // true 表示居中
 	}
 
 	@Override
@@ -645,11 +658,10 @@ class RealGame extends ApplicationAdapter {
 
 		// --- 坐标点击测试 ---
 		if (Gd.input.isTouched()) {
-			// 实机模式下：
-			// Gd.input.getX() 返回的是真实屏幕像素坐标
-			// 我们需要用相机 unproject 转换成世界坐标
-			Vector3 touchPos = new Vector3(Gd.input.getX(), Gd.input.getY(), 0);
-			camera.unproject(touchPos);
+			// 【修改点 4】使用 Viewport 来转换坐标
+			// 它会自动处理黑边偏移，比单纯的 camera.unproject 更稳
+			Vector2 touchPos = new Vector2(Gd.input.getX(), Gd.input.getY());
+			viewport.unproject(touchPos); // 屏幕 -> 世界
 
 			gameWorld.targetX = touchPos.x;
 			gameWorld.targetY = touchPos.y;
@@ -663,8 +675,12 @@ class RealGame extends ApplicationAdapter {
 		camera.update();
 
 		// --- 渲染 (直接画到屏幕) ---
-		Gdx.gl.glClearColor(0, 0, 0, 1);
+		// 这里的颜色就是“黑边”的颜色
+		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1f);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+		// 应用视口 (虽然 resize 里 apply 过，但为了防止其他 FBO 干扰，每帧 apply 也可以)
+		viewport.apply();
 
 		batch.setProjectionMatrix(camera.combined);
 		batch.begin();
