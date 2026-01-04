@@ -76,7 +76,7 @@ public class Debug {
 		registerInput();
 
 		// 打印一条调试信息验证顺序
-		log("DebugUI UI Initialized.");
+//		log("DebugUI UI Initialized.");
 	}
 
 	private void registerInput() {
@@ -85,9 +85,9 @@ public class Debug {
 				ScreenManager sm = ScreenManager.getInstance();
 				if (sm != null && sm.getImp() != null) {
 					sm.getImp().addProcessor(0, stage);
-					log("DebugUI Input Registered at Top.");
+//					log("DebugUI Input Registered at Top.");
 				} else {
-					log("Warning: ScreenManager not ready for DebugUI input.");
+//					log("Warning: ScreenManager not ready for DebugUI input.");
 				}
 			} catch (Exception e) {
 				e.printStackTrace();

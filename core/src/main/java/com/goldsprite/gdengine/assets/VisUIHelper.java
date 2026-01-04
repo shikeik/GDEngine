@@ -24,7 +24,7 @@ public class VisUIHelper {
 		VisUI.load();
 
 		try {
-			Debug.log("Injecting Chinese Font into VisUI...");
+//			Debug.log("Injecting Chinese Font into VisUI...");
 
 			// 2. 生成支持中文的字体 (使用 FontUtils 现有的逻辑)
 			// 大小设为 24，清晰度较高
@@ -56,7 +56,7 @@ public class VisUIHelper {
 			fixSplitPaneHandle();
 		} catch (Exception e) {
 			e.printStackTrace();
-			Debug.log("VisUI Font Inject Failed: " + e.getMessage());
+			Debug.log("VisUI 中文字体调整失败: " + e.getMessage());
 		}
 	}
 
