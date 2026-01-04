@@ -151,3 +151,9 @@ tasks.register('updateExe4jOptions') {
 // 设置在编译 Java 前执行此任务
 compileJava.dependsOn(updateExe4jOptions)
 jar.dependsOn(updateExe4jOptions)
+
+
+processResources {
+	dependsOn ':core:copyEngineLibs'
+	dependsOn ':core:packageEngineCore'
+}
