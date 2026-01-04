@@ -12,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -188,15 +189,31 @@ public class GDEngineHubScreen extends GScreen {
 	// Logic: ProjectManager
 	// =========================================================================================
 	public static class ProjectManager {
-		public static final String ROOT_DIR = "Projects";
 		public static FileHandle currentProject;
+		// [修改] 不再使用固定的 ROOT_DIR 常量，改为动态获取
+		// public static final String ROOT_DIR = "Projects";
+
+		// [新增] 获取项目根目录的句柄 (单点真理)
+		public static FileHandle getProjectsRoot() {
+			if (Gdx.app.getType() == com.badlogic.gdx.Application.ApplicationType.Android) {
+				// Android: 使用外部存储 (SD卡/GDEngine/Projects)
+				// 这样用户可以用 MT管理器 轻松找到
+				String externalPath = PlatformImpl.AndroidExternalStoragePath;
+				return Gdx.files.absolute(externalPath).child("GDEngine").child("Projects");
+			} else {
+				// PC: 保持原样，使用项目内部目录
+				return Gdx.files.local("Projects");
+			}
+		}
 
 		public static Array<FileHandle> listProjects() {
-			FileHandle root = Gdx.files.local(ROOT_DIR);
+			// [修改] 使用 getProjectsRoot()
+			FileHandle root = getProjectsRoot();
 			if (!root.exists()) {
 				root.mkdirs();
 				return new Array<>();
 			}
+			// ... (后续逻辑不变)
 			FileHandle[] files = root.list();
 			Array<FileHandle> projects = new Array<>();
 			for (FileHandle f : files) {
@@ -210,7 +227,8 @@ public class GDEngineHubScreen extends GScreen {
 			if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
 			if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
 
-			FileHandle projectDir = Gdx.files.local(ROOT_DIR).child(name);
+			// [修改] 使用 getProjectsRoot()
+			FileHandle projectDir = getProjectsRoot().child(name);
 			if (projectDir.exists()) return "Project already exists.";
 
 			try {

@@ -148,7 +148,7 @@ public class ScreenManager implements Disposable {
 	}
 
 	public void resize(int width, int height) {
-		curScreen.resize(width, height);
+		if(curScreen != null) curScreen.resize(width, height);
 	}
 
 	/**

@@ -11,6 +11,8 @@ public class PlatformImpl {
 
 	public static ScreenManager.Orientation defaultOrientaion = ScreenManager.Orientation.Portrait;
 
+	public static String AndroidExternalStoragePath = "";
+
 	public static int getTouchCount() {
 		int count = 0;
 		// 检查前10个指针（通常足够）
