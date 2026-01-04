@@ -84,13 +84,15 @@ public class GDEngineEditorScreen extends GScreen {
 		getImp().addProcessor(stage);
 
 		VisTable root = new VisTable();
+		float pad = 30;
+		root.padLeft(pad).padRight(pad);
 		root.setFillParent(true);
 		root.setBackground("window-bg");
 		stage.addActor(root);
 
 		// 1. Toolbar
 		VisTable toolbar = new VisTable();
-		toolbar.setBackground("button");
+		toolbar.setBackground("window-bg");
 		createToolbar(toolbar);
 		root.add(toolbar).growX().height(50).row();
 
