@@ -22,7 +22,7 @@ public class Main implements IGameScriptEntry {
 		createPlayer(0, 0, 100, Color.WHITE, 0.3f);
 
 		// 创建一个"影子" (测试多物体)
-		createPlayer(300, 0, 400, Color.BLACK, 0.5f).transform.setScale(0.8f);
+		createPlayer(300, 0, 100, Color.BLACK, 0.5f).transform.setScale(0.8f);
 	}
 
 	private GObject createPlayer(float x, float y, float size, Color c, float animSpeed) {

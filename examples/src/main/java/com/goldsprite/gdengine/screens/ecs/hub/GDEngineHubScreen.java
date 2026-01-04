@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
@@ -23,20 +24,16 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 
-/**
- * 屏幕 1: 项目管理器 (Hub)
- * 职责：展示项目列表、创建项目、记录当前选中的项目上下文
- */
 public class GDEngineHubScreen extends GScreen {
 
-    private Stage stage;
-    private VisTable projectListTable;
-    private NeonBatch neonBatch;
+	private Stage stage;
+	private VisTable projectListTable;
+	private NeonBatch neonBatch;
 
-    @Override
-    public ScreenManager.Orientation getOrientation() {
-        return ScreenManager.Orientation.Landscape;
-    }
+	@Override
+	public ScreenManager.Orientation getOrientation() {
+		return ScreenManager.Orientation.Landscape;
+	}
 
 	@Override
 	protected void initViewport() {
@@ -44,222 +41,248 @@ public class GDEngineHubScreen extends GScreen {
 		super.initViewport();
 	}
 
-    @Override
-    public void create() {
-        stage = new Stage(getUIViewport());
-        getImp().addProcessor(stage);
-        neonBatch = new NeonBatch();
+	@Override
+	public void create() {
+		stage = new Stage(getUIViewport());
+		getImp().addProcessor(stage);
+		neonBatch = new NeonBatch();
 
-        initMainLayout();
-        refreshList();
-    }
+		initMainLayout();
+		refreshList();
+	}
 
-    private void initMainLayout() {
-        VisTable root = new VisTable();
-        root.setFillParent(true);
-        root.top().pad(20);
-        stage.addActor(root);
+	private void initMainLayout() {
+		VisTable root = new VisTable();
+		root.setFillParent(true);
+		root.top().pad(20);
+		stage.addActor(root);
 
-        // Top Bar
-        VisTable topBar = new VisTable();
-        VisLabel titleLabel = new VisLabel("GDProject Hub");
-        titleLabel.setFontScale(1.5f);
-        titleLabel.setColor(Color.CYAN);
+		VisTable topBar = new VisTable();
+		VisLabel titleLabel = new VisLabel("GDProject Hub");
+		titleLabel.setFontScale(1.5f);
+		titleLabel.setColor(Color.CYAN);
 
-        VisTextButton btnCreate = new VisTextButton("[ + New Project ]");
-        btnCreate.setColor(Color.GREEN);
-        btnCreate.addListener(new ClickListener() {
+		VisTextButton btnCreate = new VisTextButton("[ + New Project ]");
+		btnCreate.setColor(Color.GREEN);
+		btnCreate.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				stage.addActor(new CreateProjectDialog(GDEngineHubScreen.this::refreshList).fadeIn());
+			}
+		});
+
+		topBar.add(titleLabel).expandX().left();
+		topBar.add(btnCreate).right().height(50);
+		root.add(topBar).growX().height(60).padBottom(10).row();
+
+		projectListTable = new VisTable();
+		projectListTable.top();
+
+		VisScrollPane scrollPane = new VisScrollPane(projectListTable);
+		scrollPane.setFadeScrollBars(false);
+		scrollPane.setScrollingDisabled(true, false);
+
+		VisTable container = new VisTable();
+		container.setBackground("window-bg");
+		container.add(scrollPane).grow().pad(5);
+
+		root.add(container).grow();
+	}
+
+	public void refreshList() {
+		projectListTable.clearChildren();
+		Array<FileHandle> projects = ProjectManager.listProjects();
+
+		if (projects.size == 0) {
+			VisLabel emptyLabel = new VisLabel("No projects found.\nClick [+ New Project] to start.", Align.center);
+			emptyLabel.setColor(Color.GRAY);
+			projectListTable.add(emptyLabel).padTop(100);
+			return;
+		}
+
+		for (FileHandle projDir : projects) {
+			VisTable item = new VisTable();
+			item.setBackground("button");
+			item.setTouchable(Touchable.enabled); // [修复] 确保 Table 可点击
+			item.pad(10);
+
+			VisLabel nameLbl = new VisLabel(projDir.name());
+			nameLbl.setFontScale(1.2f);
+			item.add(new VisLabel("📁 ")).padRight(10);
+			item.add(nameLbl).expandX().left();
+
+			VisLabel pathLbl = new VisLabel(projDir.path());
+			pathLbl.setColor(Color.GRAY);
+			pathLbl.setFontScale(0.7f);
+			item.add(pathLbl).right().padRight(20);
+
+			// [修复] 监听器绑定在 Item Table 上
+			item.addListener(new ClickListener() {
 				@Override
 				public void clicked(InputEvent event, float x, float y) {
-					stage.addActor(new CreateProjectDialog(GDEngineHubScreen.this::refreshList).fadeIn());
+					stage.addActor(new ConfirmOpenDialog(projDir.name(), () -> {
+						openProject(projDir);
+					}).fadeIn());
 				}
 			});
 
-        topBar.add(titleLabel).expandX().left();
-        topBar.add(btnCreate).right().height(50);
-        root.add(topBar).growX().height(60).padBottom(10).row();
+			projectListTable.add(item).growX().height(80).padBottom(10).row();
+		}
+	}
 
-        // Project List Container
-        projectListTable = new VisTable();
-        projectListTable.top();
+	private void openProject(FileHandle projectDir) {
+		ProjectManager.currentProject = projectDir;
+		Debug.logT("Hub", "Opening project: %s", projectDir.path());
+		getScreenManager().setCurScreen(GDEngineEditorScreen.class, true);
+	}
 
-        VisScrollPane scrollPane = new VisScrollPane(projectListTable);
-        scrollPane.setFadeScrollBars(false);
-        scrollPane.setScrollingDisabled(true, false);
+	@Override
+	public void render0(float delta) {
+		neonBatch.setProjectionMatrix(getWorldCamera().combined);
+		neonBatch.begin();
+		float w = getWorldCamera().viewportWidth;
+		float h = getWorldCamera().viewportHeight;
+		float cx = getWorldCamera().position.x;
+		float cy = getWorldCamera().position.y;
+		neonBatch.setColor(1, 1, 1, 0.05f);
+		for (float x = cx - w/2; x < cx + w/2; x+=100) neonBatch.drawLine(x, cy-h/2, x, cy+h/2, 1, Color.GRAY);
+		for (float y = cy - h/2; y < cy + h/2; y+=100) neonBatch.drawLine(cx-w/2, y, cx+w/2, y, 1, Color.GRAY);
+		neonBatch.setColor(Color.WHITE);
+		neonBatch.end();
 
-        VisTable container = new VisTable();
-        container.setBackground("window-bg");
-        container.add(scrollPane).grow().pad(5);
+		stage.act(delta);
+		stage.draw();
+	}
 
-        root.add(container).grow();
-    }
+	@Override
+	public void dispose() {
+		if (stage != null) stage.dispose();
+		if (neonBatch != null) neonBatch.dispose();
+	}
 
-    public void refreshList() {
-        projectListTable.clearChildren();
-        Array<FileHandle> projects = ProjectManager.listProjects();
+	// --- Logic ---
+	public static class ProjectManager {
+		public static final String ROOT_DIR = "Projects";
+		public static FileHandle currentProject;
 
-        if (projects.size == 0) {
-            VisLabel emptyLabel = new VisLabel("No projects found.\nClick [+ New Project] to start.", Align.center);
-            emptyLabel.setColor(Color.GRAY);
-            projectListTable.add(emptyLabel).padTop(100);
-            return;
-        }
+		public static Array<FileHandle> listProjects() {
+			FileHandle root = Gdx.files.local(ROOT_DIR);
+			if (!root.exists()) {
+				root.mkdirs();
+				return new Array<>();
+			}
+			FileHandle[] files = root.list();
+			Array<FileHandle> projects = new Array<>();
+			for (FileHandle f : files) {
+				if (f.isDirectory()) projects.add(f);
+			}
+			return projects;
+		}
 
-        for (FileHandle projDir : projects) {
-            VisTable item = new VisTable();
-            item.setBackground("button");
-            item.pad(10);
+		// [新增] 增加 packageName 参数
+		public static String createProject(String name, String packageName) {
+			if (name == null || name.trim().isEmpty()) return "Name cannot be empty.";
+			if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
+			if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
 
-            VisLabel nameLbl = new VisLabel(projDir.name());
-            nameLbl.setFontScale(1.2f);
-            item.add(new VisLabel("📁 ")).padRight(10);
-            item.add(nameLbl).expandX().left();
+			FileHandle projectDir = Gdx.files.local(ROOT_DIR).child(name);
+			if (projectDir.exists()) return "Project already exists.";
 
-            VisLabel pathLbl = new VisLabel(projDir.path());
-            pathLbl.setColor(Color.GRAY);
-            pathLbl.setFontScale(0.7f);
-            item.add(pathLbl).right().padRight(20);
+			try {
+				projectDir.mkdirs();
+				FileHandle srcDir = projectDir.child("Scripts");
+				srcDir.mkdirs();
 
-            item.addListener(new ClickListener() {
-					@Override
-					public void clicked(InputEvent event, float x, float y) {
-						stage.addActor(new ConfirmOpenDialog(projDir.name(), () -> {
-							openProject(projDir);
-						}).fadeIn());
-					}
-				});
+				ProjectConfig config = new ProjectConfig();
+				config.name = name;
+				// [新增] 写入配置
+				config.entryClass = packageName + ".Main";
+				projectDir.child("project.json").writeString(new Json().prettyPrint(config), false);
 
-            projectListTable.add(item).growX().height(80).padBottom(10).row();
-        }
-    }
+				// [新增] 根据包名生成目录结构
+				String packagePath = packageName.replace('.', '/');
+				FileHandle mainFile = srcDir.child(packagePath + "/Main.java");
 
-    private void openProject(FileHandle projectDir) {
-        // 1. 设置上下文
-        ProjectManager.currentProject = projectDir;
-        Debug.logT("Hub", "Opening project: %s", projectDir.path());
+				String mainCode = "package " + packageName + ";\n\n" +
+					"import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\n" +
+					"import com.goldsprite.gdengine.ecs.GameWorld;\n" +
+					"import com.goldsprite.gdengine.log.Debug;\n\n" +
+					"public class Main implements IGameScriptEntry {\n" +
+					"    @Override public void onStart(GameWorld world) {\n" +
+					"        Debug.logT(\"Script\", \"Hello " + name + "!\");\n" +
+					"    }\n" +
+					"}";
+				mainFile.writeString(mainCode, false);
+				return null;
+			} catch (Exception e) {
+				return "Error: " + e.getMessage();
+			}
+		}
 
-        // 2. 跳转到独立的 Editor 屏幕
-        getScreenManager().setCurScreen(GDEngineEditorScreen.class, true);
-    }
+		public static class ProjectConfig {
+			public String name;
+			public String entryClass = "Main";
+		}
+	}
 
-    @Override
-    public void render0(float delta) {
-        neonBatch.setProjectionMatrix(getWorldCamera().combined);
-        neonBatch.begin();
-        // 绘制简单的背景网格
-        float w = getWorldCamera().viewportWidth;
-        float h = getWorldCamera().viewportHeight;
-        float cx = getWorldCamera().position.x;
-        float cy = getWorldCamera().position.y;
-        neonBatch.setColor(1, 1, 1, 0.05f);
-        for (float x = cx - w/2; x < cx + w/2; x+=100) neonBatch.drawLine(x, cy-h/2, x, cy+h/2, 1, Color.GRAY);
-        for (float y = cy - h/2; y < cy + h/2; y+=100) neonBatch.drawLine(cx-w/2, y, cx+w/2, y, 1, Color.GRAY);
-        neonBatch.setColor(Color.WHITE);
-        neonBatch.end();
+	// --- Dialogs ---
+	public static class CreateProjectDialog extends VisDialog {
+		private final VisTextField nameField;
+		private final VisTextField pkgField; // [新增]
+		private final VisLabel errorLabel;
+		private final Runnable onSuccess;
 
-        stage.act(delta);
-        stage.draw();
-    }
+		public CreateProjectDialog(Runnable onSuccess) {
+			super("Create Project");
+			this.onSuccess = onSuccess;
+			setModal(true); addCloseButton(); closeOnEscape();
+			TableUtils.setSpacingDefaults(this);
 
-    @Override
-    public void dispose() {
-        if (stage != null) stage.dispose();
-        if (neonBatch != null) neonBatch.dispose();
-    }
+			add(new VisLabel("Name:")).left();
+			add(nameField = new VisTextField("MyGame")).width(250).row();
 
-    // =========================================================================================
-    // 静态内部类：ProjectManager (逻辑核心 - 公共访问点)
-    // =========================================================================================
-    public static class ProjectManager {
-        public static final String ROOT_DIR = "Projects";
-        // 全局上下文：当前选中的项目
-        public static FileHandle currentProject;
+			add(new VisLabel("Package:")).left();
+			add(pkgField = new VisTextField("com.mygame")).width(250).row(); // [新增]
 
-        public static Array<FileHandle> listProjects() {
-            FileHandle root = Gdx.files.local(ROOT_DIR);
-            if (!root.exists()) {
-                root.mkdirs();
-                return new Array<>();
-            }
-            FileHandle[] files = root.list();
-            Array<FileHandle> projects = new Array<>();
-            for (FileHandle f : files) {
-                if (f.isDirectory()) projects.add(f);
-            }
-            return projects;
-        }
+			add(errorLabel = new VisLabel("")).colspan(2).row();
+			errorLabel.setColor(Color.RED);
 
-        public static String createProject(String name) {
-            if (name == null || name.trim().isEmpty()) return "Name cannot be empty.";
-            if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid characters.";
-            FileHandle projectDir = Gdx.files.local(ROOT_DIR).child(name);
-            if (projectDir.exists()) return "Project already exists.";
+			VisTextButton createBtn = new VisTextButton("Create");
+			createBtn.addListener(new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					// 调用带包名的创建方法
+					String err = ProjectManager.createProject(nameField.getText(), pkgField.getText());
+					if (err == null) { onSuccess.run(); fadeOut(); }
+					else { errorLabel.setText(err); pack(); }
+				}
+			});
+			add(createBtn).colspan(2).right();
+			pack(); centerWindow();
+		}
+	}
 
-            try {
-                projectDir.mkdirs();
-                projectDir.child("Scripts").mkdirs();
+	public static class ConfirmOpenDialog extends VisDialog {
+		private final Runnable onYes;
 
-                ProjectConfig config = new ProjectConfig();
-                config.name = name;
-                projectDir.child("project.json").writeString(new Json().prettyPrint(config), false);
+		public ConfirmOpenDialog(String name, Runnable onYes) {
+			super("Confirm");
+			this.onYes = onYes;
+			setModal(true); addCloseButton(); closeOnEscape();
+			TableUtils.setSpacingDefaults(this);
+			text("Open project [" + name + "]?");
 
-                String mainCode = "package com.game;\nimport com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\nimport com.goldsprite.gdengine.ecs.GameWorld;\nimport com.goldsprite.gdengine.log.Debug;\n\npublic class Main implements IGameScriptEntry {\n    @Override public void onStart(GameWorld world) {\n        Debug.log(\"Hello Script!\");\n    }\n}";
-                projectDir.child("Scripts/com/game/Main.java").writeString(mainCode, false);
-                return null;
-            } catch (Exception e) {
-                return "Error: " + e.getMessage();
-            }
-        }
+			// [修复] 使用 result 机制，而不是手动 bind click listener
+			button("Yes", true);
+			button("No", false);
 
-        public static class ProjectConfig {
-            public String name;
-            public String entryClass = "Main";
-        }
-    }
+			pack(); centerWindow();
+		}
 
-    // =========================================================================================
-    // 弹窗逻辑
-    // =========================================================================================
-    public static class CreateProjectDialog extends VisDialog {
-        private final VisTextField nameField;
-        private final VisLabel errorLabel;
-        private final Runnable onSuccess;
-
-        public CreateProjectDialog(Runnable onSuccess) {
-            super("Create Project");
-            this.onSuccess = onSuccess;
-            setModal(true); addCloseButton(); closeOnEscape();
-            TableUtils.setSpacingDefaults(this);
-
-            add(new VisLabel("Name:")).left();
-            add(nameField = new VisTextField()).width(200).row();
-            add(errorLabel = new VisLabel("")).colspan(2).row();
-            errorLabel.setColor(Color.RED);
-
-            VisTextButton createBtn = new VisTextButton("Create");
-            createBtn.addListener(new ChangeListener() {
-					@Override public void changed(ChangeEvent event, Actor actor) {
-						String err = ProjectManager.createProject(nameField.getText());
-						if (err == null) { onSuccess.run(); fadeOut(); }
-						else { errorLabel.setText(err); pack(); }
-					}
-				});
-            add(createBtn).colspan(2).right();
-            pack(); centerWindow();
-        }
-    }
-
-    public static class ConfirmOpenDialog extends VisDialog {
-        public ConfirmOpenDialog(String name, Runnable onYes) {
-            super("Confirm");
-            setModal(true); addCloseButton(); closeOnEscape();
-            TableUtils.setSpacingDefaults(this);
-            text("Open project [" + name + "]?");
-            button("Yes", true).addListener(new ChangeListener() {
-					@Override public void changed(ChangeEvent event, Actor actor) { onYes.run(); }
-				});
-            button("No", false);
-            pack(); centerWindow();
-        }
-    }
+		@Override
+		protected void result(Object object) {
+			if ((boolean) object) {
+				onYes.run();
+			}
+		}
+	}
 }

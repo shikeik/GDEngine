@@ -9,6 +9,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Tree;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -25,6 +26,9 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 import com.kotcrab.vis.ui.widget.VisTree;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * 屏幕 2: 引擎编辑器 (IDE)
@@ -49,11 +53,21 @@ public class GDEngineEditorScreen extends GScreen {
 		super.initViewport();
 	}
 
+	// [新增] 重置状态逻辑
 	@Override
 	public void show() {
 		super.show();
-        // 每次进入时刷新文件树，防止外部修改导致不同步
-        reloadProjectTree();
+		// 1. 重置编辑器文本
+		if (codeEditor != null) codeEditor.setText("");
+		// 2. 重置当前文件引用
+		currentEditingFile = null;
+		// 3. 重置状态栏
+		if (statusLabel != null) {
+			statusLabel.setText("Ready");
+			statusLabel.setColor(Color.LIGHT_GRAY);
+		}
+		// 4. 刷新树
+		reloadProjectTree();
 	}
 
     @Override
@@ -177,7 +191,7 @@ public class GDEngineEditorScreen extends GScreen {
         new Thread(() -> {
             try {
                 // 目前硬编码入口类，后续可从 project.json 读取
-                String entryClass = "com.game.Main"; 
+                String entryClass = "com.game.Main";
                 String projectPath = projectDir.file().getAbsolutePath();
 
                 Debug.logT("Editor", "Start building project: %s", projectPath);
@@ -228,25 +242,56 @@ public class GDEngineEditorScreen extends GScreen {
         }).start();
     }
 
-    private void reloadProjectTree() {
-        fileTree.clearChildren();
+	private void reloadProjectTree() {
+		// [新增] 1. 保存当前展开状态
+		Set<String> expandedPaths = new HashSet<>();
+		if (fileTree.getNodes().size > 0) {
+			saveExpansionState(fileTree.getNodes(), expandedPaths);
+		}
 
-        FileHandle currentProj = GDEngineHubScreen.ProjectManager.currentProject;
+		fileTree.clearChildren();
 
-        if (currentProj == null || !currentProj.exists()) {
-            statusLabel.setText("Error: No Project Loaded");
-            return;
-        }
+		FileHandle currentProj = GDEngineHubScreen.ProjectManager.currentProject;
+		if (currentProj == null || !currentProj.exists()) {
+			statusLabel.setText("Error: No Project Loaded");
+			return;
+		}
 
-        FileHandle scriptsDir = currentProj.child("Scripts");
-        if (!scriptsDir.exists()) scriptsDir.mkdirs();
+		FileHandle scriptsDir = currentProj.child("Scripts");
+		if (!scriptsDir.exists()) scriptsDir.mkdirs();
 
-        FileNode rootNode = new FileNode(currentProj);
-        rootNode.setExpanded(true);
-        fileTree.add(rootNode);
+		FileNode rootNode = new FileNode(currentProj);
+		// 根节点总是展开
+		rootNode.setExpanded(true);
+		fileTree.add(rootNode);
 
-        recursiveAddNodes(rootNode, scriptsDir);
-    }
+		recursiveAddNodes(rootNode, scriptsDir);
+
+		// [新增] 2. 恢复展开状态
+		restoreExpansionState(fileTree.getNodes(), expandedPaths);
+	}
+
+	private void saveExpansionState(Array<FileNode> nodes, Set<String> paths) {
+		for (Tree.Node<FileNode, FileHandle, VisLabel> node : nodes) {
+			if (node.isExpanded()) {
+				paths.add(node.getValue().path());
+			}
+			if (node.getChildren().size > 0) {
+				saveExpansionState(node.getChildren(), paths);
+			}
+		}
+	}
+
+	private void restoreExpansionState(Array<FileNode> nodes, Set<String> paths) {
+		for (Tree.Node<FileNode, FileHandle, VisLabel> node : nodes) {
+			if (paths.contains(node.getValue().path())) {
+				node.setExpanded(true);
+			}
+			if (node.getChildren().size > 0) {
+				restoreExpansionState(node.getChildren(), paths);
+			}
+		}
+	}
 
     private void recursiveAddNodes(FileNode parentNode, FileHandle dir) {
         FileHandle[] files = dir.list();
@@ -370,7 +415,7 @@ public class GDEngineEditorScreen extends GScreen {
 						packageStmt = "package " + packageName + ";\n\n";
 					}
 
-					String template = packageStmt + 
+					String template = packageStmt +
 						"import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\n" +
 						"import com.goldsprite.gdengine.ecs.GameWorld;\n" +
 						"import com.goldsprite.gdengine.log.Debug;\n\n" +

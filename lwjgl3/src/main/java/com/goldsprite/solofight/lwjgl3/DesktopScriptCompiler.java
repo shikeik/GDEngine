@@ -1,6 +1,5 @@
 package com.goldsprite.solofight.lwjgl3;
 
-import com.badlogic.gdx.Gdx;
 import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 import com.goldsprite.gdengine.log.Debug;
 import org.eclipse.jdt.core.compiler.batch.BatchCompiler;
