@@ -21,5 +21,7 @@ public class GDEngineSelectionScreen extends BaseSelectionScreen {
 		map.put("编辑器开发", null);
 		map.put("引擎 编辑器", EditorGameScreen.class);
 		map.put("引擎 游戏实机", RealGameScreen.class);
+		// 在 initScreenMapping 方法中：
+		map.put("GDProject Hub", com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen.class);
 	}
 }
