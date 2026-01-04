@@ -1,4 +1,4 @@
-# SoloFight V1.8.3.x
+# SoloFight V1.8.6
 
 ## 介绍:
 

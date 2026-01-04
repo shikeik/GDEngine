@@ -61,7 +61,7 @@ public class IDEConsole extends VisTable {
 		});
 
 		header.add(toggleBtn).width(30).height(30).padRight(5);
-		header.add(lastLogLabel).expandX().fillX().padRight(5);
+		header.add(lastLogLabel).expandX().fillX().minWidth(0).padRight(5); // <--- 改了这里
 		header.add(clearBtn).height(30);
 
 		add(header).growX().height(COLLAPSED_HEIGHT);

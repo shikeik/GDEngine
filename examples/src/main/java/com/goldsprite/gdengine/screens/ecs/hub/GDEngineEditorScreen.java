@@ -13,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Json;
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -158,7 +159,6 @@ public class GDEngineEditorScreen extends GScreen {
 
 		if (Gd.compiler == null) {
 			statusLabel.setText("Error: No Compiler");
-			Debug.logT("Editor", "Compiler is null. (Desktop needs implementation)");
 			return;
 		}
 
@@ -167,11 +167,26 @@ public class GDEngineEditorScreen extends GScreen {
 
 		new Thread(() -> {
 			try {
-				// TODO: Read from project.json
-				String entryClass = "com.game.Main";
+				// [核心修复] 动态读取入口类名
+				String entryClass = "com.game.Main"; // 默认兜底
+				FileHandle configFile = projectDir.child("project.json");
+
+				if (configFile.exists()) {
+					try {
+						GDEngineHubScreen.ProjectManager.ProjectConfig cfg = new Json().fromJson(GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+						if (cfg != null && cfg.entryClass != null && !cfg.entryClass.isEmpty()) {
+							entryClass = cfg.entryClass;
+						}
+					} catch (Exception e) {
+						Debug.logT("Editor", "⚠️ 读取配置失败，使用默认入口: " + e.getMessage());
+					}
+				}
+
 				String projectPath = projectDir.file().getAbsolutePath();
 
-				Debug.logT("Editor", "Building: %s", projectPath);
+				Debug.logT("Editor", "Building: %s (Entry: %s)", projectPath, entryClass);
+
+				// 编译
 				Class<?> clazz = Gd.compiler.compile(entryClass, projectPath);
 
 				if (clazz == null) {

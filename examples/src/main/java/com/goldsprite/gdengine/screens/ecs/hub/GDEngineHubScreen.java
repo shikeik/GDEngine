@@ -11,7 +11,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.Json;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
@@ -227,36 +226,65 @@ public class GDEngineHubScreen extends GScreen {
 			if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
 			if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
 
-			// [修改] 使用 getProjectsRoot()
-			FileHandle projectDir = getProjectsRoot().child(name);
-			if (projectDir.exists()) return "Project already exists.";
+			FileHandle finalTarget = getProjectsRoot().child(name);
+			if (finalTarget.exists()) {
+				return "Project already exists!";
+			}
+
+			// 临时构建目录
+			FileHandle tempRoot = Gdx.files.local("build/tmp_creation");
+			FileHandle tempProj = tempRoot.child(name);
+			if (tempProj.exists()) tempProj.deleteDirectory();
+			tempProj.mkdirs();
 
 			try {
-				projectDir.mkdirs();
-				FileHandle srcDir = projectDir.child("Scripts");
-				srcDir.mkdirs();
+				// ---------------------------------------------------------
+				// 1. 读取并生成 project.json
+				// ---------------------------------------------------------
+				FileHandle tplConfig = Gdx.files.internal("script_project_templates/HelloGame/project.json");
+				if (!tplConfig.exists()) return "Template missing: project.json"; // 明确报错
 
-				ProjectConfig config = new ProjectConfig();
-				config.name = name;
-				config.entryClass = packageName + ".Main";
-				projectDir.child("project.json").writeString(new Json().prettyPrint(config), false);
+				String jsonContent = tplConfig.readString("UTF-8");
+				jsonContent = jsonContent.replace("${PROJECT_NAME}", name);
+				jsonContent = jsonContent.replace("${ENTRY_CLASS}", packageName+".Main");
 
-				// 根据包名生成目录
+				// 直接写入临时目录
+				tempProj.child("project.json").writeString(jsonContent, false, "UTF-8");
+
+				// ---------------------------------------------------------
+				// 2. 读取并生成 Main.java
+				// ---------------------------------------------------------
+				FileHandle tplMain = Gdx.files.internal("script_project_templates/HelloGame/Scripts/Main.java");
+				if (!tplMain.exists()) return "Template missing: Main.java"; // 明确报错
+
+				String mainCode = tplMain.readString("UTF-8");
+				mainCode = mainCode.replace("${PACKAGE_NAME}", packageName)
+					.replace("${PROJECT_NAME}", name);
+
+				// 构建包路径: Scripts/com/mygame/Main.java
 				String packagePath = packageName.replace('.', '/');
-				FileHandle mainFile = srcDir.child(packagePath + "/Main.java");
+				FileHandle targetMain = tempProj.child("Scripts").child(packagePath).child("Main.java");
 
-				String mainCode = "package " + packageName + ";\n\n" +
-					"import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\n" +
-					"import com.goldsprite.gdengine.ecs.GameWorld;\n" +
-					"import com.goldsprite.gdengine.log.Debug;\n\n" +
-					"public class Main implements IGameScriptEntry {\n" +
-					"    @Override public void onStart(GameWorld world) {\n" +
-					"        Debug.logT(\"Script\", \"Hello " + name + "!\");\n" +
-					"    }\n" +
-					"}";
-				mainFile.writeString(mainCode, false);
+				// 确保父目录存在 (关键)
+				targetMain.parent().mkdirs();
+
+				// 写入
+				targetMain.writeString(mainCode, false, "UTF-8");
+
+				// ---------------------------------------------------------
+				// 3. 交付 (Local -> External)
+				// ---------------------------------------------------------
+				// 将构建好的临时目录复制到最终位置
+				tempProj.copyTo(finalTarget.parent());
+
+				// 清理
+				tempProj.deleteDirectory();
+
 				return null;
 			} catch (Exception e) {
+				e.printStackTrace();
+				// 失败清理
+				if (tempProj.exists()) tempProj.deleteDirectory();
 				return "Error: " + e.getMessage();
 			}
 		}
@@ -264,6 +292,7 @@ public class GDEngineHubScreen extends GScreen {
 		public static class ProjectConfig {
 			public String name;
 			public String entryClass = "Main";
+			public String version = "1.0";
 		}
 	}
 
