@@ -9,7 +9,7 @@ import com.goldsprite.gdengine.screens.ecs.editor.RealGameScreen;
 import com.goldsprite.gdengine.screens.ecs.skeleton.SkeletonVisualScreen;
 import java.util.Map;
 
-public class GDEngineSelectionScreen extends BaseSelectionScreen {
+public class GDEngineSelectionScreen extends BaseSelectionScreen {int k5;
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("功能验证", null);

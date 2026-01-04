@@ -24,8 +24,8 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 
 /**
- * GDProject Hub 入口屏幕 (包含 Editor 屏幕类)
- * 全 VisUI 实现
+ * 屏幕 1: 项目管理器 (Hub)
+ * 职责：展示项目列表、创建项目、记录当前选中的项目上下文
  */
 public class GDEngineHubScreen extends GScreen {
 
@@ -70,10 +70,10 @@ public class GDEngineHubScreen extends GScreen {
 			});
 
         topBar.add(titleLabel).expandX().left();
-        topBar.add(btnCreate).right();
+        topBar.add(btnCreate).right().height(50);
         root.add(topBar).growX().height(60).padBottom(10).row();
 
-        // Project List
+        // Project List Container
         projectListTable = new VisTable();
         projectListTable.top();
 
@@ -81,9 +81,8 @@ public class GDEngineHubScreen extends GScreen {
         scrollPane.setFadeScrollBars(false);
         scrollPane.setScrollingDisabled(true, false);
 
-        // 【修复点】使用 VisTable 而不是 Table
         VisTable container = new VisTable();
-        container.setBackground("window-bg"); // 现在 VisTable 知道去 VisUI.getSkin() 里找这个 drawable
+        container.setBackground("window-bg");
         container.add(scrollPane).grow().pad(5);
 
         root.add(container).grow();
@@ -124,14 +123,16 @@ public class GDEngineHubScreen extends GScreen {
 					}
 				});
 
-            projectListTable.add(item).growX().height(60).padBottom(5).row();
+            projectListTable.add(item).growX().height(80).padBottom(10).row();
         }
     }
 
     private void openProject(FileHandle projectDir) {
+        // 1. 设置上下文
         ProjectManager.currentProject = projectDir;
         Debug.logT("Hub", "Opening project: %s", projectDir.path());
 
+        // 2. 跳转到独立的 Editor 屏幕
         getScreenManager().setCurScreen(GDEngineEditorScreen.class, true);
     }
 
@@ -139,7 +140,7 @@ public class GDEngineHubScreen extends GScreen {
     public void render0(float delta) {
         neonBatch.setProjectionMatrix(getWorldCamera().combined);
         neonBatch.begin();
-        // 简单背景网格
+        // 绘制简单的背景网格
         float w = getWorldCamera().viewportWidth;
         float h = getWorldCamera().viewportHeight;
         float cx = getWorldCamera().position.x;
@@ -161,10 +162,11 @@ public class GDEngineHubScreen extends GScreen {
     }
 
     // =========================================================================================
-    // 静态内部类：ProjectManager (逻辑)
+    // 静态内部类：ProjectManager (逻辑核心 - 公共访问点)
     // =========================================================================================
     public static class ProjectManager {
         public static final String ROOT_DIR = "Projects";
+        // 全局上下文：当前选中的项目
         public static FileHandle currentProject;
 
         public static Array<FileHandle> listProjects() {
@@ -183,22 +185,20 @@ public class GDEngineHubScreen extends GScreen {
 
         public static String createProject(String name) {
             if (name == null || name.trim().isEmpty()) return "Name cannot be empty.";
-            if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid characters. Use [a-zA-Z0-9_]";
+            if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid characters.";
             FileHandle projectDir = Gdx.files.local(ROOT_DIR).child(name);
             if (projectDir.exists()) return "Project already exists.";
 
             try {
                 projectDir.mkdirs();
                 projectDir.child("Scripts").mkdirs();
+
                 ProjectConfig config = new ProjectConfig();
                 config.name = name;
                 projectDir.child("project.json").writeString(new Json().prettyPrint(config), false);
 
-                // 写入模板
-                String mainCode = "package com.game;\nimport com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\nimport com.goldsprite.gdengine.ecs.GameWorld;\npublic class Main implements IGameScriptEntry {\n    @Override public void onStart(GameWorld world) {\n    }\n}";
-                // 这里我们假设放到 com/game 目录下
+                String mainCode = "package com.game;\nimport com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\nimport com.goldsprite.gdengine.ecs.GameWorld;\nimport com.goldsprite.gdengine.log.Debug;\n\npublic class Main implements IGameScriptEntry {\n    @Override public void onStart(GameWorld world) {\n        Debug.log(\"Hello Script!\");\n    }\n}";
                 projectDir.child("Scripts/com/game/Main.java").writeString(mainCode, false);
-
                 return null;
             } catch (Exception e) {
                 return "Error: " + e.getMessage();
@@ -212,7 +212,7 @@ public class GDEngineHubScreen extends GScreen {
     }
 
     // =========================================================================================
-    // 静态内部类：Dialogs (UI)
+    // 弹窗逻辑
     // =========================================================================================
     public static class CreateProjectDialog extends VisDialog {
         private final VisTextField nameField;
@@ -223,7 +223,6 @@ public class GDEngineHubScreen extends GScreen {
             super("Create Project");
             this.onSuccess = onSuccess;
             setModal(true); addCloseButton(); closeOnEscape();
-
             TableUtils.setSpacingDefaults(this);
 
             add(new VisLabel("Name:")).left();
@@ -249,67 +248,12 @@ public class GDEngineHubScreen extends GScreen {
             super("Confirm");
             setModal(true); addCloseButton(); closeOnEscape();
             TableUtils.setSpacingDefaults(this);
-
             text("Open project [" + name + "]?");
             button("Yes", true).addListener(new ChangeListener() {
 					@Override public void changed(ChangeEvent event, Actor actor) { onYes.run(); }
 				});
             button("No", false);
             pack(); centerWindow();
-        }
-    }
-
-    // =========================================================================================
-    // 静态内部类：Editor Screen (空壳)
-    // =========================================================================================
-
-    public static class GDEngineEditorScreen extends GScreen {
-        private Stage stage;
-
-        @Override
-        public ScreenManager.Orientation getOrientation() {
-            return ScreenManager.Orientation.Landscape;
-        }
-
-        @Override
-        public void create() {
-            stage = new Stage(getUIViewport());
-            getImp().addProcessor(stage);
-
-            VisTable root = new VisTable();
-            root.setFillParent(true);
-            root.setBackground("window-bg");
-            stage.addActor(root);
-
-            String projName = ProjectManager.currentProject != null ? ProjectManager.currentProject.name() : "Unknown";
-
-            VisLabel title = new VisLabel("Editor: " + projName);
-            title.setFontScale(2.0f);
-            title.setColor(Color.CYAN);
-            root.add(title).row();
-
-            VisLabel hint = new VisLabel("Editor UI is under construction...");
-            root.add(hint).pad(20).row();
-
-            VisTextButton backBtn = new VisTextButton("<< Back to Hub");
-            backBtn.addListener(new ChangeListener() {
-					@Override
-					public void changed(ChangeEvent event, Actor actor) {
-						getScreenManager().popLastScreen();
-					}
-				});
-            root.add(backBtn).padTop(50);
-        }
-
-        @Override
-        public void render0(float delta) {
-            stage.act(delta);
-            stage.draw();
-        }
-
-        @Override
-        public void dispose() {
-            if (stage != null) stage.dispose();
         }
     }
 }
