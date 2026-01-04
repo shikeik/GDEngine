@@ -27,6 +27,9 @@ dependencies {
 	implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
 	implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
 
+	// 添加 ECJ 编译器 (和 Android 端版本保持一致或使用较新版)
+	implementation 'org.eclipse.jdt:ecj:3.33.0'
+
 	if (enableGraalNative == 'true') {
 		implementation "io.github.berstanio:gdx-svmhelper-backend-lwjgl3:$graalHelperVersion"
 	}

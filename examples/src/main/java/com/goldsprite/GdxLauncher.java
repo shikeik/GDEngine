@@ -99,6 +99,7 @@ public class GdxLauncher extends Game {
 	}
 
 	private void testAndroidScript() {
+		if (userType != Application.ApplicationType.Android) return;
 		if (scriptCompiler == null) return;
 
 		new Thread(() -> {

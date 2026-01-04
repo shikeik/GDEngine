@@ -22,29 +22,18 @@ public class Lwjgl3Launcher {
 		if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
 		createApplication();
 	}
-	private static Lwjgl3Application createApplication() {
-		// --- 1. 实现屏幕切换回调 (PC版就是改窗口大小) ---//因为体验不佳先注释了
-		/*ScreenManager.orientationChanger = (orientation) -> {
-			int w = Gdx.graphics.getWidth();
-			int h = Gdx.graphics.getHeight();
 
-			// 只有当当前状态不符合目标时才切换
-			if (orientation == ScreenManager.Orientation.LANDSCAPE) {
-				if (w < h) Gdx.graphics.setWindowedMode(h, w); // 翻转
-			} else {
-				if (w > h) Gdx.graphics.setWindowedMode(h, w); // 翻转
-			}
-		};*/
-		// ---------------------------------------------
-		return new Lwjgl3Application(new GdxLauncher(), getDefaultConfiguration());
-//		return new Lwjgl3Application(new EditorScene2D(), getDefaultConfiguration());
+	private static Lwjgl3Application createApplication() {
+		// [修改] 创建 PC 端编译器实例
+		DesktopScriptCompiler compiler = new DesktopScriptCompiler();
+
+		// [修改] 注入到游戏主入口
+		return new Lwjgl3Application(new GdxLauncher(compiler), getDefaultConfiguration());
 	}
 
 	private static Lwjgl3ApplicationConfiguration getDefaultConfiguration() {
 		Lwjgl3ApplicationConfiguration configuration = new Lwjgl3ApplicationConfiguration();
-
 		configuration.setTitle(BuildConfig.PROJECT_NAME+" - V" + BuildConfig.DEV_VERSION);
-
 		Graphics.DisplayMode primaryMode = Lwjgl3ApplicationConfiguration.getDisplayMode();
 		configuration.setWindowedMode((int) WORLD_WIDTH, (int) WORLD_HEIGHT);
 		configuration.setDecorated(true);

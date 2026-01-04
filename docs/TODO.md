@@ -10,6 +10,8 @@ GScreen的输入多路复用要接上
 
 LogErr得做了
 
+BioCodeEditor更新: 现在行数变了不刷新布局高度导致内容被截掉
+
 
 
 

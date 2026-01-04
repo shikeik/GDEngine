@@ -188,6 +188,14 @@ public class ScreenManager implements Disposable {
 	}
 
 	public void setCurScreen(GScreen screen) {
+		// [修复] 自动依赖注入
+		// 如果是临时 new 出来的屏幕，还没有绑定 Manager 或 Input，这里自动补全
+		if (screen.getScreenManager() == null) {
+			screen.setScreenManager(this);
+		}
+		if (screen.getImp() == null) {
+			screen.setImp(new InputMultiplexer());
+		}
 		//如果屏幕未准备则初始化屏幕
 		screen.initialize();
 		//隐藏上个屏幕并切换到目标屏幕
