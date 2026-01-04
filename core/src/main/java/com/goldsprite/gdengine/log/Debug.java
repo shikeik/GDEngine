@@ -28,6 +28,7 @@ public class Debug {
 		"Test1 Y",
 		"Engine Y",
 		"Compiler Y",
+		"GDProject-TEST Y",
 	};
 
 	public static String LOG_TAG = BuildConfig.PROJECT_NAME;

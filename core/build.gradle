@@ -90,6 +90,29 @@ tasks.register('updateReadmeVersion') {
 }
 compileJava.dependsOn(updateReadmeVersion)
 
+// --- [新增] 引擎核心库打包任务 ---
+// 定义 Jar 包的输出路径 (直接输出到 android 模块的 assets 目录)
+def engineJarPath = "${project.rootDir}/android/assets/gdengine.jar"
+tasks.register('packageEngineCore', Jar) {
+	// 1. 声明打包内容：core 模块编译后的所有 class
+	from sourceSets.main.output
+
+	// 2. 设置输出位置
+	archiveFileName = "gdengine.jar"
+	destinationDirectory = file("${project.rootDir}/assets/")
+
+	// 3. 排除一些不需要的文件 (可选)
+	exclude "**/*.html"
+	exclude "**/*.gwt.xml"
+
+	// 4. 打印日志，确认任务执行
+	doLast {
+		println "✅ [Engine] Core jar packaged to: ${engineJarPath}"
+	}
+}
+// 关键：确保每次编译 core 时都会更新这个 jar
+classes.finalizedBy(packageEngineCore)
+
 testing {
 	suites {
 		// Configure the built-in test suite

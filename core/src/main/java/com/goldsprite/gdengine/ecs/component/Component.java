@@ -10,7 +10,7 @@ public abstract class Component extends EcsObject {
 	// ==========================================
 	// 1. 核心引用区
 	// ==========================================
-	protected GObject gameObject;
+	protected GObject gobject;
 	protected TransformComponent transform; // 极高频使用的快捷引用
 
 	// ==========================================
@@ -40,9 +40,9 @@ public abstract class Component extends EcsObject {
 		if (isAwake) return;
 		isAwake = true;
 
-		if (gameObject != null) {
-			ComponentManager.registerComponent(gameObject, this.getClass(), this);
-			ComponentManager.updateEntityComponentMask(gameObject);
+		if (gobject != null) {
+			ComponentManager.registerComponent(gobject, this.getClass(), this);
+			ComponentManager.updateEntityComponentMask(gobject);
 		}
 
 		onAwake();
@@ -94,16 +94,16 @@ public abstract class Component extends EcsObject {
 
 	/** 硬销毁：立即切断所有联系 (系统内部使用) */
 	public final void destroyImmediate() {
-		if (gameObject != null) {
+		if (gobject != null) {
 			// 临死前最后一口气
 			if (isEnabled) onDisable();
 			onDestroy();
 
 			// 物理移除引用
-			gameObject.removeComponent(this);
-			ComponentManager.unregisterComponent(gameObject, this.getClass(), this);
+			gobject.removeComponent(this);
+			ComponentManager.unregisterComponent(gobject, this.getClass(), this);
 
-			gameObject = null;
+			gobject = null;
 			transform = null;
 		}
 	}
@@ -113,11 +113,11 @@ public abstract class Component extends EcsObject {
 	// ==========================================
 	/** 仅供 GObject 添加组件时调用，自动绑定 Transform */
 	public void setGObject(GObject gObject) {
-		this.gameObject = gObject;
+		this.gobject = gObject;
 		this.transform = gObject.transform; // 模仿 Unity，自动缓存 transform 引用
 	}
 
-	public GObject getGObject() { return gameObject; }
+	public GObject getGObject() { return gobject; }
 	public TransformComponent getTransform() { return transform; }
 
 	/** 开关控制 */
@@ -136,26 +136,26 @@ public abstract class Component extends EcsObject {
 
 	/** 最常用：获取第一个匹配类型的组件 */
 	public <T extends Component> T getComponent(Class<T> type) {
-		if (gameObject == null) return null;
-		return gameObject.getComponent(type);
+		if (gobject == null) return null;
+		return gobject.getComponent(type);
 	}
 
 	/** 语义查找：获取指定名字的组件 (如 "HitBox") */
 	public <T extends Component> T getComponent(Class<T> type, String name) {
-		if (gameObject == null) return null;
-		return gameObject.getComponent(type, name);
+		if (gobject == null) return null;
+		return gobject.getComponent(type, name);
 	}
 
 	/** 索引查找：获取第 N 个匹配类型的组件 (如 第2个武器) */
 	public <T extends Component> T getComponent(Class<T> type, int index) {
-		if (gameObject == null) return null;
-		return gameObject.getComponent(type, index);
+		if (gobject == null) return null;
+		return gobject.getComponent(type, index);
 	}
 
 	/** 批量查找：获取所有匹配类型的组件 (如 所有渲染器) */
 	public <T extends Component> java.util.List<T> getComponents(Class<T> type) {
-		if (gameObject == null) return null;
-		return gameObject.getComponents(type);
+		if (gobject == null) return null;
+		return gobject.getComponents(type);
 	}
 
 	// ==========================================
@@ -163,7 +163,7 @@ public abstract class Component extends EcsObject {
 	// ==========================================
 	@Override
 	public String toString() {
-		String objName = (gameObject != null) ? gameObject.getName() : "Null";
+		String objName = (gobject != null) ? gobject.getName() : "Null";
 		// 格式: 101#Player.Rigidbody
 		return String.format("%d#%s.%s", getGid(), objName, getName());
 	}

@@ -10,30 +10,29 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.audio.SynthAudio;
+import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.screens.ecs.editor.Gd;
 import com.goldsprite.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
-import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 
 public class GdxLauncher extends Game {
-	private Application.ApplicationType userType;
-
+	// 【新增】保存编译器引用
+	private final IScriptCompiler scriptCompiler;
 	public SpriteBatch batch;
 	public Debug debug;
-
-	// 【新增】保存编译器引用
-    private final IScriptCompiler scriptCompiler;
+	private Application.ApplicationType userType;
 
 	public GdxLauncher() {
 		this(null);
 	}
+
 	// 【新增】构造函数，强制要求传入编译器
-    // 如果是纯实机运行不需要编译功能，可以传 null
-    public GdxLauncher(IScriptCompiler scriptCompiler) {
-        this.scriptCompiler = scriptCompiler;
-    }
+	// 如果是纯实机运行不需要编译功能，可以传 null
+	public GdxLauncher(IScriptCompiler scriptCompiler) {
+		this.scriptCompiler = scriptCompiler;
+	}
 
 	@Override
 	public void create() {
@@ -50,14 +49,14 @@ public class GdxLauncher extends Game {
 		SynthAudio.init(); // [新增] 启动音频线程
 
 		// 2. 【核心】初始化引擎全局代理 (Gd)
-        // 启动时默认为 RELEASE 模式，传入我们从 Launcher 带来的编译器
-        Gd.init(Gd.Mode.RELEASE, null, null, scriptCompiler);
+		// 启动时默认为 RELEASE 模式，传入我们从 Launcher 带来的编译器
+		Gd.init(Gd.Mode.RELEASE, null, null, scriptCompiler);
 		Debug.logT("Engine", "Gd initialized. Compiler available: %b", (scriptCompiler != null));
 		testAndroidScript();
 
 		// 4. 设置全局视口
 		float scl = 1.2f;
-		Viewport uiViewport = new ExtendViewport(540*scl, 960*scl, new OrthographicCamera());
+		Viewport uiViewport = new ExtendViewport(540 * scl, 960 * scl, new OrthographicCamera());
 
 		// 3. 初始化屏幕管理器
 		new ScreenManager(uiViewport);
@@ -72,7 +71,7 @@ public class GdxLauncher extends Game {
 
 	@Override
 	public void render() {
-		if(Gdx.input.isKeyJustPressed(Input.Keys.K)) {
+		if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
 			Debug.showDebugUI = !Debug.showDebugUI;
 		}
 
@@ -83,7 +82,7 @@ public class GdxLauncher extends Game {
 	@Override
 	public void resize(int width, int height) {
 		ScreenManager.getInstance().resize(width, height);
-		if(debug != null) debug.resize(width, height);
+		if (debug != null) debug.resize(width, height);
 		// 【补漏】视口变化时通知 Gd 配置 (虽然 Release 模式下由 GameWorld 自己管，但保持同步是个好习惯)
 		// Gd.config.logicWidth = ...;
 	}
@@ -99,34 +98,34 @@ public class GdxLauncher extends Game {
 
 
 	private void testAndroidScript() {
-        new Thread(() -> {
-            try {
+		new Thread(() -> {
+			try {
 				// 注意：使用转义的双引号 \"
 				String code =
 					"package com.test;" +
-					"public class HelloAndroid {" +
-					"    public String greet() {" +
-					"        return \"Hello from Dynamic Dex! Time: " + System.currentTimeMillis() + "\";" +
-					"    }" +
-					"}";
+						"public class HelloAndroid {" +
+						"    public String greet() {" +
+						"        return \"Hello from Dynamic Dex! Time: " + System.currentTimeMillis() + "\";" +
+						"    }" +
+						"}";
 
-                // 编译！
-                Class<?> cls = Gd.compiler.compile("com.test.HelloAndroid", code);
+				// 编译！
+				Class<?> cls = Gd.compiler.compile("com.test.HelloAndroid", code);
 
-                if (cls != null) {
-                    Object obj = cls.newInstance();
-                    // 反射调用方法
-                    java.lang.reflect.Method m = cls.getMethod("greet");
-                    String result = (String) m.invoke(obj);
+				if (cls != null) {
+					Object obj = cls.newInstance();
+					// 反射调用方法
+					java.lang.reflect.Method m = cls.getMethod("greet");
+					String result = (String) m.invoke(obj);
 
-                    Gdx.app.postRunnable(() -> {
-                        Debug.log("SCRIPT: 脚本运行结果: " + result);
-                    });
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-				Debug.log("testCode编译异常: "+e.getCause());
-            }
-        }).start();
-    }
+					Gdx.app.postRunnable(() -> {
+						Debug.log("SCRIPT: 脚本运行结果: " + result);
+					});
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				Debug.log("testCode编译异常: " + e.getCause());
+			}
+		}).start();
+	}
 }

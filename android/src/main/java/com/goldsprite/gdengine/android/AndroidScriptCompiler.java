@@ -31,6 +31,7 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 	private final File cacheDir;
 	private final File dexOutputDir;
 	private final File androidJarFile;
+	private final File engineJarFile; // [新增]
 
 	public AndroidScriptCompiler(Context context) {
 		this.context = context;
@@ -44,11 +45,13 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 
 		this.dexOutputDir = context.getDir("dex", Context.MODE_PRIVATE);
 		this.androidJarFile = new File(context.getCacheDir(), "android.jar");
+		this.engineJarFile = new File(context.getCacheDir(), "gdengine.jar"); // [新增] 引擎核心库路径
 
 		if (!cacheDir.exists()) cacheDir.mkdirs();
 		if (!dexOutputDir.exists()) dexOutputDir.mkdirs();
 
-		prepareAndroidJar();
+		// [修改] 统一准备依赖
+		prepareDependencies();
 	}
 
 	@Override
@@ -152,10 +155,14 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		org.eclipse.jdt.internal.compiler.batch.Main ecjCompiler =
 			new org.eclipse.jdt.internal.compiler.batch.Main(ecjWriter, ecjWriter, false, null, null);
 
+		// 构建 Classpath：android.jar + gdengine.jar
+		// Windows/Linux 分隔符可能不同，但在 Android 上通常是 ':'
+		String classpath = androidJarFile.getAbsolutePath() + File.pathSeparator + engineJarFile.getAbsolutePath();
+
 		String[] ecjArgs = {
 			"-source", "1.8", "-target", "1.8", "-nowarn", "-proc:none",
 			"-d", classDir.getAbsolutePath(),
-			"-classpath", androidJarFile.getAbsolutePath(),
+			"-classpath", classpath, // [修改] 传入组合路径
 			javaFile.getAbsolutePath()
 		};
 
@@ -182,7 +189,9 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 			builder.setMode(CompilationMode.DEBUG);
 			builder.setMinApiLevel(19);
 			builder.addProgramFiles(classFiles);
+			// [修改] D8 也需要知道这些库，否则可能会报找不到引用
 			builder.addLibraryFiles(Paths.get(androidJarFile.getAbsolutePath()));
+			builder.addLibraryFiles(Paths.get(engineJarFile.getAbsolutePath())); // [新增]
 			builder.setOutput(Paths.get(outputDexFile.getAbsolutePath()), OutputMode.DexIndexed);
 
 			D8.run(builder.build());
@@ -193,15 +202,27 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		}
 	}
 
-	private void prepareAndroidJar() {
-		if (androidJarFile.exists() && androidJarFile.length() > 0) return;
-		try (InputStream is = context.getAssets().open("android.jar");
-			 FileOutputStream fos = new FileOutputStream(androidJarFile)) {
+	private void prepareDependencies() {
+		// 释放 android.jar
+		extractAsset("android.jar", androidJarFile);
+		// [新增] 释放 gdengine.jar
+		extractAsset("gdengine.jar", engineJarFile);
+	}
+
+	// 提取公共方法，避免代码重复
+	private void extractAsset(String assetName, File destFile) {
+		if (destFile.exists() && destFile.length() > 0) {
+			Debug.logT("Compiler", "依赖库: %s 已缓存, 加载成功", assetName);
+			return;
+		}
+		try (InputStream is = context.getAssets().open(assetName);
+			 FileOutputStream fos = new FileOutputStream(destFile)) {
 			byte[] buffer = new byte[2048];
 			int length;
 			while ((length = is.read(buffer)) > 0) fos.write(buffer, 0, length);
+			Debug.logT("Compiler", "依赖库解压完成: " + assetName);
 		} catch (IOException e) {
-			Debug.logT("Compiler", "Fatal: android.jar missing!");
+			Debug.logT("Compiler", "Fatal: 缺失依赖库 " + assetName);
 		}
 	}
 
