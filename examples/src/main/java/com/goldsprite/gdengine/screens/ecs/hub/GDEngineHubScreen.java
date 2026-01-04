@@ -38,6 +38,12 @@ public class GDEngineHubScreen extends GScreen {
         return ScreenManager.Orientation.Landscape;
     }
 
+	@Override
+	protected void initViewport() {
+		uiViewportScale = 1.5f;
+		super.initViewport();
+	}
+
     @Override
     public void create() {
         stage = new Stage(getUIViewport());

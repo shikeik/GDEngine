@@ -7,5 +7,5 @@ public interface IScriptCompiler {
      * @param sourceCode Java 源代码字符串
      * @return 编译好的 Class 对象，如果失败返回 null
      */
-    Class<?> compile(String className, String sourceCode);
+    Class<?> compile(String mainClassName, String projectPath);
 }

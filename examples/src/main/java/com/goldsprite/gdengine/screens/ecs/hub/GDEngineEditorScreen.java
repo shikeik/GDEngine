@@ -39,6 +39,20 @@ public class GDEngineEditorScreen extends GScreen {
         return ScreenManager.Orientation.Landscape;
     }
 
+	@Override
+	protected void initViewport() {
+		uiViewportScale = 1.5f;
+		super.initViewport();
+	}
+
+	@Override
+	public void show() {
+		// TODO: Implement this method
+		super.show();
+
+        reloadProjectTree();
+	}
+
     @Override
     public void create() {
         // 1. 使用基类视口
@@ -180,27 +194,56 @@ public class GDEngineEditorScreen extends GScreen {
      * 新建文件弹窗
      */
     private void showCreateFileDialog() {
-        FileHandle currentProj = GDEngineHubScreen.ProjectManager.currentProject;
-        if (currentProj == null) return;
+		FileHandle currentProj = GDEngineHubScreen.ProjectManager.currentProject;
+		if (currentProj == null) return;
 
-        VisDialog dialog = new VisDialog("New Script");
-        dialog.setModal(true);
-        dialog.closeOnEscape(); // 【修复API】没有 set 前缀
-        dialog.addCloseButton();
-        TableUtils.setSpacingDefaults(dialog);
+		// --- 新增逻辑：确定目标文件夹 ---
+		FileHandle scriptsRoot = currentProj.child("Scripts");
+		FileHandle targetDir = scriptsRoot; // 默认为根目录
 
-        dialog.add(new VisLabel("Class Name:")).left();
-        VisTextField nameField = new VisTextField();
-        dialog.add(nameField).width(200).row();
+		// 获取树中选中的节点
+		if (!fileTree.getSelection().isEmpty()) {
+			FileNode selectedNode = fileTree.getSelection().first(); // 获取第一个选中项
+			FileHandle selectedFile = selectedNode.getValue();
 
-        VisLabel errLabel = new VisLabel("");
-        errLabel.setColor(Color.RED);
-        dialog.add(errLabel).colspan(2).row();
+			if (selectedFile.isDirectory()) {
+				targetDir = selectedFile;
+			} else {
+				targetDir = selectedFile.parent();
+			}
+		}
 
-        VisTextButton btnCreate = new VisTextButton("Create");
-        dialog.add(btnCreate).colspan(2).right();
+		// 确保目标路径是在 Scripts 目录下（防止选到外部去）
+		if (!targetDir.path().startsWith(scriptsRoot.path())) {
+			targetDir = scriptsRoot;
+		}
 
-        btnCreate.addListener(new ChangeListener() {
+		final FileHandle finalTargetDir = targetDir; // 供内部类使用
+		// --------------------------------
+
+		VisDialog dialog = new VisDialog("New Script");
+		dialog.setModal(true);
+		dialog.closeOnEscape();
+		dialog.addCloseButton();
+		TableUtils.setSpacingDefaults(dialog);
+
+		// 显示当前目标路径 (方便用户确认)
+		String relativePath = finalTargetDir.path().substring(scriptsRoot.path().length());
+		if(relativePath.isEmpty()) relativePath = "/ (Root)";
+		dialog.add(new VisLabel("Target: " + relativePath)).colspan(2).left().row();
+
+		dialog.add(new VisLabel("Class Name:")).left();
+		VisTextField nameField = new VisTextField();
+		dialog.add(nameField).width(200).row();
+
+		VisLabel errLabel = new VisLabel("");
+		errLabel.setColor(Color.RED);
+		dialog.add(errLabel).colspan(2).row();
+
+		VisTextButton btnCreate = new VisTextButton("Create");
+		dialog.add(btnCreate).colspan(2).right();
+
+		btnCreate.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
 					String name = nameField.getText().trim();
@@ -210,8 +253,8 @@ public class GDEngineEditorScreen extends GScreen {
 						return;
 					}
 
-					FileHandle scriptsDir = currentProj.child("Scripts");
-					FileHandle newFile = scriptsDir.child(name + ".java");
+					// 使用计算出的 finalTargetDir
+					FileHandle newFile = finalTargetDir.child(name + ".java");
 
 					if (newFile.exists()) {
 						errLabel.setText("File Exists");
@@ -219,15 +262,31 @@ public class GDEngineEditorScreen extends GScreen {
 						return;
 					}
 
-					String template = "import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\n" +
-                        "import com.goldsprite.gdengine.ecs.GameWorld;\n" +
-                        "import com.goldsprite.gdengine.log.Debug;\n\n" +
-                        "public class " + name + " implements IGameScriptEntry {\n" +
-                        "    @Override\n" +
-                        "    public void onStart(GameWorld world) {\n" +
-                        "        Debug.log(\"" + name + " started!\");\n" +
-                        "    }\n" +
-                        "}";
+					// --- 动态生成 Package 声明 ---
+					// 计算相对于 Scripts 目录的路径，例如 "utils/combat" -> "package utils.combat;"
+					String packageStmt = "";
+					String relPath = finalTargetDir.path().replace(scriptsRoot.path(), "");
+					// 去除开头的斜杠
+					if (relPath.startsWith("/")) relPath = relPath.substring(1);
+					if (relPath.startsWith("\\")) relPath = relPath.substring(1);
+
+					if (!relPath.isEmpty()) {
+						// 将路径分隔符转换为包点号
+						String packageName = relPath.replace("/", ".").replace("\\", ".");
+						packageStmt = "package " + packageName + ";\n\n";
+					}
+					// ---------------------------
+
+					String template = packageStmt + 
+						"import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\n" +
+						"import com.goldsprite.gdengine.ecs.GameWorld;\n" +
+						"import com.goldsprite.gdengine.log.Debug;\n\n" +
+						"public class " + name + " implements IGameScriptEntry {\n" +
+						"    @Override\n" +
+						"    public void onStart(GameWorld world) {\n" +
+						"        Debug.log(\"" + name + " started!\");\n" +
+						"    }\n" +
+						"}";
 
 					newFile.writeString(template, false);
 
@@ -237,10 +296,10 @@ public class GDEngineEditorScreen extends GScreen {
 				}
 			});
 
-        dialog.pack();
-        dialog.centerWindow();
-        stage.addActor(dialog.fadeIn());
-    }
+		dialog.pack();
+		dialog.centerWindow();
+		stage.addActor(dialog.fadeIn());
+	}
 
     @Override
     public void render0(float delta) {
