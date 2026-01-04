@@ -19,6 +19,7 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.screens.ecs.GameRunnerScreen;
 import com.goldsprite.gdengine.screens.ecs.editor.Gd;
+import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
 import com.goldsprite.solofight.ui.widget.BioCodeEditor;
 import com.kotcrab.vis.ui.util.TableUtils;
@@ -241,33 +242,34 @@ public class GDEngineEditorScreen extends GScreen {
 
 			Actor actor = node.getActor();
 
-			// 1. Click: Toggle / Open
-			actor.addListener(new ClickListener() {
-				@Override
-				public void clicked(InputEvent event, float x, float y) {
-					if (event.getButton() == Input.Buttons.RIGHT) return;
-					if (file.isDirectory()) {
-						node.setExpanded(!node.isExpanded());
-					} else {
-						loadFile(file);
-					}
-				}
-			});
+			// [重构] 交互逻辑：使用 ActorGestureListener 统一接管
+			// 参数: halfTapSquareSize=20, tapCountInterval=0.4, longPressDuration=0.4 (变快), maxFlingDelay=0.15
+			actor.addListener(new ActorGestureListener(20, 0.4f, 0.4f, 0.15f) {
 
-			// 2. Right Click (PC)
-			actor.addListener(new ClickListener() {
 				@Override
-				public void clicked(InputEvent event, float x, float y) {
-					if (event.getButton() == Input.Buttons.RIGHT) {
+				public void tap(InputEvent event, float x, float y, int count, int button) {
+					// 左键单击 -> 展开/打开
+					if (button == Input.Buttons.LEFT) {
+						if (file.isDirectory()) {
+							node.setExpanded(!node.isExpanded());
+						} else {
+							loadFile(file);
+						}
+					}
+					// 右键单击 -> 菜单 (PC习惯)
+					else if (button == Input.Buttons.RIGHT) {
 						showContextMenu(node, event.getStageX(), event.getStageY());
 					}
 				}
-			});
 
-			// 3. Long Press (Mobile)
-			actor.addListener(new ActorGestureListener() {
 				@Override
 				public boolean longPress(Actor actor, float x, float y) {
+					// 长按 -> 菜单 (Mobile习惯)
+					// longPress 返回 true 会阻止后续可能的事件，但 tap 是在 touchUp 触发，
+					// 而 longPress 是在按下 0.4s 后触发。
+					// 只要这里触发了菜单，用户松手时虽然技术上可能触发 tap，但菜单已经模态遮挡或者逻辑上已拦截。
+					// 实际上 ActorGestureListener 内部机制保证了 longPress 触发后通常不会再回调 tap。
+
 					com.badlogic.gdx.math.Vector2 v = actor.localToStageCoordinates(new com.badlogic.gdx.math.Vector2(x, y));
 					showContextMenu(node, v.x, v.y);
 					return true;
@@ -308,8 +310,9 @@ public class GDEngineEditorScreen extends GScreen {
 	// Dialogs & Helpers
 	// =========================================================================================
 
+	// [修改] 使用 BaseDialog
 	private void showDeleteConfirm(FileHandle file) {
-		VisDialog dialog = new VisDialog("Delete") {
+		new BaseDialog("Delete") {
 			@Override
 			protected void result(Object object) {
 				if ((boolean) object) {
@@ -322,21 +325,15 @@ public class GDEngineEditorScreen extends GScreen {
 					reloadProjectTree();
 				}
 			}
-		};
-		dialog.text("Are you sure to delete?\n" + file.name());
-		dialog.button("Yes", true);
-		dialog.button("No", false);
-		dialog.pack(); dialog.centerWindow(); stage.addActor(dialog.fadeIn());
+		}.text("Are you sure to delete?\n" + file.name())
+			.button("Yes", true)
+			.button("No", false)
+			.show(stage); // 使用封装的 show 方法
 	}
 
+	// [修改] 使用 BaseDialog
 	private void showCreateDialog(FileHandle targetDir, boolean isScript) {
-		VisDialog dialog = new VisDialog(isScript ? "New Script" : "New Folder");
-		dialog.setModal(true);
-		// [修复] 使用 dialog. 调用方法
-		dialog.addCloseButton();
-		dialog.closeOnEscape();
-
-		TableUtils.setSpacingDefaults(dialog);
+		BaseDialog dialog = new BaseDialog(isScript ? "New Script" : "New Folder");
 
 		dialog.add(new VisLabel("Name:")).left();
 		VisTextField nameField = new VisTextField();
@@ -361,7 +358,7 @@ public class GDEngineEditorScreen extends GScreen {
 					FileHandle scriptsRoot = GDEngineHubScreen.ProjectManager.currentProject.child("Scripts");
 					String relPath = targetDir.path().replace(scriptsRoot.path(), "");
 					if (relPath.startsWith("/")) relPath = relPath.substring(1);
-					if (relPath.startsWith("\\")) relPath = relPath.substring(1); // Win兼容
+					if (relPath.startsWith("\\")) relPath = relPath.substring(1);
 
 					String pkg = relPath.replace("/", ".").replace("\\", ".");
 					String pkgStmt = pkg.isEmpty() ? "" : "package " + pkg + ";\n\n";
@@ -386,9 +383,8 @@ public class GDEngineEditorScreen extends GScreen {
 				dialog.fadeOut(); reloadProjectTree();
 			}
 		});
-		dialog.pack();
-		dialog.centerWindow(); // [修复]
-		stage.addActor(dialog.fadeIn());
+
+		dialog.show(stage);
 	}
 
 	private void loadFile(FileHandle file) {

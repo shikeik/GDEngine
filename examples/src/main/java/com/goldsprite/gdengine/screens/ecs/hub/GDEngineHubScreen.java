@@ -16,6 +16,7 @@ import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
 import com.kotcrab.vis.ui.util.TableUtils;
 import com.kotcrab.vis.ui.widget.VisDialog;
@@ -78,12 +79,14 @@ public class GDEngineHubScreen extends GScreen {
 		titleLabel.setFontScale(1.5f);
 		titleLabel.setColor(Color.CYAN);
 
+		// [修复后] 使用 show(stage)
 		VisTextButton btnCreate = new VisTextButton("[ + New Project ]");
 		btnCreate.setColor(Color.GREEN);
 		btnCreate.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				stage.addActor(new CreateProjectDialog(GDEngineHubScreen.this::refreshList).fadeIn());
+				// 使用 .show(stage) 自动处理 pack 和 center
+				new CreateProjectDialog(GDEngineHubScreen.this::refreshList).show(stage);
 			}
 		});
 
@@ -141,9 +144,9 @@ public class GDEngineHubScreen extends GScreen {
 			item.addListener(new ClickListener() {
 				@Override
 				public void clicked(InputEvent event, float x, float y) {
-					stage.addActor(new ConfirmOpenDialog(projDir.name(), () -> {
+					new ConfirmOpenDialog(projDir.name(), () -> {
 						openProject(projDir);
-					}).fadeIn());
+					}).show(stage);
 				}
 			});
 
@@ -249,7 +252,7 @@ public class GDEngineHubScreen extends GScreen {
 	// =========================================================================================
 	// Dialogs
 	// =========================================================================================
-	public static class CreateProjectDialog extends VisDialog {
+	public static class CreateProjectDialog extends BaseDialog {
 		private final VisTextField nameField;
 		private final VisTextField pkgField;
 		private final VisLabel errorLabel;
@@ -258,8 +261,6 @@ public class GDEngineHubScreen extends GScreen {
 		public CreateProjectDialog(Runnable onSuccess) {
 			super("Create Project");
 			this.onSuccess = onSuccess;
-			setModal(true); addCloseButton(); closeOnEscape();
-			TableUtils.setSpacingDefaults(this);
 
 			add(new VisLabel("Name:")).left();
 			add(nameField = new VisTextField("MyGame")).width(250).row();
@@ -283,20 +284,16 @@ public class GDEngineHubScreen extends GScreen {
 		}
 	}
 
-	public static class ConfirmOpenDialog extends VisDialog {
+	public static class ConfirmOpenDialog extends BaseDialog {
 		private final Runnable onYes;
 
 		public ConfirmOpenDialog(String name, Runnable onYes) {
 			super("Confirm");
 			this.onYes = onYes;
-			setModal(true); addCloseButton(); closeOnEscape();
-			TableUtils.setSpacingDefaults(this);
-			text("Open project [" + name + "]?");
 
+			text("Open project [" + name + "]?");
 			button("Yes", true);
 			button("No", false);
-
-			pack(); centerWindow();
 		}
 
 		@Override
