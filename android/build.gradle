@@ -171,6 +171,7 @@ tasks.register('run', Exec) {
 	commandLine "$adb", 'shell', 'am', 'start', '-n', 'com.goldsprite.microsurvivalgame/com.goldsprite.microsurvivalgame.android.AndroidLauncher'
 }
 
+// 引擎任务==================================================
 // --- [新增] 确保打包 APK 前先生成引擎 Jar ---
 // 让 android 的资源合并任务 依赖于 core 的打包任务
 tasks.configureEach { task ->
@@ -178,6 +179,7 @@ tasks.configureEach { task ->
 		task.dependsOn ":core:packageEngineCore"
 	}
 }
+// 引擎任务==================================================
 
 /*
 // APK 复制配置
