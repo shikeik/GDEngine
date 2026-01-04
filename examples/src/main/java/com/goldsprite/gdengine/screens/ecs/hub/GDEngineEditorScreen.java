@@ -1,12 +1,15 @@
 package com.goldsprite.gdengine.screens.ecs.hub;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Tree;
+import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
@@ -16,8 +19,11 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.screens.ecs.GameRunnerScreen;
 import com.goldsprite.gdengine.screens.ecs.editor.Gd;
+import com.goldsprite.gdengine.ui.widget.IDEConsole;
 import com.goldsprite.solofight.ui.widget.BioCodeEditor;
 import com.kotcrab.vis.ui.util.TableUtils;
+import com.kotcrab.vis.ui.widget.MenuItem;
+import com.kotcrab.vis.ui.widget.PopupMenu;
 import com.kotcrab.vis.ui.widget.VisDialog;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
@@ -30,22 +36,19 @@ import com.kotcrab.vis.ui.widget.VisTree;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * 屏幕 2: 引擎编辑器 (IDE)
- * 集成开发环境：代码编辑 + 编译运行
- */
 public class GDEngineEditorScreen extends GScreen {
 
-    private Stage stage;
-    private BioCodeEditor codeEditor;
-    private VisTree<FileNode, FileHandle> fileTree;
-    private VisLabel statusLabel;
-    private FileHandle currentEditingFile;
+	private Stage stage;
+	private BioCodeEditor codeEditor;
+	private VisTree<FileNode, FileHandle> fileTree;
+	private VisLabel statusLabel;
+	private FileHandle currentEditingFile;
+	private IDEConsole console;
 
-    @Override
-    public ScreenManager.Orientation getOrientation() {
-        return ScreenManager.Orientation.Landscape;
-    }
+	@Override
+	public ScreenManager.Orientation getOrientation() {
+		return ScreenManager.Orientation.Landscape;
+	}
 
 	@Override
 	protected void initViewport() {
@@ -53,199 +56,153 @@ public class GDEngineEditorScreen extends GScreen {
 		super.initViewport();
 	}
 
-	// [新增] 重置状态逻辑
 	@Override
 	public void show() {
 		super.show();
-		// 1. 重置编辑器文本
+		Debug.showDebugUI = false; // Hide Global DebugUI
+
+		// 重置状态
 		if (codeEditor != null) codeEditor.setText("");
-		// 2. 重置当前文件引用
 		currentEditingFile = null;
-		// 3. 重置状态栏
 		if (statusLabel != null) {
 			statusLabel.setText("Ready");
 			statusLabel.setColor(Color.LIGHT_GRAY);
 		}
-		// 4. 刷新树
 		reloadProjectTree();
 	}
 
-    @Override
-    public void create() {
-        // 1. 使用基类视口
-        stage = new Stage(getUIViewport());
-        getImp().addProcessor(stage);
+	@Override
+	public void hide() {
+		super.hide();
+		Debug.showDebugUI = true; // Restore Global DebugUI
+	}
 
-        // 2. 根布局
-        VisTable root = new VisTable();
-        root.setFillParent(true);
-        root.setBackground("window-bg");
-        stage.addActor(root);
+	@Override
+	public void create() {
+		stage = new Stage(getUIViewport());
+		getImp().addProcessor(stage);
 
-        // --- 顶部工具栏 ---
-        VisTable toolbar = new VisTable();
-        toolbar.setBackground("button");
+		VisTable root = new VisTable();
+		root.setFillParent(true);
+		root.setBackground("window-bg");
+		stage.addActor(root);
 
-        VisTextButton btnBack = new VisTextButton("<< Back");
-        btnBack.addListener(new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					getScreenManager().popLastScreen();
+		// 1. Toolbar
+		VisTable toolbar = new VisTable();
+		toolbar.setBackground("button");
+		createToolbar(toolbar);
+		root.add(toolbar).growX().height(50).row();
+
+		// 2. Main Content (SplitPane: Tree + Code)
+		VisTable leftPanel = new VisTable();
+		leftPanel.setBackground("window-bg");
+
+		fileTree = new VisTree<>();
+		fileTree.getSelection().setProgrammaticChangeEvents(false);
+
+		VisScrollPane treeScroll = new VisScrollPane(fileTree);
+		treeScroll.setFadeScrollBars(false);
+		leftPanel.add(treeScroll).grow().pad(5);
+
+		VisTable rightPanel = new VisTable();
+		codeEditor = new BioCodeEditor();
+		rightPanel.add(codeEditor).grow();
+
+		VisSplitPane splitPane = new VisSplitPane(leftPanel, rightPanel, false);
+		splitPane.setSplitAmount(0.25f);
+		root.add(splitPane).grow().row();
+
+		// 3. Console
+		console = new IDEConsole();
+		root.add(console).growX();
+
+		reloadProjectTree();
+	}
+
+	private void createToolbar(Table toolbar) {
+		VisTextButton btnBack = new VisTextButton("<< Back");
+		btnBack.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { getScreenManager().popLastScreen(); }});
+
+		VisTextButton btnSave = new VisTextButton("Save");
+		btnSave.setColor(Color.YELLOW);
+		btnSave.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { saveCurrentFile(); }});
+
+		VisTextButton btnRun = new VisTextButton("▶ Run");
+		btnRun.setColor(Color.CYAN);
+		btnRun.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { buildAndRun(); }});
+
+		statusLabel = new VisLabel("Ready");
+		statusLabel.setColor(Color.LIGHT_GRAY);
+
+		toolbar.add(btnBack).padRight(10);
+		toolbar.add(btnSave).padRight(10);
+		toolbar.add(btnRun).padRight(20);
+		toolbar.add(statusLabel).expandX().left();
+	}
+
+	// =========================================================================================
+	// Core Logic: Build & Run
+	// =========================================================================================
+	private void buildAndRun() {
+		if (currentEditingFile != null) saveCurrentFile();
+
+		FileHandle projectDir = GDEngineHubScreen.ProjectManager.currentProject;
+		if (projectDir == null) { statusLabel.setText("Error: No Project"); return; }
+
+		if (Gd.compiler == null) {
+			statusLabel.setText("Error: No Compiler");
+			Debug.logT("Editor", "Compiler is null. (Desktop needs implementation)");
+			return;
+		}
+
+		statusLabel.setText("Compiling...");
+		statusLabel.setColor(Color.YELLOW);
+
+		new Thread(() -> {
+			try {
+				// TODO: Read from project.json
+				String entryClass = "com.game.Main";
+				String projectPath = projectDir.file().getAbsolutePath();
+
+				Debug.logT("Editor", "Building: %s", projectPath);
+				Class<?> clazz = Gd.compiler.compile(entryClass, projectPath);
+
+				if (clazz == null) {
+					Gdx.app.postRunnable(() -> { statusLabel.setText("Compile Failed"); statusLabel.setColor(Color.RED); });
+					return;
 				}
-			});
 
-        VisTextButton btnSave = new VisTextButton("Save");
-        btnSave.setColor(Color.YELLOW);
-        btnSave.addListener(new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					saveCurrentFile();
+				if (!IGameScriptEntry.class.isAssignableFrom(clazz)) {
+					Gdx.app.postRunnable(() -> { statusLabel.setText("Invalid Entry"); Debug.logT("Editor", "Main must implement IGameScriptEntry"); });
+					return;
 				}
-			});
 
-		// [新增] 运行按钮
-        VisTextButton btnRun = new VisTextButton("▶ Run");
-        btnRun.setColor(Color.CYAN);
-        btnRun.addListener(new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					buildAndRun();
-				}
-			});
+				Object instance = clazz.newInstance();
+				IGameScriptEntry gameEntry = (IGameScriptEntry) instance;
 
-        VisTextButton btnAdd = new VisTextButton("+ Script");
-        btnAdd.setColor(Color.GREEN);
-        btnAdd.addListener(new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					showCreateFileDialog();
-				}
-			});
+				Gdx.app.postRunnable(() -> {
+					statusLabel.setText("Running...");
+					statusLabel.setColor(Color.GREEN);
+					getScreenManager().setCurScreen(new GameRunnerScreen(gameEntry));
+				});
 
-        statusLabel = new VisLabel("Ready");
-        statusLabel.setColor(Color.LIGHT_GRAY);
+			} catch (Exception e) {
+				e.printStackTrace();
+				Gdx.app.postRunnable(() -> { statusLabel.setText("Error: " + e.getMessage()); statusLabel.setColor(Color.RED); });
+			}
+		}).start();
+	}
 
-        toolbar.add(btnBack).padRight(10);
-        toolbar.add(btnAdd).padRight(10);
-        toolbar.add(btnSave).padRight(10);
-        toolbar.add(btnRun).padRight(20); // Run 在 Save 后面
-        toolbar.add(statusLabel).expandX().left();
-
-        root.add(toolbar).growX().height(50).row();
-
-        // --- 主体分割区域 ---
-
-        // 左侧：文件树
-        VisTable leftPanel = new VisTable();
-        leftPanel.setBackground("window-bg");
-
-        fileTree = new VisTree<>();
-        fileTree.getSelection().setProgrammaticChangeEvents(false);
-
-        VisScrollPane treeScroll = new VisScrollPane(fileTree);
-        treeScroll.setFadeScrollBars(false);
-        leftPanel.add(treeScroll).grow().pad(5);
-
-        // 右侧：代码编辑器
-        VisTable rightPanel = new VisTable();
-        codeEditor = new BioCodeEditor();
-        rightPanel.add(codeEditor).grow();
-
-        // 分割面板
-        VisSplitPane splitPane = new VisSplitPane(leftPanel, rightPanel, false);
-        splitPane.setSplitAmount(0.25f);
-
-        root.add(splitPane).grow();
-
-        // --- 初始化数据 ---
-        reloadProjectTree();
-    }
-
-    /**
-     * [核心] 编译并运行逻辑
-     */
-    private void buildAndRun() {
-        // 1. 自动保存当前文件
-        if (currentEditingFile != null) {
-            saveCurrentFile();
-        }
-
-        // 2. 获取项目上下文
-        FileHandle projectDir = GDEngineHubScreen.ProjectManager.currentProject;
-        if (projectDir == null) {
-            statusLabel.setText("Error: No Project Context");
-            return;
-        }
-
-        // 3. 检查编译器
-        if (Gd.compiler == null) {
-            statusLabel.setText("Error: No Compiler Available");
-            Debug.logT("Editor", "Compiler is null. Are you on Desktop without a compiler impl?");
-            return;
-        }
-
-        statusLabel.setText("Compiling...");
-        statusLabel.setColor(Color.YELLOW);
-
-        // 4. 异步编译 (防止卡死 UI)
-        new Thread(() -> {
-            try {
-                // 目前硬编码入口类，后续可从 project.json 读取
-                String entryClass = "com.game.Main";
-                String projectPath = projectDir.file().getAbsolutePath();
-
-                Debug.logT("Editor", "Start building project: %s", projectPath);
-
-                // 执行编译
-                Class<?> clazz = Gd.compiler.compile(entryClass, projectPath);
-
-                if (clazz == null) {
-                    Gdx.app.postRunnable(() -> {
-                        statusLabel.setText("Compile Failed");
-                        statusLabel.setColor(Color.RED);
-                    });
-                    return;
-                }
-
-                // 验证接口契约
-                if (!IGameScriptEntry.class.isAssignableFrom(clazz)) {
-                    Gdx.app.postRunnable(() -> {
-                        statusLabel.setText("Error: Main must implement IGameScriptEntry");
-                        statusLabel.setColor(Color.RED);
-                        Debug.logT("Editor", "Class %s does not implement IGameScriptEntry", clazz.getName());
-                    });
-                    return;
-                }
-
-                // 实例化
-                Object instance = clazz.newInstance();
-                IGameScriptEntry gameEntry = (IGameScriptEntry) instance;
-
-                // 回到主线程启动容器
-                Gdx.app.postRunnable(() -> {
-                    statusLabel.setText("Running...");
-                    statusLabel.setColor(Color.GREEN);
-                    Debug.logT("Editor", "Build success! Launching GameRunner...");
-
-                    // 跳转到游戏容器屏
-                    getScreenManager().setCurScreen(new GameRunnerScreen(gameEntry));
-                });
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                Gdx.app.postRunnable(() -> {
-                    statusLabel.setText("Error: " + e.getMessage());
-                    statusLabel.setColor(Color.RED);
-                    Debug.logT("Editor", "Exception during build/run: %s", e.toString());
-                });
-            }
-        }).start();
-    }
+	// =========================================================================================
+	// Core Logic: File Tree & Interaction
+	// =========================================================================================
 
 	private void reloadProjectTree() {
-		// [新增] 1. 保存当前展开状态
+		// 1. 保存展开状态
 		Set<String> expandedPaths = new HashSet<>();
+		// [修复] 检查 size > 0
 		if (fileTree.getNodes().size > 0) {
+			// [修复] 显式转换泛型或直接传递，下面的方法已修正为 Array<FileNode>
 			saveExpansionState(fileTree.getNodes(), expandedPaths);
 		}
 
@@ -261,161 +218,155 @@ public class GDEngineEditorScreen extends GScreen {
 		if (!scriptsDir.exists()) scriptsDir.mkdirs();
 
 		FileNode rootNode = new FileNode(currentProj);
-		// 根节点总是展开
 		rootNode.setExpanded(true);
 		fileTree.add(rootNode);
 
 		recursiveAddNodes(rootNode, scriptsDir);
 
-		// [新增] 2. 恢复展开状态
+		// 2. 恢复展开状态
 		restoreExpansionState(fileTree.getNodes(), expandedPaths);
 	}
 
-	private void saveExpansionState(Array<FileNode> nodes, Set<String> paths) {
-		for (Tree.Node<FileNode, FileHandle, VisLabel> node : nodes) {
-			if (node.isExpanded()) {
-				paths.add(node.getValue().path());
-			}
-			if (node.getChildren().size > 0) {
-				saveExpansionState(node.getChildren(), paths);
-			}
-		}
-	}
+	private void recursiveAddNodes(FileNode parentNode, FileHandle dir) {
+		FileHandle[] files = dir.list();
+		java.util.Arrays.sort(files, (a, b) -> {
+			if (a.isDirectory() && !b.isDirectory()) return -1;
+			if (!a.isDirectory() && b.isDirectory()) return 1;
+			return a.name().compareTo(b.name());
+		});
 
-	private void restoreExpansionState(Array<FileNode> nodes, Set<String> paths) {
-		for (Tree.Node<FileNode, FileHandle, VisLabel> node : nodes) {
-			if (paths.contains(node.getValue().path())) {
-				node.setExpanded(true);
-			}
-			if (node.getChildren().size > 0) {
-				restoreExpansionState(node.getChildren(), paths);
-			}
-		}
-	}
+		for (FileHandle file : files) {
+			FileNode node = new FileNode(file);
+			parentNode.add(node);
 
-    private void recursiveAddNodes(FileNode parentNode, FileHandle dir) {
-        FileHandle[] files = dir.list();
-        for (FileHandle file : files) {
-            FileNode node = new FileNode(file);
-            parentNode.add(node);
+			Actor actor = node.getActor();
 
-            // 绑定交互逻辑
-            node.getActor().addListener(new ClickListener() {
-					@Override
-					public void clicked(InputEvent event, float x, float y) {
-						if (file.isDirectory()) {
-							node.setExpanded(!node.isExpanded());
-						} else {
-							loadFile(file);
-						}
+			// 1. Click: Toggle / Open
+			actor.addListener(new ClickListener() {
+				@Override
+				public void clicked(InputEvent event, float x, float y) {
+					if (event.getButton() == Input.Buttons.RIGHT) return;
+					if (file.isDirectory()) {
+						node.setExpanded(!node.isExpanded());
+					} else {
+						loadFile(file);
 					}
-				});
+				}
+			});
 
-            if (file.isDirectory()) {
-                recursiveAddNodes(node, file);
-            }
-        }
-    }
+			// 2. Right Click (PC)
+			actor.addListener(new ClickListener() {
+				@Override
+				public void clicked(InputEvent event, float x, float y) {
+					if (event.getButton() == Input.Buttons.RIGHT) {
+						showContextMenu(node, event.getStageX(), event.getStageY());
+					}
+				}
+			});
 
-    private void loadFile(FileHandle file) {
-        this.currentEditingFile = file;
-        codeEditor.setText(file.readString());
-        statusLabel.setText("Editing: " + file.name());
-        statusLabel.setColor(Color.LIGHT_GRAY);
-    }
+			// 3. Long Press (Mobile)
+			actor.addListener(new ActorGestureListener() {
+				@Override
+				public boolean longPress(Actor actor, float x, float y) {
+					com.badlogic.gdx.math.Vector2 v = actor.localToStageCoordinates(new com.badlogic.gdx.math.Vector2(x, y));
+					showContextMenu(node, v.x, v.y);
+					return true;
+				}
+			});
 
-    private void saveCurrentFile() {
-        if (currentEditingFile != null) {
-            try {
-                currentEditingFile.writeString(codeEditor.getText(), false);
-                statusLabel.setText("Saved: " + currentEditingFile.name());
-                statusLabel.setColor(Color.GREEN);
-                statusLabel.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence(
-										  com.badlogic.gdx.scenes.scene2d.actions.Actions.color(Color.GREEN, 0.2f),
-										  com.badlogic.gdx.scenes.scene2d.actions.Actions.color(Color.LIGHT_GRAY, 0.5f)
-									  ));
-            } catch (Exception e) {
-                statusLabel.setText("Save Failed: " + e.getMessage());
-                statusLabel.setColor(Color.RED);
-            }
-        } else {
-            statusLabel.setText("No file selected.");
-        }
-    }
-
-    private void showCreateFileDialog() {
-		FileHandle currentProj = GDEngineHubScreen.ProjectManager.currentProject;
-		if (currentProj == null) return;
-
-		FileHandle scriptsRoot = currentProj.child("Scripts");
-		FileHandle targetDir = scriptsRoot;
-
-		if (!fileTree.getSelection().isEmpty()) {
-			FileNode selectedNode = fileTree.getSelection().first();
-			FileHandle selectedFile = selectedNode.getValue();
-			if (selectedFile.isDirectory()) {
-				targetDir = selectedFile;
-			} else {
-				targetDir = selectedFile.parent();
+			if (file.isDirectory()) {
+				recursiveAddNodes(node, file);
 			}
 		}
+	}
 
-		if (!targetDir.path().startsWith(scriptsRoot.path())) {
-			targetDir = scriptsRoot;
+	private void showContextMenu(FileNode node, float x, float y) {
+		FileHandle file = node.getValue();
+		PopupMenu menu = new PopupMenu();
+
+		if (file.isDirectory()) {
+			MenuItem itemScript = new MenuItem("New Script");
+			itemScript.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { showCreateDialog(file, true); }});
+			menu.addItem(itemScript);
+
+			MenuItem itemFolder = new MenuItem("New Folder");
+			itemFolder.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { showCreateDialog(file, false); }});
+			menu.addItem(itemFolder);
+
+			menu.addSeparator();
 		}
 
-		final FileHandle finalTargetDir = targetDir;
+		MenuItem itemDelete = new MenuItem("Delete");
+		itemDelete.getLabel().setColor(Color.RED);
+		itemDelete.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { showDeleteConfirm(file); }});
+		menu.addItem(itemDelete);
 
-		VisDialog dialog = new VisDialog("New Script");
+		menu.showMenu(stage, x, y);
+	}
+
+	// =========================================================================================
+	// Dialogs & Helpers
+	// =========================================================================================
+
+	private void showDeleteConfirm(FileHandle file) {
+		VisDialog dialog = new VisDialog("Delete") {
+			@Override
+			protected void result(Object object) {
+				if ((boolean) object) {
+					if (file.isDirectory()) file.deleteDirectory(); else file.delete();
+					if (currentEditingFile != null && currentEditingFile.equals(file)) {
+						codeEditor.setText("");
+						currentEditingFile = null;
+						statusLabel.setText("Deleted.");
+					}
+					reloadProjectTree();
+				}
+			}
+		};
+		dialog.text("Are you sure to delete?\n" + file.name());
+		dialog.button("Yes", true);
+		dialog.button("No", false);
+		dialog.pack(); dialog.centerWindow(); stage.addActor(dialog.fadeIn());
+	}
+
+	private void showCreateDialog(FileHandle targetDir, boolean isScript) {
+		VisDialog dialog = new VisDialog(isScript ? "New Script" : "New Folder");
 		dialog.setModal(true);
-		dialog.closeOnEscape();
+		// [修复] 使用 dialog. 调用方法
 		dialog.addCloseButton();
+		dialog.closeOnEscape();
+
 		TableUtils.setSpacingDefaults(dialog);
 
-		String relativePath = finalTargetDir.path().substring(scriptsRoot.path().length());
-		if(relativePath.isEmpty()) relativePath = "/ (Root)";
-		dialog.add(new VisLabel("Target: " + relativePath)).colspan(2).left().row();
-
-		dialog.add(new VisLabel("Class Name:")).left();
+		dialog.add(new VisLabel("Name:")).left();
 		VisTextField nameField = new VisTextField();
 		dialog.add(nameField).width(200).row();
 
-		VisLabel errLabel = new VisLabel("");
-		errLabel.setColor(Color.RED);
+		VisLabel errLabel = new VisLabel(""); errLabel.setColor(Color.RED);
 		dialog.add(errLabel).colspan(2).row();
 
 		VisTextButton btnCreate = new VisTextButton("Create");
 		dialog.add(btnCreate).colspan(2).right();
 
 		btnCreate.addListener(new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					String name = nameField.getText().trim();
-					if (name.isEmpty() || !name.matches("[a-zA-Z0-9_]+")) {
-						errLabel.setText("Invalid Name");
-						dialog.pack();
-						return;
-					}
+			@Override
+			public void changed(ChangeEvent event, Actor actor) {
+				String name = nameField.getText().trim();
+				if (name.isEmpty() || !name.matches("[a-zA-Z0-9_]+")) { errLabel.setText("Invalid Name"); dialog.pack(); return; }
 
-					FileHandle newFile = finalTargetDir.child(name + ".java");
+				if (isScript) {
+					FileHandle newFile = targetDir.child(name + ".java");
+					if (newFile.exists()) { errLabel.setText("Exists!"); dialog.pack(); return; }
 
-					if (newFile.exists()) {
-						errLabel.setText("File Exists");
-						dialog.pack();
-						return;
-					}
-
-					String packageStmt = "";
-					String relPath = finalTargetDir.path().replace(scriptsRoot.path(), "");
+					FileHandle scriptsRoot = GDEngineHubScreen.ProjectManager.currentProject.child("Scripts");
+					String relPath = targetDir.path().replace(scriptsRoot.path(), "");
 					if (relPath.startsWith("/")) relPath = relPath.substring(1);
-					if (relPath.startsWith("\\")) relPath = relPath.substring(1);
+					if (relPath.startsWith("\\")) relPath = relPath.substring(1); // Win兼容
 
-					if (!relPath.isEmpty()) {
-						String packageName = relPath.replace("/", ".").replace("\\", ".");
-						packageStmt = "package " + packageName + ";\n\n";
-					}
+					String pkg = relPath.replace("/", ".").replace("\\", ".");
+					String pkgStmt = pkg.isEmpty() ? "" : "package " + pkg + ";\n\n";
 
-					String template = packageStmt +
+					String content = pkgStmt +
 						"import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\n" +
 						"import com.goldsprite.gdengine.ecs.GameWorld;\n" +
 						"import com.goldsprite.gdengine.log.Debug;\n\n" +
@@ -425,38 +376,80 @@ public class GDEngineEditorScreen extends GScreen {
 						"        Debug.logT(\"Script\", \"" + name + " started!\");\n" +
 						"    }\n" +
 						"}";
-
-					newFile.writeString(template, false);
-
-					dialog.fadeOut();
-					reloadProjectTree();
+					newFile.writeString(content, false);
 					loadFile(newFile);
+				} else {
+					FileHandle newDir = targetDir.child(name);
+					if (newDir.exists()) { errLabel.setText("Exists!"); dialog.pack(); return; }
+					newDir.mkdirs();
 				}
-			});
-
+				dialog.fadeOut(); reloadProjectTree();
+			}
+		});
 		dialog.pack();
-		dialog.centerWindow();
+		dialog.centerWindow(); // [修复]
 		stage.addActor(dialog.fadeIn());
 	}
 
-    @Override
-    public void render0(float delta) {
-        stage.act(delta);
-        stage.draw();
-    }
+	private void loadFile(FileHandle file) {
+		this.currentEditingFile = file;
+		codeEditor.setText(file.readString());
+		statusLabel.setText("Editing: " + file.name());
+		statusLabel.setColor(Color.LIGHT_GRAY);
+	}
 
-    @Override
-    public void dispose() {
-        if (stage != null) stage.dispose();
-    }
+	private void saveCurrentFile() {
+		if (currentEditingFile != null) {
+			try {
+				currentEditingFile.writeString(codeEditor.getText(), false);
+				statusLabel.setText("Saved: " + currentEditingFile.name());
+				statusLabel.setColor(Color.GREEN);
+				statusLabel.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence(
+					com.badlogic.gdx.scenes.scene2d.actions.Actions.color(Color.GREEN, 0.2f),
+					com.badlogic.gdx.scenes.scene2d.actions.Actions.color(Color.LIGHT_GRAY, 0.5f)
+				));
+			} catch (Exception e) {
+				statusLabel.setText("Save Failed: " + e.getMessage());
+				statusLabel.setColor(Color.RED);
+			}
+		}
+	}
 
-    public static class FileNode extends Tree.Node<FileNode, FileHandle, VisLabel> {
-        public FileNode(FileHandle file) {
-            super(new VisLabel(file.name()));
-            setValue(file);
-            VisLabel label = getActor();
-            if (file.isDirectory()) label.setColor(Color.GOLD);
-            label.setFontScale(1.1f);
-        }
-    }
+	// --- State Persistence Helpers ---
+	// [修复] 明确泛型类型 Array<FileNode>
+	private void saveExpansionState(Array<FileNode> nodes, Set<String> paths) {
+		for (FileNode node : nodes) {
+			if (node.isExpanded()) paths.add(node.getValue().path());
+			// getChildren() 返回的就是 Array<FileNode>，现在匹配了
+			if (node.getChildren().size > 0) saveExpansionState(node.getChildren(), paths);
+		}
+	}
+
+	private void restoreExpansionState(Array<FileNode> nodes, Set<String> paths) {
+		for (FileNode node : nodes) {
+			if (paths.contains(node.getValue().path())) node.setExpanded(true);
+			if (node.getChildren().size > 0) restoreExpansionState(node.getChildren(), paths);
+		}
+	}
+
+	@Override
+	public void render0(float delta) {
+		stage.act(delta);
+		stage.draw();
+	}
+
+	@Override
+	public void dispose() {
+		if (stage != null) stage.dispose();
+	}
+
+	public static class FileNode extends Tree.Node<FileNode, FileHandle, VisLabel> {
+		public FileNode(FileHandle file) {
+			super(new VisLabel(file.name()));
+			setValue(file);
+			VisLabel label = getActor();
+			if (file.isDirectory()) label.setColor(Color.GOLD);
+			label.setFontScale(1.1f);
+		}
+	}
 }

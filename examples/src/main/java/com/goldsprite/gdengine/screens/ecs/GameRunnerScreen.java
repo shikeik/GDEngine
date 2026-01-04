@@ -65,14 +65,20 @@ public class GameRunnerScreen extends GScreen {
 
 	private void initUI() {
 		uiStage = new NeonStage(getUIViewport());
-		getImp().addProcessor(uiStage); // 确保 UI 能接收输入
+		getImp().addProcessor(uiStage);
 
 		Table root = new Table();
 		root.setFillParent(true);
-		root.top().right().pad(20);
+
+		// [修改] 之前是 top().right()，现在改为 top().left()
+		// 避开 DebugUI 的 FPS (通常在左上或右上，如果FPS在左上，这里放左下或者右边)
+		// 假设 FPS 在左上角，我们把 Stop 放左边往下一点，或者放右边
+		// 您的需求是 "放左边点"，可能是指离右边缘远一点，或者就是放在屏幕左侧?
+		// 假设之前挡住了右上角的FPS，那我们放到 **左上角** (并加 padding 避开可能的系统信息)
+
+		root.top().left().pad(20);
 		uiStage.addActor(root);
 
-		// 红色停止按钮
 		VisTextButton btnStop = new VisTextButton("STOP");
 		btnStop.setColor(Color.RED);
 		btnStop.addListener(new ClickListener() {
@@ -81,6 +87,8 @@ public class GameRunnerScreen extends GScreen {
 				stopGame();
 			}
 		});
+		// 稍微大一点，半透明
+		btnStop.getColor().a = 0.6f;
 		root.add(btnStop).width(80).height(40);
 	}
 
