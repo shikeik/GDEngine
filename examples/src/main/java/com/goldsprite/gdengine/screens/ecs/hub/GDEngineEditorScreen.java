@@ -107,6 +107,10 @@ public class GDEngineEditorScreen extends GScreen {
 
 		VisTable rightPanel = new VisTable();
 		codeEditor = new BioCodeEditor();
+		// [新增] 注入 Ctrl+S 回调
+		codeEditor.setOnSave(() -> {
+			saveCurrentFile();
+		});
 		rightPanel.add(codeEditor).grow();
 
 		VisSplitPane splitPane = new VisSplitPane(leftPanel, rightPanel, false);
