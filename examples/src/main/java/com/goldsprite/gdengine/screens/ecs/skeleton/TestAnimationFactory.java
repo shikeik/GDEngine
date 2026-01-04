@@ -123,11 +123,14 @@ public class TestAnimationFactory {
 		animComp.addAnimation(pose);
 	}
 
+	public static void addTrack(NeonAnimation anim, String bone, NeonProperty prop, float... keyframes) {
+		addTrack(anim, bone, prop, NeonCurve.SMOOTH, keyframes);
+	}
 	/**
 	 * 通用轨道构建器 (支持任意数量关键帧)
 	 * 参数格式: time1, value1, time2, value2, ...
 	 */
-	private static void addTrack(NeonAnimation anim, String bone, NeonProperty prop, float... keyframes) {
+	public static void addTrack(NeonAnimation anim, String bone, NeonProperty prop, NeonCurve curve, float... keyframes) {
 		if (keyframes.length % 2 != 0) {
 			throw new IllegalArgumentException("关键帧参数必须成对出现 (time, value)");
 		}
@@ -137,7 +140,7 @@ public class TestAnimationFactory {
 			float t = keyframes[i];
 			float v = keyframes[i+1];
 			// 默认全部使用平滑插值，如果需要精细控制，可以再加重载
-			line.addKeyframe(t, v, NeonCurve.SMOOTH);
+			line.addKeyframe(t, v, curve);
 		}
 		anim.addTimeline(line);
 	}

@@ -250,9 +250,10 @@ public class DebugConsole extends Group {
 		if (currentPanelY < getStage().getHeight()) {
 			if (contentContainer.getActor() == logScroll) {
 				logLabel.setText(String.join("\n", Debug.getLogs()));
-				if (logScroll.getScrollY() >= logScroll.getMaxY() - 50) {
-					logScroll.layout(); logScroll.setScrollY(logScroll.getMaxY());
-				}
+				
+//				if (logScroll.getScrollY() >= logScroll.getMaxY() - 50) {
+//					logScroll.layout(); logScroll.setScrollY(logScroll.getMaxY());
+//				}
 			} else if (contentContainer.getActor() == infoScroll) {
 				infoLabel.setText(Debug.getInfoString());
 			}
