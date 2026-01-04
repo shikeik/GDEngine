@@ -1,6 +1,8 @@
 package com.goldsprite.gdengine.android;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.os.Build;
 import com.android.tools.r8.*;
 import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
@@ -21,21 +23,23 @@ import java.util.zip.ZipInputStream;
 
 public class AndroidScriptCompiler implements IScriptCompiler {
 	private final Context context;
-	private final File cacheDir;     // 编译缓存根目录
-	private final File libsDir;      // 依赖库目录 (android.jar, gdengine.jar, gdx.jar...)
-	private final File dexOutputDir; // Dex 解压目录
+	private final File cacheDir;
+	private final File libsDir;
+	private final File dexOutputDir;
+
+	// [新增] 用于记录版本信息的 Prefs
+	private static final String PREF_NAME = "engine_compiler_config";
+	private static final String KEY_LAST_UPDATE = "last_apk_update_time";
 
 	public AndroidScriptCompiler(Context context) {
 		this.context = context;
 
-		// 1. 设置目录
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 			this.cacheDir = new File(context.getCodeCacheDir(), "compiler_cache");
 		} else {
 			this.cacheDir = new File(context.getCacheDir(), "compiler_cache");
 		}
 
-		// 所有的依赖 jar 都释放到这里
 		this.libsDir = new File(context.getCacheDir(), "engine_libs");
 		this.dexOutputDir = context.getDir("dex", Context.MODE_PRIVATE);
 
@@ -43,29 +47,26 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		if (!libsDir.exists()) libsDir.mkdirs();
 		if (!dexOutputDir.exists()) dexOutputDir.mkdirs();
 
-		// 2. 准备所有依赖库
 		prepareDependencies();
 	}
 
-	/**
-	 * 核心接口：编译整个项目目录
-	 * @param projectPath 项目根目录 (例如 Projects/DemoGame)
-	 *                   必须包含 Scripts 子目录
-	 */
+	// ... [compile 和 runEcjCompile/runD8Dexing/loadScriptJar 方法保持不变，省略以节省篇幅] ...
+	// 请保留之前的 compile, runEcjCompile, runD8Dexing, loadScriptJar, extractDexFromJar, recursiveFindJavaFiles, deleteRecursive 方法
+
 	@Override
-	public Class<?> compile(String mainClassName, String projectPath) { // 稍微改下签名适配你的接口
+	public Class<?> compile(String mainClassName, String projectPath) {
+		// ... (保持原样)
+		// 这里为了代码完整性，请确保保留之前正确的实现逻辑
 		try {
 			File projectDir = new File(projectPath);
 			Debug.logT("Compiler", "=== 开始编译项目: %s ===", projectDir.getName());
 
-			// 1. 确定源码目录
 			File scriptsDir = new File(projectDir, "Scripts");
 			if (!scriptsDir.exists()) {
 				Debug.logT("Compiler", "❌ 找不到 Scripts 目录: %s", scriptsDir.getAbsolutePath());
 				return null;
 			}
 
-			// 2. 扫描所有 .java 文件
 			List<File> javaFiles = new ArrayList<>();
 			recursiveFindJavaFiles(scriptsDir, javaFiles);
 
@@ -75,12 +76,10 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 			}
 			Debug.logT("Compiler", "扫描到 %d 个源文件", javaFiles.size());
 
-			// 3. 准备输出目录
 			File classOutputDir = new File(cacheDir, "classes");
 			if(classOutputDir.exists()) deleteRecursive(classOutputDir);
 			classOutputDir.mkdirs();
 
-			// 4. 构建 Classpath (libsDir 下的所有 jar + android.jar)
 			StringBuilder classpath = new StringBuilder();
 			File[] libs = libsDir.listFiles(f -> f.getName().endsWith(".jar"));
 			if (libs != null) {
@@ -90,12 +89,10 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 			}
 			Debug.logT("Compiler", "Classpath 构建完成，包含 %d 个库", (libs != null ? libs.length : 0));
 
-			// 5. ECJ 编译
 			if (!runEcjCompile(javaFiles, classOutputDir, classpath.toString())) {
 				return null;
 			}
 
-			// 6. D8 转换
 			File dexJarFile = new File(cacheDir, "script_output.jar");
 			if (dexJarFile.exists()) dexJarFile.delete();
 
@@ -103,7 +100,6 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 				return null;
 			}
 
-			// 7. 加载
 			return loadScriptJar(dexJarFile, mainClassName);
 
 		} catch (Exception e) {
@@ -113,7 +109,7 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		}
 	}
 
-	// --- 内部实现 ---
+	// ... (ECJ, D8, Loader 方法保持不变) ...
 
 	private boolean runEcjCompile(List<File> javaFiles, File outputDir, String classpath) {
 		Debug.logT("Compiler", "2. ECJ 编译中...");
@@ -121,23 +117,18 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		PrintWriter ecjWriter = new PrintWriter(ecjLog);
 
 		List<String> args = new ArrayList<>();
-		args.add("-1.8"); // source level
+		args.add("-1.8");
 		args.add("-nowarn");
 		args.add("-proc:none");
 		args.add("-d"); args.add(outputDir.getAbsolutePath());
 		args.add("-classpath"); args.add(classpath);
-
-		// 添加所有源文件路径
 		for(File f : javaFiles) args.add(f.getAbsolutePath());
 
 		org.eclipse.jdt.internal.compiler.batch.Main ecjCompiler =
 			new org.eclipse.jdt.internal.compiler.batch.Main(ecjWriter, ecjWriter, false, null, null);
 
 		boolean success = ecjCompiler.compile(args.toArray(new String[0]));
-
-		if (!success) {
-			Debug.logT("Compiler", "ECJ 编译失败:\n%s", ecjLog.toString());
-		}
+		if (!success) Debug.logT("Compiler", "ECJ 编译失败:\n%s", ecjLog.toString());
 		return success;
 	}
 
@@ -146,23 +137,16 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		try {
 			List<Path> classFiles = Files.walk(Paths.get(classDir.getAbsolutePath()))
 				.filter(p -> p.toString().endsWith(".class"))
-				.collect(Collectors.toList());
+			.collect(Collectors.toList());
 
 			D8Command.Builder builder = D8Command.builder();
 			builder.setMode(CompilationMode.DEBUG);
 			builder.setMinApiLevel(19);
 			builder.setOutput(Paths.get(outputDexFile.getAbsolutePath()), OutputMode.DexIndexed);
-
-			// 输入文件
 			builder.addProgramFiles(classFiles);
-
-			// 库引用 (android.jar + engine libs)
 			if (libJars != null) {
-				for (File jar : libJars) {
-					builder.addLibraryFiles(Paths.get(jar.getAbsolutePath()));
-				}
+				for (File jar : libJars) builder.addLibraryFiles(Paths.get(jar.getAbsolutePath()));
 			}
-
 			D8.run(builder.build());
 			return outputDexFile.exists();
 		} catch (Exception e) {
@@ -173,12 +157,10 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 
 	private Class<?> loadScriptJar(File dexJarFile, String mainClassName) throws Exception {
 		ClassLoader classLoader;
-
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			Debug.logT("Compiler", "4. 内存加载...");
 			byte[] dexBytes = extractDexFromJar(dexJarFile);
 			if (dexBytes == null) throw new RuntimeException("No classes.dex found");
-
 			ByteBuffer buffer = ByteBuffer.wrap(dexBytes);
 			classLoader = new InMemoryDexClassLoader(buffer, getClass().getClassLoader());
 		} else {
@@ -191,12 +173,10 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 				getClass().getClassLoader()
 			);
 		}
-
 		Debug.logT("Compiler", "✅ 加载主类: %s", mainClassName);
 		return classLoader.loadClass(mainClassName);
 	}
 
-	// 从 Jar 中提取 classes.dex
 	private byte[] extractDexFromJar(File jarFile) throws IOException {
 		try (ZipInputStream zis = new ZipInputStream(new FileInputStream(jarFile))) {
 			ZipEntry entry;
@@ -213,38 +193,6 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		return null;
 	}
 
-	private void prepareDependencies() {
-		extractAsset("android.jar", new File(libsDir, "android.jar"));
-
-		// libs/ 下的所有文件
-		try {
-			String[] libFiles = context.getAssets().list("libs");
-			if (libFiles != null) {
-				for (String fileName : libFiles) {
-					extractAsset("libs/" + fileName, new File(libsDir, fileName));
-				}
-			}
-		} catch (IOException e) {
-			Debug.logT("Compiler", "⚠️ 无法列出 libs 目录");
-		}
-	}
-
-	private void extractAsset(String assetName, File destFile) {
-		if (destFile.exists() && destFile.length() > 0) {
-			Debug.logT("Compiler", "依赖库: %s 已缓存, 加载成功", assetName);
-			return;
-		}
-		try (InputStream is = context.getAssets().open(assetName);
-			 FileOutputStream fos = new FileOutputStream(destFile)) {
-			byte[] buffer = new byte[2048];
-			int len;
-			while ((len = is.read(buffer)) > 0) fos.write(buffer, 0, len);
-			Debug.logT("Compiler", "依赖库解压完成: " + assetName);
-		} catch (IOException e) {
-			Debug.logT("Compiler", "Fatal: 缺失依赖库 " + assetName);
-		}
-	}
-
 	private void recursiveFindJavaFiles(File dir, List<File> list) {
 		File[] files = dir.listFiles();
 		if (files == null) return;
@@ -254,8 +202,95 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		}
 	}
 
-	private void deleteRecursive(File f) { /* 同前 */
+	private void deleteRecursive(File f) {
 		if (f.isDirectory()) for (File c : f.listFiles()) deleteRecursive(c);
 		f.delete();
+	}
+
+	// -------------------------------------------------------------------------
+	// [核心修改] 智能依赖管理
+	// -------------------------------------------------------------------------
+
+	private void prepareDependencies() {
+		boolean isNewVersion = checkAppVersionChanged();
+
+		if (isNewVersion) {
+			Debug.logT("Compiler", "♻️ 检测到应用更新(或缓存缺失)，正在刷新引擎依赖库...");
+		}
+
+		// 1. android.jar (通常很大，如果文件存在且不是新版本，就跳过)
+		extractAsset("android.jar", new File(libsDir, "android.jar"), isNewVersion);
+
+		// 2. libs/*.jar (gdx.jar, gdengine.jar)
+		try {
+			String[] libFiles = context.getAssets().list("libs");
+			if (libFiles != null) {
+				for (String fileName : libFiles) {
+					// 所有的 libs 下的 jar 都跟随版本刷新
+					extractAsset("libs/" + fileName, new File(libsDir, fileName), isNewVersion);
+				}
+			}
+		} catch (IOException e) {
+			Debug.logT("Compiler", "⚠️ 无法列出 assets/libs 目录");
+		}
+
+		// 刷新完毕，保存当前版本信息
+		if (isNewVersion) {
+			saveCurrentAppVersion();
+		}
+	}
+
+	/**
+	 * 检查 APK 是否更新了
+	 * @return true 如果是新安装的版本 或者 缓存记录不存在
+	 */
+	private boolean checkAppVersionChanged() {
+		try {
+			PackageInfo pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+			long currentUpdateTime = pInfo.lastUpdateTime; // APK 最后安装/更新时间
+
+			SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+			long lastRecordedTime = prefs.getLong(KEY_LAST_UPDATE, -1);
+
+			return currentUpdateTime != lastRecordedTime;
+		} catch (Exception e) {
+			return true; // 获取失败则保守策略：视为更新
+		}
+	}
+
+	private void saveCurrentAppVersion() {
+		try {
+			PackageInfo pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+			SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+			prefs.edit().putLong(KEY_LAST_UPDATE, pInfo.lastUpdateTime).apply();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 执行解压
+	 * @param overwrite 是否强制覆盖 (即使文件已存在)
+	 */
+	private void extractAsset(String assetName, File destFile, boolean overwrite) {
+		// 智能判断：
+		// 1. 如果必须要覆盖 (APK更新了)，则不管文件在不在都写
+		// 2. 如果不需要覆盖 (APK没变)，但文件丢了，也得写
+		// 3. 否则 (APK没变 且 文件健在)，跳过 -> 省 IO
+		if (!overwrite && destFile.exists() && destFile.length() > 0) {
+			return; 
+		}
+
+		try (InputStream is = context.getAssets().open(assetName);
+		FileOutputStream fos = new FileOutputStream(destFile)) {
+
+			byte[] buffer = new byte[4096]; // 稍微加大 buffer
+			int len;
+			while ((len = is.read(buffer)) > 0) fos.write(buffer, 0, len);
+
+			// Debug.logT("Compiler", "已提取: " + assetName); // 减少日志刷屏，仅在出错或大版本更新时关注
+		} catch (IOException e) {
+			Debug.logT("Compiler", "❌ 提取库失败: " + assetName + " -> " + e.getMessage());
+		}
 	}
 }

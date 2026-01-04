@@ -125,6 +125,9 @@ tasks.register('copyEngineLibs', Copy) {
 // --- 引擎核心库打包任务 ---
 // 2. 修改之前的引擎打包任务，让它也输出到 libs 目录
 tasks.register('packageEngineCore', Jar) {
+	// 强制任务永远执行 (禁用增量构建检查)
+    outputs.upToDateWhen { false }
+	
 	from sourceSets.main.output
 	archiveFileName = "gdengine.jar"
 	destinationDirectory = assetsLibsDir // 改到 assets/libs/ 统一管理
