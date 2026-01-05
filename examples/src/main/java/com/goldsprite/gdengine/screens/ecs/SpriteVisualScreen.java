@@ -46,7 +46,7 @@ public class SpriteVisualScreen extends ExampleGScreen {
         neonBatch = new NeonBatch();
 
         try {
-            texture = new Texture(Gdx.files.internal("sprites/roles/Enma01.png"));
+            texture = new Texture(Gdx.files.internal("sprites/roles/enma/enma01.png"));
         } catch (Exception e) {
             Debug.log("Error loading texture: " + e.getMessage());
             return;

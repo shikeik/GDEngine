@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 
 /**
  * 游戏世界容器 (ECS 上下文 & 核心循环)
@@ -88,7 +89,7 @@ public class GameWorld {
 	// UI 视口 (用于 Input 处理: screen -> world)
 	public static Viewport uiViewport;
 	// 世界相机 (用于 System 获取位置: culling / physics)
-	public static Camera worldCamera;
+	public static OrthographicCamera worldCamera;
 
 	// ==========================================
 	// [新增] 8. 脚本项目资源上下文
@@ -139,7 +140,7 @@ public class GameWorld {
 	 */
 	public void setReferences(Viewport uiViewport, Camera worldCamera) {
 		GameWorld.uiViewport = uiViewport;
-		GameWorld.worldCamera = worldCamera;
+		GameWorld.worldCamera = (OrthographicCamera)worldCamera;
 	}
 
 	// ==========================================

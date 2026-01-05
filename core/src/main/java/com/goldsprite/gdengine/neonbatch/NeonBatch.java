@@ -30,6 +30,12 @@ public class NeonBatch extends BaseShapeBatch {
 	 * @param rotationDeg 旋转角度 (角度制)
 	 */
 	public void drawRect(float ldx, float ldy, float width, float height, float rotationDeg, float lineWidth, Color color, boolean filled) {
+		//处理空心厚度修正
+		ldx = ldx + (filled ? 0 : lineWidth/2f);
+		ldy = ldy + (filled ? 0 : lineWidth/2f);
+		width = filled ? width : width - lineWidth;
+		height = filled ? height : height - lineWidth;
+		
 		float halfW = width / 2;
 		float halfH = height / 2;
 
@@ -145,6 +151,8 @@ public class NeonBatch extends BaseShapeBatch {
 	 * @param segments 细分度 (建议 24-64)
 	 */
 	public void drawCircle(float x, float y, float radius, float lineWidth, Color color, int segments, boolean filled) {
+		//处理空心厚度修正
+		radius = filled ? radius : radius - lineWidth/2f;
 		// 圆形就是边数很多的正多边形
 		drawRegularPolygon(x, y, radius, segments, 0, lineWidth, color, filled);
 	}

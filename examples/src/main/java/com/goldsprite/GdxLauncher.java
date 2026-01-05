@@ -18,8 +18,6 @@ import com.goldsprite.gdengine.screens.ecs.editor.Gd;
 import com.goldsprite.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 
-import java.lang.reflect.Method;
-
 public class GdxLauncher extends Game {
 	private IScriptCompiler scriptCompiler; // 去掉 final，允许后期注入
 	public SpriteBatch batch;
