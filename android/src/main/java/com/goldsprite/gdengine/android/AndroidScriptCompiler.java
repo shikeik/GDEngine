@@ -61,7 +61,7 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 			File projectDir = new File(projectPath);
 			Debug.logT("Compiler", "=== 开始编译项目: %s ===", projectDir.getName());
 
-			File scriptsDir = new File(projectDir, "Scripts");
+			File scriptsDir = new File(projectDir, "src/main/java");
 			if (!scriptsDir.exists()) {
 				Debug.logT("Compiler", "❌ 找不到 Scripts 目录: %s", scriptsDir.getAbsolutePath());
 				return null;

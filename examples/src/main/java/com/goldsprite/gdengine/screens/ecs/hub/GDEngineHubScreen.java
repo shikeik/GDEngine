@@ -222,72 +222,88 @@ public class GDEngineHubScreen extends GScreen {
 		}
 
 		public static String createProject(String name, String packageName) {
-			if (name == null || name.trim().isEmpty()) return "Name cannot be empty.";
-			if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
-			if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
+            // 1. 校验
+            if (name == null || name.trim().isEmpty()) return "Name cannot be empty.";
+            if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
+            if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
 
-			FileHandle finalTarget = getProjectsRoot().child(name);
-			if (finalTarget.exists()) {
-				return "Project already exists!";
-			}
+            FileHandle finalTarget = getProjectsRoot().child(name);
+            if (finalTarget.exists()) {
+                return "Project already exists!";
+            }
 
-			// 临时构建目录
-			FileHandle tempRoot = Gdx.files.local("build/tmp_creation");
-			FileHandle tempProj = tempRoot.child(name);
-			if (tempProj.exists()) tempProj.deleteDirectory();
-			tempProj.mkdirs();
+            // 临时构建目录
+            FileHandle tempRoot = Gdx.files.local("build/tmp_creation");
+            FileHandle tempProj = tempRoot.child(name);
+            if (tempProj.exists()) tempProj.deleteDirectory();
+            tempProj.mkdirs();
 
-			try {
-				// ---------------------------------------------------------
-				// 1. 读取并生成 project.json
-				// ---------------------------------------------------------
-				FileHandle tplConfig = Gdx.files.internal("script_project_templates/HelloGame/project.json");
-				if (!tplConfig.exists()) return "Template missing: project.json"; // 明确报错
+            try {
+                // ---------------------------------------------------------
+                // 1. 核心文件生成 (project.json & Main.java)
+                // ---------------------------------------------------------
+                // ... (这部分保持之前的逻辑不变) ...
 
-				String jsonContent = tplConfig.readString("UTF-8");
-				jsonContent = jsonContent.replace("${PROJECT_NAME}", name);
+                FileHandle tplConfig = Gdx.files.internal("script_project_templates/HelloGame/project.json");
+                if (!tplConfig.exists()) return "Template missing: project.json";
+
+                String jsonContent = tplConfig.readString("UTF-8");
+                jsonContent = jsonContent.replace("${PROJECT_NAME}", name);
 				jsonContent = jsonContent.replace("${ENTRY_CLASS}", packageName+".Main");
+                tempProj.child("project.json").writeString(jsonContent, false, "UTF-8");
 
-				// 直接写入临时目录
-				tempProj.child("project.json").writeString(jsonContent, false, "UTF-8");
+                FileHandle tplMain = Gdx.files.internal("script_project_templates/HelloGame/Scripts/Main.java");
+                if (!tplMain.exists()) return "Template missing: Main.java";
 
-				// ---------------------------------------------------------
-				// 2. 读取并生成 Main.java
-				// ---------------------------------------------------------
-				FileHandle tplMain = Gdx.files.internal("script_project_templates/HelloGame/Scripts/Main.java");
-				if (!tplMain.exists()) return "Template missing: Main.java"; // 明确报错
-
-				String mainCode = tplMain.readString("UTF-8");
-				mainCode = mainCode.replace("${PACKAGE_NAME}", packageName)
+                String mainCode = tplMain.readString("UTF-8");
+                mainCode = mainCode.replace("${PACKAGE_NAME}", packageName)
 					.replace("${PROJECT_NAME}", name);
 
-				// 构建包路径: Scripts/com/mygame/Main.java
-				String packagePath = packageName.replace('.', '/');
-				FileHandle targetMain = tempProj.child("Scripts").child(packagePath).child("Main.java");
+                String packagePath = packageName.replace('.', '/');
+                FileHandle targetMain = tempProj.child("src").child("main").child("java").child(packagePath).child("Main.java");
+                targetMain.parent().mkdirs();
+                targetMain.writeString(mainCode, false, "UTF-8");
 
-				// 确保父目录存在 (关键)
-				targetMain.parent().mkdirs();
+                // ---------------------------------------------------------
+                // 2. IDE 支持 (Gradle & Libs) [新增]
+                // ---------------------------------------------------------
 
-				// 写入
-				targetMain.writeString(mainCode, false, "UTF-8");
+                // 2.1 拷贝 build.gradle 模板
+                FileHandle tplGradle = Gdx.files.internal("script_project_templates/build.gradle");
+                if (tplGradle.exists()) {
+                    tplGradle.copyTo(tempProj);
+                }
 
-				// ---------------------------------------------------------
-				// 3. 交付 (Local -> External)
-				// ---------------------------------------------------------
-				// 将构建好的临时目录复制到最终位置
-				tempProj.copyTo(finalTarget.parent());
+                // 2.2 自动注入依赖库 (遍历 assets/libs)
+                FileHandle libsSource = Gdx.files.internal("libs");
+                FileHandle libsTarget = tempProj.child("libs");
+                libsTarget.mkdirs();
 
-				// 清理
-				tempProj.deleteDirectory();
+                // 使用 suffix 过滤器，只拷 jar 包，避开可能存在的无关文件
+                FileHandle[] jars = libsSource.list(".jar"); 
 
-				return null;
-			} catch (Exception e) {
-				e.printStackTrace();
-				// 失败清理
-				if (tempProj.exists()) tempProj.deleteDirectory();
-				return "Error: " + e.getMessage();
-			}
-		}
+                if (jars != null && jars.length > 0) {
+                    for (FileHandle jar : jars) {
+                        // Android Assets 是流，不能直接拷文件夹，但可以拷单个文件
+                        jar.copyTo(libsTarget);
+                    }
+                } else {
+                    Debug.logT("Hub", "⚠️ Warning: assets/libs is empty or not found!");
+                }
+
+                // ---------------------------------------------------------
+                // 3. 交付
+                // ---------------------------------------------------------
+                tempProj.copyTo(finalTarget.parent());
+                tempProj.deleteDirectory();
+
+                return null;
+            } catch (Exception e) {
+                e.printStackTrace();
+                if (tempProj.exists()) tempProj.deleteDirectory();
+                return "Error: " + e.getMessage();
+            }
+        }
 
 		public static class ProjectConfig {
 			public String name;

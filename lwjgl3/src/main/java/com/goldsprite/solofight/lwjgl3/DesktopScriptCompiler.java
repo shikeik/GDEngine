@@ -36,7 +36,7 @@ public class DesktopScriptCompiler implements IScriptCompiler {
 			Debug.logT("Compiler", "=== PC 编译开始: %s ===", projectDir.getName());
 
 			// 1. 确定源码目录 (Projects/MyGame/Scripts)
-			File scriptsDir = new File(projectDir, "Scripts");
+			File scriptsDir = new File(projectDir, "src/main/java");
 			if (!scriptsDir.exists()) {
 				Debug.logT("Compiler", "❌ 找不到 Scripts 目录: %s", scriptsDir.getAbsolutePath());
 				return null;

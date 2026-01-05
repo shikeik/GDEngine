@@ -84,9 +84,9 @@ public class GDEngineEditorScreen extends GScreen {
 		stage = new Stage(getUIViewport());
 		getImp().addProcessor(stage);
 
-		VisTable root = new VisTable();
-		float pad = 30;
-		root.padLeft(pad).padRight(pad);
+		VisTable root = new VisTable();int k2;
+		float pad = 35;
+		root.padLeft(pad).padRight(pad).padBottom(pad/2f);
 		root.setFillParent(true);
 		root.setBackground("window-bg");
 		stage.addActor(root);
@@ -236,7 +236,7 @@ public class GDEngineEditorScreen extends GScreen {
 			return;
 		}
 
-		FileHandle scriptsDir = currentProj.child("Scripts");
+		FileHandle scriptsDir = currentProj.child("src").child("main").child("java");
 		if (!scriptsDir.exists()) scriptsDir.mkdirs();
 
 		FileNode rootNode = new FileNode(currentProj);
@@ -376,7 +376,7 @@ public class GDEngineEditorScreen extends GScreen {
 					FileHandle newFile = targetDir.child(name + ".java");
 					if (newFile.exists()) { errLabel.setText("Exists!"); dialog.pack(); return; }
 
-					FileHandle scriptsRoot = GDEngineHubScreen.ProjectManager.currentProject.child("Scripts");
+					FileHandle scriptsRoot = GDEngineHubScreen.ProjectManager.currentProject.child("src").child("main").child("java");
 					String relPath = targetDir.path().replace(scriptsRoot.path(), "");
 					if (relPath.startsWith("/")) relPath = relPath.substring(1);
 					if (relPath.startsWith("\\")) relPath = relPath.substring(1);
