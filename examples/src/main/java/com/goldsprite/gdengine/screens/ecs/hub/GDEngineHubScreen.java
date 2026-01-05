@@ -286,7 +286,8 @@ public class GDEngineHubScreen extends GScreen {
 				 if(defaultIcon.exists()) defaultIcon.copyTo(assetsTarget);
 
                 // 2.2 自动注入依赖库 (遍历 assets/libs)
-                FileHandle libsSource = Gdx.files.internal("libs");
+				String mulPlatPathFix = PlatformImpl.isAndroidUser() ? "" : "assets/";
+                FileHandle libsSource = Gdx.files.internal(mulPlatPathFix+"libs");
                 FileHandle libsTarget = tempProj.child("libs");
                 libsTarget.mkdirs();
 

@@ -1,5 +1,6 @@
 package com.goldsprite.gdengine;
 
+import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.goldsprite.gdengine.screens.ScreenManager;
 
@@ -22,5 +23,9 @@ public class PlatformImpl {
 			}
 		}
 		return count;
+	}
+
+	public static boolean isAndroidUser() {
+		return Gdx.app.getType() == Application.ApplicationType.Android;
 	}
 }

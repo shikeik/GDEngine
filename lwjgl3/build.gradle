@@ -15,7 +15,9 @@ plugins {
 	id "application"
 }
 
+// 1. 资源映射
 sourceSets.main.resources.srcDirs += [rootProject.file('/assets').path]
+
 mainClassName = 'com.goldsprite.solofight.lwjgl3.Lwjgl3Launcher'
 application.setMainClass(mainClassName)
 eclipse.project.name = appName + '-lwjgl3'
@@ -27,48 +29,62 @@ dependencies {
 	implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
 	implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
 
-	// 添加 ECJ 编译器 (和 Android 端版本保持一致或使用较新版)
+	// ECJ 编译器
 	implementation 'org.eclipse.jdt:ecj:3.33.0'
 
 	if (enableGraalNative == 'true') {
 		implementation "io.github.berstanio:gdx-svmhelper-backend-lwjgl3:$graalHelperVersion"
 	}
-
 }
 
 def os = System.properties['os.name'].toLowerCase()
 
+// ==================================================================
+// [修复 1] 运行任务增强
+// ==================================================================
 run {
 	workingDir = rootProject.file('/assets').path
 	setIgnoreExitValue(true)
 
+	// 【关键】强制在运行前生成引擎 jar 并复制依赖
+	// 这样 assets/libs 目录才会有东西
+	dependsOn ':core:copyEngineLibs'
+	dependsOn ':core:packageEngineCore'
+
 	if (os.contains('mac')) jvmArgs += "-XstartOnFirstThread"
 }
 
+// ==================================================================
+// [修复 2] 打包任务增强
+// ==================================================================
 jar {
-// sets the name of the .jar file this produces to the name of the game or app, with the version after.
 	archiveFileName.set("${rootProject.name}_V${projectVersion}.jar")
 	destinationDirectory.set(file("${rootProject.projectDir}/outputs"))
-// the duplicatesStrategy matters starting in Gradle 7.0; this setting works.
 	duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+
+	// 依赖运行时 Classpath
 	dependsOn configurations.runtimeClasspath
+
+	// 1. 将所有依赖解压打包 (Fat Jar)
 	from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-// these "exclude" lines remove some unnecessary duplicate files in the output JAR.
+
+	// 2. 【关键】显式包含项目源码编译结果和资源 (确保 assets 被打进去)
+	from sourceSets.main.output
+
 	exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
 	dependencies {
 		exclude('META-INF/INDEX.LIST', 'META-INF/maven/**')
 	}
-// setting the manifest makes the JAR runnable.
+
 	manifest {
 		attributes 'Main-Class': project.mainClassName
 	}
-// this last step may help on some OSes that need extra instruction to make runnable JARs.
+
 	doLast {
 		file(archiveFile).setExecutable(true, false)
 	}
 }
 
-// Equivalent to the jar task; here for compatibility with gdx-setup.
 tasks.register('dist') {
 	dependsOn 'jar'
 }
@@ -94,10 +110,9 @@ if (enableGraalNative == 'true') {
 	apply from: file("nativeimage.gradle")
 }
 
-// 更新 exe4j 配置
+// exe4j 配置更新任务 (保持不变)
 tasks.register('updateExe4jOptions') {
 	doFirst {
-		// exe4j 配置文件路径
 		def exe4jConfigFile = file("$rootProject.projectDir/outputs/SoloFight.exe4j")
 		if (!exe4jConfigFile.exists() || !project.hasProperty("projectVersion")) {
 			println "Exe4j 配置不存在, 跳过exe4j配置更新任务"
@@ -113,49 +128,25 @@ tasks.register('updateExe4jOptions') {
 
 		def content = exe4jConfigFile.getText('UTF-8')
 		def updatedContent = content
-		//替换输出目录位置
-		updatedContent = updatedContent.replaceAll(/distributionSourceDir="[^"]*"/) { match ->
-			"distributionSourceDir=\"${outputDir}\""
-		}
-		//替换iconFile文件位置
-		updatedContent = updatedContent.replaceAll(/iconFile="[^"]*"/) { match ->
-			"iconFile=\"${rootDir}/assets/icon.ico\""
-		}
-		//替换jdk依赖路径
-		updatedContent = updatedContent.replaceAll(/directory location="[^"]*"/) { match ->
-			"directory location=\"${currentJdkPath}\""
-		}
-		//替换发布jar路径
-		updatedContent = updatedContent.replaceAll(/archive location="[^"]*"/) { match ->
-			"archive location=\"${outputDir}/$newJarName\""
-		}
 
-		//替换输出applicationName
-		updatedContent = updatedContent.replaceAll(/application name="[^"]*"/) { match ->
-			"application name=\"${rootProjectName}\""
-		}
-		//替换输出exeName
-		updatedContent = updatedContent.replaceAll(/executable name="[^"]*"/) { match ->
-			"executable name=\"${newExecutableName}\""
-		}
-		//替换应用主类
-		updatedContent = updatedContent.replaceAll(/java mainClass="[^"]*"/) { match ->
-			"java mainClass=\"${mainClassName}\""
-		}
-		//替换jdkVersion
-		updatedContent = updatedContent.replaceAll(/minVersion="[^"]*"/) { match ->
-			"minVersion=\"${jdkVersion}\""
-		}
+		updatedContent = updatedContent.replaceAll(/distributionSourceDir="[^"]*"/) { "distributionSourceDir=\"${outputDir}\"" }
+		updatedContent = updatedContent.replaceAll(/iconFile="[^"]*"/) { "iconFile=\"${rootDir}/assets/icon.ico\"" }
+		updatedContent = updatedContent.replaceAll(/directory location="[^"]*"/) { "directory location=\"${currentJdkPath}\"" }
+		updatedContent = updatedContent.replaceAll(/archive location="[^"]*"/) { "archive location=\"${outputDir}/$newJarName\"" }
+		updatedContent = updatedContent.replaceAll(/application name="[^"]*"/) { "application name=\"${rootProjectName}\"" }
+		updatedContent = updatedContent.replaceAll(/executable name="[^"]*"/) { "executable name=\"${newExecutableName}\"" }
+		updatedContent = updatedContent.replaceAll(/java mainClass="[^"]*"/) { "java mainClass=\"${mainClassName}\"" }
+		updatedContent = updatedContent.replaceAll(/minVersion="[^"]*"/) { "minVersion=\"${jdkVersion}\"" }
+
 		exe4jConfigFile.write(updatedContent, 'UTF-8')
-
 		println "✅ exe4j配置更新完毕"
 	}
 }
-// 设置在编译 Java 前执行此任务
+
 compileJava.dependsOn(updateExe4jOptions)
 jar.dependsOn(updateExe4jOptions)
 
-
+// 资源处理依赖 (虽然 run 已经加了，这里保留给 build 使用)
 processResources {
 	dependsOn ':core:copyEngineLibs'
 	dependsOn ':core:packageEngineCore'
