@@ -181,7 +181,7 @@ tasks.configureEach { task ->
 }
 // 引擎任务==================================================
 
-/*
+
 // APK 复制配置
 tasks.whenTaskAdded { task ->
 	if (task.name.startsWith('assemble') &&
@@ -202,7 +202,7 @@ tasks.whenTaskAdded { task ->
 				def apkDir = file(project.buildDir)
 
 
-				def apkFiles = fileTree(apkDir).filter { it.name.endsWith('.apk') }
+				def apkFiles = fileTree(apkDir).filter { it.name.endsWith('-debug.apk') || it.name.endsWith("-release.apk") }
 				def apk = apkFiles.files.first()
 
 				if (apk && apk.exists()) {
@@ -231,4 +231,4 @@ tasks.whenTaskAdded { task ->
 		task.finalizedBy(postTaskName)
 	}
 }
-*/
+
