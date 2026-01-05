@@ -15,6 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
+import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
@@ -185,6 +186,14 @@ public class GDEngineEditorScreen extends GScreen {
 				String projectPath = projectDir.file().getAbsolutePath();
 
 				Debug.logT("Editor", "Building: %s (Entry: %s)", projectPath, entryClass);
+
+
+				// [新增] 注入资源上下文到 Core 层
+				// 这样 GameRunner 里的组件就能通过 GameWorld.getAsset() 找到图了
+				GameWorld.projectAssetsRoot = projectDir.child("assets");
+				if (!GameWorld.projectAssetsRoot.exists()) {
+					GameWorld.projectAssetsRoot.mkdirs(); // 防御性创建
+				}
 
 				// 编译
 				Class<?> clazz = Gd.compiler.compile(entryClass, projectPath);

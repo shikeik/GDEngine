@@ -22,14 +22,18 @@ public class Debug {
 	public static String[] showTags = {
 		"Default Y",
 		"拦截 N",
-		//Test
+		// Engine
+		"Engine Y",
+		"Compiler Y",
+		"Script Y",
+		"Editor Y",
+		"GDProject-TEST Y",
+		"Hub Y",
+		"Runner Y",
+		// Test
 		"TEST Y",
 		"VERIFY Y",
 		"Test1 Y",
-		"Engine Y",
-		"Compiler Y",
-		"GDProject-TEST Y",
-		"Script Y",
 	};
 
 	public static String LOG_TAG = BuildConfig.PROJECT_NAME;

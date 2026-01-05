@@ -242,8 +242,8 @@ public class GDEngineHubScreen extends GScreen {
                 // ---------------------------------------------------------
                 // 1. 核心文件生成 (project.json & Main.java)
                 // ---------------------------------------------------------
-                // ... (这部分保持之前的逻辑不变) ...
 
+				// project.json
                 FileHandle tplConfig = Gdx.files.internal("script_project_templates/HelloGame/project.json");
                 if (!tplConfig.exists()) return "Template missing: project.json";
 
@@ -252,6 +252,7 @@ public class GDEngineHubScreen extends GScreen {
 				jsonContent = jsonContent.replace("${ENTRY_CLASS}", packageName+".Main");
                 tempProj.child("project.json").writeString(jsonContent, false, "UTF-8");
 
+				// Main Script
                 FileHandle tplMain = Gdx.files.internal("script_project_templates/HelloGame/Scripts/Main.java");
                 if (!tplMain.exists()) return "Template missing: Main.java";
 
@@ -274,13 +275,23 @@ public class GDEngineHubScreen extends GScreen {
                     tplGradle.copyTo(tempProj);
                 }
 
+				// ---------------------------------------------------------
+				// [新增] 资源目录 (Assets)
+				// ---------------------------------------------------------
+				FileHandle assetsTarget = tempProj.child("assets");
+				assetsTarget.mkdirs();
+
+				// (可选) 可以在这里拷入一个默认图标，防止空文件夹被某些系统忽略
+				 FileHandle defaultIcon = Gdx.files.internal("gd_icon.png");
+				 if(defaultIcon.exists()) defaultIcon.copyTo(assetsTarget);
+
                 // 2.2 自动注入依赖库 (遍历 assets/libs)
                 FileHandle libsSource = Gdx.files.internal("libs");
                 FileHandle libsTarget = tempProj.child("libs");
                 libsTarget.mkdirs();
 
                 // 使用 suffix 过滤器，只拷 jar 包，避开可能存在的无关文件
-                FileHandle[] jars = libsSource.list(".jar"); 
+                FileHandle[] jars = libsSource.list(".jar");
 
                 if (jars != null && jars.length > 0) {
                     for (FileHandle jar : jars) {

@@ -2,6 +2,10 @@ ignored: indentFix codeFormatFix
 
 # TODO   
 
+PC libs为0个, 没有打包libs到运行程序中?应该是gradle任务的问题
+Editor的New Script上下文菜单还在用硬编码脚本模板, 这里需要和创建项目的统一下逻辑, 新脚本文件模板也改为从assets/script_project_templates/NewScript.java获取的方式
+脚本项目结构的规范化进阶
+
 限制变换组件为等比缩放
 
 现在编辑器只是渲染，而没有跑真的gameworld逻辑或者gameworld没有自己的逻辑

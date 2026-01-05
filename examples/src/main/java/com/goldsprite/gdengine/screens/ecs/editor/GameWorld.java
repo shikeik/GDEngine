@@ -17,7 +17,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 // ==========================================
 public class GameWorld {
 	// 不再写死静态常量，而是从 Gd.config 读取
-	// public static final float WORLD_WIDTH = 960; 
+	// public static final float WORLD_WIDTH = 960;
 
 	public Texture playerTex, bgTex;
 	public float playerX = 0, playerY = 0;
@@ -124,7 +124,7 @@ public class GameWorld {
 	public Camera getGameCamera() { return gameCamera; }
 
 	private Texture tryLoadTexture(String path, int w, int h, Color c) {
-		try { return new Texture(Gd.files.internal(path)); } 
+		try { return new Texture(Gd.files.internal(path)); }
 		catch (Exception e) { return createSolidTexture(w, h, c); }
 	}
 

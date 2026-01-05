@@ -1,5 +1,7 @@
 package com.goldsprite.gdengine.ecs;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.log.Debug;
@@ -87,6 +89,27 @@ public class GameWorld {
 	public static Viewport uiViewport;
 	// 世界相机 (用于 System 获取位置: culling / physics)
 	public static Camera worldCamera;
+
+	// ==========================================
+	// [新增] 8. 脚本项目资源上下文
+	// ==========================================
+
+	/** 当前运行项目的 Assets 根目录 (由 Editor 注入) */
+	public static FileHandle projectAssetsRoot;
+
+	/**
+	 * 解析项目资源路径
+	 * @param path 相对路径 (例如 "sprites/player.png")
+	 * @return 绝对 FileHandle
+	 */
+	public static FileHandle getAsset(String path) {
+		// 如果没有注入项目路径(比如引擎内部测试)，回退到 Gdx.files.internal
+		if (projectAssetsRoot == null || !projectAssetsRoot.exists()) {
+			return Gdx.files.internal(path);
+		}
+		return projectAssetsRoot.child(path);
+	}
+
 
 	// ==========================================
 	// 构造与初始化
@@ -292,6 +315,10 @@ public class GameWorld {
 
 		// [修复] 彻底销毁组件管理器状态，防止静态变量污染下一次运行
 		ComponentManager.dispose();
+
+		// 注意：projectAssetsRoot 是静态的且跨声明周期（编辑器->游戏），
+		// 通常不需要在这里置空，除非切换项目。
+		// 但为了保险，可以在 Hub 打开新项目时覆盖它。
 
 		instance = null;
 	}
