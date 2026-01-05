@@ -275,6 +275,14 @@ public class GDEngineHubScreen extends GScreen {
                     tplGradle.copyTo(tempProj);
                 }
 
+                // 2.1 拷贝 settings.gradle 模板
+                tplGradle = Gdx.files.internal("script_project_templates/settings.gradle");
+                if (tplGradle.exists()) {
+					jsonContent = tplGradle.readString("UTF-8");
+					jsonContent = jsonContent.replace("${PROJECT_NAME}", name);
+					tempProj.child("settings.gradle").writeString(jsonContent, false, "UTF-8");
+                }
+
 				// ---------------------------------------------------------
 				// [新增] 资源目录 (Assets)
 				// ---------------------------------------------------------
