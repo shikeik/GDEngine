@@ -3,6 +3,7 @@ package com.goldsprite.gdengine.ecs.component;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.ObjectMap;
+import com.goldsprite.gdengine.core.scripting.ScriptResourceTracker;
 import com.goldsprite.gdengine.ecs.skeleton.NeonBone;
 import com.goldsprite.gdengine.ecs.skeleton.NeonSkeleton;
 import com.goldsprite.gdengine.ecs.skeleton.animation.NeonProperty;
@@ -69,6 +70,40 @@ public class NeonAnimatorComponent extends Component {
 			this.inTransition = true;
 		}
 		this.isPlaying = true;
+	}
+
+	/**
+	 * [新增] 脚本快捷方法：创建简单的序列帧动画
+	 *
+	 * 使用示例:
+	 * anim.createSimpleAnim("Run", 0.8f, true, "run_01.png", "run_02.png", "run_03.png");
+	 *
+	 * @param name 动画名 (用于 play)
+	 * @param duration 总时长 (秒)
+	 * @param looping 是否循环
+	 * @param fileNames 图片文件名列表
+	 */
+	public void createSimpleAnim(String name, float duration, boolean looping, String... fileNames) {
+		if (fileNames == null || fileNames.length == 0) return;
+
+		NeonAnimation anim = new NeonAnimation(name, duration, looping);
+
+		// 创建针对自身的 Sprite 属性轨道
+		NeonTimeline timeline = new NeonTimeline("self", NeonProperty.SPRITE);
+
+		float frameDuration = duration / fileNames.length;
+
+		for (int i = 0; i < fileNames.length; i++) {
+			// 自动加载每一帧
+			TextureRegion reg = ScriptResourceTracker.loadRegion(fileNames[i]);
+			if (reg != null) {
+				// 在对应时间点插入关键帧
+				timeline.addKeyframe(i * frameDuration, reg);
+			}
+		}
+
+		anim.addTimeline(timeline);
+		addAnimation(anim);
 	}
 
 	@Override

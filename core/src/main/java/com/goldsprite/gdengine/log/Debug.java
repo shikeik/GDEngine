@@ -22,6 +22,7 @@ public class Debug {
 	public static String[] showTags = {
 		"Default Y",
 		"拦截 N",
+
 		// Engine
 		"Engine Y",
 		"Compiler Y",
@@ -30,6 +31,8 @@ public class Debug {
 		"GDProject-TEST Y",
 		"Hub Y",
 		"Runner Y",
+		"Asset Y",
+
 		// Test
 		"TEST Y",
 		"VERIFY Y",

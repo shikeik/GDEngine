@@ -1,4 +1,4 @@
-# SoloFight V1.8.6
+# SoloFight V1.8.8-alpha
 
 ## 介绍:
 

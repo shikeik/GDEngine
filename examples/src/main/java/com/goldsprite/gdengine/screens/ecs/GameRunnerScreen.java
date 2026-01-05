@@ -5,6 +5,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
+import com.goldsprite.gdengine.core.scripting.ScriptResourceTracker;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.system.SkeletonRenderSystem;
 import com.goldsprite.gdengine.ecs.system.SkeletonSystem;
@@ -31,6 +32,7 @@ public class GameRunnerScreen extends GScreen {
 	protected void initViewport() {
 		autoCenterWorldCamera = false;
 		uiViewportScale = 1.5f;
+		worldScale = 0.4f;
 		super.initViewport();
 	}
 
@@ -41,6 +43,9 @@ public class GameRunnerScreen extends GScreen {
 
 	@Override
 	public void create() {
+		// [新增] 每次运行前确保清理一次（防止上次异常退出残留）
+		ScriptResourceTracker.disposeAll();
+
 		neonBatch = new NeonBatch();
 
 		try {
@@ -126,6 +131,9 @@ public class GameRunnerScreen extends GScreen {
 	public void dispose() {
 		if (world != null) world.dispose();
 		if (neonBatch != null) neonBatch.dispose();
-		if (uiStage != null) uiStage.dispose(); // [新增]
+		if (uiStage != null) uiStage.dispose();
+
+		// [新增] 核心清理：释放所有脚本加载的图片
+		ScriptResourceTracker.disposeAll();
 	}
 }

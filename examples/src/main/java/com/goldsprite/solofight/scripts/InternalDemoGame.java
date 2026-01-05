@@ -30,10 +30,10 @@ public class InternalDemoGame implements IGameScriptEntry {
 		GObject player = new GObject("ScriptPlayer");
 		player.transform.setPosition(x, y);
 		player.transform.setScale(1f);int k;
-		
+
 		player.addComponent(new Component(){
 			private NeonBatch neonBatch;
-			
+
 			@Override public void onAwake() {
 				neonBatch = new NeonBatch();
 			}

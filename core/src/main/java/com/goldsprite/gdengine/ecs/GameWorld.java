@@ -103,11 +103,15 @@ public class GameWorld {
 	 * @return 绝对 FileHandle
 	 */
 	public static FileHandle getAsset(String path) {
-		// 如果没有注入项目路径(比如引擎内部测试)，回退到 Gdx.files.internal
+		// 如果没有注入项目路径(比如引擎内部测试)，回退到 getInternalAssets
 		if (projectAssetsRoot == null || !projectAssetsRoot.exists()) {
-			return Gdx.files.internal(path);
+			return getInternalAssets(path);
 		}
 		return projectAssetsRoot.child(path);
+	}
+
+	public static FileHandle getInternalAssets(String path) {
+		return Gdx.files.internal(path);
 	}
 
 

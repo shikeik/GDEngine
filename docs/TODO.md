@@ -5,6 +5,7 @@ ignored: indentFix codeFormatFix
 PC libs为0个, 没有打包libs到运行程序中?应该是gradle任务的问题
 Editor的New Script上下文菜单还在用硬编码脚本模板, 这里需要和创建项目的统一下逻辑, 新脚本文件模板也改为从assets/script_project_templates/NewScript.java获取的方式
 脚本项目结构的规范化进阶
+现在世界相机的视口大小和ui视口缩放绑定的, 按理应该基于基准视口大小而不是和ui视口耦合, 有空改
 
 限制变换组件为等比缩放
 

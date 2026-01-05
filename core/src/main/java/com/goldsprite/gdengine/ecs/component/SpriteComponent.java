@@ -2,6 +2,7 @@ package com.goldsprite.gdengine.ecs.component;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.goldsprite.gdengine.core.scripting.ScriptResourceTracker;
 
 /**
  * 精灵组件 (帧动画的基础)
@@ -20,6 +21,20 @@ public class SpriteComponent extends Component {
 
 	public float width = 0;
 	public float height = 0;
+
+	public SpriteComponent() {}
+
+	/**
+	 * [新增] 脚本专用快捷构造
+	 * 自动从项目 assets 目录加载图片
+	 * @param fileName 例如 "hero.png"
+	 */
+	public SpriteComponent(String fileName) {
+		TextureRegion reg = ScriptResourceTracker.loadRegion(fileName);
+		if (reg != null) {
+			setRegion(reg);
+		}
+	}
 
 	public void setRegion(TextureRegion region) {
 		this.region = region;
