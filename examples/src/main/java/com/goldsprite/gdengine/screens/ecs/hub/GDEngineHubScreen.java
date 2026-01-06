@@ -294,19 +294,13 @@ public class GDEngineHubScreen extends GScreen {
 				 if(defaultIcon.exists()) defaultIcon.copyTo(assetsTarget);
 
 				// 2.2 自动注入依赖库 (遍历 assets/libs)
-				String mulPlatPathFix = PlatformImpl.isAndroidUser() ? "" : "assets/";
-				mulPlatPathFix = "";
-				FileHandle libsSource = Gdx.files.internal(mulPlatPathFix+"libs");
+				// 不需要 AssetUtils，不需要索引逻辑，直接用 Gd.files
+				FileHandle libsSource = Gd.files.internal("libs"); // 注意用 Gd.files
 				FileHandle libsTarget = tempProj.child("libs");
 				libsTarget.mkdirs();
 
-				//test
-				FileHandle gdxHandle = libsSource.child("gdx-1.12.1.jar");
-				Debug.log("gdxHandle exists: %s, isDir: %s", gdxHandle.exists(), gdxHandle.isDirectory());
-//				gdxHandle.copyTo(libsTarget);
-
 				// 使用 suffix 过滤器，只拷 jar 包，避开可能存在的无关文件
-				FileHandle[] jars = libsSource.list(".jar");
+				FileHandle[] jars = libsSource.list(".jar"); // 这一步在 PC 上会自动查 assets.txt
 
 				if (jars != null && jars.length > 0) {
 					for (FileHandle jar : jars) {

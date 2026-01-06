@@ -6,7 +6,9 @@ import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.Input;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.config.GDEngineConfig;
+import com.goldsprite.gdengine.core.platform.DesktopFiles;
 import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 
 /**
@@ -71,14 +73,17 @@ public class Gd {
 		if (graphicsImpl != null) graphics = graphicsImpl;
 		else graphics = Gdx.graphics;
 
+		// Files 注入逻辑
+		if (PlatformImpl.isAndroidUser()) files = Gdx.files; // Android 原生支持良好，直接透传
+		else files = new DesktopFiles(Gdx.files); // Desktop 使用代理，解决 JAR 包 list 问题
+
 		if (compilerImpl != null) compiler = compilerImpl;
 
 		// 刷新基础引用，防止 Gdx 上下文重建后引用失效
-		files = Gdx.files;
 		app = Gdx.app;
 		audio = Gdx.audio;
 
-		// [新增] 加载引擎配置
+		// 加载引擎配置
 		engineConfig = GDEngineConfig.load();
 	}
 

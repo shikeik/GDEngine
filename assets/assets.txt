@@ -1,4 +1,3 @@
-GDEngine/engine_config.json
 android.jar
 back.png
 fonts/HYSongYunLangHeiW-1.ttf

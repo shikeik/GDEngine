@@ -33,6 +33,7 @@ public class Debug {
 		"Runner Y",
 		"Asset Y",
 		"Config Y",
+		"AssetUtils Y",
 
 		// Test
 		"TEST Y",
