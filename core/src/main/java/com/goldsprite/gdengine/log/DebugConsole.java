@@ -23,9 +23,9 @@ import com.goldsprite.gdengine.assets.VisUIHelper;
  * 调试控制台 (抽屉动画版)
  */
 public class DebugConsole extends Group {
-
-	private enum State { COLLAPSED, EXPANDED }
-	private State currentState = State.COLLAPSED;
+	private static DebugConsole inst;
+	public enum State { COLLAPSED, EXPANDED }
+	public State currentState = State.COLLAPSED;
 
 	// UI 组件
 	private VisTextButton fpsBtn;
@@ -48,11 +48,12 @@ public class DebugConsole extends Group {
 	private float updateTimer = 0;
 	private final float REFRESH_RATE = 1/60f; // UI 刷新频率
 
-	float resizeHandleHeight = 20;
+	float resizeHandleHeight = 14;
 
 	private final TextureRegionDrawable backDrawable, back2Drawable, dragDrawable;
 
 	public DebugConsole() {
+		inst = this;
 		// 1. 资源准备
 		backDrawable = ColorTextureUtils.createColorDrawable(Color.valueOf("00000099"));
 		back2Drawable = ColorTextureUtils.createColorDrawable(Color.valueOf("00000000"));
@@ -157,7 +158,7 @@ public class DebugConsole extends Group {
 					currentPanelY = targetPanelY; // 直接设置，取消插值延迟
 				}
 			});
-		panel.add(resizeHandle).growX().height(20);
+		panel.add(resizeHandle).growX().height(resizeHandleHeight);
 
 		addActor(panel);
 	}
@@ -177,6 +178,13 @@ public class DebugConsole extends Group {
 		}
 	}
 
+	public static void autoSwitchState() {
+		if(inst == null) return;
+		inst.switchState();
+	}
+	private void switchState() {
+		switchState(currentState == State.COLLAPSED ? State.EXPANDED : State.COLLAPSED);
+	}
 	private void switchState(State state) {
 		this.currentState = state;
 		if (state == State.COLLAPSED) {
@@ -250,7 +258,7 @@ public class DebugConsole extends Group {
 		if (currentPanelY < getStage().getHeight()) {
 			if (contentContainer.getActor() == logScroll) {
 				logLabel.setText(String.join("\n", Debug.getLogs()));
-				
+
 //				if (logScroll.getScrollY() >= logScroll.getMaxY() - 50) {
 //					logScroll.layout(); logScroll.setScrollY(logScroll.getMaxY());
 //				}

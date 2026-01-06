@@ -1,15 +1,10 @@
 package com.goldsprite.gdengine.assets;
 
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.scenes.scene2d.ui.SplitPane;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.goldsprite.gdengine.log.Debug;
 import com.kotcrab.vis.ui.VisUI;
-import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.kotcrab.vis.ui.widget.VisTextField;
-import com.kotcrab.vis.ui.widget.VisTree;
+import com.kotcrab.vis.ui.widget.*;
 
 public class VisUIHelper {
 	public static BitmapFont cnFont;
@@ -41,6 +36,9 @@ public class VisUIHelper {
 			// Label (最重要)
 			skin.get(Label.LabelStyle.class).font = cnFont;
 			skin.get("small", Label.LabelStyle.class).font = smFont;
+
+			skin.get(MenuItem.MenuItemStyle.class).font = smFont;
+			skin.get(Window.WindowStyle.class).titleFont = smFont;
 
 			//VisScrollPane.ScrollPaneStyle 没有font
 

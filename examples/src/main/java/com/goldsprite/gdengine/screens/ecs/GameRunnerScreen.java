@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
 import com.goldsprite.gdengine.core.scripting.ScriptResourceTracker;
 import com.goldsprite.gdengine.ecs.GameWorld;
@@ -31,7 +32,7 @@ public class GameRunnerScreen extends GScreen {
 	@Override
 	protected void initViewport() {
 		autoCenterWorldCamera = false;
-		uiViewportScale = 1.5f;
+		uiViewportScale = PlatformImpl.isAndroidUser() ? 1.5f : 2.5f;
 		worldScale = 0.4f;
 		super.initViewport();
 	}

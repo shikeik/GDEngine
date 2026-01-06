@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Logger;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.solofight.BuildConfig;
 
@@ -48,16 +49,17 @@ public class Debug {
 	private static List<String> logMessages = new ArrayList<>();
 	private static List<String> logInfos = new ArrayList<>();
 	public static boolean showDebugUI = true;
+	public static boolean shortcuts = true;
 	static int maxLogsCache = 100;
 
 	// 表现层 (延后初始化)
 	private Stage stage;
-	private DebugConsole console;
+	public DebugConsole console;
 
 	// 视口配置
-	static float scl = 1.4f;
-	private static final float LOGICAL_SHORT = 540f*scl;
-	private static final float LOGICAL_LONG = 960f*scl;
+	static float scl = 2.5f;
+	private static final float LOGICAL_SHORT = 540f;
+	private static final float LOGICAL_LONG = 960f;
 
 	// [修改] 构造函数只做最基础的数据准备，绝对不碰 UI
 	public Debug() {
@@ -78,7 +80,7 @@ public class Debug {
 		if (stage != null) return; // 防止重复初始化
 
 		// [修改] 初始默认横屏
-		stage = new Stage(new ExtendViewport(LOGICAL_LONG, LOGICAL_SHORT));
+		stage = new Stage(new ExtendViewport(LOGICAL_LONG*scl, LOGICAL_SHORT*scl));
 
 		console = new DebugConsole();
 		stage.addActor(console);
@@ -228,13 +230,14 @@ public class Debug {
 	public void resize(int w, int h) {
 		if (stage == null) return;
 
+		scl = PlatformImpl.isAndroidUser() ? 1.4f : 2f;
 		ExtendViewport vp = (ExtendViewport) stage.getViewport();
 		if (h > w) {
-			vp.setMinWorldWidth(LOGICAL_SHORT);
-			vp.setMinWorldHeight(LOGICAL_LONG);
+			vp.setMinWorldWidth(LOGICAL_SHORT*scl);
+			vp.setMinWorldHeight(LOGICAL_LONG*scl);
 		} else {
-			vp.setMinWorldWidth(LOGICAL_LONG);
-			vp.setMinWorldHeight(LOGICAL_SHORT);
+			vp.setMinWorldWidth(LOGICAL_LONG*scl);
+			vp.setMinWorldHeight(LOGICAL_SHORT*scl);
 		}
 		vp.update(w, h, true);
 	}

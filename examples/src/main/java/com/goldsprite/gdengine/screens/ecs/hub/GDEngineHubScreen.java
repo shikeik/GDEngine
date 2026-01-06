@@ -7,10 +7,12 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Timer;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.config.GDEngineConfig;
@@ -20,11 +22,7 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
-import com.kotcrab.vis.ui.widget.VisLabel;
-import com.kotcrab.vis.ui.widget.VisScrollPane;
-import com.kotcrab.vis.ui.widget.VisTable;
-import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.kotcrab.vis.ui.widget.VisTextField;
+import com.kotcrab.vis.ui.widget.*;
 
 public class GDEngineHubScreen extends GScreen {
 
@@ -173,18 +171,88 @@ public class GDEngineHubScreen extends GScreen {
 			pathLabel.setFontScale(0.8f);
 			item.add(pathLabel).right().padRight(20);
 
-			// 整个条目点击事件
-			item.addListener(new ClickListener() {
+			// [修改] 统一交互逻辑：单击弹窗(延时)，双击直达
+			item.addListener(new ActorGestureListener(20, 0.4f, 0.4f, 0.15f) {
+				private Timer.Task tapTask;
+
 				@Override
-				public void clicked(InputEvent event, float x, float y) {
-					new ConfirmOpenDialog(projDir.name(), () -> {
-						openProject(projDir);
-					}).show(stage);
+				public void tap(InputEvent event, float x, float y, int count, int button) {
+					if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
+						if (count == 2) {
+							// 双击 (Pro): 取消单击任务，直接打开
+							if (tapTask != null && !tapTask.isScheduled()) {
+								// 如果任务已经在运行中(极小概率)，取消可能没用，但在单线程模型下通常安全
+							}
+							if (tapTask != null) tapTask.cancel();
+
+							openProject(projDir);
+						}
+						else if (count == 1) {
+							// 单击 (Safe): 延迟 0.25s 执行，给双击留出时间窗
+							// 如果用户手速快(0.25s内)点第二下，这个任务就会被上面的 count==2 取消
+							// 如果手速慢，弹窗就会出来，挡住第二次点击(符合预期)
+							tapTask = Timer.schedule(new Timer.Task() {
+								@Override
+								public void run() {
+									new ConfirmOpenDialog(projDir.name(), () -> {
+										openProject(projDir);
+									}).show(stage);
+								}
+							}, 0.2f);
+						}
+					} else if (button == com.badlogic.gdx.Input.Buttons.RIGHT) {
+						showProjectMenu(projDir, event.getStageX(), event.getStageY());
+					}
+				}
+
+				@Override
+				public boolean longPress(Actor actor, float x, float y) {
+					com.badlogic.gdx.math.Vector2 v = actor.localToStageCoordinates(new com.badlogic.gdx.math.Vector2(x, y));
+					showProjectMenu(projDir, v.x, v.y);
+					return true;
 				}
 			});
 
 			projectListTable.add(item).growX().height(80).padBottom(10).row();
 		}
+	}
+	// [新增] 显示项目上下文菜单
+	private void showProjectMenu(FileHandle projDir, float x, float y) {
+		PopupMenu menu = new PopupMenu();
+
+		MenuItem itemDelete = new MenuItem("Delete Project");
+		itemDelete.getLabel().setColor(Color.RED);
+		itemDelete.addListener(new ChangeListener() {
+			@Override
+			public void changed(ChangeEvent event, Actor actor) {
+				showDeleteProjectConfirm(projDir);
+			}
+		});
+		menu.addItem(itemDelete);
+
+		menu.showMenu(stage, x, y);
+	}
+
+	// [新增] 删除确认弹窗
+	private void showDeleteProjectConfirm(FileHandle projDir) {
+		new BaseDialog("Delete Project") {
+			@Override
+			protected void result(Object object) {
+				if ((boolean) object) {
+					try {
+						projDir.deleteDirectory();
+						com.goldsprite.gdengine.log.Debug.logT("Hub", "Project deleted: " + projDir.name());
+						refreshList();
+					} catch (Exception e) {
+						com.goldsprite.gdengine.log.Debug.logT("Hub", "Delete failed: " + e.getMessage());
+					}
+				}
+			}
+		}
+			.text("Warning: This will PERMANENTLY delete project:\n" + projDir.name() + "\n\nCannot be undone!")
+			.button("Delete", true)
+			.button("Cancel", false)
+			.show(stage);
 	}
 
 	private void openProject(FileHandle projectDir) {
@@ -360,11 +428,29 @@ public class GDEngineHubScreen extends GScreen {
 			super("Create Project");
 			this.onSuccess = onSuccess;
 
+			// --- 自动命名逻辑 (Auto-Increment Name) ---
+			String baseName = "MyGame";
+			String finalName = baseName;
+			FileHandle root = Gd.engineConfig.getProjectsDir();
+
+			// 循环检查直到找到未被占用的名字
+			// 逻辑: MyGame -> MyGame1 -> MyGame2 ...
+			if (root != null && root.exists()) {
+				int counter = 1;
+				while (root.child(finalName).exists()) {
+					finalName = baseName + counter;
+					counter++;
+				}
+			}
+			// ----------------------------------------
+
 			add(new VisLabel("Name:")).left();
-			add(nameField = new VisTextField("MyGame")).width(250).row();
+			// 使用计算出的可用名称
+			add(nameField = new VisTextField(finalName)).width(250).row();
 
 			add(new VisLabel("Package:")).left();
-			add(pkgField = new VisTextField("com.mygame")).width(250).row();
+			// 包名跟随项目名变化 (转小写)
+			add(pkgField = new VisTextField("com." + finalName.toLowerCase())).width(250).row();
 
 			add(errorLabel = new VisLabel("")).colspan(2).row();
 			errorLabel.setColor(Color.RED);

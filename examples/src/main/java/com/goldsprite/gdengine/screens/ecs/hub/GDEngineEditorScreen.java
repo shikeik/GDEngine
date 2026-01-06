@@ -312,7 +312,32 @@ public class GDEngineEditorScreen extends GScreen {
 		FileHandle file = node.getValue();
 		PopupMenu menu = new PopupMenu();
 
+		// [新增] 针对文件的逻辑：检查是否为脚本入口
+		if (!file.isDirectory() && file.extension().equals("java")) {
+			// 简单的文本扫描，避免编译开销
+			String content = file.readString("UTF-8"); // 确保用UTF-8读取
+
+			// 简单的正则匹配：implements ... IGameScriptEntry
+			// 兼容带包名和不带包名的写法
+			boolean isEntry = content.contains("implements IGameScriptEntry") ||
+				content.contains("implements com.goldsprite.gdengine.core.scripting.IGameScriptEntry");
+
+			if (isEntry) {
+				MenuItem itemSetMain = new MenuItem("Set as Launch Entry");
+				itemSetMain.getLabel().setColor(Color.CYAN);
+				itemSetMain.addListener(new ChangeListener() {
+					@Override
+					public void changed(ChangeEvent event, Actor actor) {
+						setProjectEntry(file);
+					}
+				});
+				menu.addItem(itemSetMain);
+				menu.addSeparator();
+			}
+		}
+
 		if (file.isDirectory()) {
+			// ... (原有的创建菜单代码) ...
 			MenuItem itemScript = new MenuItem("New Script");
 			itemScript.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { showCreateDialog(file, true); }});
 			menu.addItem(itemScript);
@@ -324,12 +349,66 @@ public class GDEngineEditorScreen extends GScreen {
 			menu.addSeparator();
 		}
 
+		// ... (原有的删除菜单代码) ...
 		MenuItem itemDelete = new MenuItem("Delete");
-		itemDelete.getLabel().setColor(Color.RED);
-		itemDelete.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { showDeleteConfirm(file); }});
+		// ...
 		menu.addItem(itemDelete);
 
 		menu.showMenu(stage, x, y);
+	}
+
+	// [新增] 设置启动入口逻辑
+	private void setProjectEntry(FileHandle file) {
+		FileHandle projectDir = GDEngineHubScreen.ProjectManager.currentProject;
+		FileHandle srcRoot = projectDir.child("src").child("main").child("java");
+
+		// 1. 计算全类名
+		// 路径: .../src/main/java/com/mygame/MyScript.java
+		// 相对: com/mygame/MyScript.java
+		String fullPath = file.path();
+		String rootPath = srcRoot.path();
+
+		if (!fullPath.startsWith(rootPath)) {
+			statusLabel.setText("Error: File not in src path!");
+			return;
+		}
+
+		String relPath = fullPath.substring(rootPath.length());
+		if (relPath.startsWith("/") || relPath.startsWith("\\")) relPath = relPath.substring(1);
+
+		// com/mygame/MyScript.java -> com.mygame.MyScript
+		String className = relPath.replace(".java", "").replace("/", ".").replace("\\", ".");
+
+		// 2. 修改 project.json
+		try {
+			FileHandle configFile = projectDir.child("project.json");
+			GDEngineHubScreen.ProjectManager.ProjectConfig cfg;
+			Json json = new Json();
+
+			if (configFile.exists()) {
+				cfg = json.fromJson(GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+			} else {
+				cfg = new GDEngineHubScreen.ProjectManager.ProjectConfig();
+				cfg.name = projectDir.name();
+			}
+
+			cfg.entryClass = className;
+
+			// 3. 保存
+			configFile.writeString(json.prettyPrint(cfg), false, "UTF-8");
+
+			statusLabel.setText("Entry set: " + className);
+			statusLabel.setColor(Color.GREEN);
+			statusLabel.addAction(com.badlogic.gdx.scenes.scene2d.actions.Actions.sequence(
+				com.badlogic.gdx.scenes.scene2d.actions.Actions.color(Color.GREEN, 0.5f),
+				com.badlogic.gdx.scenes.scene2d.actions.Actions.color(Color.LIGHT_GRAY, 1f)
+			));
+
+		} catch (Exception e) {
+			statusLabel.setText("Config Error: " + e.getMessage());
+			statusLabel.setColor(Color.RED);
+			e.printStackTrace();
+		}
 	}
 
 	// =========================================================================================

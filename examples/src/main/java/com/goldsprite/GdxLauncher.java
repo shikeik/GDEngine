@@ -10,6 +10,7 @@ import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.audio.SynthAudio;
 import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.log.DebugConsole;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.screens.ExampleSelectScreen;
@@ -85,8 +86,9 @@ public class GdxLauncher extends Game {
 			return;
 		}
 
-		if (Gdx.input.isKeyJustPressed(Input.Keys.K)) {
-			Debug.showDebugUI = !Debug.showDebugUI;
+		if (Gdx.input.isKeyJustPressed(Input.Keys.Z)) {
+//			Debug.showDebugUI = !Debug.showDebugUI;
+			if(Debug.shortcuts) DebugConsole.autoSwitchState();
 		}
 
 		ScreenManager.getInstance().render();

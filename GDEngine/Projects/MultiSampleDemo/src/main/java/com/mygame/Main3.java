@@ -157,7 +157,7 @@ public class Main3 implements IGameScriptEntry {
 	/**
      *  ( SpriteUtils mode=0 )
      * @param tex 
-     * @param row §Ü
+     * @param row 
      * @param count 
      */
     private Array<TextureRegion> splitFrames(Texture tex, int row, int count) {
