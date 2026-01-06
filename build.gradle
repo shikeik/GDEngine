@@ -36,35 +36,6 @@ allprojects {
 	}
 }
 
-configure(subprojects - project(':android')) {
-	apply plugin: 'java-library'
-	sourceCompatibility = 8
-
-/*
-  生成资源文件清单（assets.txt）
-  - 扫描 assets 目录中的所有文件
-  - 按相对路径排序后写入 assets.txt
-  - 用于动态加载资源，避免硬编码路径
-  这个桌面端代码中需要扫描asset/目录时会用到! 因为File.list无法获取目录会报空
-*/
-	tasks.register('generateAssetList') {
-		inputs.dir("${project.rootDir}/assets/")
-		File assetsFolder = new File("${project.rootDir}/assets/")
-		File assetsFile = new File(assetsFolder, "assets.txt")
-
-		assetsFile.delete() // 删除旧的清单文件
-		fileTree(assetsFolder).collect { assetsFolder.relativePath(it) }.sort().each {
-			assetsFile.append(it + "\n") // 写入文件路径
-		}
-	}
-// 将生成任务绑定到资源处理任务
-	processResources.dependsOn 'generateAssetList'
-
-	compileJava {
-		options.incremental = true
-	}
-}
-
 subprojects {
 	version = '$projectVersion'
 	ext.appName = 'SoloFight'
@@ -97,4 +68,58 @@ subprojects {
 }
 
 eclipse.project.name = 'SoloFight' + '-parent'
+
+
+/*
+  生成资源文件清单（assets.txt）
+  - 扫描 assets 目录中的所有文件
+  - 按相对路径排序后写入 assets.txt
+  - 用于动态加载资源，避免硬编码路径
+  这个桌面端代码中需要扫描asset/目录时会用到! 因为File.list无法获取目录会报空
+*/
+configure(subprojects - project(':android')) {
+	apply plugin: 'java-library'
+
+	// [新增] 1. 模板同步任务
+	// 将 GDEngine/InternalProjectTemplates 同步到 assets/engine/templates
+	tasks.register('syncEngineTemplates', Sync) {
+		from file("GDEngine/InternalProjectTemplates")
+		into file("assets/engine/templates")
+
+		// 排除不必要的元数据文件
+		exclude "**/*.git", "**/.gradle", "**/build/", "**/*.class"
+
+		doFirst {
+			println ">>> 同步本地项目模板到assets中..."
+		}
+	}
+
+	// [修改] 2. 清单生成任务 (保持原有逻辑，只需添加 dependsOn)
+	tasks.register('generateAssetList') {
+		// 关键：生成清单前，必须先把模板复制进去，否则清单里会少东西
+		dependsOn 'syncEngineTemplates'
+
+		inputs.dir("${project.rootDir}/assets/")
+		// ... (后续原有的生成逻辑保持不变) ...
+		File assetsFolder = new File("${project.rootDir}/assets/")
+		File assetsFile = new File(assetsFolder, "assets.txt")
+
+		assetsFile.delete()
+		fileTree(assetsFolder).collect { assetsFolder.relativePath(it) }.sort().each {
+			assetsFile.append(it + "\n")
+		}
+		doFirst {
+			println ">>> 资源文件变化, 同步资源清单中..."
+		}
+	}
+	// [保持] 绑定到 processResources
+	processResources.dependsOn 'generateAssetList'
+
+	compileJava {
+		options.incremental = true
+	}
+}
+
+
+
 

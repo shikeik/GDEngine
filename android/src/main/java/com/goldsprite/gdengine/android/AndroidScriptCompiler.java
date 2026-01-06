@@ -223,11 +223,11 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 
 		// 2. libs/*.jar (gdx.jar, gdengine.jar)
 		try {
-			String[] libFiles = context.getAssets().list("libs");
+			String[] libFiles = context.getAssets().list("engine/libs");
 			if (libFiles != null) {
 				for (String fileName : libFiles) {
 					// 所有的 libs 下的 jar 都跟随版本刷新
-					extractAsset("libs/" + fileName, new File(libsDir, fileName), isNewVersion);
+					extractAsset("engine/libs/" + fileName, new File(libsDir, fileName), isNewVersion);
 				}
 			}
 		} catch (IOException e) {
@@ -278,7 +278,7 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		// 2. 如果不需要覆盖 (APK没变)，但文件丢了，也得写
 		// 3. 否则 (APK没变 且 文件健在)，跳过 -> 省 IO
 		if (!overwrite && destFile.exists() && destFile.length() > 0) {
-			return; 
+			return;
 		}
 
 		try (InputStream is = context.getAssets().open(assetName);
