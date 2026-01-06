@@ -1,0 +1,6 @@
+{
+	"displayName": "Flappy Cube",
+	"description": "经典的 Flappy Bird 复刻版。展示物理重力、无限卷轴和碰撞检测。",
+	"version": "1.0",
+	"originEntry": "com.flappy.Main2"
+}
