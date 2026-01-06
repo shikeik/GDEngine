@@ -10,7 +10,6 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -26,7 +25,6 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 
 public class BioCodeEditor extends VisTable {
-
 	private CodeTextArea textArea;
 	private VisLabel lineNumbers;
 	private VisScrollPane scrollPane;
@@ -40,15 +38,18 @@ public class BioCodeEditor extends VisTable {
 	private Runnable onSaveCallback;
 
 	public BioCodeEditor() {
+		this(1f);
+	}
+	public BioCodeEditor(float baseFntScale) {
 		super();
-		build();
+		build(baseFntScale);
 	}
 
 	public void setOnSave(Runnable onSave) {
 		this.onSaveCallback = onSave;
 	}
 
-	private void build() {
+	private void build(float baseFntScale) {
 		setBackground("window-bg");
 
 		VisTextField.VisTextFieldStyle baseStyle = VisUI.getSkin().get(VisTextField.VisTextFieldStyle.class);
@@ -57,7 +58,7 @@ public class BioCodeEditor extends VisTable {
 		// --- 字体配置 ---
 		customStyle.font = FontUtils.generateAutoClarity(35);
 		customStyle.font.getData().markupEnabled = true;
-		customStyle.font.getData().setScale(customStyle.font.getData().scaleX * 0.5f);
+		customStyle.font.getData().setScale(customStyle.font.getData().scaleX * 0.5f * baseFntScale);
 
 		// [修复2] 赋予换行符宽度，让空行选区可见
 		BitmapFont.Glyph spaceGlyph = customStyle.font.getData().getGlyph('\n');

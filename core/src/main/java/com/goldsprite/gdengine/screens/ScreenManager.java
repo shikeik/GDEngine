@@ -4,7 +4,6 @@ import com.badlogic.gdx.*;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.PlatformImpl;
-//import com.goldsprite.gameframeworks.log.Debug;
 
 import java.util.*;
 import java.util.function.Consumer;

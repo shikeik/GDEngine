@@ -4,11 +4,8 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.utils.ScreenUtils; // 记得引入这个
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.badlogic.gdx.utils.viewport.Viewport;
+import com.badlogic.gdx.utils.ScreenUtils;
 import com.goldsprite.gdengine.assets.VisUIHelper;
 import com.goldsprite.gdengine.audio.SynthAudio;
 import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
@@ -39,9 +36,7 @@ public class GdxLauncher extends Game {
 	public void create() {
 		userType = Gdx.app.getType();
 
-		float scl = 1.2f;
-		Viewport uiViewport = new ExtendViewport(540 * scl, 960 * scl, new OrthographicCamera());
-		new ScreenManager(uiViewport);
+		new ScreenManager();
 
 		// 如果是 Android 端且没有编译器，说明权限还在申请中
 		// 我们先暂停初始化，防止读取资源报错

@@ -39,6 +39,10 @@ public class IDEConsole extends VisTable {
 		// 2. 顶部/底部栏 (放在第二行，常驻)
 		VisTable header = new VisTable();
 
+		lastLogLabel = new VisLabel("Ready");
+		lastLogLabel.setColor(Color.GRAY);
+		lastLogLabel.setEllipsis(true);
+
 		toggleBtn = new VisTextButton("▲");
 		toggleBtn.addListener(new ClickListener() {
 			@Override
@@ -46,10 +50,6 @@ public class IDEConsole extends VisTable {
 				toggle();
 			}
 		});
-
-		lastLogLabel = new VisLabel("Ready");
-		lastLogLabel.setColor(Color.GRAY);
-		lastLogLabel.setEllipsis(true);
 
 		VisTextButton clearBtn = new VisTextButton("Clear");
 		clearBtn.addListener(new ClickListener() {
@@ -60,11 +60,12 @@ public class IDEConsole extends VisTable {
 			}
 		});
 
-		header.add(toggleBtn).width(30).height(30).padRight(5);
-		header.add(lastLogLabel).expandX().fillX().minWidth(0).padRight(5); // <--- 改了这里
-		header.add(clearBtn).height(30);
+		header.add(lastLogLabel).padLeft(20).expandX().fillX().minWidth(0).padRight(5);
+		float size = 40;
+		header.add(toggleBtn).width(size).height(size).padRight(10);
+		header.add(clearBtn).height(size).padRight(20);
 
-		add(header).growX().height(COLLAPSED_HEIGHT);
+		add(header).padBottom(10).growX().height(COLLAPSED_HEIGHT);
 
 		setExpanded(false);
 	}
@@ -105,6 +106,7 @@ public class IDEConsole extends VisTable {
 		}
 
 		String last = logs.get(logs.size() - 1);
+		last = last.split("\n")[0]; // 换行截断
 		lastLogLabel.setText(last);
 
 		if (expanded) {

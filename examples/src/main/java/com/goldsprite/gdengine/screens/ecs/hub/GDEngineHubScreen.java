@@ -40,7 +40,7 @@ public class GDEngineHubScreen extends GScreen {
 
 	@Override
 	protected void initViewport() {
-		uiViewportScale = 1.5f;
+		uiViewportScale = PlatformImpl.isAndroidUser() ? 1.5f : 2.5f;
 		super.initViewport();
 	}
 
@@ -104,7 +104,7 @@ public class GDEngineHubScreen extends GScreen {
 
 		VisTable container = new VisTable();
 		container.setBackground("window-bg");
-		container.add(scrollPane).grow().pad(5);
+		container.add(scrollPane).grow().pad(20);
 
 		root.add(container).grow().row();
 
@@ -131,14 +131,14 @@ public class GDEngineHubScreen extends GScreen {
 			item.pad(10);
 
 			VisLabel nameLbl = new VisLabel(projDir.name());
-			nameLbl.setFontScale(1.2f);
+			nameLbl.setFontScale(1.3f);
 			item.add(new VisLabel("📁 ")).padRight(10);
 			item.add(nameLbl).expandX().left();
 
-			VisLabel pathLbl = new VisLabel(projDir.path());
-			pathLbl.setColor(Color.GRAY);
-			pathLbl.setFontScale(0.7f);
-			item.add(pathLbl).right().padRight(20);
+			VisLabel pathLabel = new VisLabel(projDir.path());
+			pathLabel.setColor(Color.GRAY);
+			pathLabel.setFontScale(0.8f);
+			item.add(pathLabel).right().padRight(20);
 
 			// 整个条目点击事件
 			item.addListener(new ClickListener() {

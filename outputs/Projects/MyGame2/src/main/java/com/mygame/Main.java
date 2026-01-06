@@ -9,15 +9,15 @@ import com.goldsprite.gdengine.ecs.component.Component;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 
 /**
- * �皸����
+ * 自动生成的游戏入口脚本
  */
 public class Main implements IGameScriptEntry {
 
 	@Override
 	public void onStart(GameWorld world) {
-		Debug.logT("Script", "游�! 欢�� MyGame2!");
+		Debug.logT("Script", "游戏启动! 欢迎来到 MyGame2!");
 
-		// 刻��两��
+		// 创建一个示例方块
 		createCube(world, 0, 0);
 	}
 
@@ -25,7 +25,7 @@ public class Main implements IGameScriptEntry {
 		GObject obj = new GObject("Cube");
 		obj.transform.setPosition(x, y);
 
-		// 动添�丮���渲�绻�
+		// 动态添加一个简单的渲染组件
 		obj.addComponent(new Component() {
 			private NeonBatch batch;
 
@@ -36,7 +36,7 @@ public class Main implements IGameScriptEntry {
 
 			@Override
 			public void update(float delta) {
-				// 箕�旋转动�
+				// 简单的旋转动画
 				float angle = GameWorld.getTotalTime() * 100f;
 
 				batch.setProjectionMatrix(GameWorld.worldCamera.combined);
@@ -50,6 +50,6 @@ public class Main implements IGameScriptEntry {
 
 	@Override
 	public void onUpdate(float delta) {
-		// ��逻�在�
+		// 全局逻辑写在这里
 	}
 }

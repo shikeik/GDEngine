@@ -13,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.log.Debug;
@@ -52,7 +53,7 @@ public class GDEngineEditorScreen extends GScreen {
 
 	@Override
 	protected void initViewport() {
-		uiViewportScale = 1.5f;
+		uiViewportScale = PlatformImpl.isAndroidUser() ? 1.5f : 2.5f;
 		super.initViewport();
 	}
 
@@ -82,9 +83,9 @@ public class GDEngineEditorScreen extends GScreen {
 		stage = new Stage(getUIViewport());
 		getImp().addProcessor(stage);
 
-		VisTable root = new VisTable();int k2;
+		VisTable root = new VisTable();
 		float pad = 35;
-		root.padLeft(pad).padRight(pad).padBottom(pad/2f);
+		root.padLeft(pad).padRight(pad);
 		root.setFillParent(true);
 		root.setBackground("window-bg");
 		stage.addActor(root);
@@ -107,11 +108,9 @@ public class GDEngineEditorScreen extends GScreen {
 		leftPanel.add(treeScroll).grow().pad(5);
 
 		VisTable rightPanel = new VisTable();
-		codeEditor = new BioCodeEditor();
+		codeEditor = new BioCodeEditor(PlatformImpl.isAndroidUser()? 1f : 1.5f);
 		// [新增] 注入 Ctrl+S 回调
-		codeEditor.setOnSave(() -> {
-			saveCurrentFile();
-		});
+		codeEditor.setOnSave(this::saveCurrentFile);
 		rightPanel.add(codeEditor).grow();
 
 		VisSplitPane splitPane = new VisSplitPane(leftPanel, rightPanel, false);
@@ -205,7 +204,7 @@ public class GDEngineEditorScreen extends GScreen {
 					return;
 				}
 
-				Object instance = clazz.newInstance();
+				Object instance = clazz.getDeclaredConstructor().newInstance();
 				IGameScriptEntry gameEntry = (IGameScriptEntry) instance;
 
 				Gdx.app.postRunnable(() -> {
@@ -416,7 +415,7 @@ public class GDEngineEditorScreen extends GScreen {
 
 	private void loadFile(FileHandle file) {
 		this.currentEditingFile = file;
-		codeEditor.setText(file.readString());
+		codeEditor.setText(file.readString("UTF-8"));
 		statusLabel.setText("Editing: " + file.name());
 		statusLabel.setColor(Color.LIGHT_GRAY);
 	}

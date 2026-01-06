@@ -8,9 +8,9 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gdengine.PlatformImpl;
 
 
@@ -50,7 +50,7 @@ public abstract class GScreen extends ScreenAdapter {
 
 	//ExampleGScreen Logic
 	// 1. 定义基准尺寸 (540p)
-	protected float uiViewportScale = 1.2f; // 保持原本的缩放系数
+	protected float uiViewportScale = PlatformImpl.isAndroidUser() ? 1.2f : 1.3f; // 保持原本的缩放系数
 	protected float viewSizeShort = 540f;
 	protected float viewSizeLong = 960f;
 
@@ -107,7 +107,7 @@ public abstract class GScreen extends ScreenAdapter {
 		}
 
 		// 自动应用缩放系数
-		uiViewport = new ExtendViewport(w * uiViewportScale, h * uiViewportScale);
+		uiViewport = new FitViewport(w * uiViewportScale, h * uiViewportScale);
 		//Debug.log("1ui视口宽高: %s", getViewSize());
 
 		uiViewport.update(screenW, screenH, true);
