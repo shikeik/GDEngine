@@ -47,7 +47,7 @@ public class Gd {
 	/** 全局配置中心 */
 	public static final Config config = new Config();
 
-	/** 引擎偏好设置 (Editor Preferences) [新增] */
+	/** 引擎偏好设置 (可能为 null，表示未初始化引导) */
 	public static GDEngineConfig engineConfig;
 
 	/** 当前运行模式 */
@@ -69,22 +69,21 @@ public class Gd {
 
 		if (inputImpl != null) input = inputImpl;
 		else input = Gdx.input;
-
 		if (graphicsImpl != null) graphics = graphicsImpl;
 		else graphics = Gdx.graphics;
-
-		// Files 注入逻辑
-		if (PlatformImpl.isAndroidUser()) files = Gdx.files; // Android 原生支持良好，直接透传
-		else files = new DesktopFiles(Gdx.files); // Desktop 使用代理，解决 JAR 包 list 问题
-
-		if (compilerImpl != null) compiler = compilerImpl;
+		if (!PlatformImpl.isAndroidUser()) files = new DesktopFiles(Gdx.files); // Desktop 使用代理，解决 JAR 包 list 问题
+		else files = Gdx.files; // Android 原生支持良好，直接透传
 
 		// 刷新基础引用，防止 Gdx 上下文重建后引用失效
 		app = Gdx.app;
 		audio = Gdx.audio;
 
-		// 加载引擎配置
-		engineConfig = GDEngineConfig.load();
+		if (compilerImpl != null) compiler = compilerImpl;
+
+		// 尝试静默加载配置
+		if (GDEngineConfig.tryLoad()) {
+			engineConfig = GDEngineConfig.getInstance();
+		}
 	}
 
 	// =============================================================

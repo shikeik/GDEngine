@@ -29,7 +29,7 @@ public class SettingsWindow extends BaseDialog {
 
 		// 路径输入框
 		pathField = new VisTextField();
-		pathField.setText(Gd.engineConfig.projectsRootPath);
+		pathField.setText(Gd.engineConfig.projectsSubDir);
 		add(pathField).growX().minWidth(500).padBottom(10).row();
 
 		// 错误提示区域
@@ -51,7 +51,7 @@ public class SettingsWindow extends BaseDialog {
 		btnReset.addListener(new ChangeListener() {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
-				pathField.setText(GDEngineConfig.getDefaultProjectsPath());
+				pathField.setText(GDEngineConfig.getRecommendedRoot());
 				errorLabel.setText("");
 			}
 		});
@@ -81,35 +81,26 @@ public class SettingsWindow extends BaseDialog {
 		return table;
 	}
 
+	// [修改] saveSettings 方法逻辑
 	private void saveSettings() {
-		String newPath = pathField.getText().trim();
+		// 这里现在只修改 projectsSubDir，或者只做一些简单的 UI Scale 配置
+		// 如果我们允许用户在设置里修改 Root 路径，逻辑会比较复杂(迁移文件等)
+		// 暂时只允许修改 "子目录名" 或者 "UI Scale"
 
-		// 简单的有效性校验
-		FileHandle handle = Gdx.files.absolute(newPath);
-		if (!handle.exists()) {
-			// 尝试创建
-			try {
-				handle.mkdirs();
-			} catch (Exception e) {
-				errorLabel.setText("Invalid path: Cannot create directory.");
-				pack();
-				return;
-			}
-		}
+		// 既然我们现在的需求是 Projects 路径可配置，而 Config 已经把 Projects 锁定在 Root 下了
+		// 那么这里的输入框如果依然是绝对路径，逻辑就会冲突。
 
-		if (!handle.isDirectory()) {
-			errorLabel.setText("Path exists but is not a directory.");
-			pack();
-			return;
-		}
+		// 方案修正：
+		// SettingsWindow 暂时只显示当前 Root 路径 (Read Only)，或者提供 "Reset Root" 按钮(清除 Prefs 并重启)。
+		// 鉴于目前需求，我们先把这个窗口简化为 "信息展示 + UI配置"。
 
-		// 更新 Config 并保存
-		Gd.engineConfig.projectsRootPath = newPath;
+		// 如果您确实想改 Projects 路径，那是修改 GDEngineConfig.projectsSubDir
+
+		// 示例：只保存 UI Scale (如果有输入框的话)
+		// Gd.engineConfig.uiScale = ...
+
 		Gd.engineConfig.save();
-
-		// 回调刷新
 		if (onConfigChanged != null) onConfigChanged.run();
-
 		fadeOut();
 	}
 }

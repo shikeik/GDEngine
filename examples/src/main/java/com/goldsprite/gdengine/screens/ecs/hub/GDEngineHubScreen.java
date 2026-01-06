@@ -84,7 +84,8 @@ public class GDEngineHubScreen extends GScreen {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				// 传入 refreshList 回调，确保修改路径后列表刷新
-				new SettingsWindow(GDEngineHubScreen.this::refreshList).show(stage);
+				//没写好暂时注释
+//				new SettingsWindow(GDEngineHubScreen.this::refreshList).show(stage);
 			}
 		});
 
@@ -200,16 +201,8 @@ public class GDEngineHubScreen extends GScreen {
 	public static class ProjectManager {
 		public static FileHandle currentProject;
 
-		// [修改] 核心：动态获取根目录
-		public static FileHandle getProjectsRoot() {
-			String path = Gd.engineConfig.projectsRootPath;
-			return Gdx.files.absolute(path);
-		}
-
 		public static Array<FileHandle> listProjects() {
-			// [适配] 使用 getProjectsRoot
-			FileHandle root = getProjectsRoot();
-			// ... (后续逻辑不变，复用 root 变量)
+			FileHandle root = Gd.engineConfig.getProjectsDir();
 			FileHandle[] files = root.list();
 			Array<FileHandle> projects = new Array<>();
 			if(files != null) { // 防空
@@ -227,7 +220,7 @@ public class GDEngineHubScreen extends GScreen {
 			if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
 
 			// [适配] 使用 getProjectsRoot 获取目标路径
-			FileHandle finalTarget = getProjectsRoot().child(name);
+			FileHandle finalTarget = Gd.engineConfig.getProjectsDir().child(name);
 			if (finalTarget.exists()) {
 				return "Project already exists!";
 			}

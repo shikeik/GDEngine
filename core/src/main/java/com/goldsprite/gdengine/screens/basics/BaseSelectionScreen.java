@@ -86,8 +86,7 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 			button.addListener(new ClickListener() {
 				@Override
 				public void clicked(InputEvent event, float x, float y) {
-					// 自动创建并跳转
-					getScreenManager().setCurScreen(key, true);
+					onScreenSelected(key);
 				}
 			});
 		}
@@ -98,6 +97,14 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 	public void render0(float delta) {
 		stage.act(delta);
 		stage.draw();
+	}
+
+	/**
+	 * 屏幕选择回调 (子类可重写此方法进行拦截)
+	 */
+	protected void onScreenSelected(Class<? extends GScreen> screenClass) {
+		// 自动创建并跳转
+		getScreenManager().setCurScreen(screenClass, true);
 	}
 
 	@Override

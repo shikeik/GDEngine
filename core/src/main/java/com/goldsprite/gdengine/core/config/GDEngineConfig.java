@@ -1,6 +1,7 @@
 package com.goldsprite.gdengine.core.config;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
@@ -8,100 +9,137 @@ import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.log.Debug;
 
 /**
- * 引擎全局偏好设置 (Editor Preferences)
- * 存储在本地设备，不随项目同步。
+ * 引擎全局配置管理器
+ * 机制：利用 Preferences (gd_boot) 存储引擎根目录路径，实现位置解耦。
  */
 public class GDEngineConfig {
 
-	private static final String CONFIG_FILE_PATH = "GDEngine/engine_config.json";
+	// 引导首选项 Key
+	private static final String PREF_NAME = "gd_boot";
+	private static final String KEY_ENGINE_ROOT = "engine_root";
+
+	// 配置文件名 (存储在 EngineRoot 下)
+	private static final String CONFIG_FILENAME = "engine_config.json";
+
 	private static final Json json = new Json();
+	private static GDEngineConfig instance;
 
 	static {
-		// [修复] 明确设置输出类型为 JSON (这会启用换行)
 		json.setOutputType(JsonWriter.OutputType.json);
 		json.setIgnoreUnknownFields(true);
-		// [可选] 如果想强制不用引号包围Key可以设为javascript，但json兼容性最好
 	}
 
-	public String engineRootPath;
-	public String projectsRootPath;
+	// ==========================================
+	// 实例字段 (JSON Payload)
+	// ==========================================
+
+	/** 项目存放子目录名 (默认 Projects) */
+	public String projectsSubDir = "Projects";
+
 	public float uiScale = 1.0f;
-	public String lastOpenProjectPath;
+	public String lastOpenProjectPath = "";
 
-	public static GDEngineConfig load() {
-		FileHandle file = getConfigFile();
-		GDEngineConfig config = null;
+	// 运行时缓存：当前生效的引擎根目录 (不序列化)
+	private transient String activeEngineRoot;
 
-		if (file.exists()) {
+	// ==========================================
+	// 静态生命周期
+	// ==========================================
+
+	/**
+	 * 尝试加载配置
+	 * @return 如果成功加载(或已初始化)返回 true；如果未配置引导路径返回 false (需要弹窗)
+	 */
+	public static boolean tryLoad() {
+		if (instance != null) return true;
+
+		Preferences prefs = Gdx.app.getPreferences(PREF_NAME);
+		String savedRoot = prefs.getString(KEY_ENGINE_ROOT, null);
+
+		if (savedRoot == null || savedRoot.trim().isEmpty()) {
+			return false; // 未引导
+		}
+
+		// 校验目录是否存在
+		FileHandle rootHandle = Gdx.files.absolute(savedRoot);
+		if (!rootHandle.exists() || !rootHandle.isDirectory()) {
+			Debug.logT("Config", "引导路径失效: " + savedRoot);
+			return false;
+		}
+
+		loadFromRoot(savedRoot);
+		return true;
+	}
+
+	/**
+	 * 初始化/重置引擎根目录 (由 SetupDialog 调用)
+	 */
+	public static void initialize(String engineRootPath) {
+		FileHandle root = Gdx.files.absolute(engineRootPath);
+		if (!root.exists()) root.mkdirs();
+
+		// 1. 保存引导
+		Preferences prefs = Gdx.app.getPreferences(PREF_NAME);
+		prefs.putString(KEY_ENGINE_ROOT, engineRootPath);
+		prefs.flush();
+
+		// 2. 加载/生成配置
+		loadFromRoot(engineRootPath);
+	}
+
+	private static void loadFromRoot(String rootPath) {
+		FileHandle configFile = Gdx.files.absolute(rootPath).child(CONFIG_FILENAME);
+
+		if (configFile.exists()) {
 			try {
-				config = json.fromJson(GDEngineConfig.class, file);
+				instance = json.fromJson(GDEngineConfig.class, configFile);
 			} catch (Exception e) {
-				Debug.logT("Config", "配置读取失败，重置为默认: " + e.getMessage());
+				Debug.logT("Config", "JSON损坏，重置默认: " + e.getMessage());
 			}
 		}
 
-		if (config == null) {
-			config = new GDEngineConfig();
-			config.resetToDefault();
-			config.save(); // 生成默认文件
+		if (instance == null) {
+			instance = new GDEngineConfig();
 		}
 
-		// 校验路径有效性，无效则回退默认
-		if (!checkPathValid(config.projectsRootPath)) {
-			Debug.logT("Config", "配置路径无效，回退默认: " + config.projectsRootPath);
-			config.resetToDefault();
-		}
+		instance.activeEngineRoot = rootPath;
 
-		Debug.logT("Config", "Loaded. Root: " + config.projectsRootPath);
-		return config;
+		// 确保 Projects 目录存在
+		instance.getProjectsDir().mkdirs();
+
+		instance.save(); // 确保文件存在
+		Debug.logT("Config", "Ready. Engine Root: " + rootPath);
 	}
+
+	public static GDEngineConfig getInstance() {
+		return instance;
+	}
+
+	// ==========================================
+	// 实例方法
+	// ==========================================
 
 	public void save() {
+		if (activeEngineRoot == null) return;
 		try {
-			FileHandle file = getConfigFile();
-			// [修复] 使用 toJson 直接序列化，它会遵循 static 块里的 OutputType.json 配置
-			file.writeString(json.prettyPrint(this), false, "UTF-8");
-			Debug.logT("Config", "Saved to " + file.path());
+			FileHandle file = Gdx.files.absolute(activeEngineRoot).child(CONFIG_FILENAME);
+			file.writeString(json.toJson(this), false, "UTF-8");
 		} catch (Exception e) {
-			Debug.logT("Config", "保存失败: " + e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
-	public void resetToDefault() {
-		this.projectsRootPath = getDefaultProjectsPath();
-		this.uiScale = 1.0f;
+	public FileHandle getProjectsDir() {
+		return Gdx.files.absolute(activeEngineRoot).child(projectsSubDir);
 	}
 
-	/** 获取配置文件的物理句柄 */
-	private static FileHandle getConfigFile() {
+	/** 获取推荐的默认安装位置 (供 SetupDialog 使用) */
+	public static String getRecommendedRoot() {
 		if (PlatformImpl.isAndroidUser()) {
-			// Android: /storage/emulated/0/GDEngine/engine_config.json
-			String externalPath = PlatformImpl.AndroidExternalStoragePath;
-			return Gdx.files.absolute(externalPath).child(CONFIG_FILE_PATH);
+			return PlatformImpl.AndroidExternalStoragePath + "/GDEngine";
 		} else {
-			// PC: ./GDEngine/engine_config.json (项目根目录下)
-			return Gdx.files.local(CONFIG_FILE_PATH);
-		}
-	}
-
-	/** 获取默认的项目存放路径 */
-	public static String getDefaultProjectsPath() {
-		if (PlatformImpl.isAndroidUser()) {
-			// [修复] Android 默认: SD卡/GDEngine/Projects
-			return PlatformImpl.AndroidExternalStoragePath + "/GDEngine/Projects";
-		} else {
-			// PC 默认: ./GDEngine/Projects
-			return Gdx.files.local("GDEngine/Projects").file().getAbsolutePath();
-		}
-	}
-
-	private static boolean checkPathValid(String path) {
-		try{
-			FileHandle handle = Gdx.files.absolute(path);
-			if (!handle.exists()) handle.mkdirs();
-			return true;
-		}catch (Exception e){
-			return false; // 创建失败则表示路径不合法
+			// PC 默认: 当前工作目录下的 GDEngine (便携)
+			return Gdx.files.local("GDEngine").file().getAbsolutePath();
 		}
 	}
 }
