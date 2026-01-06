@@ -1,4 +1,4 @@
-# SoloFight V1.8.11.3-beta
+# SoloFight V1.8.12.4-rc
 
 ## 介绍:
 

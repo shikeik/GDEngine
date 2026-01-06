@@ -339,7 +339,7 @@ public class GDEngineHubScreen extends GScreen {
 		/** 扫描所有可用模板 */
 		public static Array<TemplateInfo> listTemplates() {
 			Array<TemplateInfo> list = new Array<>();
-			FileHandle templatesRoot = Gdx.files.internal("engine/templates");
+			FileHandle templatesRoot = Gd.files.internal("engine/templates");
 			if (!templatesRoot.exists()) return list;
 
 			for (FileHandle dir : templatesRoot.list()) {

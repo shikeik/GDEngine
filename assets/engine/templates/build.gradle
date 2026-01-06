@@ -1,5 +1,5 @@
 plugins {
-	id 'java'
+	id 'java-library'
 }
 
 sourceSets.main.resources.srcDirs += [rootProject.file('/assets').path]

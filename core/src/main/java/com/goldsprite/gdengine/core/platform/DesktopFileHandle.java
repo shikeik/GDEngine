@@ -91,4 +91,16 @@ public class DesktopFileHandle extends FileHandle {
 		if (file.getPath().length() == 0) throw new com.badlogic.gdx.utils.GdxRuntimeException("Cannot get the sibling of the root.");
 		return new DesktopFileHandle(new File(file.getParent(), name), type());
 	}
+
+	@Override
+	public boolean isDirectory() {
+		if (type() == FileType.Internal) {
+			// 既然 AssetUtils 已经告诉我们这个 handle 是存在的
+			// 我们尝试 list 一下，如果有子文件，那就是目录
+			// 这是一个低成本的判断
+			String[] children = AssetUtils.listNames(path());
+			return children.length > 0;
+		}
+		return super.isDirectory();
+	}
 }
