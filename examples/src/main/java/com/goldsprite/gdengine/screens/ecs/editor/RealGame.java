@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.math.Vector2;
+import com.goldsprite.gdengine.core.Gd;
 
 // ==========================================
 // 6. 实机运行入口 (The Acid Test)
@@ -14,12 +15,12 @@ public class RealGame extends ApplicationAdapter {
 
     @Override
     public void create() {
-        // 1. 初始化 RELEASE 模式
-        Gd.init(Gd.Mode.RELEASE, null, null);
+		// 1. 【修改点】初始化 RELEASE 模式 (传入原生 Gdx 实现)
+		Gd.init(Gd.Mode.RELEASE, Gdx.input, Gdx.graphics, null);
 
-        // 2. 初始化游戏
-        gameWorld = new GameWorld();
-        gameWorld.init();
+		// 2. 初始化游戏
+		gameWorld = new GameWorld();
+		gameWorld.init();
 
         System.out.println("RealGame Started in RELEASE Mode");
     }

@@ -20,6 +20,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.goldsprite.gdengine.core.Gd;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisWindow;
@@ -50,8 +51,14 @@ public class EditorController {
 		createGameWindow();
 		createSceneWindow();
 
-		// 3. 代理初始化
-		Gd.init(Gd.Mode.EDITOR, gameWidget, gameTarget);
+		// 3. 【修改点】 代理初始化 -> 依赖注入
+		// 手动创建适配器实例
+		EditorGameInput inputImpl = new EditorGameInput(gameWidget);
+		EditorGameGraphics graphicsImpl = new EditorGameGraphics(gameTarget);
+
+		// 注入到 Core Gd
+		// compiler 可以传 null 或保持 Gd.compiler (如果之前有赋值)
+		Gd.init(Gd.Mode.EDITOR, inputImpl, graphicsImpl, Gd.compiler);
 
 		// 4. 游戏初始化 (会读取 Gd.config 默认配置)
 		gameWorld = new GameWorld();

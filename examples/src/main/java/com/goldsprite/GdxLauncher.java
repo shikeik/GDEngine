@@ -14,7 +14,7 @@ import com.goldsprite.gdengine.audio.SynthAudio;
 import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.ScreenManager;
-import com.goldsprite.gdengine.screens.ecs.editor.Gd;
+import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
 
@@ -64,7 +64,8 @@ public class GdxLauncher extends Game {
 
 		SynthAudio.init();
 
-		Gd.init(Gd.Mode.RELEASE, null, null, scriptCompiler);
+		// 【修改点】注入原生实现和编译器
+		Gd.init(Gd.Mode.RELEASE, Gdx.input, Gdx.graphics, scriptCompiler);
 		Debug.logT("Engine", "Gd initialized. Compiler available: %b", (scriptCompiler != null));
 
 		ScreenManager.getInstance()

@@ -11,6 +11,7 @@ import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.goldsprite.gdengine.core.Gd;
 
 // ==========================================
 // 1. 业务逻辑层 (Model) - 配置驱动 & 依赖注入版
