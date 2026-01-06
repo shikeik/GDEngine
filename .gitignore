@@ -1,9 +1,9 @@
 ## Gradle:
 gradle-app.setting
 /gradle/gradle-daemon-jvm.properties
+.gradle/
 
 ## Custom
-.gradle/
 build/
 javadoc/
 .idea/
@@ -54,7 +54,6 @@ www-test/
 # Not sure yet...
 
 ## IntelliJ, Android Studio:
-.idea/
 *.ipr
 *.iws
 *.iml

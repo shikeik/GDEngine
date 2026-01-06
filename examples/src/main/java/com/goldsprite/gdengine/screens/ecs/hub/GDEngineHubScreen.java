@@ -295,9 +295,15 @@ public class GDEngineHubScreen extends GScreen {
 
 				// 2.2 自动注入依赖库 (遍历 assets/libs)
 				String mulPlatPathFix = PlatformImpl.isAndroidUser() ? "" : "assets/";
+				mulPlatPathFix = "";
 				FileHandle libsSource = Gdx.files.internal(mulPlatPathFix+"libs");
 				FileHandle libsTarget = tempProj.child("libs");
 				libsTarget.mkdirs();
+
+				//test
+				FileHandle gdxHandle = libsSource.child("gdx-1.12.1.jar");
+				Debug.log("gdxHandle exists: %s, isDir: %s", gdxHandle.exists(), gdxHandle.isDirectory());
+//				gdxHandle.copyTo(libsTarget);
 
 				// 使用 suffix 过滤器，只拷 jar 包，避开可能存在的无关文件
 				FileHandle[] jars = libsSource.list(".jar");

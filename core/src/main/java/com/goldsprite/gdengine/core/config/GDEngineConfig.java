@@ -23,9 +23,10 @@ public class GDEngineConfig {
 		// [可选] 如果想强制不用引号包围Key可以设为javascript，但json兼容性最好
 	}
 
-	public String projectsRootPath = "";
+	public String engineRootPath;
+	public String projectsRootPath;
 	public float uiScale = 1.0f;
-	public String lastOpenProjectPath = "";
+	public String lastOpenProjectPath;
 
 	public static GDEngineConfig load() {
 		FileHandle file = getConfigFile();

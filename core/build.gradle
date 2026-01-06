@@ -31,7 +31,7 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.javadoc {
 	// 设置生成的 Javadoc 的输出目录
-	destinationDir = file("$rootProject.projectDir/readme/docs/javadoc")
+	destinationDir = file("$rootProject.projectDir/docs/javadoc")
 
 	// 配置 Javadoc 的额外选项
 	options {
@@ -93,7 +93,7 @@ compileJava.dependsOn(updateReadmeVersion)
 
 // 引擎任务==================================================
 // 1. 定义我们要暴露给脚本的白名单库 (只要文件名包含这些字符串就提取)
-def exposedLibs = ["gdx", "gdx-tools"] // 目前只需要 gdx，未来可以加 'box2d', 'ashley' 等
+def exposedLibs = ["gdx", "gdx-tools", "gdx-freetype", "vis-ui"] // 目前只需要 gdx，未来可以加 'box2d', 'ashley' 等
 // 定义 libs 输出目录
 def assetsLibsDir = file("${project.rootDir}/assets/libs/")
 
@@ -127,7 +127,7 @@ tasks.register('copyEngineLibs', Copy) {
 tasks.register('packageEngineCore', Jar) {
 	// 强制任务永远执行 (禁用增量构建检查)
     outputs.upToDateWhen { false }
-	
+
 	from sourceSets.main.output
 	archiveFileName = "gdengine.jar"
 	destinationDirectory = assetsLibsDir // 改到 assets/libs/ 统一管理
