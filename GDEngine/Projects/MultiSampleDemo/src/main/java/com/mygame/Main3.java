@@ -15,7 +15,7 @@ import com.badlogic.gdx.*;
 import com.goldsprite.gdengine.*;
 
 /**
- * 混合演示
+ * 
  */
 public class Main3 implements IGameScriptEntry {
 	private NeonBatch neonBatch;
@@ -26,7 +26,7 @@ public class Main3 implements IGameScriptEntry {
 
 	private float worldWidth, worldHeight;
 	
-	//开始时执行
+	//
 	@Override public void onStart(GameWorld world) {
 		neonBatch = new NeonBatch();
 		tex_gd_icon = new Texture(GameWorld.getAsset("gd_icon.png"));
@@ -36,14 +36,14 @@ public class Main3 implements IGameScriptEntry {
 		worldWidth = GameWorld.worldCamera.viewportWidth;
 		worldHeight = GameWorld.worldCamera.viewportHeight;
 		
-		String info = "世界高度: "+worldHeight
+		String info = ": "+worldHeight
 		+"\n"+GameWorld.inst().getSystem(SpriteSystem.class)
 		;
-		Debug.logT("Script", "RotCube脚本项目 onStart(). \ninfo: \n%s", info);
+		Debug.logT("Script", "RotCube onStart(). \ninfo: \n%s", info);
 
 		
 		float size = worldHeight*0.15f;
-		// 创建一个旋转Cube x y size color animSpeed
+		// Cube x y size color animSpeed
 		createRotCube(-worldHeight*0.2f, worldHeight*0.3f, size, Color.RED, 0.3f);
 
 		GObject p = createRotGdIcon(worldHeight*0.2f, worldHeight*0.3f, size, Color.WHITE, -0.3f);
@@ -55,7 +55,7 @@ public class Main3 implements IGameScriptEntry {
 		role = createRole(0, -worldHeight*0.2f, size);
 	}
 
-	// 每帧更新
+	// ?
 	@Override public void onUpdate(float delta) {
 		logic(delta);
 		drawGrid();
@@ -155,14 +155,14 @@ public class Main3 implements IGameScriptEntry {
 	}
 	
 	/**
-     * 辅助切图方法 (模拟 SpriteUtils mode=0 的逻辑)
-     * @param tex 纹理
-     * @param row 行号
-     * @param count 数量
+     *  ( SpriteUtils mode=0 )
+     * @param tex 
+     * @param row к
+     * @param count 
      */
     private Array<TextureRegion> splitFrames(Texture tex, int row, int count) {
         Array<TextureRegion> frames = new Array<>();
-        int cellSize = 80; // 这里这张图最后确定是80
+        int cellSize = 80; // 80
         for (int i = 0; i < count; i++) {
             // x, y, w, h
             frames.add(new TextureRegion(tex, i * cellSize, row * cellSize, cellSize, cellSize));
@@ -171,7 +171,7 @@ public class Main3 implements IGameScriptEntry {
     }
 
     /**
-     * 辅助构建动画数据
+     * 
      */
     private NeonAnimation createFrameAnim(String name, float duration, Array<TextureRegion> frames) {
         NeonAnimation anim = new NeonAnimation(name, duration, true);
@@ -179,7 +179,7 @@ public class Main3 implements IGameScriptEntry {
 
         float frameDuration = duration / frames.size;
         for (int i = 0; i < frames.size; i++) {
-            // 在对应时间点插入图片对象
+            // 
             timeline.addKeyframe(i * frameDuration, frames.get(i));
         }
         anim.addTimeline(timeline);
