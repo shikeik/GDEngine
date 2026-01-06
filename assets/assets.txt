@@ -11,8 +11,10 @@ engine/templates/FlappyGame/src/main/java/com/flappy/Main2.java
 engine/templates/FlappyGame/template.json
 engine/templates/HelloGame/project.json
 engine/templates/HelloGame/src/main/java/com/mygame/Main.java
-engine/templates/build.gradle
-engine/templates/settings.gradle
+engine/templates/MultiSampleDemo/assets/gd_icon.png
+engine/templates/MultiSampleDemo/project.json
+engine/templates/MultiSampleDemo/src/main/java/com/mygame/Main2.java
+engine/templates/MultiSampleDemo/src/main/java/com/mygame/Main3.java
 fonts/HYSongYunLangHeiW-1.ttf
 fonts/NotoSansMonoCJKsc-Regular.otf
 fonts/ark-pixel-10px-monospaced-zh_cn.ttf

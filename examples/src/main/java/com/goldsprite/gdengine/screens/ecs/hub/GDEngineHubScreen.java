@@ -580,6 +580,22 @@ public class GDEngineHubScreen extends GScreen {
 
 			templates = ProjectManager.listTemplates();
 
+			// --- [修复] 找回自动命名逻辑 ---
+			String baseName = "MyGame";
+			String finalName = baseName;
+			FileHandle projectsRoot = Gd.engineConfig.getProjectsDir();
+
+			if (projectsRoot != null && projectsRoot.exists()) {
+				int counter = 1;
+				// 循环检查直到找到未被占用的名字
+				// MyGame -> MyGame1 -> MyGame2 ...
+				while (projectsRoot.child(finalName).exists()) {
+					finalName = baseName + counter;
+					counter++;
+				}
+			}
+			// ------------------------------
+
 			// --- Layout ---
 			VisTable content = new VisTable();
 			content.defaults().pad(5);
@@ -609,14 +625,15 @@ public class GDEngineHubScreen extends GScreen {
 
 			// 2. Project Info
 			content.add(new VisLabel("Project Name:")).left();
-			nameField = new VisTextField("MyGame");
+			nameField = new VisTextField(finalName); // 使用计算出的 finalName
 			content.add(nameField).width(250).row();
 
 			content.add(new VisLabel("Package:")).left();
-			pkgField = new VisTextField("com.mygame");
+			// 包名跟随项目名变化 (转小写)
+			pkgField = new VisTextField("com." + finalName.toLowerCase());
 			content.add(pkgField).width(250).row();
 
-			// Name 联动 Package
+			// Name 联动 Package (原有逻辑)
 			nameField.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
 					pkgField.setText("com." + nameField.getText().toLowerCase());
