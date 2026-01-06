@@ -6,6 +6,7 @@ import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.Input;
+import com.goldsprite.gdengine.core.config.GDEngineConfig;
 import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 
 /**
@@ -44,6 +45,9 @@ public class Gd {
 	/** 全局配置中心 */
 	public static final Config config = new Config();
 
+	/** 引擎偏好设置 (Editor Preferences) [新增] */
+	public static GDEngineConfig engineConfig;
+
 	/** 当前运行模式 */
 	public static Mode mode = Mode.RELEASE;
 
@@ -73,6 +77,9 @@ public class Gd {
 		files = Gdx.files;
 		app = Gdx.app;
 		audio = Gdx.audio;
+
+		// [新增] 加载引擎配置
+		engineConfig = GDEngineConfig.load();
 	}
 
 	// =============================================================

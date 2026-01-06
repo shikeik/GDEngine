@@ -12,14 +12,13 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
-import com.kotcrab.vis.ui.util.TableUtils;
-import com.kotcrab.vis.ui.widget.VisDialog;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -189,20 +188,12 @@ public class GDEngineHubScreen extends GScreen {
 	// =========================================================================================
 	public static class ProjectManager {
 		public static FileHandle currentProject;
-		// [修改] 不再使用固定的 ROOT_DIR 常量，改为动态获取
-		// public static final String ROOT_DIR = "Projects";
 
-		// [新增] 获取项目根目录的句柄 (单点真理)
+		// [修改] 使用 Gd.engineConfig 获取路径
 		public static FileHandle getProjectsRoot() {
-			if (Gdx.app.getType() == com.badlogic.gdx.Application.ApplicationType.Android) {
-				// Android: 使用外部存储 (SD卡/GDEngine/Projects)
-				// 这样用户可以用 MT管理器 轻松找到
-				String externalPath = PlatformImpl.AndroidExternalStoragePath;
-				return Gdx.files.absolute(externalPath).child("GDEngine").child("Projects");
-			} else {
-				// PC: 保持原样，使用项目内部目录
-				return Gdx.files.local("Projects");
-			}
+			String path = Gd.engineConfig.projectsRootPath;
+			// 使用 absolute 句柄，因为配置里存的是绝对路径
+			return Gdx.files.absolute(path);
 		}
 
 		public static Array<FileHandle> listProjects() {

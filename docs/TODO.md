@@ -1,6 +1,27 @@
-﻿ignored: indentFix codeFormatFix
+﻿ignored: indentFix codeFormatFix  
 
 # TODO   
+
+吸纳开发者的好主意: 
+```
+诶！我有个好主意
+我把我的引擎做的游戏放taptap上
+然后给个说明，这游戏是gd引擎做的，然后跳转qq群(这会同时吸引玩家与开发者, 所以得说明对引擎感兴趣的可加此群)按钮，以此吸纳玩家与开发者
+不过要做到这步还需要最后的步骤，引擎得能把自己的运行时和脚本开发者的项目合在一起打包成apk和exe
+```
+
+sourceJar得搞了, 可以直接在ide跳转javadoc给脚本开发者写教程, 这必须得做起来  
+
+为了应对以后可能很多脚本项目模板的情况, 以及脚本项目可能会更新的情况:  
+- 创建一个gradle复制任务来把Projects/所有模板复制过去, 
+  - 但是这里有个问题, 有可能会掺杂一些其他人分享的脚本项目, 所以得区分内置模板项目和用户项目, 
+  - 我们只复制内置模板项目, 用户脚本项目不管: 
+    - 内置模板项目路径改为: GDEngine/InternalProjectTemplates/
+    - 用户改为: GDEngine/UserProjects/
+    - 但以上只是我们在开发时用于复制脚本辨认的, 实际上运行时脚本开发者不会有这个GDEngine/InternalProjectTemplates/, 
+      - 但是引擎开发者会从这里运行项目, 所以还是需要在hub显示这里的项目
+  - 总之有了复制任务我们就可以方便的开发, 更新项目模板, 也就是"官方游戏与教程"
+- 第二个, assets/路径也要整改, 添加assets/engine/来表示所有引擎的东西, 然后里面才是libs/和script_project_templates/
 
 增加引擎级配置: 配置脚本项目根目录(这一是为了用户可以自行决定项目根位置, 二主要是为了让我能够用git将手机端与电脑端的Projects/数据同步并直接引用(所以为了实现这个还需要个平台参数, 安卓就在安卓的项目路径/Projects/下电脑就在电脑路径的Projects/下))
 

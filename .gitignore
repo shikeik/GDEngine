@@ -172,3 +172,6 @@ ProjectTree.txt
 saves/
 docs/tmp/
 Projects/
+
+# GDEngine Config (Local Preferences)
+GDEngine/engine_config.json
