@@ -1,5 +1,5 @@
 {
-	"name": "${PROJECT_NAME}",
-	"entryClass": "${ENTRY_CLASS}",
+	"name": "HelloGame",
+	"entryClass": "com.mygame.Main",
 	"version": "1.0"
 }

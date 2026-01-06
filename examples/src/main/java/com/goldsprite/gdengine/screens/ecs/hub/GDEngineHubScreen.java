@@ -3,6 +3,8 @@ package com.goldsprite.gdengine.screens.ecs.hub;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -10,8 +12,10 @@ import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Timer;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.Gd;
@@ -285,17 +289,40 @@ public class GDEngineHubScreen extends GScreen {
 		if (neonBatch != null) neonBatch.dispose();
 	}
 
+
 	// =========================================================================================
-	// Logic: ProjectManager
+	// Logic: ProjectManager (Full Refactor)
 	// =========================================================================================
 	public static class ProjectManager {
 		public static FileHandle currentProject;
+		private static final Json json = new Json();
+
+		// 简单的 DTO
+		public static class TemplateInfo {
+			public String id; // 文件夹名
+			public String displayName;
+			public String description;
+			public String originEntry; // "com.mygame.Main"
+			public String version;
+			public FileHandle dirHandle; // assets/engine/templates/{id}
+		}
+
+		public static class ProjectConfig {
+			public String name;
+			public String entryClass;
+			public TemplateRef template; // 新增字段
+		}
+
+		public static class TemplateRef {
+			public String sourceName;
+			public String version;
+		}
 
 		public static Array<FileHandle> listProjects() {
 			FileHandle root = Gd.engineConfig.getProjectsDir();
 			FileHandle[] files = root.list();
 			Array<FileHandle> projects = new Array<>();
-			if(files != null) { // 防空
+			if(files != null) {
 				for (FileHandle f : files) {
 					if (f.isDirectory()) projects.add(f);
 				}
@@ -303,170 +330,348 @@ public class GDEngineHubScreen extends GScreen {
 			return projects;
 		}
 
-		public static String createProject(String name, String packageName) {
+		/** 扫描所有可用模板 */
+		public static Array<TemplateInfo> listTemplates() {
+			Array<TemplateInfo> list = new Array<>();
+			FileHandle templatesRoot = Gdx.files.internal("engine/templates");
+			if (!templatesRoot.exists()) return list;
+
+			for (FileHandle dir : templatesRoot.list()) {
+				if (!dir.isDirectory()) continue;
+
+				TemplateInfo info = new TemplateInfo();
+				info.id = dir.name();
+				info.dirHandle = dir;
+
+				// 尝试读取 template.json
+				FileHandle metaFile = dir.child("template.json");
+				if (metaFile.exists()) {
+					try {
+						TemplateInfo meta = json.fromJson(TemplateInfo.class, metaFile);
+						info.displayName = meta.displayName;
+						info.description = meta.description;
+						info.originEntry = meta.originEntry;
+						info.version = meta.version;
+					} catch (Exception e) {
+						Debug.logT("Hub", "Template parse error: " + dir.name());
+						info.displayName = info.id + " (Error)";
+					}
+				} else {
+					info.displayName = info.id;
+					info.description = "No description.";
+					info.originEntry = "com.game.Main"; // Fallback
+				}
+				list.add(info);
+			}
+			return list;
+		}
+
+		/**
+		 * 通用创建逻辑
+		 * 核心：Scripts/ (assets) -> src/main/java/ (user) + Package Refactoring
+		 */
+		public static String createProject(TemplateInfo tmpl, String name, String packageName) {
 			// 1. 校验
 			if (name == null || name.trim().isEmpty()) return "Name cannot be empty.";
 			if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
 			if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
 
-			// [适配] 使用 getProjectsRoot 获取目标路径
 			FileHandle finalTarget = Gd.engineConfig.getProjectsDir().child(name);
-			if (finalTarget.exists()) {
-				return "Project already exists!";
-			}
+			if (finalTarget.exists()) return "Project already exists!";
 
-			// 临时构建目录
-			FileHandle tempRoot = Gdx.files.local("build/tmp_creation");
-			FileHandle tempProj = tempRoot.child(name);
-			if (tempProj.exists()) tempProj.deleteDirectory();
-			tempProj.mkdirs();
+			// 原始包名 (例如: com.mygame)
+			String originPkg = "";
+			if (tmpl.originEntry != null && tmpl.originEntry.contains(".")) {
+				originPkg = tmpl.originEntry.substring(0, tmpl.originEntry.lastIndexOf('.'));
+			}
+			String targetPkg = packageName;
+
+			Debug.logT("Hub", "Creating project '%s' from template '%s'", name, tmpl.id);
+
+			// 临时目录
+			FileHandle tempRoot = Gdx.files.local("build/tmp_creation").child(name);
+			if (tempRoot.exists()) tempRoot.deleteDirectory();
+			tempRoot.mkdirs();
 
 			try {
-				String assetsTemplatePath = "engine/templates";
+				// [核心修改] 遍历模板根目录
+				// 我们不再使用通用的递归，而是针对根目录的特定文件夹做处理，更安全
+				processRootDirectory(tmpl.dirHandle, tempRoot, originPkg, targetPkg, name, tmpl);
 
-				// ---------------------------------------------------------
-				// 1. 核心文件生成 (project.json & Main.java)
-				// ---------------------------------------------------------
-
-				// project.json
-				FileHandle tplConfig = Gdx.files.internal(assetsTemplatePath+"/HelloGame/project.json");
-				if (!tplConfig.exists()) return "Template missing: project.json";
-
-				String jsonContent = tplConfig.readString("UTF-8");
-				jsonContent = jsonContent.replace("${PROJECT_NAME}", name);
-				jsonContent = jsonContent.replace("${ENTRY_CLASS}", packageName+".Main");
-				tempProj.child("project.json").writeString(jsonContent, false, "UTF-8");
-
-				// Main Script
-				FileHandle tplMain = Gdx.files.internal(assetsTemplatePath+"/HelloGame/Scripts/Main.java");
-				if (!tplMain.exists()) return "Template missing: Main.java";
-
-				String mainCode = tplMain.readString("UTF-8");
-				mainCode = mainCode.replace("${PACKAGE_NAME}", packageName)
-					.replace("${PROJECT_NAME}", name);
-
-				String packagePath = packageName.replace('.', '/');
-				FileHandle targetMain = tempProj.child("src").child("main").child("java").child(packagePath).child("Main.java");
-				targetMain.parent().mkdirs();
-				targetMain.writeString(mainCode, false, "UTF-8");
-
-				// ---------------------------------------------------------
-				// 2. IDE 支持 (Gradle & Libs) [新增]
-				// ---------------------------------------------------------
-
-				// 2.1 拷贝 build.gradle 模板
-				FileHandle tplGradle = Gdx.files.internal(assetsTemplatePath+"/build.gradle");
-				if (tplGradle.exists()) {
-					tplGradle.copyTo(tempProj);
-				}
-
-				// 2.1 拷贝 settings.gradle 模板
-				tplGradle = Gdx.files.internal(assetsTemplatePath+"/settings.gradle");
-				if (tplGradle.exists()) {
-					jsonContent = tplGradle.readString("UTF-8");
-					jsonContent = jsonContent.replace("${PROJECT_NAME}", name);
-					tempProj.child("settings.gradle").writeString(jsonContent, false, "UTF-8");
-				}
-
-				// ---------------------------------------------------------
-				// [新增] 资源目录 (Assets)
-				// ---------------------------------------------------------
-				FileHandle assetsTarget = tempProj.child("assets");
-				assetsTarget.mkdirs();
-
-				// (可选) 可以在这里拷入一个默认图标，防止空文件夹被某些系统忽略
-				 FileHandle defaultIcon = Gdx.files.internal("gd_icon.png");
-				 if(defaultIcon.exists()) defaultIcon.copyTo(assetsTarget);
-
-				// 2.2 自动注入依赖库 (遍历 assets/libs)
-				// 不需要 AssetUtils，不需要索引逻辑，直接用 Gd.files
-				FileHandle libsSource = Gd.files.internal("engine/libs"); // 注意用 Gd.files
-				FileHandle libsTarget = tempProj.child("engine/libs");
+				// --- 注入依赖库 ---
+				FileHandle libsSource = Gdx.files.internal("engine/libs");
+				FileHandle libsTarget = tempRoot.child("engine/libs");
 				libsTarget.mkdirs();
-
-				// 使用 suffix 过滤器，只拷 jar 包，避开可能存在的无关文件
-				FileHandle[] jars = libsSource.list(".jar"); // 这一步在 PC 上会自动查 assets.txt
-
-				if (jars != null && jars.length > 0) {
-					for (FileHandle jar : jars) {
-						// Android Assets 是流，不能直接拷文件夹，但可以拷单个文件
-						jar.copyTo(libsTarget);
-					}
-				} else {
-					Debug.logT("Hub", "⚠️ Warning: assets/libs is empty or not found!");
+				for (FileHandle jar : libsSource.list(".jar")) {
+					jar.copyTo(libsTarget);
 				}
 
-				// ---------------------------------------------------------
-				// 3. 交付
-				// ---------------------------------------------------------
-				tempProj.copyTo(finalTarget.parent());
-				tempProj.deleteDirectory();
+				// --- 交付 ---
+				tempRoot.copyTo(finalTarget.parent());
+				tempRoot.deleteDirectory();
 
 				return null;
 			} catch (Exception e) {
 				e.printStackTrace();
-				if (tempProj.exists()) tempProj.deleteDirectory();
+				if (tempRoot.exists()) tempRoot.deleteDirectory();
 				return "Error: " + e.getMessage();
 			}
 		}
 
-		public static class ProjectConfig {
-			public String name;
-			public String entryClass = "Main";
-			public String version = "1.0";
+		/**
+		 * 处理模板根目录
+		 */
+		private static void processRootDirectory(FileHandle sourceDir, FileHandle destDir, String originPkg, String targetPkg, String projName, TemplateInfo tmpl) {
+			for (FileHandle file : sourceDir.list()) {
+				if (file.name().equals("template.json")) continue;
+				if (file.name().equals("preview.png")) continue;
+
+				if (file.isDirectory()) {
+					if (file.name().equals("src")) {
+						// [核心] 遇到 src 目录，进入源码处理模式
+						// 假设结构标准为 src/main/java
+						FileHandle srcJavaSource = file.child("main").child("java");
+						if (srcJavaSource.exists()) {
+							FileHandle srcJavaTarget = destDir.child("src").child("main").child("java");
+							processSourceCode(srcJavaSource, srcJavaTarget, originPkg, targetPkg);
+						} else {
+							// 非标准结构？直接复制整个 src
+							file.copyTo(destDir);
+						}
+					} else {
+						// 其他目录 (如 assets)，直接复制
+						file.copyTo(destDir);
+					}
+				} else {
+					// 根目录下的文件处理
+					if (file.name().equals("project.json")) {
+						processProjectConfig(file, destDir.child("project.json"), targetPkg, projName, tmpl);
+					} else if (file.name().equals("settings.gradle") || file.name().equals("build.gradle")) {
+						// 处理 Gradle 文件中的文本替换
+						String content = file.readString("UTF-8");
+						content = content.replace("${PROJECT_NAME}", projName);
+						if (!originPkg.isEmpty()) content = content.replace(originPkg, targetPkg);
+						destDir.child(file.name()).writeString(content, false, "UTF-8");
+					} else {
+						// 其他文件原样复制
+						file.copyTo(destDir);
+					}
+				}
+			}
+		}
+
+		/**
+		 * 处理源码目录：递归查找 Java 文件，重构路径并修改内容
+		 * @param sourceRoot 模板里的 Scripts/ 目录
+		 * @param targetRoot 目标里的 src/main/java/ 目录
+		 */
+		private static void processSourceCode(FileHandle sourceRoot, FileHandle targetRoot, String originPkg, String targetPkg) {
+			// 1. 递归获取所有 .java 文件
+			Array<FileHandle> javaFiles = new Array<>();
+			findJavaFiles(sourceRoot, javaFiles);
+
+			// 路径前缀 (如 com/mygame)
+			String originPathPrefix = originPkg.replace('.', '/');
+			String targetPathPrefix = targetPkg.replace('.', '/');
+
+			for (FileHandle javaFile : javaFiles) {
+				// 2. 计算相对路径
+				// 假设 javaFile: .../templates/HelloGame/src/main/java/com/mygame/Main.java
+				// rootPath: .../templates/HelloGame/src/main/java
+				// relativePath: com/mygame/Main.java
+				String fullPath = javaFile.path();
+				String rootPath = sourceRoot.path();
+
+				// 简单的路径截取
+				String relativePath = fullPath.substring(rootPath.length());
+				if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
+					relativePath = relativePath.substring(1);
+				}
+
+				// 3. 路径重构 (Package Refactoring)
+				// 如果路径以原始包路径开头，替换为目标包路径
+				// com/mygame/Main.java -> com/user/new/Main.java
+				String newRelativePath = relativePath;
+
+				// 统一分隔符比较
+				String checkPath = relativePath.replace('\\', '/');
+				if (!originPathPrefix.isEmpty() && checkPath.startsWith(originPathPrefix)) {
+					newRelativePath = checkPath.replaceFirst(originPathPrefix, targetPathPrefix);
+				}
+
+				FileHandle targetFile = targetRoot.child(newRelativePath);
+
+				// 4. 内容重构 (Text Replacement)
+				String content = javaFile.readString("UTF-8");
+				if (!originPkg.isEmpty()) {
+					// 替换包声明 package com.mygame; -> package com.user.new;
+					content = content.replace("package " + originPkg, "package " + targetPkg);
+					// 替换 import
+					content = content.replace("import " + originPkg, "import " + targetPkg);
+					// 替换其他可能的引用
+					content = content.replace(originPkg, targetPkg);
+				}
+
+				targetFile.writeString(content, false, "UTF-8");
+			}
+		}
+
+		private static void findJavaFiles(FileHandle dir, Array<FileHandle> out) {
+			for (FileHandle f : dir.list()) {
+				if (f.isDirectory()) findJavaFiles(f, out);
+				else if (f.extension().equals("java")) out.add(f);
+			}
+		}
+
+		private static void processProjectConfig(FileHandle source, FileHandle target, String targetPkg, String projName, TemplateInfo tmpl) {
+			try {
+				String content = source.readString("UTF-8");
+				// 先做通用替换
+				if (tmpl.originEntry != null && tmpl.originEntry.contains(".")) {
+					String originPkg = tmpl.originEntry.substring(0, tmpl.originEntry.lastIndexOf('.'));
+					content = content.replace(originPkg, targetPkg);
+				}
+
+				// 解析 JSON 对象进行精确修改
+				ProjectConfig cfg = json.fromJson(ProjectConfig.class, content);
+				cfg.name = projName;
+
+				// 注入模板信息
+				TemplateRef ref = new TemplateRef();
+				ref.sourceName = tmpl.id;
+				ref.version = tmpl.version;
+				cfg.template = ref;
+
+				target.writeString(json.prettyPrint(cfg), false, "UTF-8");
+			} catch (Exception e) {
+				// Fallback: 直接复制
+				source.copyTo(target);
+			}
 		}
 	}
 
 	// =========================================================================================
-	// Dialogs
+	// Dialogs (Updated)
 	// =========================================================================================
+
 	public static class CreateProjectDialog extends BaseDialog {
 		private final VisTextField nameField;
 		private final VisTextField pkgField;
 		private final VisLabel errorLabel;
 		private final Runnable onSuccess;
 
+		// 模板选择
+		private final VisSelectBox<String> templateBox;
+		private final VisImage previewImage;
+		private final Array<ProjectManager.TemplateInfo> templates;
+
 		public CreateProjectDialog(Runnable onSuccess) {
-			super("Create Project");
+			super("New Project");
 			this.onSuccess = onSuccess;
 
-			// --- 自动命名逻辑 (Auto-Increment Name) ---
-			String baseName = "MyGame";
-			String finalName = baseName;
-			FileHandle root = Gd.engineConfig.getProjectsDir();
+			templates = ProjectManager.listTemplates();
 
-			// 循环检查直到找到未被占用的名字
-			// 逻辑: MyGame -> MyGame1 -> MyGame2 ...
-			if (root != null && root.exists()) {
-				int counter = 1;
-				while (root.child(finalName).exists()) {
-					finalName = baseName + counter;
-					counter++;
-				}
-			}
-			// ----------------------------------------
+			// --- Layout ---
+			VisTable content = new VisTable();
+			content.defaults().pad(5);
 
-			add(new VisLabel("Name:")).left();
-			// 使用计算出的可用名称
-			add(nameField = new VisTextField(finalName)).width(250).row();
+			// 1. Template Selection
+			content.add(new VisLabel("Template:")).left();
+			templateBox = new VisSelectBox<>();
+			Array<String> names = new Array<>();
+			for(ProjectManager.TemplateInfo t : templates) names.add(t.displayName);
+			templateBox.setItems(names);
+			content.add(templateBox).width(250).row();
 
-			add(new VisLabel("Package:")).left();
-			// 包名跟随项目名变化 (转小写)
-			add(pkgField = new VisTextField("com." + finalName.toLowerCase())).width(250).row();
+			// Preview Image
+			previewImage = new VisImage();
+			// 默认图
+			TextureRegionDrawable defaultIcon = new TextureRegionDrawable(new TextureRegion(new Texture(Gdx.files.internal("gd_icon.png"))));
+			previewImage.setDrawable(defaultIcon);
 
-			add(errorLabel = new VisLabel("")).colspan(2).row();
-			errorLabel.setColor(Color.RED);
-
-			VisTextButton createBtn = new VisTextButton("Create");
-			createBtn.addListener(new ChangeListener() {
-				@Override public void changed(ChangeEvent event, Actor actor) {
-					String err = ProjectManager.createProject(nameField.getText(), pkgField.getText());
-					if (err == null) { onSuccess.run(); fadeOut(); }
-					else { errorLabel.setText(err); pack(); }
+			// 事件监听：切换模板时更新预览图和包名建议
+			templateBox.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					updatePreview();
 				}
 			});
-			add(createBtn).colspan(2).right();
-			pack(); centerWindow();
+			content.add(previewImage).colspan(2).size(100).padBottom(10).row();
+
+			// 2. Project Info
+			content.add(new VisLabel("Project Name:")).left();
+			nameField = new VisTextField("MyGame");
+			content.add(nameField).width(250).row();
+
+			content.add(new VisLabel("Package:")).left();
+			pkgField = new VisTextField("com.mygame");
+			content.add(pkgField).width(250).row();
+
+			// Name 联动 Package
+			nameField.addListener(new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					pkgField.setText("com." + nameField.getText().toLowerCase());
+				}
+			});
+
+			add(content).row();
+
+			// 3. Footer
+			errorLabel = new VisLabel("");
+			errorLabel.setColor(Color.RED);
+			add(errorLabel).padBottom(10).row();
+
+			VisTextButton createBtn = new VisTextButton("Create");
+			createBtn.addListener(new ClickListener() {
+				@Override public void clicked(InputEvent event, float x, float y) {
+					doCreate();
+				}
+			});
+			add(createBtn).width(150);
+
+			pack();
+			centerWindow();
+
+			// Init
+			if(templates.size > 0) updatePreview();
+		}
+
+		private void updatePreview() {
+			int idx = templateBox.getSelectedIndex();
+			if(idx < 0 || idx >= templates.size) return;
+			ProjectManager.TemplateInfo tmpl = templates.get(idx);
+
+			// 尝试加载 preview.png
+			FileHandle imgFile = tmpl.dirHandle.child("preview.png");
+			if(imgFile.exists()) {
+				try {
+					Texture tex = new Texture(imgFile);
+					previewImage.setDrawable(new TextureRegionDrawable(new TextureRegion(tex)));
+				} catch(Exception e) {
+					// Load failed
+				}
+			} else {
+				// Reset to default
+				previewImage.setDrawable(new TextureRegionDrawable(new TextureRegion(new Texture(Gdx.files.internal("gd_icon.png")))));
+			}
+		}
+
+		private void doCreate() {
+			int idx = templateBox.getSelectedIndex();
+			if(idx < 0) { errorLabel.setText("Select a template"); return; }
+
+			ProjectManager.TemplateInfo tmpl = templates.get(idx);
+			String name = nameField.getText();
+			String pkg = pkgField.getText();
+
+			String err = ProjectManager.createProject(tmpl, name, pkg);
+			if (err == null) {
+				onSuccess.run();
+				fadeOut();
+			} else {
+				errorLabel.setText(err);
+				pack();
+			}
 		}
 	}
 

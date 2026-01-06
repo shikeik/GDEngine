@@ -1,4 +1,4 @@
-package ${PACKAGE_NAME};
+package com.mygame;
 
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
 import com.goldsprite.gdengine.ecs.GameWorld;
@@ -15,7 +15,7 @@ public class Main implements IGameScriptEntry {
 
 	@Override
 	public void onStart(GameWorld world) {
-		Debug.logT("Script", "游戏启动! 欢迎来到 ${PROJECT_NAME}!");
+		Debug.logT("Script", "游戏启动! 欢迎来到 HelloGame!");
 
 		// 创建一个示例方块
 		createCube(world, 0, 0);

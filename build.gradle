@@ -75,13 +75,14 @@ eclipse.project.name = 'SoloFight' + '-parent'
 
 // 1. 定义全局任务 (定义在 Root Project 中)
 
-// 任务A: 同步模板代码
+// [修正] 任务A: 同步模板代码 (原样复制，保留 src/main/java 结构)
 tasks.register('syncEngineTemplates', Sync) {
 	group = "gdengine"
 	from file("GDEngine/InternalProjectTemplates")
 	into file("assets/engine/templates")
-	exclude "**/*.git", "**/.gradle", "**/build/", "**/*.class"
-	doFirst { println ">>> 同步本地项目模板..." }
+	// 排除版本控制和构建产物，保留源码和资源
+	exclude "**/*.git", "**/.gradle", "**/build/", "**/*.class", "**/*.iml"
+	doFirst { println ">>> 同步本地项目模板 (Standard Structure)..." }
 }
 
 // 任务B: 生成资源清单 (assets.txt)
@@ -101,7 +102,7 @@ tasks.register('generateAssetList') {
 }
 
 // ============================================================
-// 2. 集中管理依赖关系 (防止死循环的关键)
+// 2. 集中管理依赖关系
 // ============================================================
 
 // 配置 generateAssetList 的前置条件
