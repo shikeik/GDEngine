@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.Gd;
+import com.goldsprite.gdengine.core.config.GDEngineConfig;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -46,8 +47,30 @@ public class GDEngineHubScreen extends GScreen {
 	@Override
 	public void show() {
 		super.show();
-		Debug.showDebugUI = false; // 进入 Hub 隐藏全局 DebugUI
-		refreshList();
+		Debug.showDebugUI = false;
+
+		// [核心修改] 进入 Hub 时检查环境
+		checkEnvironment();
+	}
+
+	private void checkEnvironment() {
+		// 1. 尝试加载配置
+		if (Gd.engineConfig == null) {
+			if (GDEngineConfig.tryLoad()) {
+				Gd.engineConfig = GDEngineConfig.getInstance();
+				refreshList(); // 加载成功，刷新列表
+			} else {
+				// 2. 加载失败（未初始化），弹出 SetupDialog
+				// 此时背景是 Hub 的空列表，或者你可以先不渲染 List
+				new SetupDialog(() -> {
+					// 初始化成功回调
+					Gd.engineConfig = GDEngineConfig.getInstance();
+					refreshList();
+				}).show(stage);
+			}
+		} else {
+			refreshList();
+		}
 	}
 
 	@Override
@@ -63,7 +86,7 @@ public class GDEngineHubScreen extends GScreen {
 		neonBatch = new NeonBatch();
 
 		initMainLayout();
-		refreshList();
+		refreshList(); // 这里不刷新, 改为show判断引导并刷新
 	}
 
 	private void initMainLayout() {
@@ -84,8 +107,7 @@ public class GDEngineHubScreen extends GScreen {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				// 传入 refreshList 回调，确保修改路径后列表刷新
-				//没写好暂时注释
-//				new SettingsWindow(GDEngineHubScreen.this::refreshList).show(stage);
+				new SettingsWindow(GDEngineHubScreen.this::refreshList).show(stage);
 			}
 		});
 

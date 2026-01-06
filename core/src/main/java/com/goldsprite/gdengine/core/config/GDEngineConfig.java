@@ -17,8 +17,7 @@ public class GDEngineConfig {
 	// 引导首选项 Key
 	private static final String PREF_NAME = "gd_boot";
 	private static final String KEY_ENGINE_ROOT = "engine_root";
-
-	// 配置文件名 (存储在 EngineRoot 下)
+	// 配置文件 (存储在 EngineRoot 下)
 	private static final String CONFIG_FILENAME = "engine_config.json";
 
 	private static final Json json = new Json();
@@ -30,11 +29,14 @@ public class GDEngineConfig {
 	}
 
 	// ==========================================
-	// 实例字段 (JSON Payload)
+	// 配置字段 (JSON Payload)
 	// ==========================================
 
-	/** 项目存放子目录名 (默认 Projects) */
-	public String projectsSubDir = "Projects";
+	/**
+	 * 自定义项目根目录 (绝对路径)
+	 * 如果为空，则默认使用 engineRoot/Projects
+	 */
+	public String customProjectsPath = "";
 
 	public float uiScale = 1.0f;
 	public String lastOpenProjectPath = "";
@@ -43,13 +45,9 @@ public class GDEngineConfig {
 	private transient String activeEngineRoot;
 
 	// ==========================================
-	// 静态生命周期
+	// 逻辑方法
 	// ==========================================
 
-	/**
-	 * 尝试加载配置
-	 * @return 如果成功加载(或已初始化)返回 true；如果未配置引导路径返回 false (需要弹窗)
-	 */
 	public static boolean tryLoad() {
 		if (instance != null) return true;
 
@@ -94,30 +92,23 @@ public class GDEngineConfig {
 			try {
 				instance = json.fromJson(GDEngineConfig.class, configFile);
 			} catch (Exception e) {
-				Debug.logT("Config", "JSON损坏，重置默认: " + e.getMessage());
+				Debug.logT("Config", "Load failed, using default.");
 			}
 		}
 
-		if (instance == null) {
-			instance = new GDEngineConfig();
-		}
+		if (instance == null) instance = new GDEngineConfig();
 
 		instance.activeEngineRoot = rootPath;
+		instance.getProjectsDir().mkdirs(); // 确保项目目录存在
+		instance.save();
 
-		// 确保 Projects 目录存在
-		instance.getProjectsDir().mkdirs();
 
-		instance.save(); // 确保文件存在
-		Debug.logT("Config", "Ready. Engine Root: " + rootPath);
+		// [新增] 打印首选项物理位置
+		printPrefsLocation();
+		Debug.logT("Config", "Engine Root: " + rootPath);
 	}
 
-	public static GDEngineConfig getInstance() {
-		return instance;
-	}
-
-	// ==========================================
-	// 实例方法
-	// ==========================================
+	public static GDEngineConfig getInstance() { return instance; }
 
 	public void save() {
 		if (activeEngineRoot == null) return;
@@ -129,17 +120,45 @@ public class GDEngineConfig {
 		}
 	}
 
+	/** 获取当前生效的项目根目录 */
 	public FileHandle getProjectsDir() {
-		return Gdx.files.absolute(activeEngineRoot).child(projectsSubDir);
+		// 优先使用自定义路径
+		if (customProjectsPath != null && !customProjectsPath.trim().isEmpty()) {
+			return Gdx.files.absolute(customProjectsPath);
+		}
+		// 默认路径
+		return Gdx.files.absolute(activeEngineRoot).child("Projects");
 	}
 
-	/** 获取推荐的默认安装位置 (供 SetupDialog 使用) */
+	public String getActiveEngineRoot() { return activeEngineRoot; }
+
 	public static String getRecommendedRoot() {
 		if (PlatformImpl.isAndroidUser()) {
 			return PlatformImpl.AndroidExternalStoragePath + "/GDEngine";
 		} else {
-			// PC 默认: 当前工作目录下的 GDEngine (便携)
 			return Gdx.files.local("GDEngine").file().getAbsolutePath();
 		}
+	}
+
+	/** 打印 Preferences 在硬盘上的实际藏身之处 */
+	private static void printPrefsLocation() {
+		String location;
+		if (PlatformImpl.isAndroidUser()) {
+			try {
+				// Android: Gdx.files.local(".") 指向 /data/user/0/<pkg>/files/
+				// Prefs 在 /data/user/0/<pkg>/shared_prefs/gd_boot.xml
+				// 我们通过 local 目录往上找一级，再进入 shared_prefs
+				FileHandle pkgRoot = Gdx.files.absolute(Gdx.files.local("").file().getParentFile().getAbsolutePath());
+				FileHandle prefsFile = pkgRoot.child("shared_prefs").child(PREF_NAME + ".xml");
+				location = prefsFile.file().getAbsolutePath();
+			} catch (Exception e) {
+				location = "Android Internal Storage (Calculation Failed)";
+			}
+		} else {
+			// Desktop (Lwjgl3): 默认存放在用户主目录的 .prefs 文件夹下
+			String userHome = System.getProperty("user.home");
+			location = userHome + "\\.prefs\\" + PREF_NAME;
+		}
+		Debug.logT("Config", "⚓ Boot Prefs Location: " + location);
 	}
 }

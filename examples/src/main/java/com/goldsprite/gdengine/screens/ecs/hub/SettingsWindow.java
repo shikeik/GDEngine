@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.gdengine.core.Gd;
-import com.goldsprite.gdengine.core.config.GDEngineConfig;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -23,21 +22,33 @@ public class SettingsWindow extends BaseDialog {
 		super("Engine Settings");
 		this.onConfigChanged = onConfigChanged;
 
-		left();
+		// --- 标题 ---
+		add(new VisLabel("Engine Preferences")).padBottom(20).row();
 
-		add(new VisLabel("Projects Root Path:")).left().padBottom(5).row();
+		// --- 表单区域 ---
+		VisTable form = new VisTable();
+		form.defaults().padBottom(10).left();
 
-		// 路径输入框
-		pathField = new VisTextField();
-		pathField.setText(Gd.engineConfig.projectsSubDir);
-		add(pathField).growX().minWidth(500).padBottom(10).row();
+		// 1. Engine Root (ReadOnly) - 告诉用户引擎安装在哪
+		form.add(new VisLabel("Engine Root (Read-only):"));
+		VisLabel rootLabel = new VisLabel(Gd.engineConfig.getActiveEngineRoot());
+		rootLabel.setColor(Color.GRAY);
+		form.add(rootLabel).row();
 
-		// 错误提示区域
+		// 2. Projects Path (Editable) - 允许用户改到 Git 目录
+		form.add(new VisLabel("Projects Path:"));
+		pathField = new VisTextField(Gd.engineConfig.customProjectsPath);
+		pathField.setMessageText("Leave empty to use default");
+		form.add(pathField).width(400).row();
+
+		add(form).padBottom(20).row();
+
+		// --- 错误提示 ---
 		errorLabel = new VisLabel("");
 		errorLabel.setColor(Color.RED);
 		add(errorLabel).center().padBottom(10).row();
 
-		// 按钮栏
+		// --- 按钮栏 ---
 		add(createButtonPanel()).growX();
 
 		pack();
@@ -47,16 +58,16 @@ public class SettingsWindow extends BaseDialog {
 	private Actor createButtonPanel() {
 		VisTable table = new VisTable();
 
-		VisTextButton btnReset = new VisTextButton("Reset Default");
+		VisTextButton btnReset = new VisTextButton("Default");
 		btnReset.addListener(new ChangeListener() {
 			@Override
 			public void changed(ChangeEvent event, Actor actor) {
-				pathField.setText(GDEngineConfig.getRecommendedRoot());
+				pathField.setText(""); // 清空即恢复默认
 				errorLabel.setText("");
 			}
 		});
 
-		VisTextButton btnSave = new VisTextButton("Save");
+		VisTextButton btnSave = new VisTextButton("Save & Apply");
 		btnSave.setColor(Color.GREEN);
 		btnSave.addListener(new ChangeListener() {
 			@Override
@@ -81,26 +92,35 @@ public class SettingsWindow extends BaseDialog {
 		return table;
 	}
 
-	// [修改] saveSettings 方法逻辑
 	private void saveSettings() {
-		// 这里现在只修改 projectsSubDir，或者只做一些简单的 UI Scale 配置
-		// 如果我们允许用户在设置里修改 Root 路径，逻辑会比较复杂(迁移文件等)
-		// 暂时只允许修改 "子目录名" 或者 "UI Scale"
+		String newPath = pathField.getText().trim();
 
-		// 既然我们现在的需求是 Projects 路径可配置，而 Config 已经把 Projects 锁定在 Root 下了
-		// 那么这里的输入框如果依然是绝对路径，逻辑就会冲突。
+		// 如果输入了路径，校验有效性
+		if (!newPath.isEmpty()) {
+			FileHandle handle = Gdx.files.absolute(newPath);
+			if (!handle.exists()) {
+				try {
+					handle.mkdirs();
+				} catch (Exception e) {
+					errorLabel.setText("Cannot create directory!");
+					pack();
+					return;
+				}
+			}
+			if (!handle.isDirectory()) {
+				errorLabel.setText("Path is not a directory!");
+				pack();
+				return;
+			}
+		}
 
-		// 方案修正：
-		// SettingsWindow 暂时只显示当前 Root 路径 (Read Only)，或者提供 "Reset Root" 按钮(清除 Prefs 并重启)。
-		// 鉴于目前需求，我们先把这个窗口简化为 "信息展示 + UI配置"。
-
-		// 如果您确实想改 Projects 路径，那是修改 GDEngineConfig.projectsSubDir
-
-		// 示例：只保存 UI Scale (如果有输入框的话)
-		// Gd.engineConfig.uiScale = ...
-
+		// 更新 Config
+		Gd.engineConfig.customProjectsPath = newPath;
 		Gd.engineConfig.save();
+
+		// 刷新回调
 		if (onConfigChanged != null) onConfigChanged.run();
+
 		fadeOut();
 	}
 }
