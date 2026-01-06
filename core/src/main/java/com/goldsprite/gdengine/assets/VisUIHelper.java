@@ -33,7 +33,7 @@ public class VisUIHelper {
 
 			// 4. 暴力替换常用组件样式中的字体引用
 
-			// Label (最重要)
+			// Label (VisLabel也是它)
 			skin.get(Label.LabelStyle.class).font = cnFont;
 			skin.get("small", Label.LabelStyle.class).font = smFont;
 

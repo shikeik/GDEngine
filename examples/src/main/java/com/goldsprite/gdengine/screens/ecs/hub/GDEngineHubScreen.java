@@ -20,12 +20,14 @@ import com.badlogic.gdx.utils.Timer;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.config.GDEngineConfig;
+import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
+import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 
 public class GDEngineHubScreen extends GScreen {
@@ -42,7 +44,7 @@ public class GDEngineHubScreen extends GScreen {
 
 	@Override
 	protected void initViewport() {
-		uiViewportScale = PlatformImpl.isAndroidUser() ? 1.5f : 2.5f;
+		uiViewportScale = PlatformImpl.isAndroidUser() ? 1.5f : 2.0f;
 		super.initViewport();
 	}
 
@@ -583,25 +585,33 @@ public class GDEngineHubScreen extends GScreen {
 
 			templates = ProjectManager.listTemplates();
 
-			// --- Layout ---
-			// 使用 Table 嵌套实现 "左图右文" 布局
+			// --- [布局优化] ---
+			// 核心容器：设置最小宽度，让其不再窄小
 			VisTable content = new VisTable();
-			content.defaults().pad(5);
+			content.defaults().padBottom(10).left(); // 默认左对齐，增加行间距
 
-			// 1. Template Selection Row
-			content.add(new VisLabel("Template:")).left();
+			// 1. Template Selection
+			// 使用嵌套 VisTable 确保 Label 和 SelectBox 对齐
+			VisTable tplRow = new VisTable();
+			tplRow.add(new VisLabel("Template:")).width(100).left(); // 固定标签宽
 			templateBox = new VisSelectBox<>();
 			Array<String> names = new Array<>();
 			for(ProjectManager.TemplateInfo t : templates) names.add(t.displayName);
 			templateBox.setItems(names);
-			content.add(templateBox).growX().row();
+			tplRow.add(templateBox).growX(); // 撑满剩余空间
+
+			content.add(tplRow).growX().row();
 
 			// 2. Info Area (Image + Details)
+			// 背景色块，区分区域
 			VisTable infoTable = new VisTable();
+			infoTable.setBackground(VisUI.getSkin().getDrawable("button")); // 给个底色
+			infoTable.pad(10);
 
 			// Left: Image
 			previewImage = new VisImage();
-			infoTable.add(previewImage).size(100).top().left().padRight(10);
+			// 限制图片大小，不随父容器拉伸
+			infoTable.add(previewImage).size(120).top().left().padRight(15);
 
 			// Right: Description & Version
 			VisTable detailsTable = new VisTable();
@@ -609,24 +619,20 @@ public class GDEngineHubScreen extends GScreen {
 
 			versionLabel = new VisLabel("v1.0");
 			versionLabel.setColor(Color.CYAN);
-			detailsTable.add(versionLabel).left().row();
+			detailsTable.add(versionLabel).left().padBottom(5).row();
 
 			descLabel = new VisLabel("Description...");
-			descLabel.setWrap(true); // 允许换行
-			descLabel.setColor(Color.GRAY);
-			descLabel.setFontScale(0.9f);
-			// 限制宽度以触发自动换行
-			detailsTable.add(descLabel).width(230).left().top().padTop(5);
+			descLabel.setWrap(true);
+			descLabel.setColor(Color.LIGHT_GRAY);
+			// [关键] 在 VisTable 布局中，Wrap 的 Label 必须指定宽度或 grow，否则无法计算换行
+			detailsTable.add(descLabel).growX().left().top();
 
 			infoTable.add(detailsTable).grow().top();
 
-			// Add Info Area to Main Content
-			content.add(infoTable).colspan(2).growX().padBottom(10).row();
+			content.add(infoTable).growX().height(140).padBottom(15).row();
 
-			// 3. Project Info
-			content.add(new VisLabel("Project Name:")).left();
-
-			// 自动命名逻辑
+			// 3. Project Info (Name & Package)
+			// 计算自动命名 (保持原有逻辑)
 			String baseName = "MyGame";
 			String finalName = baseName;
 			FileHandle projectsRoot = Gd.engineConfig.getProjectsDir();
@@ -638,26 +644,36 @@ public class GDEngineHubScreen extends GScreen {
 				}
 			}
 
+			// Name Row
+			VisTable nameRow = new VisTable();
+			nameRow.add(new VisLabel("Project Name:")).width(100).left();
 			nameField = new VisTextField(finalName);
-			content.add(nameField).growX().row();
+			nameRow.add(nameField).growX();
+			content.add(nameRow).growX().row();
 
-			content.add(new VisLabel("Package:")).left();
+			// Package Row
+			VisTable pkgRow = new VisTable();
+			pkgRow.add(new VisLabel("Package:")).width(100).left();
 			pkgField = new VisTextField("com." + finalName.toLowerCase());
-			content.add(pkgField).growX().row();
+			pkgRow.add(pkgField).growX();
+			content.add(pkgRow).growX().row();
 
+			// Name 联动 Package
 			nameField.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
 					pkgField.setText("com." + nameField.getText().toLowerCase());
 				}
 			});
 
-			add(content).width(400).row(); // 限制总宽度
+			// 将 content 添加到 Dialog，设置最小宽度 600
+			add(content).minWidth(600).pad(10).row();
 
-			// 4. Footer
+			// 4. Footer (Error & Button)
 			errorLabel = new VisLabel("");
 			errorLabel.setColor(Color.RED);
 			errorLabel.setWrap(true);
-			add(errorLabel).width(380).padBottom(10).row();
+			errorLabel.setAlignment(Align.center);
+			add(errorLabel).growX().padBottom(10).row();
 
 			VisTextButton createBtn = new VisTextButton("Create Project");
 			createBtn.setColor(Color.GREEN);
@@ -666,14 +682,12 @@ public class GDEngineHubScreen extends GScreen {
 					doCreate();
 				}
 			});
-			add(createBtn).growX().height(40);
+			// 按钮不需要太宽，居中，设置个固定宽或者 padding
+			add(createBtn).width(200).height(45).padBottom(10);
 
-			// 事件监听：切换模板时更新
+			// ... (事件监听器和初始化代码保持不变) ...
 			templateBox.addListener(new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					updateTemplateInfo();
-				}
+				@Override public void changed(ChangeEvent event, Actor actor) { updateTemplateInfo(); }
 			});
 
 			pack();
@@ -743,6 +757,209 @@ public class GDEngineHubScreen extends GScreen {
 			if ((boolean) object) {
 				onYes.run();
 			}
+		}
+	}
+
+	// =========================================================================================
+	// Logic: TemplateExporter (Dev Tool)
+	// =========================================================================================
+	public static class TemplateExporter {
+
+		/**
+		 * 导出项目为内部模板
+		 * @param projectDir 用户项目根目录
+		 * @param meta 用户填写的模板元数据
+		 * @return 错误信息，成功返回 null
+		 */
+		public static String exportProject(FileHandle projectDir, ProjectManager.TemplateInfo meta) {
+			// 1. 定位 InternalProjectTemplates 目录
+			// 假设我们在 IDE 环境下运行，根目录是项目根
+			FileHandle internalRoot = Gdx.files.absolute(System.getProperty("user.dir")).child("GDEngine/InternalProjectTemplates");
+
+			if (!internalRoot.exists()) {
+				return "Error: InternalProjectTemplates not found.\nThis feature is for engine developers only.";
+			}
+
+			FileHandle targetTplDir = internalRoot.child(meta.id);
+
+			// 2. 合规审查 (Review Pipeline)
+			String reviewError = runComplianceCheck(projectDir);
+			if (reviewError != null) return "Review Failed:\n" + reviewError;
+
+			try {
+				Debug.logT("Exporter", "Starting export to: " + targetTplDir.path());
+
+				// 3. 清理旧模板
+				if (targetTplDir.exists()) {
+					targetTplDir.deleteDirectory();
+				}
+				targetTplDir.mkdirs();
+
+				// 4. 复制核心文件
+				// 4.1 src
+				FileHandle src = projectDir.child("src");
+				if (src.exists()) src.copyTo(targetTplDir);
+
+				// 4.2 assets
+				FileHandle assets = projectDir.child("assets");
+				if (assets.exists()) assets.copyTo(targetTplDir);
+
+				// 4.3 project.json (需清洗)
+				FileHandle projJson = projectDir.child("project.json");
+				if (projJson.exists()) {
+					ProjectManager.ProjectConfig cfg = new Json().fromJson(ProjectManager.ProjectConfig.class, projJson);
+					// 清洗：移除 template 引用信息，恢复纯净状态
+					cfg.template = null;
+					// 写入
+					targetTplDir.child("project.json").writeString(new Json().prettyPrint(cfg), false, "UTF-8");
+
+					// 自动填充 originEntry (如果 meta 没填)
+					if (meta.originEntry == null || meta.originEntry.isEmpty()) {
+						meta.originEntry = cfg.entryClass;
+					}
+				}
+
+				// 4.4 生成 template.json
+				// 构造干净的 meta 对象用于序列化
+				ProjectManager.TemplateInfo finalMeta = new ProjectManager.TemplateInfo();
+				finalMeta.displayName = meta.displayName;
+				finalMeta.description = meta.description;
+				finalMeta.version = meta.version;
+				finalMeta.originEntry = meta.originEntry;
+				// id 和 dirHandle 不需要写入 json
+
+				targetTplDir.child("template.json").writeString(new Json().prettyPrint(finalMeta), false, "UTF-8");
+
+				Debug.logT("Exporter", "✅ Export success: " + meta.id);
+				return null;
+
+			} catch (Exception e) {
+				e.printStackTrace();
+				return "Export Exception: " + e.getMessage();
+			}
+		}
+
+		private static String runComplianceCheck(FileHandle projectDir) {
+			// Check 1: Config
+			FileHandle configFile = projectDir.child("project.json");
+			if (!configFile.exists()) return "Missing project.json";
+
+			String entryClass = null;
+			try {
+				ProjectManager.ProjectConfig cfg = new Json().fromJson(ProjectManager.ProjectConfig.class, configFile);
+				entryClass = cfg.entryClass;
+			} catch(Exception e) { return "Invalid project.json format"; }
+
+			if (entryClass == null || entryClass.isEmpty()) return "Entry class not defined in config";
+
+			// Check 2: Structure
+			if (!projectDir.child("src/main/java").exists()) return "Missing src/main/java structure";
+
+			// Check 3: Compilation (The Acid Test)
+			if (Gd.compiler != null) {
+				try {
+					// 注入资源上下文，防止因资源缺失导致 Start 方法报错 (虽然只是编译检查，但有些静态块可能会跑)
+					GameWorld.projectAssetsRoot = projectDir.child("assets");
+					Class<?> clazz = Gd.compiler.compile(entryClass, projectDir.file().getAbsolutePath());
+					if (clazz == null) return "Compilation failed (See log)";
+					if (!com.goldsprite.gdengine.core.scripting.IGameScriptEntry.class.isAssignableFrom(clazz)) {
+						return "Entry class must implement IGameScriptEntry";
+					}
+				} catch (Exception e) {
+					return "Compiler error: " + e.getMessage();
+				}
+			} else {
+				Debug.logT("Exporter", "⚠️ Compiler not available, skipping compilation check.");
+			}
+
+			return null;
+		}
+	}
+
+	public static class ExportTemplateDialog extends BaseDialog {
+		private final VisTextField idField, nameField, versionField;
+		private final VisTextArea descArea;
+		private final VisLabel errorLabel;
+		private final FileHandle projectDir;
+
+		public ExportTemplateDialog(FileHandle projectDir) {
+			super("Export Template (Dev Only)");
+			this.projectDir = projectDir;
+
+			VisTable content = new VisTable();
+			content.defaults().pad(5).left();
+
+			// Auto-fill ID from folder name
+			content.add(new VisLabel("Template ID (Folder Name):"));
+			idField = new VisTextField(projectDir.name());
+			content.add(idField).width(300).row();
+
+			content.add(new VisLabel("Display Name:"));
+			nameField = new VisTextField(projectDir.name());
+			content.add(nameField).width(300).row();
+
+			content.add(new VisLabel("Version:"));
+			versionField = new VisTextField("1.0");
+			content.add(versionField).width(100).row();
+
+			content.add(new VisLabel("Description:")).top();
+			descArea = new VisTextArea("Auto-exported template.");
+			descArea.setPrefRows(3);
+			content.add(descArea).width(300).row();
+
+			add(content).padBottom(10).row();
+
+			errorLabel = new VisLabel("");
+			errorLabel.setColor(Color.RED);
+			errorLabel.setWrap(true);
+			add(errorLabel).width(400).padBottom(10).row();
+
+			VisTextButton btnExport = new VisTextButton("Review & Export");
+			btnExport.setColor(Color.ORANGE);
+			btnExport.addListener(new ClickListener() {
+				@Override public void clicked(InputEvent event, float x, float y) {
+					doExport();
+				}
+			});
+
+			add(btnExport).growX().height(40);
+
+			pack();
+			centerWindow();
+		}
+
+		private void doExport() {
+			String id = idField.getText().trim();
+			if (id.isEmpty() || !id.matches("[a-zA-Z0-9_]+")) {
+				errorLabel.setText("Invalid Template ID (Alphanumeric only)");
+				pack(); return;
+			}
+
+			ProjectManager.TemplateInfo meta = new ProjectManager.TemplateInfo();
+			meta.id = id;
+			meta.displayName = nameField.getText();
+			meta.description = descArea.getText();
+			meta.version = versionField.getText();
+
+			errorLabel.setText("Reviewing...");
+			errorLabel.setColor(Color.YELLOW);
+
+			// 异步执行防止卡顿 UI
+			new Thread(() -> {
+				String err = TemplateExporter.exportProject(projectDir, meta);
+
+				Gdx.app.postRunnable(() -> {
+					if (err == null) {
+						fadeOut();
+						// 可选：显示一个成功提示 Toast
+						com.goldsprite.gdengine.log.Debug.logT("Exporter", "Export Completed!");
+					} else {
+						errorLabel.setText(err);
+						errorLabel.setColor(Color.RED);
+						pack();
+					}
+				});
+			}).start();
 		}
 	}
 }

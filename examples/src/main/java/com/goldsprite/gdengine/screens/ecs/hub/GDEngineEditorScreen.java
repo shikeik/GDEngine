@@ -53,7 +53,7 @@ public class GDEngineEditorScreen extends GScreen {
 
 	@Override
 	protected void initViewport() {
-		uiViewportScale = PlatformImpl.isAndroidUser() ? 1.5f : 2.5f;
+		uiViewportScale = PlatformImpl.isAndroidUser() ? 1.5f : 2.0f;
 		super.initViewport();
 	}
 
@@ -142,6 +142,26 @@ public class GDEngineEditorScreen extends GScreen {
 		toolbar.add(btnBack).padRight(10);
 		toolbar.add(btnSave).padRight(10);
 		toolbar.add(btnRun).padRight(20);
+
+		// [修改] 仅在开发者模式下显示 Export 按钮
+		boolean isDevMode = Boolean.getBoolean("gd.dev") || System.getenv("GD_DEV") != null;
+
+		if (isDevMode) {
+			VisTextButton btnExport = new VisTextButton("Export Tpl");
+			btnExport.setColor(Color.ORANGE);
+			btnExport.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					if (currentEditingFile != null) saveCurrentFile();
+					FileHandle proj = GDEngineHubScreen.ProjectManager.currentProject;
+					if (proj != null) {
+						new GDEngineHubScreen.ExportTemplateDialog(proj).show(stage);
+					}
+				}
+			});
+			toolbar.add(btnExport).padRight(20);
+		}
+
 		toolbar.add(statusLabel).expandX().left();
 	}
 

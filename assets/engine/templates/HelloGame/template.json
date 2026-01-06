@@ -1,0 +1,6 @@
+{
+displayName: HelloGame
+description: Auto-exported template.\n这是GD引擎的HelloWorld.
+originEntry: com.mygame.Main
+version: 1.1
+}

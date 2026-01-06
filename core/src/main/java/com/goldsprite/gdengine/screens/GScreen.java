@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.Vector2;
@@ -107,7 +108,7 @@ public abstract class GScreen extends ScreenAdapter {
 		}
 
 		// 自动应用缩放系数
-		uiViewport = new FitViewport(w * uiViewportScale, h * uiViewportScale);
+		uiViewport = new ExtendViewport(w * uiViewportScale, h * uiViewportScale);
 		//Debug.log("1ui视口宽高: %s", getViewSize());
 
 		uiViewport.update(screenW, screenH, true);
