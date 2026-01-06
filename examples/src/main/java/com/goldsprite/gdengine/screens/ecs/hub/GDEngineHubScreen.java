@@ -569,9 +569,12 @@ public class GDEngineHubScreen extends GScreen {
 		private final VisLabel errorLabel;
 		private final Runnable onSuccess;
 
-		// 模板选择
+		// 模板选择相关
 		private final VisSelectBox<String> templateBox;
 		private final VisImage previewImage;
+		// [新增] 详情展示组件
+		private final VisLabel descLabel;
+		private final VisLabel versionLabel;
 		private final Array<ProjectManager.TemplateInfo> templates;
 
 		public CreateProjectDialog(Runnable onSuccess) {
@@ -580,115 +583,137 @@ public class GDEngineHubScreen extends GScreen {
 
 			templates = ProjectManager.listTemplates();
 
-			// --- [修复] 找回自动命名逻辑 ---
-			String baseName = "MyGame";
-			String finalName = baseName;
-			FileHandle projectsRoot = Gd.engineConfig.getProjectsDir();
-
-			if (projectsRoot != null && projectsRoot.exists()) {
-				int counter = 1;
-				// 循环检查直到找到未被占用的名字
-				// MyGame -> MyGame1 -> MyGame2 ...
-				while (projectsRoot.child(finalName).exists()) {
-					finalName = baseName + counter;
-					counter++;
-				}
-			}
-			// ------------------------------
-
 			// --- Layout ---
+			// 使用 Table 嵌套实现 "左图右文" 布局
 			VisTable content = new VisTable();
 			content.defaults().pad(5);
 
-			// 1. Template Selection
+			// 1. Template Selection Row
 			content.add(new VisLabel("Template:")).left();
 			templateBox = new VisSelectBox<>();
 			Array<String> names = new Array<>();
 			for(ProjectManager.TemplateInfo t : templates) names.add(t.displayName);
 			templateBox.setItems(names);
-			content.add(templateBox).width(250).row();
+			content.add(templateBox).growX().row();
 
-			// Preview Image
+			// 2. Info Area (Image + Details)
+			VisTable infoTable = new VisTable();
+
+			// Left: Image
 			previewImage = new VisImage();
-			// 默认图
-			TextureRegionDrawable defaultIcon = new TextureRegionDrawable(new TextureRegion(new Texture(Gdx.files.internal("gd_icon.png"))));
-			previewImage.setDrawable(defaultIcon);
+			infoTable.add(previewImage).size(100).top().left().padRight(10);
 
-			// 事件监听：切换模板时更新预览图和包名建议
-			templateBox.addListener(new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					updatePreview();
-				}
-			});
-			content.add(previewImage).colspan(2).size(100).padBottom(10).row();
+			// Right: Description & Version
+			VisTable detailsTable = new VisTable();
+			detailsTable.top().left();
 
-			// 2. Project Info
+			versionLabel = new VisLabel("v1.0");
+			versionLabel.setColor(Color.CYAN);
+			detailsTable.add(versionLabel).left().row();
+
+			descLabel = new VisLabel("Description...");
+			descLabel.setWrap(true); // 允许换行
+			descLabel.setColor(Color.GRAY);
+			descLabel.setFontScale(0.9f);
+			// 限制宽度以触发自动换行
+			detailsTable.add(descLabel).width(230).left().top().padTop(5);
+
+			infoTable.add(detailsTable).grow().top();
+
+			// Add Info Area to Main Content
+			content.add(infoTable).colspan(2).growX().padBottom(10).row();
+
+			// 3. Project Info
 			content.add(new VisLabel("Project Name:")).left();
-			nameField = new VisTextField(finalName); // 使用计算出的 finalName
-			content.add(nameField).width(250).row();
+
+			// 自动命名逻辑
+			String baseName = "MyGame";
+			String finalName = baseName;
+			FileHandle projectsRoot = Gd.engineConfig.getProjectsDir();
+			if (projectsRoot != null && projectsRoot.exists()) {
+				int counter = 1;
+				while (projectsRoot.child(finalName).exists()) {
+					finalName = baseName + counter;
+					counter++;
+				}
+			}
+
+			nameField = new VisTextField(finalName);
+			content.add(nameField).growX().row();
 
 			content.add(new VisLabel("Package:")).left();
-			// 包名跟随项目名变化 (转小写)
 			pkgField = new VisTextField("com." + finalName.toLowerCase());
-			content.add(pkgField).width(250).row();
+			content.add(pkgField).growX().row();
 
-			// Name 联动 Package (原有逻辑)
 			nameField.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
 					pkgField.setText("com." + nameField.getText().toLowerCase());
 				}
 			});
 
-			add(content).row();
+			add(content).width(400).row(); // 限制总宽度
 
-			// 3. Footer
+			// 4. Footer
 			errorLabel = new VisLabel("");
 			errorLabel.setColor(Color.RED);
-			add(errorLabel).padBottom(10).row();
+			errorLabel.setWrap(true);
+			add(errorLabel).width(380).padBottom(10).row();
 
-			VisTextButton createBtn = new VisTextButton("Create");
+			VisTextButton createBtn = new VisTextButton("Create Project");
+			createBtn.setColor(Color.GREEN);
 			createBtn.addListener(new ClickListener() {
 				@Override public void clicked(InputEvent event, float x, float y) {
 					doCreate();
 				}
 			});
-			add(createBtn).width(150);
+			add(createBtn).growX().height(40);
+
+			// 事件监听：切换模板时更新
+			templateBox.addListener(new ChangeListener() {
+				@Override
+				public void changed(ChangeEvent event, Actor actor) {
+					updateTemplateInfo();
+				}
+			});
 
 			pack();
 			centerWindow();
 
-			// Init
-			if(templates.size > 0) updatePreview();
+			if(templates.size > 0) updateTemplateInfo();
 		}
 
-		private void updatePreview() {
+		private void updateTemplateInfo() {
 			int idx = templateBox.getSelectedIndex();
 			if(idx < 0 || idx >= templates.size) return;
 			ProjectManager.TemplateInfo tmpl = templates.get(idx);
 
-			// 尝试加载 preview.png
+			// Update Text
+			descLabel.setText(tmpl.description != null ? tmpl.description : "No description.");
+			versionLabel.setText("v" + (tmpl.version != null ? tmpl.version : "1.0"));
+
+			// Update Image
 			FileHandle imgFile = tmpl.dirHandle.child("preview.png");
 			if(imgFile.exists()) {
 				try {
 					Texture tex = new Texture(imgFile);
 					previewImage.setDrawable(new TextureRegionDrawable(new TextureRegion(tex)));
-				} catch(Exception e) {
-					// Load failed
-				}
+				} catch(Exception e) { e.printStackTrace(); }
 			} else {
-				// Reset to default
 				previewImage.setDrawable(new TextureRegionDrawable(new TextureRegion(new Texture(Gdx.files.internal("gd_icon.png")))));
 			}
+
+			// 刷新布局，因为描述文字高度可能变化
+			pack();
+			centerWindow();
 		}
 
 		private void doCreate() {
 			int idx = templateBox.getSelectedIndex();
-			if(idx < 0) { errorLabel.setText("Select a template"); return; }
+			if(idx < 0) { errorLabel.setText("Please select a template"); return; }
 
 			ProjectManager.TemplateInfo tmpl = templates.get(idx);
-			String name = nameField.getText();
-			String pkg = pkgField.getText();
+			String name = nameField.getText().trim();
+			String pkg = pkgField.getText().trim();
 
 			String err = ProjectManager.createProject(tmpl, name, pkg);
 			if (err == null) {
@@ -696,7 +721,7 @@ public class GDEngineHubScreen extends GScreen {
 				fadeOut();
 			} else {
 				errorLabel.setText(err);
-				pack();
+				pack(); // 错误信息可能很长
 			}
 		}
 	}
