@@ -1,25 +1,27 @@
 package com.goldsprite.solofight;
 
 import com.badlogic.gdx.Application;
+import com.badlogic.gdx.Files;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
+import com.badlogic.gdx.Preferences;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.InitializationError;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
+import java.io.File;
 import java.lang.reflect.Proxy;
+import java.util.HashMap;
+import java.util.Map;
 
-/**
- * 纯 JDK 动态代理版 TestRunner
- * 无 Mockito，无 Headless，无 Native 依赖。
- * 专治各种水土不服。
- */
 public class GdxTestRunner extends BlockJUnit4ClassRunner {
 
 	private static boolean initialized = false;
+
+	// [新增] 用于控制 internal() 的根路径
+	public static String mockAssetsRoot = null;
 
 	public GdxTestRunner(Class<?> klass) throws InitializationError {
 		super(klass);
@@ -29,47 +31,70 @@ public class GdxTestRunner extends BlockJUnit4ClassRunner {
 	private synchronized void initGdxEnvironment() {
 		if (initialized) return;
 
-		// 1. 模拟 Application (处理日志)
+		// 1. Application Mock
 		Gdx.app = (Application) Proxy.newProxyInstance(
-				Application.class.getClassLoader(),
-				new Class[]{Application.class},
-				new InvocationHandler() {
-					@Override
-					public Object invoke(Object proxy, Method method, Object[] args) {
-						String name = method.getName();
-						// 拦截日志输出，打印到控制台
-						if (name.equals("log") || name.equals("error") || name.equals("debug")) {
-							String tag = args.length > 0 ? String.valueOf(args[0]) : "";
-							String msg = args.length > 1 ? String.valueOf(args[1]) : "";
-							System.out.println("[" + tag + "] " + msg);
-						}
-						// 拦截 getType，返回 Desktop 防止某些逻辑判断出错
-						if (name.equals("getType")) {
-							return Application.ApplicationType.Desktop;
-						}
-						return defaultValue(method.getReturnType());
-					}
+			Application.class.getClassLoader(),
+			new Class[]{Application.class},
+			(proxy, method, args) -> {
+				String name = method.getName();
+				if (name.equals("getType")) return Application.ApplicationType.Desktop;
+				if (name.equals("getPreferences")) return new MemoryPreferences();
+				if (name.equals("log") || name.equals("error") || name.equals("debug")) {
+					String tag = args.length > 0 ? String.valueOf(args[0]) : "";
+					String msg = args.length > 1 ? String.valueOf(args[1]) : "";
+					System.out.println("[GDX-" + tag + "] " + msg);
 				}
+				return defaultValue(method.getReturnType());
+			}
 		);
 
-		// 2. 模拟 Graphics (处理时间和帧数)
+		// 2. Graphics Mock
 		Gdx.graphics = (Graphics) Proxy.newProxyInstance(
-				Graphics.class.getClassLoader(),
-				new Class[]{Graphics.class},
-				(proxy, method, args) -> {
-					if (method.getName().equals("getDeltaTime")) return 0.016f; // 60FPS
-					if (method.getName().equals("getFrameId")) return 1L;
-					return defaultValue(method.getReturnType());
-				}
+			Graphics.class.getClassLoader(),
+			new Class[]{Graphics.class},
+			(proxy, method, args) -> {
+				if (method.getName().equals("getDeltaTime")) return 0.016f;
+				if (method.getName().equals("getFrameId")) return 1L;
+				return defaultValue(method.getReturnType());
+			}
 		);
 
-		// 3. 模拟 GL20 (防空指针，什么都不做)
+		// 3. GL20 Mock
 		Gdx.gl = (GL20) Proxy.newProxyInstance(
-				GL20.class.getClassLoader(),
-				new Class[]{GL20.class},
-				(proxy, method, args) -> defaultValue(method.getReturnType())
+			GL20.class.getClassLoader(),
+			new Class[]{GL20.class},
+			(proxy, method, args) -> defaultValue(method.getReturnType())
 		);
 		Gdx.gl20 = Gdx.gl;
+
+		// 4. Files Implementation
+		Gdx.files = new Files() {
+			@Override
+			public FileHandle getFileHandle(String path, FileType type) {
+				// 简单的透传，如果是 Internal 且设置了 Root，转给 internal() 处理
+				if (type == FileType.Internal) return internal(path);
+				return new FileHandle(new File(path));
+			}
+
+			@Override public FileHandle classpath(String path) { return new FileHandle(new File(path)); }
+
+			@Override
+			public FileHandle internal(String path) {
+				// [核心修改] 支持重定向 Internal 路径到沙盒
+				if (mockAssetsRoot != null) {
+					return new FileHandle(new File(mockAssetsRoot, path));
+				}
+				return new FileHandle(new File(path));
+			}
+
+			@Override public FileHandle external(String path) { return new FileHandle(new File(path)); }
+			@Override public FileHandle absolute(String path) { return new FileHandle(new File(path)); }
+			@Override public FileHandle local(String path) { return new FileHandle(new File(path)); }
+			@Override public String getExternalStoragePath() { return ""; }
+			@Override public boolean isExternalStorageAvailable() { return true; }
+			@Override public String getLocalStoragePath() { return ""; }
+			@Override public boolean isLocalStorageAvailable() { return true; }
+		};
 
 		initialized = true;
 	}
@@ -83,7 +108,34 @@ public class GdxTestRunner extends BlockJUnit4ClassRunner {
 		if (type == float.class) return 0f;
 		if (type == long.class) return 0L;
 		if (type == double.class) return 0.0;
-		return null; // 对象类型返回 null
+		return null;
+	}
+
+	// [新增] 内存版 Preferences 实现 (仅用于测试)
+	public static class MemoryPreferences implements Preferences {
+		private final Map<String, Object> values = new HashMap<>();
+
+		@Override public Preferences putBoolean(String key, boolean val) { values.put(key, val); return this; }
+		@Override public Preferences putInteger(String key, int val) { values.put(key, val); return this; }
+		@Override public Preferences putLong(String key, long val) { values.put(key, val); return this; }
+		@Override public Preferences putFloat(String key, float val) { values.put(key, val); return this; }
+		@Override public Preferences putString(String key, String val) { values.put(key, val); return this; }
+		@Override public Preferences put(Map<String, ?> vals) { values.putAll(vals); return this; }
+		@Override public boolean getBoolean(String key) { return getBoolean(key, false); }
+		@Override public int getInteger(String key) { return getInteger(key, 0); }
+		@Override public long getLong(String key) { return getLong(key, 0); }
+		@Override public float getFloat(String key) { return getFloat(key, 0); }
+		@Override public String getString(String key) { return getString(key, ""); }
+		@Override public boolean getBoolean(String key, boolean defValue) { Object v = values.get(key); return v instanceof Boolean ? (Boolean) v : defValue; }
+		@Override public int getInteger(String key, int defValue) { Object v = values.get(key); return v instanceof Integer ? (Integer) v : defValue; }
+		@Override public long getLong(String key, long defValue) { Object v = values.get(key); return v instanceof Long ? (Long) v : defValue; }
+		@Override public float getFloat(String key, float defValue) { Object v = values.get(key); return v instanceof Float ? (Float) v : defValue; }
+		@Override public String getString(String key, String defValue) { Object v = values.get(key); return v instanceof String ? (String) v : defValue; }
+		@Override public Map<String, ?> get() { return values; }
+		@Override public boolean contains(String key) { return values.containsKey(key); }
+		@Override public void clear() { values.clear(); }
+		@Override public void remove(String key) { values.remove(key); }
+		@Override public void flush() { /* Do nothing in memory */ }
 	}
 
 	@Override

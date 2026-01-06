@@ -297,6 +297,12 @@ public class GDEngineHubScreen extends GScreen {
 		public static FileHandle currentProject;
 		private static final Json json = new Json();
 
+		// [新增] 静态块配置 Json
+		static {
+			json.setIgnoreUnknownFields(true);
+			json.setOutputType(com.badlogic.gdx.utils.JsonWriter.OutputType.json);
+		}
+
 		// 简单的 DTO
 		public static class TemplateInfo {
 			public String id; // 文件夹名
@@ -544,6 +550,9 @@ public class GDEngineHubScreen extends GScreen {
 
 				target.writeString(json.prettyPrint(cfg), false, "UTF-8");
 			} catch (Exception e) {
+				// [新增] 打印错误日志，方便调试测试失败原因
+				Debug.logT("Hub", "⚠️ project.json 处理失败，回退为直接复制: " + e.getMessage());
+				e.printStackTrace(); // 打印堆栈
 				// Fallback: 直接复制
 				source.copyTo(target);
 			}

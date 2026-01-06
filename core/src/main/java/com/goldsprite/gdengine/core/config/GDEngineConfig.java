@@ -125,11 +125,14 @@ public class GDEngineConfig {
 
 	/** 获取当前生效的项目根目录 */
 	public FileHandle getProjectsDir() {
-//		// 优先使用自定义路径
-//		if (customProjectsPath != null && !customProjectsPath.trim().isEmpty()) {
-//			return Gdx.files.absolute(customProjectsPath);
-//		}
-		// 默认路径
+		// [修复] 防御性检查
+		if (activeEngineRoot == null) {
+			// 如果没初始化，尝试返回 customProjectsPath (如果有)，否则返回空对象或抛出更有意义的异常
+			if (customProjectsPath != null && !customProjectsPath.isEmpty()) {
+				return Gdx.files.absolute(customProjectsPath);
+			}
+			throw new IllegalStateException("Engine not initialized: activeEngineRoot is null");
+		}
 		return Gdx.files.absolute(activeEngineRoot).child(projectsSubDir);
 	}
 
