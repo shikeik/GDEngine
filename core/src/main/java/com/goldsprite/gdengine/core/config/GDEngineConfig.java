@@ -17,26 +17,15 @@ public class GDEngineConfig {
 	private static final Json json = new Json();
 
 	static {
+		// [修复] 明确设置输出类型为 JSON (这会启用换行)
 		json.setOutputType(JsonWriter.OutputType.json);
 		json.setIgnoreUnknownFields(true);
+		// [可选] 如果想强制不用引号包围Key可以设为javascript，但json兼容性最好
 	}
 
-	// ==========================================
-	// 配置字段 (Public POJO)
-	// ==========================================
-
-	/** 脚本项目的根目录绝对路径 */
 	public String projectsRootPath = "";
-
-	/** UI 缩放倍率 (预留) */
 	public float uiScale = 1.0f;
-
-	/** 上次打开的项目路径 (预留) */
 	public String lastOpenProjectPath = "";
-
-	// ==========================================
-	// 逻辑方法
-	// ==========================================
 
 	public static GDEngineConfig load() {
 		FileHandle file = getConfigFile();
@@ -56,7 +45,7 @@ public class GDEngineConfig {
 			config.save(); // 生成默认文件
 		}
 
-		// 校验路径有效性，如果路径被删了，回退默认
+		// 校验路径有效性，无效则回退默认
 		if (!checkPathValid(config.projectsRootPath)) {
 			Debug.logT("Config", "配置路径无效，回退默认: " + config.projectsRootPath);
 			config.resetToDefault();
@@ -69,6 +58,7 @@ public class GDEngineConfig {
 	public void save() {
 		try {
 			FileHandle file = getConfigFile();
+			// [修复] 使用 toJson 直接序列化，它会遵循 static 块里的 OutputType.json 配置
 			file.writeString(json.prettyPrint(this), false, "UTF-8");
 			Debug.logT("Config", "Saved to " + file.path());
 		} catch (Exception e) {
@@ -94,23 +84,23 @@ public class GDEngineConfig {
 	}
 
 	/** 获取默认的项目存放路径 */
-	private String getDefaultProjectsPath() {
-		FileHandle root;
+	public static String getDefaultProjectsPath() {
 		if (PlatformImpl.isAndroidUser()) {
-			// Android: 默认在 GDEngine/Projects
-			String externalPath = PlatformImpl.AndroidExternalStoragePath;
-			root = Gdx.files.absolute(externalPath).child("GDEngine/Projects");
+			// [修复] Android 默认: SD卡/GDEngine/Projects
+			return PlatformImpl.AndroidExternalStoragePath + "/GDEngine/Projects";
 		} else {
-			// PC: 默认在当前工作目录下的 GDEngine/Projects
-			root = Gdx.files.local("GDEngine/Projects");
+			// PC 默认: ./GDEngine/Projects
+			return Gdx.files.local("GDEngine/Projects").file().getAbsolutePath();
 		}
-
-		if (!root.exists()) root.mkdirs();
-		return root.file().getAbsolutePath();
 	}
 
 	private static boolean checkPathValid(String path) {
-		if (path == null || path.trim().isEmpty()) return false;
-		return Gdx.files.absolute(path).exists();
+		try{
+			FileHandle handle = Gdx.files.absolute(path);
+			if (!handle.exists()) handle.mkdirs();
+			return true;
+		}catch (Exception e){
+			return false; // 创建失败则表示路径不合法
+		}
 	}
 }

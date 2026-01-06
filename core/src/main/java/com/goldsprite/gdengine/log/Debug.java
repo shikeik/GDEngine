@@ -32,6 +32,7 @@ public class Debug {
 		"Hub Y",
 		"Runner Y",
 		"Asset Y",
+		"Config Y",
 
 		// Test
 		"TEST Y",

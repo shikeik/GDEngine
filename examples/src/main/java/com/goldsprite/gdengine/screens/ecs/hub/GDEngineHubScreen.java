@@ -78,7 +78,17 @@ public class GDEngineHubScreen extends GScreen {
 		titleLabel.setFontScale(1.5f);
 		titleLabel.setColor(Color.CYAN);
 
-		// [修复后] 使用 show(stage)
+		// [新增] 设置按钮
+		VisTextButton btnSettings = new VisTextButton("⚙ Settings");
+		btnSettings.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				// 传入 refreshList 回调，确保修改路径后列表刷新
+				new SettingsWindow(GDEngineHubScreen.this::refreshList).show(stage);
+			}
+		});
+
+		// 使用 show(stage)
 		VisTextButton btnCreate = new VisTextButton("[ + New Project ]");
 		btnCreate.setColor(Color.GREEN);
 		btnCreate.addListener(new ClickListener() {
@@ -90,6 +100,7 @@ public class GDEngineHubScreen extends GScreen {
 		});
 
 		topBar.add(titleLabel).expandX().left();
+		topBar.add(btnSettings).right().padRight(10).height(50); // 添加到 Create 左边
 		topBar.add(btnCreate).right().height(50);
 		root.add(topBar).growX().height(60).padBottom(10).row();
 
@@ -189,25 +200,22 @@ public class GDEngineHubScreen extends GScreen {
 	public static class ProjectManager {
 		public static FileHandle currentProject;
 
-		// [修改] 使用 Gd.engineConfig 获取路径
+		// [修改] 核心：动态获取根目录
 		public static FileHandle getProjectsRoot() {
 			String path = Gd.engineConfig.projectsRootPath;
-			// 使用 absolute 句柄，因为配置里存的是绝对路径
 			return Gdx.files.absolute(path);
 		}
 
 		public static Array<FileHandle> listProjects() {
-			// [修改] 使用 getProjectsRoot()
+			// [适配] 使用 getProjectsRoot
 			FileHandle root = getProjectsRoot();
-			if (!root.exists()) {
-				root.mkdirs();
-				return new Array<>();
-			}
-			// ... (后续逻辑不变)
+			// ... (后续逻辑不变，复用 root 变量)
 			FileHandle[] files = root.list();
 			Array<FileHandle> projects = new Array<>();
-			for (FileHandle f : files) {
-				if (f.isDirectory()) projects.add(f);
+			if(files != null) { // 防空
+				for (FileHandle f : files) {
+					if (f.isDirectory()) projects.add(f);
+				}
 			}
 			return projects;
 		}
@@ -218,6 +226,7 @@ public class GDEngineHubScreen extends GScreen {
 			if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
 			if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
 
+			// [适配] 使用 getProjectsRoot 获取目标路径
 			FileHandle finalTarget = getProjectsRoot().child(name);
 			if (finalTarget.exists()) {
 				return "Project already exists!";
