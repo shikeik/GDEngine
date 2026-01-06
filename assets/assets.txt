@@ -5,6 +5,10 @@ engine/libs/gdx-1.12.1.jar
 engine/libs/gdx-freetype-1.12.1.jar
 engine/libs/gdx-tools-1.12.1.jar
 engine/libs/vis-ui-1.5.3.jar
+engine/templates/HelloGame/Scripts/Main.java
+engine/templates/HelloGame/project.json
+engine/templates/build.gradle
+engine/templates/settings.gradle
 fonts/HYSongYunLangHeiW-1.ttf
 fonts/NotoSansMonoCJKsc-Regular.otf
 fonts/ark-pixel-10px-monospaced-zh_cn.ttf

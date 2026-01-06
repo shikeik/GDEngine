@@ -69,57 +69,88 @@ subprojects {
 
 eclipse.project.name = 'SoloFight' + '-parent'
 
+// ============================================================
+// 统一构建调度中心 (Build Orchestration)
+// ============================================================
 
-/*
-  生成资源文件清单（assets.txt）
-  - 扫描 assets 目录中的所有文件
-  - 按相对路径排序后写入 assets.txt
-  - 用于动态加载资源，避免硬编码路径
-  这个桌面端代码中需要扫描asset/目录时会用到! 因为File.list无法获取目录会报空
-*/
-configure(subprojects - project(':android')) {
-	apply plugin: 'java-library'
+// 1. 定义全局任务 (定义在 Root Project 中)
 
-	// [新增] 1. 模板同步任务
-	// 将 GDEngine/InternalProjectTemplates 同步到 assets/engine/templates
-	tasks.register('syncEngineTemplates', Sync) {
-		from file("GDEngine/InternalProjectTemplates")
-		into file("assets/engine/templates")
+// 任务A: 同步模板代码
+tasks.register('syncEngineTemplates', Sync) {
+	group = "gdengine"
+	from file("GDEngine/InternalProjectTemplates")
+	into file("assets/engine/templates")
+	exclude "**/*.git", "**/.gradle", "**/build/", "**/*.class"
+	doFirst { println ">>> 同步本地项目模板..." }
+}
 
-		// 排除不必要的元数据文件
-		exclude "**/*.git", "**/.gradle", "**/build/", "**/*.class"
+// 任务B: 生成资源清单 (assets.txt)
+tasks.register('generateAssetList') {
+	group = "gdengine"
+	inputs.dir("${project.rootDir}/assets/")
+	File assetsFolder = new File("${project.rootDir}/assets/")
+	File assetsFile = new File(assetsFolder, "assets.txt")
 
-		doFirst {
-			println ">>> 同步本地项目模板到assets中..."
-		}
-	}
-
-	// [修改] 2. 清单生成任务 (保持原有逻辑，只需添加 dependsOn)
-	tasks.register('generateAssetList') {
-		// 关键：生成清单前，必须先把模板复制进去，否则清单里会少东西
-		dependsOn 'syncEngineTemplates'
-
-		inputs.dir("${project.rootDir}/assets/")
-		// ... (后续原有的生成逻辑保持不变) ...
-		File assetsFolder = new File("${project.rootDir}/assets/")
-		File assetsFile = new File(assetsFolder, "assets.txt")
-
+	doLast {
 		assetsFile.delete()
 		fileTree(assetsFolder).collect { assetsFolder.relativePath(it) }.sort().each {
-			assetsFile.append(it + "\n")
+			if (it != "assets.txt") assetsFile.append(it + "\n")
 		}
-		doFirst {
-			println ">>> 资源文件变化, 同步资源清单中..."
-		}
-	}
-	// [保持] 绑定到 processResources
-	processResources.dependsOn 'generateAssetList'
-
-	compileJava {
-		options.incremental = true
+		println ">>> 资源清单 assets.txt 已更新"
 	}
 }
 
+// ============================================================
+// 2. 集中管理依赖关系 (防止死循环的关键)
+// ============================================================
 
+// 配置 generateAssetList 的前置条件
+// 必须等所有文件(Libs, Jar, Templates)都就位了，再扫描生成清单
+tasks.named('generateAssetList') {
+	dependsOn 'syncEngineTemplates'
+	dependsOn ':core:copyEngineLibs'
+	dependsOn ':core:packageEngineCore'
+}
 
+// [核心修复] 仅将资源准备任务挂载到【消费者】项目，切断 :core 的闭环
+// 不要对 subprojects 统一设置，而是针对性设置
 
+// 配置 Desktop (Lwjgl3)
+project(':lwjgl3') {
+	afterEvaluate { project ->
+		// 此时插件已加载，任务已存在
+		if (project.tasks.findByName('run')) {
+			project.tasks.named('run').configure {
+				dependsOn rootProject.tasks.named('generateAssetList')
+			}
+		}
+		if (project.tasks.findByName('processResources')) {
+			project.tasks.named('processResources').configure {
+				dependsOn rootProject.tasks.named('generateAssetList')
+			}
+		}
+	}
+}
+
+// 配置 Android
+project(':android') {
+	afterEvaluate { project ->
+		// Android 独特的生命周期任务
+		if (project.tasks.findByName('preBuild')) {
+			project.tasks.named('preBuild').configure {
+				dependsOn rootProject.tasks.named('generateAssetList')
+			}
+		}
+	}
+}
+
+// 配置 Examples (防止独立编译时资源缺失)
+project(':examples') {
+	afterEvaluate { project ->
+		if (project.tasks.findByName('processResources')) {
+			project.tasks.named('processResources').configure {
+				dependsOn rootProject.tasks.named('generateAssetList')
+			}
+		}
+	}
+}

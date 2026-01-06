@@ -322,12 +322,14 @@ public class GDEngineHubScreen extends GScreen {
 			tempProj.mkdirs();
 
 			try {
+				String assetsTemplatePath = "engine/templates";
+
 				// ---------------------------------------------------------
 				// 1. 核心文件生成 (project.json & Main.java)
 				// ---------------------------------------------------------
 
 				// project.json
-				FileHandle tplConfig = Gdx.files.internal("script_project_templates/HelloGame/project.json");
+				FileHandle tplConfig = Gdx.files.internal(assetsTemplatePath+"/HelloGame/project.json");
 				if (!tplConfig.exists()) return "Template missing: project.json";
 
 				String jsonContent = tplConfig.readString("UTF-8");
@@ -336,7 +338,7 @@ public class GDEngineHubScreen extends GScreen {
 				tempProj.child("project.json").writeString(jsonContent, false, "UTF-8");
 
 				// Main Script
-				FileHandle tplMain = Gdx.files.internal("script_project_templates/HelloGame/Scripts/Main.java");
+				FileHandle tplMain = Gdx.files.internal(assetsTemplatePath+"/HelloGame/Scripts/Main.java");
 				if (!tplMain.exists()) return "Template missing: Main.java";
 
 				String mainCode = tplMain.readString("UTF-8");
@@ -353,13 +355,13 @@ public class GDEngineHubScreen extends GScreen {
 				// ---------------------------------------------------------
 
 				// 2.1 拷贝 build.gradle 模板
-				FileHandle tplGradle = Gdx.files.internal("script_project_templates/build.gradle");
+				FileHandle tplGradle = Gdx.files.internal(assetsTemplatePath+"/build.gradle");
 				if (tplGradle.exists()) {
 					tplGradle.copyTo(tempProj);
 				}
 
 				// 2.1 拷贝 settings.gradle 模板
-				tplGradle = Gdx.files.internal("script_project_templates/settings.gradle");
+				tplGradle = Gdx.files.internal(assetsTemplatePath+"/settings.gradle");
 				if (tplGradle.exists()) {
 					jsonContent = tplGradle.readString("UTF-8");
 					jsonContent = jsonContent.replace("${PROJECT_NAME}", name);
@@ -378,8 +380,8 @@ public class GDEngineHubScreen extends GScreen {
 
 				// 2.2 自动注入依赖库 (遍历 assets/libs)
 				// 不需要 AssetUtils，不需要索引逻辑，直接用 Gd.files
-				FileHandle libsSource = Gd.files.internal("libs"); // 注意用 Gd.files
-				FileHandle libsTarget = tempProj.child("libs");
+				FileHandle libsSource = Gd.files.internal("engine/libs"); // 注意用 Gd.files
+				FileHandle libsTarget = tempProj.child("engine/libs");
 				libsTarget.mkdirs();
 
 				// 使用 suffix 过滤器，只拷 jar 包，避开可能存在的无关文件

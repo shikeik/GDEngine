@@ -38,6 +38,9 @@ public class GDEngineConfig {
 	 */
 	public String customProjectsPath = "";
 
+	/** 项目存放子目录名 (User Space) */
+	public String projectsSubDir = "UserProjects"; // [修改] 改为 UserProjects
+
 	public float uiScale = 1.0f;
 	public String lastOpenProjectPath = "";
 
@@ -122,12 +125,12 @@ public class GDEngineConfig {
 
 	/** 获取当前生效的项目根目录 */
 	public FileHandle getProjectsDir() {
-		// 优先使用自定义路径
-		if (customProjectsPath != null && !customProjectsPath.trim().isEmpty()) {
-			return Gdx.files.absolute(customProjectsPath);
-		}
+//		// 优先使用自定义路径
+//		if (customProjectsPath != null && !customProjectsPath.trim().isEmpty()) {
+//			return Gdx.files.absolute(customProjectsPath);
+//		}
 		// 默认路径
-		return Gdx.files.absolute(activeEngineRoot).child("Projects");
+		return Gdx.files.absolute(activeEngineRoot).child(projectsSubDir);
 	}
 
 	public String getActiveEngineRoot() { return activeEngineRoot; }

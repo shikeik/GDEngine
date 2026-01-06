@@ -1,0 +1,10 @@
+plugins {
+	id 'java'
+}
+
+sourceSets.main.resources.srcDirs += [rootProject.file('/assets').path]
+
+dependencies {
+	// 引用 libs 目录下所有的 jar 包
+	implementation fileTree(dir: 'libs', include: ['*.jar'])
+}

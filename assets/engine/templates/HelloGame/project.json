@@ -1,0 +1,5 @@
+{
+	"name": "${PROJECT_NAME}",
+	"entryClass": "${ENTRY_CLASS}",
+	"version": "1.0"
+}

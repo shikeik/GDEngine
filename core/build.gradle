@@ -90,57 +90,44 @@ tasks.register('updateReadmeVersion') {
 }
 compileJava.dependsOn(updateReadmeVersion)
 
-
 // 引擎任务==================================================
-// 1. 定义我们要暴露给脚本的白名单库 (只要文件名包含这些字符串就提取)
-def exposedLibs = ["gdx", "gdx-tools", "gdx-freetype", "vis-ui"] // 目前只需要 gdx，未来可以加 'box2d', 'ashley' 等
-// 定义 libs 输出目录
-def assetsLibsDir = file("${project.rootDir}/assets/libs/")
+// 1. 定义白名单
+def exposedLibs = ["gdx", "gdx-tools", "gdx-freetype", "vis-ui"]
+// 路径: assets/engine/libs
+def assetsLibsDir = file("${project.rootDir}/assets/engine/libs/")
 
 // 第三方库打包任务
 tasks.register('copyEngineLibs', Copy) {
 	group = "gdengine"
-	description = "复制第三方包到 assets/libs"
-
-	// 从编译时的依赖中筛选
+	description = "复制第三方包到 assets/engine/libs"
 	from configurations.compileClasspath
 	into assetsLibsDir
-
 	include { details ->
 		def name = details.file.name
-		// 排除 native 库 (so文件在apk里, java不需要引用) 和 源码包
 		if (name.contains("natives") || name.contains("sources")) return false
-
-		// 检查白名单
 		return exposedLibs.any { key -> name.matches(/^$key-\d+.*\.jar$/) }
 	}
-
-	doLast {
-		println "✅ [Engine] 第三方包已全部复制到: ${assetsLibsDir}"
-		// 打印一下拷了啥，方便调试
-		assetsLibsDir.listFiles().each { println "    - ${it.name}" }
-	}
+	duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
-// --- 引擎核心库打包任务 ---
-// 2. 修改之前的引擎打包任务，让它也输出到 libs 目录
+// 引擎核心库打包任务
 tasks.register('packageEngineCore', Jar) {
-	// 强制任务永远执行 (禁用增量构建检查)
-    outputs.upToDateWhen { false }
+	outputs.upToDateWhen { false }
 
-	from sourceSets.main.output
+	// [重要] 只取编译后的 class，不取 resources，避免隐式依赖
+	from sourceSets.main.java.classesDirectory
+	// 显式依赖编译
+	dependsOn compileJava
+
 	archiveFileName = "gdengine.jar"
-	destinationDirectory = assetsLibsDir // 改到 assets/libs/ 统一管理
-
-	exclude "**/*.html"
-	exclude "**/*.gwt.xml"
+	destinationDirectory = assetsLibsDir
+	exclude "**/*.html", "**/*.gwt.xml"
 
 	doLast { println "✅ [Engine] 引擎核心库已打包." }
 }
 
-// 3. 绑定顺序：先拷第三方，再打包引擎
-packageEngineCore.dependsOn(copyEngineLibs)
-classes.finalizedBy(packageEngineCore)
+// 注意：这里删除了所有 dependsOn / finalizedBy 代码
+// 全部移交 root_build.gradle 统一管理
 // 引擎任务==================================================
 
 
