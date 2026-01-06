@@ -25,16 +25,16 @@ import com.goldsprite.gdengine.screens.ecs.skeleton.TestSkeletonFactory;
 
 public class JsonLiveEditScreen extends ExampleGScreen {
 
-    private GameWorld world;
-    private NeonBatch neonBatch;
-    private NeonStage uiStage;
+	private GameWorld world;
+	private NeonBatch neonBatch;
+	private NeonStage uiStage;
 
-    private NeonAnimatorComponent playerAnimator;
-    private BioCodeEditor codeEditor;
-    private ToastUI toast;
+	private NeonAnimatorComponent playerAnimator;
+	private BioCodeEditor codeEditor;
+	private ToastUI toast;
 
-    // [修改] 替换默认模板：站立挥剑 (Slash)
-    private final String DEFAULT_JSON = "{\n" +
+	// [修改] 替换默认模板：站立挥剑 (Slash)
+	private final String DEFAULT_JSON = "{\n" +
 	"  \"name\": \"Slash_Test\",\n" +
 	"  \"duration\": 0.8,\n" +
 	"  \"looping\": true,\n" +
@@ -82,126 +82,126 @@ public class JsonLiveEditScreen extends ExampleGScreen {
 	"  ]\n" +
 	"}";
 
-    @Override
-    public ScreenManager.Orientation getOrientation() { return ScreenManager.Orientation.Landscape; }
+	@Override
+	public ScreenManager.Orientation getOrientation() { return ScreenManager.Orientation.Landscape; }
 
-    @Override
-    public String getIntroduction() {
-        return "JSON 实时编辑器 (v1.7.0)\n左侧编辑 JSON，右侧实时预览\n支持 Hot-Reload (应用按钮)";
-    }
+	@Override
+	public String getIntroduction() {
+		return "JSON 实时编辑器 (v1.7.0)\n左侧编辑 JSON，右侧实时预览\n支持 Hot-Reload (应用按钮)";
+	}
 
-    @Override
-    public void create() {
-        neonBatch = new NeonBatch();
+	@Override
+	public void create() {
+		neonBatch = new NeonBatch();
 
-        try { if (GameWorld.inst() != null) GameWorld.inst().dispose(); } catch(Exception ignored){}
-        world = new GameWorld();
-        world.setReferences(getUIViewport(), worldCamera);
+		try { if (GameWorld.inst() != null) GameWorld.inst().dispose(); } catch(Exception ignored){}
+		world = new GameWorld();
+		world.setReferences(getUIViewport(), worldCamera);
 
-        world.registerSystem(new SkeletonSystem());
-        world.registerSystem(new SkeletonRenderSystem(neonBatch, getWorldCamera()));
+		world.registerSystem(new SkeletonSystem());
+		world.registerSystem(new SkeletonRenderSystem(neonBatch, getWorldCamera()));
 
-        createTestEntity();
-        initUI();
+		createTestEntity();
+		initUI();
 
-        // 初始加载一次
-        applyJson();
+		// 初始加载一次
+		applyJson();
 
-        // 相机调整 (给左边留出位置)
+		// 相机调整 (给左边留出位置)
 		autoCenterWorldCamera = false;
-        getWorldCamera().position.set(-150, 0, 0);
-        getWorldCamera().update();
-    }
+		getWorldCamera().position.set(-150, 0, 0);
+		getWorldCamera().update();
+	}
 
-    private void createTestEntity() {
-        GObject player = new GObject("Player");
-        player.transform.setPosition(0, -100);
-        player.transform.setScale(1.5f);
+	private void createTestEntity() {
+		GObject player = new GObject("Player");
+		player.transform.setPosition(0, -100);
+		player.transform.setScale(1.5f);
 
-        SkeletonComponent skelComp = player.addComponent(SkeletonComponent.class);
-        playerAnimator = player.addComponent(NeonAnimatorComponent.class);
+		SkeletonComponent skelComp = player.addComponent(SkeletonComponent.class);
+		playerAnimator = player.addComponent(NeonAnimatorComponent.class);
 
-        // 使用工厂构建一个基础火柴人
-        TestSkeletonFactory.buildStickman(skelComp.getSkeleton());
-    }
+		// 使用工厂构建一个基础火柴人
+		TestSkeletonFactory.buildStickman(skelComp.getSkeleton());
+	}
 
-    private void initUI() {
-        uiStage = new NeonStage(getUIViewport());
-        getImp().addProcessor(uiStage);
+	private void initUI() {
+		uiStage = new NeonStage(getUIViewport());
+		getImp().addProcessor(uiStage);
 
-        Table root = new Table();
-        root.setFillParent(true);
-        uiStage.addActor(root);
+		Table root = new Table();
+		root.setFillParent(true);
+		uiStage.addActor(root);
 
-        // --- Layout ---
-        // Left: Editor (40% width)
-        Table leftPanel = new Table();
-        codeEditor = new BioCodeEditor();
-        codeEditor.setText(DEFAULT_JSON);
+		// --- Layout ---
+		// Left: Editor (40% width)
+		Table leftPanel = new Table();
+		codeEditor = new BioCodeEditor();
+		codeEditor.setText(DEFAULT_JSON);
 
-        VisTextButton btnApply = new VisTextButton("APPLY (Run JSON)");
-        btnApply.setColor(Color.valueOf("00eaff"));
-        btnApply.addListener(new ChangeListener() {
+		VisTextButton btnApply = new VisTextButton("APPLY (Run JSON)");
+		btnApply.setColor(Color.valueOf("00eaff"));
+		btnApply.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
 					applyJson();
 				}
 			});
 
-        leftPanel.add(new VisLabel("Animation JSON")).left().row();
-        leftPanel.add(codeEditor).grow().padBottom(5).row();
-        leftPanel.add(btnApply).growX().height(50);
+		leftPanel.add(new VisLabel("Animation JSON")).left().row();
+		leftPanel.add(codeEditor).grow().padBottom(5).row();
+		leftPanel.add(btnApply).growX().height(50);
 
-        root.add(leftPanel).width(getUIViewport().getWorldWidth() * 0.4f).growY().pad(10);
+		root.add(leftPanel).width(getUIViewport().getWorldWidth() * 0.4f).growY().pad(10);
 
-        // Right: Empty (Camera View)
-        root.add().grow();
+		// Right: Empty (Camera View)
+		root.add().grow();
 
-        // Toast
-        toast = new ToastUI();
-        toast.setPosition(getUIViewport().getWorldWidth()/2, 100);
-        uiStage.addActor(toast);
-    }
+		// Toast
+		toast = new ToastUI();
+		toast.setPosition(getUIViewport().getWorldWidth()/2, 100);
+		uiStage.addActor(toast);
+	}
 
-    private void applyJson() {
-        String jsonStr = codeEditor.getText();
-        try {
-            // 1. 解析
-            NeonAnimation anim = NeonJsonUtils.fromJson(jsonStr);
+	private void applyJson() {
+		String jsonStr = codeEditor.getText();
+		try {
+			// 1. 解析
+			NeonAnimation anim = NeonJsonUtils.fromJson(jsonStr);
 
-            // 2. 注册并播放
-            playerAnimator.addAnimation(anim);
-            playerAnimator.play(anim.name);
+			// 2. 注册并播放
+			playerAnimator.addAnimation(anim);
+			playerAnimator.play(anim.name);
 
-            toast.show("Applied: " + anim.name);
-            Debug.log("JSON Parsed successfully.");
+			toast.show("Applied: " + anim.name);
+			Debug.log("JSON Parsed successfully.");
 
-        } catch (Exception e) {
-            String err = "JSON Error: " + e.getMessage();
-            toast.show("Error!");
-            Debug.log(err);
-            e.printStackTrace();
-        }
-    }
+		} catch (Exception e) {
+			String err = "JSON Error: " + e.getMessage();
+			toast.show("Error!");
+			Debug.log(err);
+			e.printStackTrace();
+		}
+	}
 
-    @Override
-    public void render0(float delta) {
-        world.update(delta);
+	@Override
+	public void render0(float delta) {
+		world.update(delta);
 
-        neonBatch.setProjectionMatrix(getWorldCamera().combined);
-        neonBatch.begin();
-        neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.GRAY);
-        neonBatch.end();
+		neonBatch.setProjectionMatrix(getWorldCamera().combined);
+		neonBatch.begin();
+		neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.GRAY);
+		neonBatch.end();
 
-        world.getSystem(SkeletonRenderSystem.class).update(delta);
+		world.getSystem(SkeletonRenderSystem.class).update(delta);
 
-        uiStage.act(delta);
-        uiStage.draw();
-    }
+		uiStage.act(delta);
+		uiStage.draw();
+	}
 
-    @Override
-    public void dispose() {
-        if(world!=null) world.dispose();
-        if(neonBatch!=null) neonBatch.dispose();
-        if(uiStage!=null) uiStage.dispose();
-    }
+	@Override
+	public void dispose() {
+		if(world!=null) world.dispose();
+		if(neonBatch!=null) neonBatch.dispose();
+		if(uiStage!=null) uiStage.dispose();
+	}
 }

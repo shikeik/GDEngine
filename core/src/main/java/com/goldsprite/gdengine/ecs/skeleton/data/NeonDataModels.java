@@ -10,30 +10,30 @@ import java.util.List;
  */
 public class NeonDataModels {
 
-    public static class AnimData {
-        public String name;
-        public float duration;
-        public boolean looping;
-        public List<TimelineData> timelines = new ArrayList<>();
-    }
+	public static class AnimData {
+		public String name;
+		public float duration;
+		public boolean looping;
+		public List<TimelineData> timelines = new ArrayList<>();
+	}
 
-    public static class TimelineData {
-        public String bone;     // boneName
-        public String prop;     // NeonProperty name (X, Y, ROTATION...)
-        public List<KeyframeData> keys = new ArrayList<>();
-    }
+	public static class TimelineData {
+		public String bone;     // boneName
+		public String prop;     // NeonProperty name (X, Y, ROTATION...)
+		public List<KeyframeData> keys = new ArrayList<>();
+	}
 
-    public static class KeyframeData {
-        public float t;         // time
-        public float v;         // float value (用于骨骼)
-        public String s;        // sprite name (用于帧动画, Optional)
-        public String c;        // curve type (LINEAR, SMOOTH, STEPPED)
+	public static class KeyframeData {
+		public float t;         // time
+		public float v;         // float value (用于骨骼)
+		public String s;        // sprite name (用于帧动画, Optional)
+		public String c;        // curve type (LINEAR, SMOOTH, STEPPED)
 
-        public KeyframeData() {}
+		public KeyframeData() {}
 
-        // 便捷构造
-        public KeyframeData(float t, float v, String c) {
-            this.t = t; this.v = v; this.c = c;
-        }
-    }
+		// 便捷构造
+		public KeyframeData(float t, float v, String c) {
+			this.t = t; this.v = v; this.c = c;
+		}
+	}
 }
