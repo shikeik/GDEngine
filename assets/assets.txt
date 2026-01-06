@@ -8,6 +8,7 @@ engine/libs/vis-ui-1.5.3.jar
 engine/templates/FlappyGame/project.json
 engine/templates/FlappyGame/src/main/java/com/flappy/Game.java
 engine/templates/FlappyGame/src/main/java/com/flappy/Main2.java
+engine/templates/FlappyGame/src/main/java/com/flappy/NeonDigitDrawer.java
 engine/templates/FlappyGame/template.json
 engine/templates/HelloGame/project.json
 engine/templates/HelloGame/src/main/java/com/mygame/Main.java
