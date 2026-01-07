@@ -11,6 +11,7 @@ public class GameContentSelectionScreen extends BaseSelectionScreen {
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("测试场景", null);
+		map.put("Transform Scaling Test", TransformTestScreen.class);
 		map.put("H5 渐变血条测试", HealthBarDemoScreen.class);
 		map.put("Floating Text (飘字) 测试", TextTestScreen.class);
 		map.put("Neon Glow (辉光) 测试(原BioWar)", BloomDebugScreen.class);

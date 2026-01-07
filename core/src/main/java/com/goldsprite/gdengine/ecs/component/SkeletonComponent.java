@@ -25,8 +25,8 @@ public class SkeletonComponent extends Component {
 			skeleton.rootBone.x = transform.position.x;
 			skeleton.rootBone.y = transform.position.y;
 			skeleton.rootBone.rotation = transform.rotation;
-			skeleton.rootBone.scaleX = transform.scale.x;
-			skeleton.rootBone.scaleY = transform.scale.y;
+			skeleton.rootBone.scaleX = transform.scale;
+			skeleton.rootBone.scaleY = transform.scale;
 		}
 
 		// 然后触发骨骼矩阵计算

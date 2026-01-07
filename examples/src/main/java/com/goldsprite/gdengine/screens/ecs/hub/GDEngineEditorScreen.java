@@ -599,18 +599,35 @@ public class GDEngineEditorScreen extends GScreen {
 					if (relPath.startsWith("\\")) relPath = relPath.substring(1);
 
 					String pkg = relPath.replace("/", ".").replace("\\", ".");
-					String pkgStmt = pkg.isEmpty() ? "" : "package " + pkg + ";\n\n";
 
-					String content = pkgStmt +
-						"import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\n" +
-						"import com.goldsprite.gdengine.ecs.GameWorld;\n" +
-						"import com.goldsprite.gdengine.log.Debug;\n\n" +
-						"public class " + name + " implements IGameScriptEntry {\n" +
-						"    @Override\n" +
-						"    public void onStart(GameWorld world) {\n" +
-						"        Debug.logT(\"Script\", \"" + name + " started!\");\n" +
-						"    }\n" +
-						"}";
+					// [修改] 使用模板文件创建脚本
+					FileHandle templateFile = Gdx.files.internal("script_project_templates/NewScript.java");
+					String content;
+					
+					if (templateFile.exists()) {
+						content = templateFile.readString("UTF-8");
+						content = content.replace("${PACKAGE_NAME}", pkg);
+						content = content.replace("${CLASS_NAME}", name);
+						
+						// 处理无包名的情况
+						if (pkg.isEmpty()) {
+							content = content.replace("package ;", "").trim();
+						}
+					} else {
+						// Fallback: 硬编码模板
+						String pkgStmt = pkg.isEmpty() ? "" : "package " + pkg + ";\n\n";
+						content = pkgStmt +
+							"import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;\n" +
+							"import com.goldsprite.gdengine.ecs.GameWorld;\n" +
+							"import com.goldsprite.gdengine.log.Debug;\n\n" +
+							"public class " + name + " implements IGameScriptEntry {\n" +
+							"    @Override\n" +
+							"    public void onStart(GameWorld world) {\n" +
+							"        Debug.logT(\"Script\", \"" + name + " started!\");\n" +
+							"    }\n" +
+							"}";
+					}
+
 					newFile.writeString(content, false);
 					loadFile(newFile);
 				} else {

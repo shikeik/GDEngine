@@ -9,7 +9,7 @@ import com.badlogic.gdx.math.Vector2;
 public class TransformComponent extends Component {
 
 	public final Vector2 position = new Vector2();
-	public final Vector2 scale = new Vector2(1, 1);
+	public float scale = 1f;
 	public float rotation = 0f;
 
 	// 世界数据 (由 updateWorldTransform 计算)
@@ -24,7 +24,7 @@ public class TransformComponent extends Component {
 	/** 核心矩阵计算：World = Parent * Local */
 	public void updateWorldTransform(TransformComponent parentTransform) {
 		// 1. 设置自己的局部矩阵
-		worldTransform.setToTrnRotScl(position.x, position.y, rotation, scale.x, scale.y);
+		worldTransform.setToTrnRotScl(position.x, position.y, rotation, scale, scale);
 
 		// 2. 乘以父级矩阵
 		if (parentTransform != null) {
@@ -44,7 +44,7 @@ public class TransformComponent extends Component {
 
 	public void setPosition(float x, float y) { this.position.set(x, y); }
 	public void setRotation(float degrees) { this.rotation = degrees; }
-	public void setScale(float s) { this.scale.set(s, s); }
+	public void setScale(float s) { this.scale = s; }
 
 	/** [修正] 局部 -> 世界 */
 	public Vector2 localToWorld(Vector2 localPoint, Vector2 result) {

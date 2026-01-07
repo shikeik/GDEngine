@@ -28,6 +28,7 @@ icon.ico
 libgdx.png
 music/gplane2.ogg
 role.png
+script_project_templates/NewScript.java
 sounds/explosion.wav
 sounds/explosion_0.wav
 sounds/explosion_1.wav

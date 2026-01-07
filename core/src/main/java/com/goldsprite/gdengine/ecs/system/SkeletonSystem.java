@@ -32,8 +32,8 @@ public class SkeletonSystem extends BaseSystem {
 				skeleton.rootBone.x = transform.position.x;
 				skeleton.rootBone.y = transform.position.y;
 				skeleton.rootBone.rotation = transform.rotation;
-				skeleton.rootBone.scaleX = transform.scale.x;
-				skeleton.rootBone.scaleY = transform.scale.y;
+				skeleton.rootBone.scaleX = transform.scale;
+				skeleton.rootBone.scaleY = transform.scale;
 			}
 
 			// 2. 触发矩阵计算 (Recursive)

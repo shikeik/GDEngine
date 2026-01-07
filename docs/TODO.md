@@ -1,4 +1,4 @@
-﻿ignored: indentFix codeFormatFix  
+ignored: indentFix codeFormatFix  
 
 ## 版本
 
@@ -70,7 +70,7 @@ Editor的New Script上下文菜单还在用硬编码脚本模板, 这里需要�
 脚本项目结构的规范化进阶
 现在世界相机的视口大小和ui视口缩放绑定的, 按理应该基于基准视口大小而不是和ui视口耦合, 有空改
 
-限制变换组件为等比缩放: 把方法改为只能设置1个值xy相等即可
+
 
 
 
@@ -91,6 +91,7 @@ Editor的New Script上下文菜单还在用硬编码脚本模板, 这里需要�
 
 
 ## 已完成: 
+- [x] 限制变换组件为等比缩放: 把方法改为只能设置1个值xy相等即可
 
 
 

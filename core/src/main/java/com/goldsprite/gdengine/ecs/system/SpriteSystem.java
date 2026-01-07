@@ -51,8 +51,8 @@ public class SpriteSystem extends BaseSystem {
 
 		// 2. 变换属性
 		float rotation = transform.rotation;
-		float scaleX = transform.scale.x * (sprite.flipX ? -1 : 1);
-		float scaleY = transform.scale.x * (sprite.flipY ? -1 : 1);
+		float scaleX = transform.scale * (sprite.flipX ? -1 : 1);
+		float scaleY = transform.scale * (sprite.flipY ? -1 : 1);
 
 		// 3. 颜色混合 (Sprite颜色 * 批处理颜色)
 		Color oldColor = batch.getColor();
