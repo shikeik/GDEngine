@@ -27,6 +27,7 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
+import com.goldsprite.solofight.BuildConfig;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 
@@ -318,7 +319,9 @@ public class GDEngineHubScreen extends GScreen {
 		public static class ProjectConfig {
 			public String name;
 			public String entryClass;
-			public TemplateRef template; // 新增字段
+			public TemplateRef template;
+			// [新增] 记录项目关联的引擎版本
+			public String engineVersion;
 		}
 
 		public static class TemplateRef {
@@ -549,6 +552,8 @@ public class GDEngineHubScreen extends GScreen {
 				ref.sourceName = tmpl.id;
 				ref.version = tmpl.version;
 				cfg.template = ref;
+				// [新增] 注入当前引擎版本
+				cfg.engineVersion = BuildConfig.DEV_VERSION;
 
 				target.writeString(json.prettyPrint(cfg), false, "UTF-8");
 			} catch (Exception e) {

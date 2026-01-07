@@ -162,7 +162,97 @@ public class GDEngineEditorScreen extends GScreen {
 			toolbar.add(btnExport).padRight(20);
 		}
 
+		// [新增] 版本检查与更新按钮
+		checkEngineUpdate(toolbar);
+
 		toolbar.add(statusLabel).expandX().left();
+	}
+
+	private void checkEngineUpdate(Table toolbar) {
+		FileHandle projectDir = GDEngineHubScreen.ProjectManager.currentProject;
+		if (projectDir == null) return;
+
+		try {
+			FileHandle configFile = projectDir.child("project.json");
+			if (configFile.exists()) {
+				GDEngineHubScreen.ProjectManager.ProjectConfig cfg = new Json().fromJson(
+					GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+
+				String currentEngineVer = com.goldsprite.solofight.BuildConfig.DEV_VERSION;
+				String projectEngineVer = cfg.engineVersion; // 可能为 null (旧项目)
+
+				// 简单的字符串不等对比，或者您可以实现更复杂的 SemVer 比较
+				if (projectEngineVer == null || !projectEngineVer.equals(currentEngineVer)) {
+					VisTextButton btnUpdate = new VisTextButton("Update Libs (" + (projectEngineVer==null?"?":projectEngineVer) + "->" + currentEngineVer + ")");
+					btnUpdate.setColor(Color.YELLOW);
+					btnUpdate.addListener(new ChangeListener() {
+						@Override
+						public void changed(ChangeEvent event, Actor actor) {
+							showUpdateConfirmDialog(projectDir, currentEngineVer);
+						}
+					});
+					toolbar.add(btnUpdate).padRight(20);
+				} else {
+					// 版本一致，显示一个淡色的版本号即可
+					VisLabel verLabel = new VisLabel("v" + projectEngineVer);
+					verLabel.setColor(Color.DARK_GRAY);
+					toolbar.add(verLabel).padRight(20);
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void showUpdateConfirmDialog(FileHandle projectDir, String targetVer) {
+		new BaseDialog("Update Engine Libs") {
+			@Override
+			protected void result(Object object) {
+				if ((boolean) object) {
+					performUpdate(projectDir, targetVer);
+				}
+			}
+		}.text("Update project engine libraries to v" + targetVer + "?\nThis will overwrite files in 'engine/libs'.")
+			.button("Update", true)
+			.button("Cancel", false)
+			.show(stage);
+	}
+
+	private void performUpdate(FileHandle projectDir, String targetVer) {
+		try {
+			// 1. Update Libs
+			FileHandle sourceLibs = Gdx.files.internal("engine/libs");
+			FileHandle targetLibs = projectDir.child("engine/libs");
+
+			// 清空旧库? 还是覆盖? 建议清空以防残留旧版本 jar
+			if (targetLibs.exists()) targetLibs.deleteDirectory();
+			targetLibs.mkdirs();
+
+			for (FileHandle jar : sourceLibs.list(".jar")) {
+				jar.copyTo(targetLibs);
+			}
+
+			// 2. Update Config
+			FileHandle configFile = projectDir.child("project.json");
+			Json json = new Json();
+			GDEngineHubScreen.ProjectManager.ProjectConfig cfg = json.fromJson(
+				GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+
+			cfg.engineVersion = targetVer;
+
+			configFile.writeString(json.prettyPrint(cfg), false, "UTF-8");
+
+			statusLabel.setText("Project updated to v" + targetVer);
+			statusLabel.setColor(Color.GREEN);
+
+			// 刷新界面 (比如移除更新按钮)，这里简单处理：重新进入当前屏幕
+			// 或者仅仅隐藏按钮
+			getScreenManager().setCurScreen(new GDEngineEditorScreen());
+
+		} catch (Exception e) {
+			statusLabel.setText("Update Failed: " + e.getMessage());
+			statusLabel.setColor(Color.RED);
+		}
 	}
 
 	// =========================================================================================
