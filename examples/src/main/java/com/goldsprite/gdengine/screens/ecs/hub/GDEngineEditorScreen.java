@@ -45,6 +45,9 @@ public class GDEngineEditorScreen extends GScreen {
 	private VisLabel statusLabel;
 	private FileHandle currentEditingFile;
 	private IDEConsole console;
+	private VisTextButton btnUpdate;
+	private VisLabel verLabel;
+	private VisTable toolbar;
 
 	@Override
 	public ScreenManager.Orientation getOrientation() {
@@ -70,6 +73,7 @@ public class GDEngineEditorScreen extends GScreen {
 			statusLabel.setColor(Color.LIGHT_GRAY);
 		}
 		reloadProjectTree();
+		createToolbar(toolbar);
 	}
 
 	@Override
@@ -91,7 +95,7 @@ public class GDEngineEditorScreen extends GScreen {
 		stage.addActor(root);
 
 		// 1. Toolbar
-		VisTable toolbar = new VisTable();
+		toolbar = new VisTable();
 		toolbar.setBackground("window-bg");
 		createToolbar(toolbar);
 		root.add(toolbar).growX().height(50).row();
@@ -125,6 +129,8 @@ public class GDEngineEditorScreen extends GScreen {
 	}
 
 	private void createToolbar(Table toolbar) {
+		toolbar.clear();
+
 		VisTextButton btnBack = new VisTextButton("<< Back");
 		btnBack.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { getScreenManager().popLastScreen(); }});
 
@@ -183,8 +189,7 @@ public class GDEngineEditorScreen extends GScreen {
 
 				if (projectEngineVer == null || !projectEngineVer.equals(currentEngineVer)) {
 					// 显示更新按钮
-					VisTextButton btnUpdate = new VisTextButton("Update Libs (" + (projectEngineVer==null?"?":projectEngineVer) + "->" + currentEngineVer + ")");
-					btnUpdate.setColor(Color.YELLOW);
+					btnUpdate = new VisTextButton("");
 					btnUpdate.addListener(new ChangeListener() {
 						@Override
 						public void changed(ChangeEvent event, Actor actor) {
@@ -193,13 +198,38 @@ public class GDEngineEditorScreen extends GScreen {
 					});
 					toolbar.add(btnUpdate).padRight(20);
 				} else {
-					VisLabel verLabel = new VisLabel("v" + projectEngineVer);
-					verLabel.setColor(Color.DARK_GRAY);
+					verLabel = new VisLabel();
 					toolbar.add(verLabel).padRight(20);
 				}
+
+				refreshBtnUpdate();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+
+	private void refreshBtnUpdate() {
+		if(btnUpdate == null && verLabel == null) return;
+
+		FileHandle projectDir = GDEngineHubScreen.ProjectManager.currentProject;
+		FileHandle configFile = projectDir.child("project.json");
+		if(!configFile.exists()){
+			btnUpdate.setText("v?");
+			return;
+		}
+		GDEngineHubScreen.ProjectManager.ProjectConfig cfg = new Json().fromJson(
+			GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+		String currentEngineVer = com.goldsprite.solofight.BuildConfig.DEV_VERSION;
+		String projectEngineVer = cfg.engineVersion;
+
+		if (projectEngineVer == null || !projectEngineVer.equals(currentEngineVer)) {
+			String txt = "Update Libs (" + (projectEngineVer == null ? "?" : projectEngineVer) + "->" + currentEngineVer + ")";
+			btnUpdate.setText(txt);
+			btnUpdate.setColor(Color.YELLOW);
+		}else{
+			verLabel.setText("v" + projectEngineVer);
+			verLabel.setColor(Color.DARK_GRAY);
 		}
 	}
 
