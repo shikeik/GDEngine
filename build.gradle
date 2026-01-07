@@ -89,6 +89,10 @@ tasks.register('syncEngineTemplates', Sync) {
 	include "*/assets/**"       // 递归包含 assets
 	include "*/src/**"          // 递归包含 src (源码)
 
+	// [新增] 包含通用的构建脚本 (必须分发，否则用户项目无法构建)
+	include "build.gradle"
+	include "settings.gradle"
+
 	// 同时也排除掉这些目录里可能存在的系统垃圾文件
 	exclude "**/.DS_Store", "**/Thumbs.db"
 

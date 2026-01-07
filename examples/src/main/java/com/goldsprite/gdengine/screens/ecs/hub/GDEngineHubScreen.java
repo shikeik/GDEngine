@@ -423,8 +423,32 @@ public class GDEngineHubScreen extends GScreen {
 				// 我们不再使用通用的递归，而是针对根目录的特定文件夹做处理，更安全
 				processRootDirectory(tmpl.dirHandle, tempRoot, originPkg, targetPkg, name, tmpl);
 
+				// --- [新增] 注入通用构建脚本 (来自模板根目录) ---
+				FileHandle templatesRoot = tmpl.dirHandle.parent();
+				FileHandle commonBuild = templatesRoot.child("build.gradle");
+				FileHandle commonSettings = templatesRoot.child("settings.gradle");
+
+				if (commonBuild.exists()) {
+					String content = commonBuild.readString("UTF-8");
+					// 这里的 build.gradle 已经包含了我们注入的 idea {} 魔法代码
+					tempRoot.child("build.gradle").writeString(content, false, "UTF-8");
+				}
+				
+				if (commonSettings.exists()) {
+					String content = commonSettings.readString("UTF-8");
+					// 替换项目名称占位符 (如果存在)
+					// 注意：settings.gradle 通常包含 rootProject.name = '${PROJECT_NAME}'
+					content = content.replace("${PROJECT_NAME}", name);
+					tempRoot.child("settings.gradle").writeString(content, false, "UTF-8");
+				}
+
 				// --- 注入依赖库 ---
+				// [核心修改] 路径自动探测
 				FileHandle libsSource = Gdx.files.internal("engine/libs");
+				if (!libsSource.exists()) {
+					libsSource = Gdx.files.internal("assets/engine/libs");
+				}
+				
 				FileHandle libsTarget = tempRoot.child("libs");
 				libsTarget.mkdirs();
 				for (FileHandle jar : libsSource.list(".jar")) {

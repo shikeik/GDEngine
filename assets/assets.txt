@@ -19,6 +19,8 @@ engine/templates/MultiSampleDemo/project.json
 engine/templates/MultiSampleDemo/src/main/java/com/mygame/Main2.java
 engine/templates/MultiSampleDemo/src/main/java/com/mygame/Main3.java
 engine/templates/MultiSampleDemo/template.json
+engine/templates/build.gradle
+engine/templates/settings.gradle
 fonts/HYSongYunLangHeiW-1.ttf
 fonts/NotoSansMonoCJKsc-Regular.otf
 fonts/ark-pixel-10px-monospaced-zh_cn.ttf

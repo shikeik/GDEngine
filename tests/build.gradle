@@ -25,6 +25,9 @@ dependencies {
 }
 
 test {
+    // 强制设置工作目录为项目根目录，以便能找到 assets/
+    workingDir = project.rootDir
+    
     testLogging {
         showStandardStreams = true
         events "passed", "skipped", "failed"
