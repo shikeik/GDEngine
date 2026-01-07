@@ -14,11 +14,26 @@ import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
 /**
  * 引擎核心 API 入口 (GDEngine Facade)
  * <p>
- * 职责：
- * 1. 提供全局唯一的静态访问点 (类似 Gdx)。
- * 2. 通过依赖注入 (init) 持有具体的输入/图形实现。
- * 3. 维护引擎级配置 (Config)。
+ * 这是访问 GDEngine 核心功能的全局入口点。它不仅代理了 LibGDX 的基础模块（如 {@link #input}, {@link #graphics}），
+ * 还提供了引擎特有的功能（如脚本编译、配置管理）。
  * </p>
+ *
+ * <h3>快速索引：</h3>
+ * <ul>
+ *   <li>详细指南与架构说明: <a href="file:E:\WorkSpaces\Libgdx_WSpace\Projs\SoloFight\docs\manual\core\engine_context.md">docs/manual/core/engine_context.md</a></li>
+ *   <li>获取当前运行模式: {@link #mode}</li>
+ * </ul>
+ *
+ * <h3>Code Example:</h3>
+ * <pre>
+ * // 检查是否在编辑器模式下运行
+ * if (Gd.mode == Gd.Mode.EDITOR) {
+ *     Gd.app.log("Engine", "Running in Editor Mode");
+ * }
+ *
+ * // 获取逻辑设计分辨率
+ * float width = Gd.config.logicWidth;
+ * </pre>
  */
 public class Gd {
 
