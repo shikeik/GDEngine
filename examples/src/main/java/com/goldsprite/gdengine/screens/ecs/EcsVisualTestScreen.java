@@ -14,6 +14,7 @@ import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.ecs.fsm.State;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
+import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.neonbatch.NeonStage;
 import com.kotcrab.vis.ui.widget.VisLabel;
@@ -41,6 +42,12 @@ public class EcsVisualTestScreen extends ExampleGScreen {
 	@Override
 	public String getIntroduction() {
 		return "ECS 可视化测试\n验证: 矩阵变换(父子级)、TimeScale、FSM";
+	}
+
+	@Override
+	public void show() {
+		super.show();
+		Debug.logT("VisualCheck", "Checking visual center for " + this.getClass().getSimpleName() + " Camera Pos: " + getWorldCamera().position);
 	}
 
 	@Override

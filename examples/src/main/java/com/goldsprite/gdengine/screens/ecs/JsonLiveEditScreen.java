@@ -91,6 +91,12 @@ public class JsonLiveEditScreen extends ExampleGScreen {
 	}
 
 	@Override
+	public void show() {
+		super.show();
+		Debug.logT("VisualCheck", "Checking visual center for " + this.getClass().getSimpleName() + " Camera Pos: " + getWorldCamera().position);
+	}
+
+	@Override
 	public void create() {
 		neonBatch = new NeonBatch();
 

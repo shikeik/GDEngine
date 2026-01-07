@@ -41,6 +41,7 @@ public class Debug {
 		"TEST Y",
 		"VERIFY Y",
 		"Test1 Y",
+		"VisualCheck Y",
 	};
 
 	public static String LOG_TAG = BuildConfig.PROJECT_NAME;

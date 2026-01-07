@@ -27,6 +27,12 @@ public class TransformTestScreen extends ExampleGScreen {
     }
 
     @Override
+    public void show() {
+        super.show();
+        Debug.logT("VisualCheck", "Checking visual center for " + this.getClass().getSimpleName() + " Camera Pos: " + getWorldCamera().position);
+    }
+
+    @Override
     public ScreenManager.Orientation getOrientation() {
         return ScreenManager.Orientation.Landscape;
     }

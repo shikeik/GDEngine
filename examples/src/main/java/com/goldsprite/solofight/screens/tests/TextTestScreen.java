@@ -12,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
+import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.solofight.modules.FloatingTextManager;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
@@ -24,6 +25,12 @@ public class TextTestScreen extends ExampleGScreen {
 	@Override
 	public String getIntroduction() {
 		return "漂浮文字系统测试\n[点击屏幕] 生成伤害数字\n[UI按钮] 增加连击";
+	}
+
+	@Override
+	public void show() {
+		super.show();
+		Debug.logT("VisualCheck", "Checking visual center for " + this.getClass().getSimpleName() + " Camera Pos: " + getWorldCamera().position);
 	}
 
 	@Override

@@ -66,17 +66,18 @@ public class GameScreen extends ExampleGScreen {
 		return ScreenManager.Orientation.Landscape;
 	}
 
-	@Override
-	protected void initViewport() {
-		float scl = 0.9f;
-		uiViewport = new ExtendViewport(960, 540);
-		setWorldScale(0.8f);
-	}
+
 
 	@Override
 	protected void initViewport() {
 		super.initViewport();
 		autoCenterWorldCamera = true;
+	}
+
+	@Override
+	public void show() {
+		super.show();
+		Debug.logT("VisualCheck", "Checking visual center for " + this.getClass().getSimpleName() + " Camera Pos: " + getWorldCamera().position);
 	}
 
 	@Override

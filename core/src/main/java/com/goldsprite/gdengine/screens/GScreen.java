@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.log.Debug;
 
 
 /**
@@ -81,11 +82,10 @@ public abstract class GScreen extends ScreenAdapter {
 
 		// 调用可重写的初始化方法，代替直接实例化
 		initViewport();
-		resizeWorldCamera(false);// 这里更新数据create才能拿到正确相机数据
+		resizeWorldCamera(autoCenterWorldCamera);// 这里更新数据create才能拿到正确相机数据
 
 		create();
 	}
-
 
 	// 3. 智能初始化视口 (接管 GScreen 的 initViewport)
 	protected void initViewport() {
