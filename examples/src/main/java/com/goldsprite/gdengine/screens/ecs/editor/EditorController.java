@@ -5,7 +5,9 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 import com.badlogic.gdx.math.Vector2;
@@ -20,19 +22,39 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.StretchViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.core.Gd;
+import com.goldsprite.gdengine.ecs.GameWorld;
+import com.goldsprite.gdengine.ecs.system.SkeletonRenderSystem;
+import com.goldsprite.gdengine.ecs.system.SpriteSystem;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisWindow;
+import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.ecs.component.SpriteComponent;
+import com.goldsprite.gdengine.ecs.component.TransformComponent;
 
 public class EditorController {
 	Stage stage;
-	GameWorld gameWorld;
+	// GameWorld gameWorld; // Replaced by core.ecs.GameWorld.inst()
 	ViewTarget gameTarget, sceneTarget;
 	ViewWidget gameWidget, sceneWidget;
 	Touchpad joystick;
+	
+	private GObject player;
 
 	private OrthographicCamera sceneCamera;
+	private OrthographicCamera gameCamera;
+	private Viewport gameViewport;
+
+	// Rendering Systems (Managed manually for Editor FBOs)
+	private SpriteBatch spriteBatch;
+	private NeonBatch neonBatch;
+	private SpriteSystem spriteSystem;
+	private SkeletonRenderSystem skeletonRenderSystem;
 
 	public void create() {
 		if (!VisUI.isLoaded()) VisUI.load();
@@ -43,6 +65,10 @@ public class EditorController {
 		gameTarget = new ViewTarget(fboW, fboH);
 		sceneTarget = new ViewTarget(fboW, fboH);
 		sceneCamera = new OrthographicCamera(fboW, fboH);
+		
+		// Game Camera Init
+		gameCamera = new OrthographicCamera();
+		reloadGameViewport();
 
 		// 2. UI 环境
 		float scl = 1.2f;
@@ -51,23 +77,93 @@ public class EditorController {
 		createGameWindow();
 		createSceneWindow();
 
-		// 3. 【修改点】 代理初始化 -> 依赖注入
-		// 手动创建适配器实例
+		// 3. 依赖注入
 		EditorGameInput inputImpl = new EditorGameInput(gameWidget);
 		EditorGameGraphics graphicsImpl = new EditorGameGraphics(gameTarget);
-
-		// 注入到 Core Gd
-		// compiler 可以传 null 或保持 Gd.compiler (如果之前有赋值)
 		Gd.init(Gd.Mode.EDITOR, inputImpl, graphicsImpl, Gd.compiler);
 
-		// 4. 游戏初始化 (会读取 Gd.config 默认配置)
-		gameWorld = new GameWorld();
-		gameWorld.init();
+		// 4. ECS 游戏世界初始化
+		if (GameWorld.inst() == null) {
+			new GameWorld();
+		}
+		// 注入视口和相机 (主要用于逻辑计算)
+		GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
 
-		// 5. 确保游戏视口大小正确 (FBO大小)
-		gameWorld.getViewport().update(fboW, fboH, true);
+		// 5. 初始化渲染系统
+		spriteBatch = new SpriteBatch();
+		neonBatch = new NeonBatch();
+		// 初始相机暂时设为 gameCamera，但在 render 时会切换
+		spriteSystem = new SpriteSystem(spriteBatch, gameCamera);
+		skeletonRenderSystem = new SkeletonRenderSystem(neonBatch, gameCamera);
+		
+		// 注册到 GameWorld (可选: 如果希望 GameWorld.update 自动驱动它们，但这里我们手动驱动)
+		// GameWorld.inst().registerSystem(spriteSystem);
+		// GameWorld.inst().registerSystem(skeletonRenderSystem);
+		
+		// 注意：GameWorld.update() 可能会自动运行所有 registered systems
+		// 为了避免在非 FBO 环境下渲染，我们选择**不**注册它们到 GameWorld，
+		// 而是像之前计划的那样，在 render() 中手动调用它们的 update()。
+		
+		// 确保游戏视口大小正确
+		gameViewport.update(fboW, fboH, true);
+		
+		initTestScene();
 
 		Gdx.input.setInputProcessor(stage);
+	}
+	
+	private void initTestScene() {
+		GameWorld world = GameWorld.inst();
+		
+		// 1. 创建主角
+		player = new GObject("Player");
+		
+		// Transform
+		TransformComponent trans = player.addComponent(TransformComponent.class);
+		trans.position.set(0, 0); 
+		trans.scale = 0.5f; 
+		
+		// Sprite
+		SpriteComponent sprite = player.addComponent(SpriteComponent.class);
+		try {
+			// 使用 GDX 原生加载确保稳定
+			Texture tex = new Texture(Gdx.files.internal("sprites/roles/enma/enma01.png"));
+			sprite.setRegion(new TextureRegion(tex));
+		} catch (Exception e) {
+			Gdx.app.error("Editor", "Failed to load sprite", e);
+		}
+		sprite.setEnable(true);
+		
+		// 2. 创建一个参照物
+		GObject bgObj = new GObject("Reference");
+		TransformComponent bgTrans = bgObj.addComponent(TransformComponent.class);
+		bgTrans.position.set(200, 100);
+		SpriteComponent bgSprite = bgObj.addComponent(SpriteComponent.class);
+		try {
+			Texture tex = new Texture(Gdx.files.internal("sprites/roles/Abaddon01.png"));
+			bgSprite.setRegion(new TextureRegion(tex));
+		} catch (Exception e) {}
+		bgSprite.setEnable(true);
+	}
+	
+	private void reloadGameViewport() {
+		Gd.Config conf = Gd.config;
+		
+		switch (conf.viewportType) {
+			case FIT:
+				gameViewport = new FitViewport(conf.logicWidth, conf.logicHeight, gameCamera);
+				break;
+			case STRETCH:
+				gameViewport = new StretchViewport(conf.logicWidth, conf.logicHeight, gameCamera);
+				break;
+			case EXTEND:
+				gameViewport = new ExtendViewport(conf.logicWidth, conf.logicHeight, gameCamera);
+				break;
+		}
+		// Apply updates
+		if (gameTarget != null) {
+			gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight(), true);
+		}
 	}
 
 	public InputProcessor getInputProcessor() { return stage; }
@@ -89,10 +185,9 @@ public class EditorController {
 						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
 						Gd.input.getInputProcessor().touchDown((int) fboPos.x, (int) fboPos.y, pointer, button);
 					}
-					// 坐标验证
-					Vector2 worldPos = gameWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY(), gameWorld.getViewport());
-					gameWorld.targetX = worldPos.x;
-					gameWorld.targetY = worldPos.y;
+					// 坐标验证 & 逻辑 (暂时移除旧 GameWorld 逻辑)
+					// Vector2 worldPos = gameWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY(), gameViewport);
+					// GameWorld.inst()... // Handle input logic here later
 					return true;
 				}
 				@Override
@@ -109,21 +204,18 @@ public class EditorController {
 						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
 						Gd.input.getInputProcessor().touchDragged((int) fboPos.x, (int) fboPos.y, pointer);
 					}
-					Vector2 worldPos = gameWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY(), gameWorld.getViewport());
-					gameWorld.targetX = worldPos.x;
-					gameWorld.targetY = worldPos.y;
 				}
 			});
 
 		// 摇杆
-		Texture bg = GameWorld.createSolidTexture(100, 100, Color.DARK_GRAY);
-		Texture knob = GameWorld.createSolidTexture(30, 30, Color.LIGHT_GRAY);
+		Texture bg = createSolidTexture(100, 100, Color.DARK_GRAY);
+		Texture knob = createSolidTexture(30, 30, Color.LIGHT_GRAY);
 		Touchpad.TouchpadStyle style = new Touchpad.TouchpadStyle();
 		style.background = new TextureRegionDrawable(new TextureRegion(bg));
 		style.knob = new TextureRegionDrawable(new TextureRegion(knob));
 		joystick = new Touchpad(10, style);
 
-		// 配置修改器 (模拟 Godot 的 Project Settings)
+		// 配置修改器
 		VisSelectBox<String> box = new VisSelectBox<>();
 		box.setItems("FIT", "STRETCH", "EXTEND");
 		box.addListener(new ChangeListener() {
@@ -131,7 +223,6 @@ public class EditorController {
 				public void changed(ChangeEvent event, Actor actor) {
 					String mode = box.getSelected();
 
-					// 1. 修改配置数据
 					if (mode.equals("FIT")) {
 						Gd.config.viewportType = Gd.ViewportType.FIT;
 						gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
@@ -143,15 +234,11 @@ public class EditorController {
 						gameWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 					}
 
-					// 2. 通知游戏逻辑重载
-					gameWorld.reloadConfig();
-
-					// 3. 刷新日志
+					reloadGameViewport();
 					Gdx.app.log("Editor", "Viewport Changed to: " + mode);
 				}
 			});
 
-		// 默认 Widget 模式
 		gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
 
 		Table uiTable = new Table();
@@ -168,6 +255,15 @@ public class EditorController {
 
 		win.add(stack).grow();
 		stage.addActor(win);
+	}
+	
+	private Texture createSolidTexture(int w, int h, Color c) {
+		Pixmap p = new Pixmap(w, h, Pixmap.Format.RGBA8888);
+		p.setColor(c);
+		p.fill();
+		Texture t = new Texture(p);
+		p.dispose();
+		return t;
 	}
 
 	private void createSceneWindow() {
@@ -202,25 +298,58 @@ public class EditorController {
 	}
 
 	public void render(float delta) {
-		float speed = 200 * delta;
-		gameWorld.update(delta, joystick.getKnobPercentX() * speed, joystick.getKnobPercentY() * speed);
+		// 1. 逻辑更新 (Input -> Logic)
+		// 简单的摇杆控制逻辑
+		if (player != null) {
+			float speed = 200 * delta;
+			float dx = joystick.getKnobPercentX() * speed;
+			float dy = joystick.getKnobPercentY() * speed;
+			
+			TransformComponent trans = player.getComponent(TransformComponent.class);
+			if (trans != null) {
+				trans.position.add(dx, dy);
+				
+				// 面向调整
+				SpriteComponent sprite = player.getComponent(SpriteComponent.class);
+				if (sprite != null && dx != 0) {
+					sprite.flipX = dx < 0;
+				}
+			}
+		}
+		
+		GameWorld.inst().update(delta);
+		
+		// 2. 更新相机
+		gameCamera.update();
+		sceneCamera.update();
 
-		// --- 渲染 Game View (使用游戏相机) ---
+		// 3. 渲染 Game View (使用游戏相机)
 		gameTarget.renderToFbo(() -> {
-			// 1. 应用游戏视口 (处理黑边)
-			gameWorld.getViewport().apply();
-			// 2. 使用游戏相机渲染
-			gameWorld.render(gameWorld.getGameCamera());
-			gameWorld.renderDebug(gameWorld.getGameCamera());
+			gameViewport.apply();
+			
+			// 手动驱动渲染系统
+			spriteSystem.setCamera(gameCamera);
+			spriteSystem.update(delta);
+			
+			skeletonRenderSystem.setCamera(gameCamera);
+			skeletonRenderSystem.update(delta);
+			
+			// Debug 渲染 (如果有)
+			// renderDebug(gameCamera);
 		});
 
-		// --- 渲染 Scene View (使用上帝相机) ---
+		// 4. 渲染 Scene View (使用上帝相机)
 		sceneTarget.renderToFbo(() -> {
-			// 1. 铺满全屏 (SceneView 不应该有 FIT 黑边)
 			Gdx.gl.glViewport(0, 0, sceneTarget.getFboWidth(), sceneTarget.getFboHeight());
-			// 2. 使用上帝相机渲染
-			gameWorld.render(sceneCamera);
-			gameWorld.renderDebug(sceneCamera);
+			
+			spriteSystem.setCamera(sceneCamera);
+			spriteSystem.update(delta);
+			
+			skeletonRenderSystem.setCamera(sceneCamera);
+			skeletonRenderSystem.update(delta);
+			
+			// Debug 渲染
+			// renderDebug(sceneCamera);
 		});
 
 		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -237,7 +366,9 @@ public class EditorController {
 
 	public void dispose() {
 		VisUI.dispose();
-		gameWorld.dispose();
+		// GameWorld.dispose(); // GameWorld 目前没有 dispose 方法，也许需要添加
+		if (spriteBatch != null) spriteBatch.dispose();
+		if (neonBatch != null) neonBatch.dispose();
 		gameTarget.dispose();
 		sceneTarget.dispose();
 		gameWidget.dispose();

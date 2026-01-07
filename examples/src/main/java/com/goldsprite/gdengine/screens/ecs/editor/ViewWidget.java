@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.ui.Widget;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.goldsprite.gdengine.assets.ColorTextureUtils;
 
 // ==========================================
 // 3. UI 展示层 (Consumer) - 深度修复版
@@ -23,7 +24,7 @@ public class ViewWidget extends Widget {
 	public ViewWidget(ViewTarget target) {
 		this.target = target;
 		// 深灰色背景，如果能看到它，说明 Widget 这一层有黑边
-		bgTexture = GameWorld.createSolidTexture(1, 1, new Color(0.15f, 0.15f, 0.15f, 1));
+		bgTexture = ColorTextureUtils.createColorTexture(new Color(0.15f, 0.15f, 0.15f, 1));
 	}
 
 	public void setDisplayMode(DisplayMode mode) {

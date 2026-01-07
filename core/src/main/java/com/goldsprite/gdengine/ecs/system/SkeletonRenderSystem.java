@@ -17,10 +17,14 @@ import java.util.List;
 public class SkeletonRenderSystem extends BaseSystem {
 
 	private final NeonBatch batch;
-	private final OrthographicCamera camera;
+	private OrthographicCamera camera;
 
 	public SkeletonRenderSystem(NeonBatch batch, OrthographicCamera camera) {
 		this.batch = batch;
+		this.camera = camera;
+	}
+
+	public void setCamera(OrthographicCamera camera) {
 		this.camera = camera;
 	}
 

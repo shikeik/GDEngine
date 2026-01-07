@@ -8,7 +8,7 @@
       <registry />
       <envVar name="JAVA_HOME" />
       <envVar name="JDK_HOME" />
-      <directory location="C:/Users/26670/.trae/extensions/redhat.java-1.51.0-win32-x64/jre/21.0.9-win32-x86_64" />
+      <directory location="C:/Users/26670/.jdks/jdk-17" />
     </searchSequence>
     <classPath>
       <archive location="E:/WorkSpaces/Libgdx_WSpace/Projs/SoloFight/outputs/SoloFight_V1.8.14.1-fix.jar" failOnError="false" />

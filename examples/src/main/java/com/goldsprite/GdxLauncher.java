@@ -22,6 +22,7 @@ import com.goldsprite.solofight.screens.tests.CombatScreen;
 import com.goldsprite.solofight.screens.tests.TextTestScreen;
 import com.goldsprite.gdengine.screens.ecs.SpriteVisualScreen;
 import com.goldsprite.gdengine.screens.ecs.JsonLiveEditScreen;
+import com.goldsprite.gdengine.screens.ecs.editor.EditorGameScreen;
 import com.kotcrab.vis.ui.VisUI;
 
 public class GdxLauncher extends Game {

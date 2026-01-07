@@ -15,10 +15,14 @@ import java.util.List;
 public class SpriteSystem extends BaseSystem {
 
 	private final SpriteBatch batch;
-	private final OrthographicCamera camera;
+	private OrthographicCamera camera;
 
 	public SpriteSystem(SpriteBatch batch, OrthographicCamera camera) {
 		this.batch = batch;
+		this.camera = camera;
+	}
+
+	public void setCamera(OrthographicCamera camera) {
 		this.camera = camera;
 	}
 
