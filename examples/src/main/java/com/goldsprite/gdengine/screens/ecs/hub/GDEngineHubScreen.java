@@ -590,28 +590,27 @@ public class GDEngineHubScreen extends GScreen {
 			VisTable content = new VisTable();
 			content.defaults().padBottom(10).left(); // 默认左对齐，增加行间距
 
+			float labelWidth = 220;
 			// 1. Template Selection
-			// 使用嵌套 VisTable 确保 Label 和 SelectBox 对齐
 			VisTable tplRow = new VisTable();
-			tplRow.add(new VisLabel("Template:")).width(100).left(); // 固定标签宽
+			tplRow.add(new VisLabel("Template:")).width(labelWidth).left();
 			templateBox = new VisSelectBox<>();
 			Array<String> names = new Array<>();
 			for(ProjectManager.TemplateInfo t : templates) names.add(t.displayName);
 			templateBox.setItems(names);
-			tplRow.add(templateBox).growX(); // 撑满剩余空间
+			tplRow.add(templateBox).width(labelWidth*3);
 
 			content.add(tplRow).growX().row();
 
 			// 2. Info Area (Image + Details)
-			// 背景色块，区分区域
 			VisTable infoTable = new VisTable();
-			infoTable.setBackground(VisUI.getSkin().getDrawable("button")); // 给个底色
-			infoTable.pad(10);
+			infoTable.setBackground(VisUI.getSkin().getDrawable("button"));
+			infoTable.pad(15);
 
 			// Left: Image
 			previewImage = new VisImage();
-			// 限制图片大小，不随父容器拉伸
-			infoTable.add(previewImage).size(120).top().left().padRight(15);
+			// [核心修复1] 使用 center() 让图片在左侧区域垂直居中
+			infoTable.add(previewImage).size(100).center().left().padRight(20);
 
 			// Right: Description & Version
 			VisTable detailsTable = new VisTable();
@@ -624,15 +623,18 @@ public class GDEngineHubScreen extends GScreen {
 			descLabel = new VisLabel("Description...");
 			descLabel.setWrap(true);
 			descLabel.setColor(Color.LIGHT_GRAY);
-			// [关键] 在 VisTable 布局中，Wrap 的 Label 必须指定宽度或 grow，否则无法计算换行
-			detailsTable.add(descLabel).growX().left().top();
 
-			infoTable.add(detailsTable).grow().top();
+			// [核心修复2] 给描述文字一个明确的宽度 (Dialog宽600 - 图片100 - Padding ≈ 420)
+			// 只有设置了具体宽度，setWrap(true) 才能正确计算换行高度
+			detailsTable.add(descLabel).width(420).left().top();
 
-			content.add(infoTable).growX().height(140).padBottom(15).row();
+			infoTable.add(detailsTable).grow(); // 让文字部分填满剩余空间
 
-			// 3. Project Info (Name & Package)
-			// 计算自动命名 (保持原有逻辑)
+			// [核心修复3] 移除 height(140) 硬限制，改为 minHeight(120)
+			// 这样当文字换行变多时，infoTable 会自动变高，背景也会随之拉伸
+			content.add(infoTable).growX().minHeight(120).padBottom(15).row();
+
+			// 3. Project Info
 			String baseName = "MyGame";
 			String finalName = baseName;
 			FileHandle projectsRoot = Gd.engineConfig.getProjectsDir();
@@ -646,29 +648,28 @@ public class GDEngineHubScreen extends GScreen {
 
 			// Name Row
 			VisTable nameRow = new VisTable();
-			nameRow.add(new VisLabel("Project Name:")).width(100).left();
+			nameRow.add(new VisLabel("Project Name:")).width(labelWidth).left();
 			nameField = new VisTextField(finalName);
 			nameRow.add(nameField).growX();
 			content.add(nameRow).growX().row();
 
 			// Package Row
 			VisTable pkgRow = new VisTable();
-			pkgRow.add(new VisLabel("Package:")).width(100).left();
+			pkgRow.add(new VisLabel("Package:")).width(labelWidth).left();
 			pkgField = new VisTextField("com." + finalName.toLowerCase());
 			pkgRow.add(pkgField).growX();
 			content.add(pkgRow).growX().row();
 
-			// Name 联动 Package
 			nameField.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
 					pkgField.setText("com." + nameField.getText().toLowerCase());
 				}
 			});
 
-			// 将 content 添加到 Dialog，设置最小宽度 600
+			// 将 content 添加到 Dialog
 			add(content).minWidth(600).pad(10).row();
 
-			// 4. Footer (Error & Button)
+			// 4. Footer
 			errorLabel = new VisLabel("");
 			errorLabel.setColor(Color.RED);
 			errorLabel.setWrap(true);
@@ -682,10 +683,9 @@ public class GDEngineHubScreen extends GScreen {
 					doCreate();
 				}
 			});
-			// 按钮不需要太宽，居中，设置个固定宽或者 padding
-			add(createBtn).width(200).height(45).padBottom(10);
+			content.add(createBtn).colspan(2).bottom().center().width(200).height(45).padBottom(0);
 
-			// ... (事件监听器和初始化代码保持不变) ...
+			// Init
 			templateBox.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) { updateTemplateInfo(); }
 			});
