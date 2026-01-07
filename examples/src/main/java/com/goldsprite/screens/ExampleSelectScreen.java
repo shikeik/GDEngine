@@ -13,10 +13,11 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	@Override
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("场景列表\n", null);
+		map.put(">>>引擎开发<<<", GDEngineSelectionScreen.class);
+		map.put("", null);
 		// [新增] 架构验证入口
-		map.put("架构验证: Internal Demo Game", InternalGameTestScreen.class);
-		map.put("临时测试", TempTestScreen.class);
-		map.put("引擎开发", GDEngineSelectionScreen.class);
-		map.put("游戏内容", GameContentSelectionScreen.class);
+		//map.put("架构验证: Internal Demo Game", InternalGameTestScreen.class);
+		//map.put("临时测试", TempTestScreen.class);
+		map.put("游戏内容(旧版)", GameContentSelectionScreen.class);
 	}
 }
