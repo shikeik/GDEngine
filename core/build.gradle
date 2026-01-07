@@ -9,6 +9,10 @@ eclipse.project.name = appName + '-core'
 group = 'com.goldsprite.solofight.core'
 version = '0.1.0'
 
+java {
+	withJavadocJar()
+}
+
 dependencies {
 	api "com.badlogicgames.gdx:gdx:$gdxVersion"
 	api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
@@ -30,9 +34,6 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.javadoc {
-	// 设置生成的 Javadoc 的输出目录
-	destinationDir = file("$rootProject.projectDir/docs/javadoc")
-
 	// 配置 Javadoc 的额外选项
 	options {
 		// 设置语言版本
@@ -118,12 +119,27 @@ tasks.register('packageEngineCore', Jar) {
 	from sourceSets.main.java.classesDirectory
 	// 显式依赖编译
 	dependsOn compileJava
+	dependsOn javadocJar
 
 	archiveFileName = "gdengine.jar"
 	destinationDirectory = assetsLibsDir
 	exclude "**/*.html", "**/*.gwt.xml"
 
-	doLast { println "✅ [Engine] 引擎核心库已打包." }
+	// [新增操作] 复制 Javadoc Jar 到引擎目录
+    doLast {
+        // 1. 找到刚才生成的 javadoc jar 文件
+        def javadocJarFile = tasks.javadocJar.archiveFile.get().asFile
+        // 2. 目标目录
+        def targetDir = file("${project.rootDir}/assets/engine/libs/")
+        // 3. 执行复制 (重命名为 gdengine-javadoc.jar 以保持命名规范)
+        copy {
+            from javadocJarFile
+            into targetDir
+            rename { "gdengine-javadoc.jar" } // 统一叫 gdengine-javadoc.jar，方便脚本项目引用
+        }
+        println "✅ [Engine] 引擎核心库已打包."
+        println "✅ [Engine] 文档库 (Javadoc) 已发布到 assets/engine/libs/gdengine-javadoc.jar"
+    }
 }
 
 // 注意：这里删除了所有 dependsOn / finalizedBy 代码

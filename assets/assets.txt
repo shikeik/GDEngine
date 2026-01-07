@@ -1,5 +1,6 @@
 android.jar
 back.png
+engine/libs/gdengine-javadoc.jar
 engine/libs/gdengine.jar
 engine/libs/gdx-1.12.1.jar
 engine/libs/gdx-freetype-1.12.1.jar

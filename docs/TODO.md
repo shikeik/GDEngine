@@ -40,6 +40,8 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
+lwjgl3可以更名回desktop, 因为这是libgdx的默认桌面模块名.
+
 静态内部类的独立化，大类封装清理，多余场景清理
 
 
