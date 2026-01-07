@@ -173,7 +173,18 @@ public class GDEngineHubScreen extends GScreen {
 			item.add(new VisLabel("📁 ")).padRight(10);
 			item.add(nameLbl).expandX().left();
 
-			VisLabel pathLabel = new VisLabel(projDir.path());
+			// 读取项目配置获取版本
+			String projEngineVer = "?";
+			FileHandle conf = projDir.child("project.json");
+			if (conf.exists()) {
+				try {
+					ProjectManager.ProjectConfig cfg = new Json().fromJson(ProjectManager.ProjectConfig.class, conf);
+					if (cfg.engineVersion != null) projEngineVer = cfg.engineVersion;
+				} catch(Exception e) {}
+			}
+
+			// UI 展示
+			VisLabel pathLabel = new VisLabel("Engine: " + projDir.path() + " | " + projEngineVer);
 			pathLabel.setColor(Color.GRAY);
 			pathLabel.setFontScale(0.8f);
 			item.add(pathLabel).right().padRight(20);
@@ -312,7 +323,8 @@ public class GDEngineHubScreen extends GScreen {
 			public String displayName;
 			public String description;
 			public String originEntry; // "com.mygame.Main"
-			public String version;
+			public String version;       // 模板自身版本 (e.g. 1.0)
+			public String engineVersion; // [新增] 适配的引擎版本 (e.g. 1.8.11.1-alpha)
 			public FileHandle dirHandle; // assets/engine/templates/{id}
 		}
 
@@ -327,6 +339,7 @@ public class GDEngineHubScreen extends GScreen {
 		public static class TemplateRef {
 			public String sourceName;
 			public String version;
+			public String engineVersion;
 		}
 
 		public static Array<FileHandle> listProjects() {
@@ -363,6 +376,7 @@ public class GDEngineHubScreen extends GScreen {
 						info.description = meta.description;
 						info.originEntry = meta.originEntry;
 						info.version = meta.version;
+						info.engineVersion = meta.engineVersion;
 					} catch (Exception e) {
 						Debug.logT("Hub", "Template parse error: " + dir.name());
 						info.displayName = info.id + " (Error)";
@@ -411,7 +425,7 @@ public class GDEngineHubScreen extends GScreen {
 
 				// --- 注入依赖库 ---
 				FileHandle libsSource = Gdx.files.internal("engine/libs");
-				FileHandle libsTarget = tempRoot.child("engine/libs");
+				FileHandle libsTarget = tempRoot.child("libs");
 				libsTarget.mkdirs();
 				for (FileHandle jar : libsSource.list(".jar")) {
 					jar.copyTo(libsTarget);
@@ -551,9 +565,10 @@ public class GDEngineHubScreen extends GScreen {
 				TemplateRef ref = new TemplateRef();
 				ref.sourceName = tmpl.id;
 				ref.version = tmpl.version;
+				ref.engineVersion = tmpl.engineVersion;
 				cfg.template = ref;
 				// [新增] 注入当前引擎版本
-				cfg.engineVersion = BuildConfig.DEV_VERSION;
+				cfg.engineVersion = tmpl.engineVersion;
 
 				target.writeString(json.prettyPrint(cfg), false, "UTF-8");
 			} catch (Exception e) {
@@ -581,7 +596,7 @@ public class GDEngineHubScreen extends GScreen {
 		private final VisImage previewImage;
 		// [新增] 详情展示组件
 		private final VisLabel descLabel;
-		private final VisLabel versionLabel;
+		private final VisLabel versionLabel, enginVersionLabel;
 		private final Array<ProjectManager.TemplateInfo> templates;
 
 		public CreateProjectDialog(Runnable onSuccess) {
@@ -621,17 +636,23 @@ public class GDEngineHubScreen extends GScreen {
 			VisTable detailsTable = new VisTable();
 			detailsTable.top().left();
 
-			versionLabel = new VisLabel("v1.0");
-			versionLabel.setColor(Color.CYAN);
-			detailsTable.add(versionLabel).left().padBottom(5).row();
-
 			descLabel = new VisLabel("Description...");
 			descLabel.setWrap(true);
 			descLabel.setColor(Color.LIGHT_GRAY);
-
+			descLabel.setAlignment(Align.center);
 			// [核心修复2] 给描述文字一个明确的宽度 (Dialog宽600 - 图片100 - Padding ≈ 420)
 			// 只有设置了具体宽度，setWrap(true) 才能正确计算换行高度
-			detailsTable.add(descLabel).width(420).left().top();
+			detailsTable.add(descLabel).growX().center().top().row();
+
+			versionLabel = new VisLabel("v1.0");
+			versionLabel.setColor(Color.CYAN);
+			versionLabel.setAlignment(Align.right);
+			detailsTable.add(versionLabel).growX().right().padBottom(5).row();
+
+			enginVersionLabel = new VisLabel("v1.0");
+			enginVersionLabel.setColor(Color.GOLDENROD);
+			enginVersionLabel.setAlignment(Align.right);
+			detailsTable.add(enginVersionLabel).growX().right().padBottom(5);
 
 			infoTable.add(detailsTable).grow(); // 让文字部分填满剩余空间
 
@@ -708,7 +729,8 @@ public class GDEngineHubScreen extends GScreen {
 
 			// Update Text
 			descLabel.setText(tmpl.description != null ? tmpl.description : "No description.");
-			versionLabel.setText("v" + (tmpl.version != null ? tmpl.version : "1.0"));
+			versionLabel.setText("template: v" + (tmpl.version != null ? tmpl.version : "1.0"));
+			enginVersionLabel.setText("engine: v" + (tmpl.engineVersion != null ? tmpl.engineVersion : "1.0"));
 
 			// Update Image
 			FileHandle imgFile = tmpl.dirHandle.child("preview.png");
@@ -831,6 +853,8 @@ public class GDEngineHubScreen extends GScreen {
 				finalMeta.description = meta.description;
 				finalMeta.version = meta.version;
 				finalMeta.originEntry = meta.originEntry;
+				// [新增] 自动注入当前引擎版本
+				finalMeta.engineVersion = meta.engineVersion;
 				// id 和 dirHandle 不需要写入 json
 
 				targetTplDir.child("template.json").writeString(new Json().prettyPrint(finalMeta), false, "UTF-8");
