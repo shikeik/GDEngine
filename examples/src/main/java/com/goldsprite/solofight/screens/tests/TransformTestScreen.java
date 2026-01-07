@@ -42,10 +42,7 @@ public class TransformTestScreen extends ExampleGScreen {
         // Create Test Entity
         testObj = new GObject("TestBox");
         // Center the object
-        testObj.transform.setPosition(
-            getWorldCamera().viewportWidth / 2f,
-            getWorldCamera().viewportHeight / 2f
-        );
+        testObj.transform.setPosition(0, 0);
         
         SpriteComponent sprite = new SpriteComponent();
         

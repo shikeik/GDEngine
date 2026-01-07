@@ -74,6 +74,12 @@ public class GameScreen extends ExampleGScreen {
 	}
 
 	@Override
+	protected void initViewport() {
+		super.initViewport();
+		autoCenterWorldCamera = true;
+	}
+
+	@Override
 	public void create() {
 		neonBatch = new NeonBatch();
 		parallaxBG = new ParallaxBackground();

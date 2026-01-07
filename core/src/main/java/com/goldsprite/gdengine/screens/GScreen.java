@@ -47,7 +47,7 @@ public abstract class GScreen extends ScreenAdapter {
 
 	// [新增] 配置项：Resize 时是否自动将世界相机重置到中心
 	// 默认 true 保持向后兼容，SkeletonVisualScreen 可以设为 false
-	protected boolean autoCenterWorldCamera = true;
+	protected boolean autoCenterWorldCamera = false;
 
 	//ExampleGScreen Logic
 	// 1. 定义基准尺寸 (540p)

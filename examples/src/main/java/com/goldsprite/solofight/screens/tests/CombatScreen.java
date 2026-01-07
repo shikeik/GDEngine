@@ -42,6 +42,7 @@ public class CombatScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
+		autoCenterWorldCamera = true;
 		neonBatch = new NeonBatch();
 
 		p1 = new Fighter(200, Color.CYAN, false);

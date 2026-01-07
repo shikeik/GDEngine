@@ -108,7 +108,7 @@ public class JsonLiveEditScreen extends ExampleGScreen {
 		applyJson();
 
 		// 相机调整 (给左边留出位置)
-		autoCenterWorldCamera = false;
+		//autoCenterWorldCamera = false; // Default is false now
 		getWorldCamera().position.set(-150, 0, 0);
 		getWorldCamera().update();
 	}

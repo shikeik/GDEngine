@@ -62,8 +62,9 @@ public class EcsVisualTestScreen extends ExampleGScreen {
 	}
 
 	private void createSolarSystem() {
-		float cx = getWorldCenter().x;
-		float cy = getWorldCenter().y;
+		// [修改] 迁移到中心坐标系 (0,0)
+		float cx = 0;
+		float cy = 0;
 
 		// --- 1. 太阳 (Root) ---
 		GObject sun = new GObject("Sun");

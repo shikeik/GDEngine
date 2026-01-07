@@ -61,7 +61,7 @@ public class SpriteVisualScreen extends ExampleGScreen {
 		createTestEntity();
 		initUI();
 
-		autoCenterWorldCamera = false;
+		//autoCenterWorldCamera = false; // Default is false now
 		getWorldCamera().zoom = 0.8f;
 		getWorldCamera().update();
 	}

@@ -33,6 +33,7 @@ public class TextTestScreen extends ExampleGScreen {
 
 	@Override
 	public void create() {
+		autoCenterWorldCamera = true;
 		FloatingTextManager.init();
 
 		batch = new SpriteBatch();

@@ -31,7 +31,7 @@ public class GameRunnerScreen extends GScreen {
 
 	@Override
 	protected void initViewport() {
-		autoCenterWorldCamera = false;
+		//autoCenterWorldCamera = false; // Default is false now
 		uiViewportScale = PlatformImpl.isAndroidUser() ? 1.5f : 2.5f;
 		worldScale = 0.4f;
 		super.initViewport();
