@@ -24,30 +24,30 @@ public class RichTextTestScreen extends GScreen {
         VisTable container = new VisTable();
         container.defaults().pad(10).left();
         
-        container.add(new VisLabel("Rich Text Test")).row();
+        container.add(new VisLabel("富文本功能测试 (Rich Text)")).row();
         
         // Test 1: Basic colors and sizes
-        String text1 = "Hello [color=red]Red[/color] and [size=40]Big[/size] world!";
-        container.add(new VisLabel("Test 1: " + text1)).row();
+        String text1 = "你好 [color=red]红色[/color] 和 [size=40]大号[/size] 世界！";
+        container.add(new VisLabel("测试 1: 基础样式")).row();
         RichText rt1 = new RichText(text1, 500);
         container.add(rt1).row();
         
         container.add(new VisLabel("----------------")).fillX().pad(5).row();
         
         // Test 2: Nested and Images
-        String text2 = "Items: [img=gd_icon.png|32x32] x [size=40][color=gold]5[/color][/size]";
-        container.add(new VisLabel("Test 2: Images")).row();
+        String text2 = "获得物品: [img=gd_icon.png|32x32] x [size=40][color=gold]5[/color][/size]";
+        container.add(new VisLabel("测试 2: 图文混排")).row();
         RichText rt2 = new RichText(text2, 500);
         container.add(rt2).row();
 
         container.add(new VisLabel("----------------")).fillX().pad(5).row();
         
         // Test 3: Wrapping
-        String text3 = "This is a long text to test automatic wrapping functionality. " +
-                       "We have some [color=green]green text[/color] in the middle and some " +
-                       "[size=20]small text[/size] as well. Let's see how it behaves when the " +
-                       "width limit is reached. [img=gd_icon.png|20x20] Icon here.";
-        container.add(new VisLabel("Test 3: Wrap (Width=300)")).row();
+        String text3 = "这是一段很长的文本，用于测试自动换行功能。" +
+                       "中间包含一些 [color=green]绿色文本[/color] 和 " +
+                       "[size=20]小号字体[/size]。让我们看看当达到宽度限制时它如何表现。" +
+                       "[img=gd_icon.png|20x20] 图标结尾。";
+        container.add(new VisLabel("测试 3: 自动换行 (宽=300)")).row();
         RichText rt3 = new RichText(text3, 300);
         rt3.debug(); // Show bounds
         container.add(rt3).row();
@@ -55,8 +55,8 @@ public class RichTextTestScreen extends GScreen {
         container.add(new VisLabel("----------------")).fillX().pad(5).row();
         
         // Test 4: Events
-        String text4 = "Click [event=click_me][color=cyan]HERE[/color][/event] to trigger event.";
-        container.add(new VisLabel("Test 4: Events")).row();
+        String text4 = "点击 [event=click_me][color=cyan]这里[/color][/event] 触发事件。";
+        container.add(new VisLabel("测试 4: 点击事件")).row();
         RichText rt4 = new RichText(text4, 500);
         rt4.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
             @Override
@@ -81,7 +81,7 @@ public class RichTextTestScreen extends GScreen {
                        "[img=sprites/icons/RavenFantasyIcons16x16.png#potion] " +
                        "[img=sprites/icons/RavenFantasyIcons16x16.png#shield]";
                        
-        container.add(new VisLabel("Test 5: Custom Atlas (Sword, Potion, Shield)")).row();
+        container.add(new VisLabel("Test 5: 自定义资源图标 (Sword, Potion, Shield)")).row();
         RichText rt5 = new RichText(text5, 500);
         // 放大一点看清楚
         rt5.setScale(2); 

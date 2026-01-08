@@ -51,10 +51,12 @@ public class FontUtils {
 		FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(fntPath));
 		FreeTypeFontParameter parameter = new FreeTypeFontParameter();
 
-		//clarity = 3.0f;
-		parameter.size = Math.round(fntSize * clarity);
-		//parameter.size = (int) Math.ceil(fntSize * clarity);
-		parameter.mono = false; // [关键] 强制等宽，保证选区对齐
+        //clarity = 3.0f;
+        // [New Strategy] 2.0x Scale for High DPI support
+        clarity = 2.0f;
+        parameter.size = Math.round(fntSize * clarity);
+        //parameter.size = (int) Math.ceil(fntSize * clarity);
+        parameter.mono = false; // [关键] 强制等宽，保证选区对齐
 		parameter.incremental = true;
 		parameter.color = Color.WHITE;
 		// 稍微增加间距，防止缩小后字符粘连
