@@ -16,10 +16,14 @@ import com.badlogic.gdx.scenes.scene2d.ui.Widget;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
+import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
+import com.badlogic.gdx.files.FileHandle;
+import java.util.HashSet;
+import java.util.Set;
 import com.goldsprite.gdengine.ui.input.SmartColorInput;
 import com.goldsprite.gdengine.ui.input.SmartNumInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
@@ -56,6 +60,11 @@ import java.util.function.Supplier;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.kotcrab.vis.ui.widget.file.FileChooser;
+import com.kotcrab.vis.ui.widget.VisDialog;
+import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
+import com.goldsprite.gdengine.PlatformImpl;
+
 /**
  * Flat Icon 设计器原型 (Phase 1 - Fix Gizmo)
  */
@@ -75,16 +84,28 @@ public class IconEditorDemo extends GScreen {
 
 	// --- UI 引用 ---
 	private VisTree<UiNode, EditorTarget> hierarchyTree;
+	private VisTree<FileNode, FileHandle> fileTree; // [New] File Tree
 	private VisTable inspectorTable;
 	private CommandHistoryUI historyPanel;
 	private BioCodeEditor jsonEditor;
 	private Stack propertiesStack;
+
+	// --- File System ---
+	private FileHandle currentFile;
+	private boolean isDirty = false;
+	private static final String PROJECT_DIR = "IconProjects";
 
 	// --- 数据根节点 ---
 	// private EditorTarget rootNode; // Moved to SceneManager
 
 	// [新增] 拖拽管理器
     private DragAndDrop dragAndDrop;
+    
+    public IconEditorDemo() {
+        // [修复] 设置 UI 视口缩放系数，解决分辨率过小问题
+        // 参考 GScreen 默认值，或者根据需要调整。例如 PC 端稍微放大一点视野。
+        this.uiViewportScale = PlatformImpl.isAndroidUser() ? 1.0f : 1.5f;
+    }
     
     // --- Event System ---
     public interface EditorListener {
@@ -267,6 +288,22 @@ public class IconEditorDemo extends GScreen {
     }
 	
 	
+	public static class FileNode extends Tree.Node<FileNode, FileHandle, VisLabel> {
+		public FileNode(FileHandle file) {
+			super(new VisLabel(file.name()));
+			setValue(file);
+			VisLabel label = getActor();
+			if (file.isDirectory()) label.setColor(Color.GOLD);
+		}
+
+		public void setDirty(boolean dirty) {
+			VisLabel label = getActor();
+			String name = getValue().name();
+			if (dirty) label.setText(name + " *");
+			else label.setText(name);
+		}
+	}
+
 	// [重构] 修复布局、菜单坐标、拖拽逻辑
 	public static class UiNode extends Tree.Node<UiNode, EditorTarget, VisTable> {
 		
@@ -578,6 +615,326 @@ public class IconEditorDemo extends GScreen {
 	}
 
 	// ========================================================================
+	// File System
+	// ========================================================================
+
+	private void initProjectSystem() {
+		FileHandle dir = Gd.files.local(PROJECT_DIR);
+		if (!dir.exists()) dir.mkdirs();
+
+		FileHandle[] files = dir.list("json");
+		if (files.length == 0) {
+			createDefaultProject();
+		}
+		
+		reloadFileTree();
+		
+		// Load first project by default if no current file
+		if (currentFile == null && fileTree.getNodes().size > 0) {
+			FileNode first = fileTree.getNodes().first();
+			loadProject(first.getValue());
+			fileTree.getSelection().set(first);
+		}
+	}
+
+	private void createDefaultProject() {
+		FileHandle file = Gd.files.local(PROJECT_DIR + "/DefaultProject.json");
+		GroupNode root = new GroupNode("Root");
+		
+		// Add some default content
+		RectShape r = new RectShape("Rect");
+		r.width = 100; r.height = 100; r.color.set(Color.CYAN);
+		r.setParent(root);
+		
+		saveProjectToFile(root, file);
+	}
+
+	private void reloadFileTree() {
+		fileTree.clearChildren();
+		FileHandle dir = Gdx.files.local(PROJECT_DIR);
+		FileHandle[] files = dir.list("json");
+		
+		for (FileHandle file : files) {
+			FileNode node = new FileNode(file);
+			
+			// [New] Node Context Menu & Click Logic
+			node.getActor().addListener(new ActorGestureListener(20, 0.4f, 1.0f, 0.15f) {
+				private com.badlogic.gdx.utils.Timer.Task tapTask;
+
+				@Override
+				public boolean longPress(Actor actor, float x, float y) {
+					fileTree.getSelection().set(node);
+					Vector2 stageCoords = actor.localToStageCoordinates(new Vector2(x, y));
+					showFileTreeMenu(node, stageCoords.x, stageCoords.y);
+					return true; // Stop propagation
+				}
+
+				@Override
+				public void tap(InputEvent event, float x, float y, int count, int button) {
+					event.stop(); // 阻止事件冒泡，防止触发背景菜单
+
+					if (button == Input.Buttons.RIGHT) {
+						fileTree.getSelection().set(node);
+						showFileTreeMenu(node, event.getStageX(), event.getStageY());
+					} else if (button == Input.Buttons.LEFT) {
+						fileTree.getSelection().set(node);
+
+						if (count == 2) {
+							// 双击：取消单击任务，直接打开
+							if (tapTask != null) tapTask.cancel();
+							loadProject(node.getValue());
+							Gdx.app.log("Editor", "Double click: Load " + node.getValue().name());
+						} else if (count == 1) {
+							// 单击：延迟打开弹窗
+							tapTask = com.badlogic.gdx.utils.Timer.schedule(new com.badlogic.gdx.utils.Timer.Task() {
+								@Override
+								public void run() {
+									// 0.2s 后执行单击逻辑 (例如弹出确认框或加载)
+									// 这里根据用户需求：单击延迟打开弹窗 (Confirm Load?)
+									// 或者如果当前没加载，就加载？
+									// 既然双击是直接打开，单击弹窗确认比较合理
+									// 但为了简便且符合编辑器习惯，这里单击仅做选中，
+									// 或者如果用户想要"单击打开"，那就不需要双击了。
+									// 用户说"单击时延迟打开弹窗"，那我们就弹个窗。
+									showLoadConfirmDialog(node.getValue());
+								}
+							}, 0.2f);
+						}
+					}
+				}
+			});
+			
+			fileTree.add(node);
+			if (currentFile != null && file.equals(currentFile)) {
+				fileTree.getSelection().set(node);
+				if (isDirty) node.setDirty(true);
+			}
+		}
+	}
+	
+	private void showLoadConfirmDialog(FileHandle file) {
+		VisDialog dialog = new VisDialog("Open Project") {
+			@Override
+			protected void result(Object object) {
+				if ((Boolean)object) {
+					loadProject(file);
+				}
+			}
+		};
+		dialog.text("Open '" + file.name() + "'?");
+		dialog.button("Open", true);
+		dialog.button("Cancel", false);
+		dialog.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent event, float x, float y) {
+				// Prevent click through
+			}
+		});
+		dialog.show(uiStage);
+	}
+
+	private void showFileTreeMenu(FileNode node, float x, float y) {
+		PopupMenu menu = new PopupMenu();
+		
+		if (node == null) {
+			// Background Menu
+			menu.addItem(new MenuItem("New Project", new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					createNewProject();
+				}
+			}));
+		} else {
+			// File Menu
+			menu.addItem(new MenuItem("Delete", new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					deleteProject(node.getValue());
+				}
+			}));
+			menu.addItem(new MenuItem("Rename", new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					renameProject(node.getValue());
+				}
+			}));
+			menu.addItem(new MenuItem("Duplicate", new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					duplicateProject(node.getValue());
+				}
+			}));
+		}
+		
+		menu.showMenu(uiStage, x, y);
+	}
+	
+	private void createNewProject() {
+		VisDialog dialog = new VisDialog("New Project");
+		VisTextField nameField = new VisTextField("NewProject");
+		dialog.add(new VisLabel("Name:")).padRight(5);
+		dialog.add(nameField).growX().row();
+		
+		VisTextButton btnCreate = new VisTextButton("Create");
+		btnCreate.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent event, float x, float y) {
+				String name = nameField.getText();
+				if (name.isEmpty()) return;
+				if (!name.endsWith(".json")) name += ".json";
+				
+				FileHandle file = Gdx.files.local(PROJECT_DIR + "/" + name);
+				if (file.exists()) {
+					// Simple alert or just return
+					return;
+				}
+				
+				GroupNode root = new GroupNode("Root");
+				saveProjectToFile(root, file);
+				reloadFileTree();
+				
+				// Auto load
+				for (FileNode n : fileTree.getNodes()) {
+					if (n.getValue().equals(file)) {
+						fileTree.getSelection().set(n);
+						loadProject(file);
+						break;
+					}
+				}
+				
+				dialog.fadeOut();
+			}
+		});
+		
+		dialog.add(btnCreate).colspan(2).padTop(10);
+		dialog.show(uiStage);
+		dialog.centerWindow();
+		uiStage.setKeyboardFocus(nameField);
+	}
+	
+	private void deleteProject(FileHandle file) {
+		VisDialog dialog = new VisDialog("Delete Project") {
+			@Override
+			protected void result(Object object) {
+				if ((Boolean)object) {
+					file.delete();
+					if (currentFile != null && currentFile.equals(file)) {
+						currentFile = null;
+						sceneManager.setRoot(null);
+					}
+					reloadFileTree();
+				}
+			}
+		};
+		dialog.text("Are you sure you want to delete '" + file.name() + "'?");
+		dialog.button("Yes", true);
+		dialog.button("No", false);
+		dialog.show(uiStage);
+	}
+	
+	private void renameProject(FileHandle file) {
+		VisDialog dialog = new VisDialog("Rename Project");
+		VisTextField nameField = new VisTextField(file.nameWithoutExtension());
+		dialog.add(new VisLabel("New Name:")).padRight(5);
+		dialog.add(nameField).growX().row();
+		
+		VisTextButton btnConfirm = new VisTextButton("Rename");
+		btnConfirm.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent event, float x, float y) {
+				String name = nameField.getText();
+				if (name.isEmpty()) return;
+				if (!name.endsWith(".json")) name += ".json";
+				
+				FileHandle newFile = file.sibling(name);
+				if (newFile.exists()) return;
+				
+				file.moveTo(newFile);
+				
+				if (currentFile != null && currentFile.equals(file)) {
+					currentFile = newFile;
+				}
+				
+				reloadFileTree();
+				dialog.fadeOut();
+			}
+		});
+		
+		dialog.add(btnConfirm).colspan(2).padTop(10);
+		dialog.show(uiStage);
+	}
+
+	private void duplicateProject(FileHandle file) {
+		String base = file.nameWithoutExtension();
+		String ext = file.extension();
+		int i = 1;
+		while (true) {
+			FileHandle copy = file.sibling(base + "_copy" + i + "." + ext);
+			if (!copy.exists()) {
+				file.copyTo(copy);
+				reloadFileTree();
+				return;
+			}
+			i++;
+		}
+	}
+
+	public void saveProject() {
+		if (currentFile == null) {
+			currentFile = Gd.files.local(PROJECT_DIR + "/Project_" + System.currentTimeMillis() + ".json");
+		}
+		saveProjectToFile(sceneManager.getRoot(), currentFile);
+		markDirty(false);
+		reloadFileTree();
+	}
+
+	private Json createJson() {
+		Json json = new Json();
+		json.setOutputType(OutputType.json);
+		json.setIgnoreUnknownFields(true);
+		json.addClassTag("Group", GroupNode.class);
+		json.addClassTag("Rectangle", RectShape.class);
+		json.addClassTag("Circle", CircleShape.class);
+		return json;
+	}
+
+	private void saveProjectToFile(EditorTarget root, FileHandle file) {
+		Json json = createJson();
+		file.writeString(json.prettyPrint(root), false, "UTF-8");
+		Gdx.app.log("Editor", "Saved project to " + file.path());
+	}
+
+	private void loadProject(FileHandle file) {
+		try {
+			Json json = createJson();
+			
+			// Try to load as GroupNode (default root)
+			GroupNode root = json.fromJson(GroupNode.class, file);
+			
+			if (root != null) {
+				fixParentRefs(root);
+				
+				// [关键修复] 确保在设置新 Root 前清理旧状态
+				sceneManager.selectNode(null); // 先取消选中，避免引用到旧对象
+				sceneManager.setRoot(root);    // 设置新 Root，内部会触发 notifyStructureChanged -> onStructureChanged -> 重建 UI
+				
+				currentFile = file;
+				markDirty(false);
+				Gdx.app.log("Editor", "Loaded project from " + file.path());
+			}
+		} catch (Exception e) {
+			Gdx.app.error("Editor", "Load failed", e);
+		}
+	}
+
+	public void markDirty(boolean dirty) {
+		if (this.isDirty == dirty) return;
+		this.isDirty = dirty;
+		
+		if (currentFile != null) {
+			for (FileNode node : fileTree.getNodes()) {
+				if (node.getValue().equals(currentFile)) {
+					node.setDirty(dirty);
+					break;
+				}
+			}
+		}
+	}
+
+	// ========================================================================
 	// UI Layout (修复工具栏布局)
 	// ========================================================================
 
@@ -586,9 +943,60 @@ public class IconEditorDemo extends GScreen {
 		root.setFillParent(true);
 		uiStage.addActor(root);
 
-		// 1. 左侧面板
-		VisTable leftPanel = new VisTable(true);
-		leftPanel.setBackground("window-bg");
+		// 1. 左侧面板 (Split: FileTree / Hierarchy)
+		// A. File Tree Panel
+		VisTable fileTreePanel = new VisTable(true);
+		fileTreePanel.setBackground("window-bg");
+		
+		VisTable fileToolbar = new VisTable();
+		fileToolbar.add(new VisLabel("Projects")).expandX().left();
+		// Refresh Button
+		VisTextButton btnRefresh = new VisTextButton("R");
+		btnRefresh.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { reloadFileTree(); } });
+		fileToolbar.add(btnRefresh);
+		fileTreePanel.add(fileToolbar).growX().pad(5).row();
+
+		fileTree = new VisTree<>();
+		fileTree.getSelection().setProgrammaticChangeEvents(false);
+		// [修改] 移除默认 ChangeListener，改用 ActorGestureListener 处理单击/双击
+		/*
+		fileTree.addListener(new ChangeListener() {
+			@Override public void changed(ChangeEvent event, Actor actor) {
+				if (fileTree.getSelection().size() == 0) return;
+				FileNode sel = fileTree.getSelection().first();
+				if (sel != null && !sel.getValue().equals(currentFile)) {
+					loadProject(sel.getValue());
+				}
+			}
+		});
+		*/
+		
+		// [New] File Tree Context Menu & Background Click & Double Click Load
+		fileTreePanel.addListener(new ActorGestureListener() {
+			@Override
+			public boolean longPress(Actor actor, float x, float y) {
+				// 如果点击的是节点，则忽略背景事件
+				if (fileTree.getOverNode() != null) return false;
+				
+				showFileTreeMenu(null, actor.localToStageCoordinates(new Vector2(x, y)).x, actor.localToStageCoordinates(new Vector2(x, y)).y);
+				return true;
+			}
+			@Override
+			public void tap(InputEvent event, float x, float y, int count, int button) {
+				// 如果点击的是节点，则忽略背景事件
+				if (fileTree.getOverNode() != null) return;
+
+				if (button == Input.Buttons.RIGHT) {
+					showFileTreeMenu(null, event.getStageX(), event.getStageY());
+				}
+			}
+		});
+
+		fileTreePanel.add(new VisScrollPane(fileTree)).grow();
+
+		// B. Hierarchy Panel
+		VisTable hierarchyPanel = new VisTable(true);
+		hierarchyPanel.setBackground("window-bg");
 
 		VisTable leftToolbar = new VisTable();
 		leftToolbar.add(new VisLabel("Hierarchy")).expandX().left();
@@ -607,7 +1015,7 @@ public class IconEditorDemo extends GScreen {
 			} 
 		});
 		leftToolbar.add(btnAdd);
-		leftPanel.add(leftToolbar).growX().pad(5).row();
+		hierarchyPanel.add(leftToolbar).growX().pad(5).row();
 
 		hierarchyTree = new VisTree<>();
 		// [核心修复] 增加缩进宽度，让层级更明显
@@ -615,6 +1023,10 @@ public class IconEditorDemo extends GScreen {
 		hierarchyTree.getSelection().setProgrammaticChangeEvents(false);
 		hierarchyTree.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
+					if (hierarchyTree.getSelection().size() == 0) {
+						sceneManager.selectNode(null);
+						return;
+					}
 					UiNode sel = hierarchyTree.getSelection().first();
 					if (sel != null) sceneManager.selectNode(sel.getValue());
 					else sceneManager.selectNode(null);
@@ -622,7 +1034,11 @@ public class IconEditorDemo extends GScreen {
 			});
 
 		onStructureChanged();
-		leftPanel.add(new VisScrollPane(hierarchyTree)).grow();
+		hierarchyPanel.add(new VisScrollPane(hierarchyTree)).grow();
+
+		// C. Left Split Pane
+		VisSplitPane leftSplit = new VisSplitPane(fileTreePanel, hierarchyPanel, true);
+		leftSplit.setSplitAmount(0.3f);
 
 		// 2. 右侧面板
 		VisTable rightPanel = new VisTable(true);
@@ -723,10 +1139,12 @@ public class IconEditorDemo extends GScreen {
 		VisSplitPane rightSplit = new VisSplitPane(centerStack, rightPanel, false);
 		rightSplit.setSplitAmount(0.75f);
 
-		VisSplitPane mainSplit = new VisSplitPane(leftPanel, rightSplit, false);
+		VisSplitPane mainSplit = new VisSplitPane(leftSplit, rightSplit, false);
 		mainSplit.setSplitAmount(0.2f);
 
 		root.add(mainSplit).grow();
+		
+		initProjectSystem();
 	}
 
 	private void addToolBtn(Table t, String text, Runnable act) {
@@ -763,9 +1181,7 @@ public class IconEditorDemo extends GScreen {
 		}
 		
 		try {
-			Json json = new Json();
-			json.setOutputType(OutputType.json);
-			json.setIgnoreUnknownFields(true);
+			Json json = createJson();
 			String text = json.prettyPrint(node);
 			jsonEditor.setText(text);
 		} catch (Exception e) {
@@ -779,8 +1195,7 @@ public class IconEditorDemo extends GScreen {
 		
 		String jsonText = jsonEditor.getText();
 		try {
-			Json json = new Json();
-			json.setIgnoreUnknownFields(true);
+			Json json = createJson();
 			
 			Class<? extends EditorTarget> clazz = sceneManager.getSelection().getClass();
 			EditorTarget newObj = json.fromJson(clazz, jsonText);
@@ -825,6 +1240,7 @@ public class IconEditorDemo extends GScreen {
 	}
 
 	private void onStructureChanged() {
+		markDirty(true);
 		// 1. 清理 UI
 		hierarchyTree.clear();
 		// 2. [关键] 清理旧的拖拽源和目标
@@ -1186,6 +1602,9 @@ public class IconEditorDemo extends GScreen {
 				} else if (keycode == Input.Keys.Y) {
 					commandManager.redo();
 					return true;
+				} else if (keycode == Input.Keys.S) {
+					screen.saveProject();
+					return true;
 				}
 			} else {
 				// MRS Mode Switch
@@ -1538,6 +1957,7 @@ public class IconEditorDemo extends GScreen {
 		}
 
 		public void refreshValues() {
+			screen.markDirty(true);
 			if (sceneManager.getSelection() != null && container != null) {
 				build(container, sceneManager.getSelection());
 			}

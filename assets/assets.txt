@@ -29,6 +29,10 @@ gd_icon.png
 greetings.png
 icon.ico
 libgdx.png
+local/iconProjects/2.json
+local/iconProjects/NewProject.json
+local/iconProjects/Project_1767906845727.json
+local/iconProjects/Project_1767907215002.json
 music/gplane2.ogg
 role.png
 script_project_templates/NewScript.java

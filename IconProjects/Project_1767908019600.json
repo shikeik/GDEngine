@@ -1,0 +1,85 @@
+{
+"name": "Root",
+"x": 0,
+"y": 0,
+"rotation": 0,
+"scaleX": 1,
+"scaleY": 1,
+"color": {
+	"r": 1,
+	"g": 1,
+	"b": 1,
+	"a": 1
+},
+"children": [
+	{
+		"class": "Circle",
+		"name": "Circle",
+		"x": 16.000023,
+		"y": -153,
+		"rotation": 0,
+		"scaleX": 1,
+		"scaleY": 1,
+		"color": {
+			"r": 1,
+			"g": 1,
+			"b": 1,
+			"a": 1
+		},
+		"children": [],
+		"radius": 60
+	},
+	{
+		"class": "Rectangle",
+		"name": "Rect",
+		"x": 50,
+		"y": 0,
+		"rotation": 0,
+		"scaleX": 1,
+		"scaleY": 1,
+		"color": {
+			"r": 1,
+			"g": 1,
+			"b": 1,
+			"a": 1
+		},
+		"children": [],
+		"width": 100,
+		"height": 100
+	},
+	{
+		"class": "Group",
+		"name": "Group",
+		"x": 0,
+		"y": 100,
+		"rotation": 0,
+		"scaleX": 1,
+		"scaleY": 1,
+		"color": {
+			"r": 1,
+			"g": 1,
+			"b": 1,
+			"a": 1
+		},
+		"children": [
+			{
+				"class": "Circle",
+				"name": "SubCircle",
+				"x": 0,
+				"y": 0,
+				"rotation": 0,
+				"scaleX": 1,
+				"scaleY": 1,
+				"color": {
+					"r": 1,
+					"g": 1,
+					"b": 1,
+					"a": 1
+				},
+				"children": [],
+				"radius": 50
+			}
+		]
+	}
+]
+}

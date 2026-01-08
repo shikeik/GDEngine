@@ -43,7 +43,7 @@ def os = System.properties['os.name'].toLowerCase()
 // [修复 1] 运行任务增强
 // ==================================================================
 run {
-	workingDir = rootProject.file('/assets').path
+	workingDir = rootProject.projectDir
 	setIgnoreExitValue(true)
 
 	// 【关键】强制在运行前生成引擎 jar 并复制依赖
