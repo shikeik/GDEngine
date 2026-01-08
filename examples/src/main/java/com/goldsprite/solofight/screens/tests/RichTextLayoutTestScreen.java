@@ -1,10 +1,10 @@
 package com.goldsprite.solofight.screens.tests;
 
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.richtext.RichText;
 import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
@@ -28,6 +28,11 @@ public class RichTextLayoutTestScreen extends GScreen {
     private RichText richText;
     private VisLabel sizeInfoLabel;
 
+    @Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Landscape;
+    }
+	
     @Override
     public void create() {
         super.create();
