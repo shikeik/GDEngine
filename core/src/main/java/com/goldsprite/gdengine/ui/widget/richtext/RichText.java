@@ -92,8 +92,15 @@ public class RichText extends WidgetGroup {
     
     private void addTextActor(String text, RichStyle style) {
         BitmapFont font = getFont(style.fontSize);
+        // [Bug Fix] 禁用 BitmapFont 的内部标记解析，防止它覆盖我们的颜色设置
+        // 或者保留它，但我们这里主要是通过 LabelStyle 传色
+        font.getData().markupEnabled = false; 
+        
         Label.LabelStyle ls = new Label.LabelStyle(font, style.color);
         VisLabel label = new VisLabel(text, ls);
+        
+        // [Bug Fix] 显式设置颜色，以防万一
+        label.setColor(style.color);
         
         if (style.event != null) {
             final String eventId = style.event;
@@ -192,16 +199,24 @@ public class RichText extends WidgetGroup {
         alignLine(lineStartIndex, children.size, y, currentLineHeight);
         totalHeight += currentLineHeight;
         
+        // [Bug Fix] 确保 prefHeight 至少包含了所有行高
+        // 之前的逻辑只加了行高，但没有考虑行间距（如果需要）
+        // 另外，y 是从 0 向下减的，所以 totalHeight 应该是 abs(y_end)
+        // y 最终是负数，表示底部相对于顶部的距离
+        
         this.prefHeight = totalHeight;
         
         // Shift all actors up so that bottom-left is (0,0) or top-left is (0, height)?
         // WidgetGroup coordinate system: (0,0) is bottom-left.
-        // Our 'y' started at 0 and went negative.
-        // To make the top line appear at (0, height), we need to shift by +totalHeight.
+        // Our 'y' started at 0 and went negative (Top-Down layout).
+        // To put them in (0,0) based group, we shift them up by totalHeight.
         
         for (Actor child : children) {
             child.setY(child.getY() + totalHeight);
         }
+        
+        // [Bug Fix] 确保 WidgetGroup 的大小被正确设置，否则 Debug 框还是错的
+        setSize(maxWidth, prefHeight);
     }
     
     private void alignLine(int start, int end, float lineTopY, float lineHeight) {

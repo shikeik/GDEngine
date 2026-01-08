@@ -74,6 +74,13 @@ public class CustomAtlasLoader {
                 int cols = texture.getWidth() / data.gridWidth;
                 if (cols <= 0) cols = 1;
                 
+                // [Bug Fix] 行列计算逻辑
+                // LibGDX 纹理坐标原点在左上角 (0,0) ? 不，LibGDX Texture 默认 (0,0) 在左上角（对于 Pixmap），
+                // 但绘制时 UV (0,0) 是左上角。
+                // 关键是: row = index / cols; col = index % cols;
+                // index 0 -> row 0, col 0
+                // index 1 -> row 0, col 1
+                
                 int row = info.index / cols;
                 int col = info.index % cols;
                 
@@ -81,6 +88,14 @@ public class CustomAtlasLoader {
                 y = row * data.gridHeight;
                 w = data.gridWidth;
                 h = data.gridHeight;
+                
+                // 确保不越界
+                if (x + w > texture.getWidth() || y + h > texture.getHeight()) {
+                     Gdx.app.error("CustomAtlasLoader", "Region out of bounds: " + regionName + " index=" + info.index);
+                     return new TextureRegion(texture); // Fallback
+                }
+                
+                return new TextureRegion(texture, x, y, w, h);
             } else {
                 // 暂时只支持 Grid 模式，未来可扩展 XYWH 模式
                 x = 0; y = 0; w = texture.getWidth(); h = texture.getHeight();
