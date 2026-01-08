@@ -918,6 +918,7 @@ public class IconEditorDemo extends GScreen {
 		void removeFromParent(); // 从父级移除自己
 		Array<EditorTarget> getChildren();
 		void addChild(EditorTarget child); // 仅添加数据，不处理逻辑
+		boolean hitTest(float x, float y);
 		void render(NeonBatch batch);
 	}
 
@@ -967,6 +968,8 @@ public class IconEditorDemo extends GScreen {
 		@Override public void removeFromParent() {
 			setParent(null);
 		}
+
+		@Override public boolean hitTest(float x, float y) { return false; }
 	}
 
 	public static class GroupNode extends BaseNode {
@@ -982,6 +985,17 @@ public class IconEditorDemo extends GScreen {
 		@Override public void render(NeonBatch batch) {
 			batch.drawRect(x - width/2*scaleX, y - height/2*scaleY, width*scaleX, height*scaleY, rotation, 0, color, true);
 		}
+
+		@Override public boolean hitTest(float wx, float wy) {
+			float dx = wx - x;
+			float dy = wy - y;
+			float rad = -rotation * MathUtils.degreesToRadians;
+			float c = MathUtils.cos(rad);
+			float s = MathUtils.sin(rad);
+			float lx = dx * c - dy * s;
+			float ly = dx * s + dy * c;
+			return Math.abs(lx) <= width * Math.abs(scaleX) / 2 && Math.abs(ly) <= height * Math.abs(scaleY) / 2;
+		}
 	}
 
 	public static class CircleShape extends BaseNode {
@@ -990,6 +1004,13 @@ public class IconEditorDemo extends GScreen {
 		@Override public String getTypeName() { return "Circle"; }
 		@Override public void render(NeonBatch batch) {
 			batch.drawCircle(x, y, radius * Math.max(Math.abs(scaleX), Math.abs(scaleY)), 0, color, 32, true);
+		}
+
+		@Override public boolean hitTest(float wx, float wy) {
+			float dx = wx - x;
+			float dy = wy - y;
+			float r = radius * Math.max(Math.abs(scaleX), Math.abs(scaleY));
+			return dx * dx + dy * dy <= r * r;
 		}
 	}
 
@@ -1147,6 +1168,21 @@ public class IconEditorDemo extends GScreen {
 			this.screen = screen; this.sceneManager = sm; this.gizmo = gizmo; this.commandManager = cm;
 		}
 
+		private EditorTarget findTarget(float wx, float wy) {
+			return findRecursive(sceneManager.getRoot(), wx, wy);
+		}
+
+		private EditorTarget findRecursive(EditorTarget node, float wx, float wy) {
+			Array<EditorTarget> children = node.getChildren();
+			for (int i = children.size - 1; i >= 0; i--) {
+				EditorTarget child = children.get(i);
+				EditorTarget found = findRecursive(child, wx, wy);
+				if (found != null) return found;
+			}
+			if (node.hitTest(wx, wy)) return node;
+			return null;
+		}
+
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 			Vector2 wPos = screen.screenToWorldCoord(screenX, screenY);
@@ -1204,6 +1240,20 @@ public class IconEditorDemo extends GScreen {
 					startDrag(DragMode.BODY, wPos); return true;
 				}
 			}
+
+			EditorTarget hit = findTarget(wPos.x, wPos.y);
+			if (hit != null) {
+				if (hit != t) {
+					sceneManager.selectNode(hit);
+				}
+				startDrag(DragMode.BODY, wPos);
+				return true;
+			}
+
+			if (t != null) {
+				sceneManager.selectNode(null);
+			}
+
 			return false;
 		}
 
