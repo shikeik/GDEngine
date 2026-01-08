@@ -67,11 +67,11 @@ public class GdxLauncher extends Game {
 		debug = Debug.getInstance();
 		debug.initUI();
 
-		SynthAudio.init();
+		SynthAudio.init();int k;
 
 		// 【修改点】注入原生实现和编译器
 		Gd.init(Gd.Mode.RELEASE, Gdx.input, Gdx.graphics, scriptCompiler);
-		Debug.logT("Engine", "Gd initialized. Compiler available: %b", (scriptCompiler != null));
+		Debug.logT("Engine", "[RED]Gd initialized. Compiler available: %b", (scriptCompiler != null));
 
 		ScreenManager.getInstance()
 			.addScreen(new ExampleSelectScreen())

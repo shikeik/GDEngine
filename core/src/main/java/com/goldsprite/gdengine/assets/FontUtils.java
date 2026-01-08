@@ -1,6 +1,8 @@
 package com.goldsprite.gdengine.assets;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
@@ -16,7 +18,7 @@ public class FontUtils {
 	public static String fnt7Path = "fonts/SanJiHuaChaoTi-Cu-2.ttf";
 	public static String fnt8Path = "fonts/ark-pixel-10px-monospaced-zh_cn.ttf";
 	//public static String fntPath = fnt6Path;
-	public static String fntPath = fnt6Path;
+	public static String fntPath = fnt2Path;
 
 	public static int defaultFntSize = 30;
 
@@ -48,14 +50,31 @@ public class FontUtils {
 		// 加载字体
 		FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(fntPath));
 		FreeTypeFontParameter parameter = new FreeTypeFontParameter();
-		parameter.size = Math.round(fntSize * clarity); // 字体大小
+
+        clarity = 3.0f;
+        parameter.size = Math.round(fntSize * clarity);
+		//parameter.size = (int) Math.ceil(fntSize * clarity);
 		parameter.mono = false; // [关键] 强制等宽，保证选区对齐
 		parameter.incremental = true;
-		parameter.color = com.badlogic.gdx.graphics.Color.WHITE;
+		parameter.color = Color.WHITE;
+		// 稍微增加间距，防止缩小后字符粘连
+		parameter.spaceX = 1;
+
+		// [核心 1] 开启 MipMap：解决大图缩小后的“变形/噪点”问题
+		parameter.genMipMaps = true;
+
+		// [核心 2] 过滤模式：使用三线性过滤 (MipMapLinearLinear)
+		// 这是画质最好的过滤模式，虽然稍微耗一点点性能
+		parameter.minFilter = Texture.TextureFilter.MipMapLinearLinear;
+		parameter.magFilter = Texture.TextureFilter.Linear;
 
 		BitmapFont fnt = generator.generateFont(parameter);
 		fnt.getData().setScale(1 / clarity);
+		fnt.getData().markupEnabled = true;
 
+		// 开启线性过滤（保证由 SDF Shader 接管时边缘平滑）
+		fnt.setUseIntegerPositions(false);
+		
 		// [关键] 修复 Tab 显示
 		fixTabSupport(fnt);
 

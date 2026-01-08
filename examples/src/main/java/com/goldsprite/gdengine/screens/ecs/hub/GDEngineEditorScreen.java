@@ -112,7 +112,7 @@ public class GDEngineEditorScreen extends GScreen {
 		leftPanel.add(treeScroll).grow().pad(5);
 
 		VisTable rightPanel = new VisTable();
-		codeEditor = new BioCodeEditor(PlatformImpl.isAndroidUser()? 1f : 1.5f);
+		codeEditor = new BioCodeEditor(PlatformImpl.isAndroidUser()? 1.2f : 1.5f);
 		// [新增] 注入 Ctrl+S 回调
 		codeEditor.setOnSave(this::saveCurrentFile);
 		rightPanel.add(codeEditor).grow();
