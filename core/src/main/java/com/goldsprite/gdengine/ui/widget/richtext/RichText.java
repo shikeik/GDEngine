@@ -6,11 +6,14 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.SnapshotArray;
+import com.goldsprite.gdengine.assets.CustomAtlasLoader;
 import com.goldsprite.gdengine.assets.FontUtils;
 import com.kotcrab.vis.ui.widget.VisLabel;
 
@@ -107,16 +110,23 @@ public class RichText extends WidgetGroup {
     
     private void addImageActor(RichElement el) {
         try {
-            Texture tex = new Texture(Gdx.files.internal(el.imagePath));
-            Image img = new Image(tex);
+            // Use CustomAtlasLoader to support region slicing (#regionName)
+            TextureRegion region = CustomAtlasLoader.inst().getRegion(el.imagePath, el.regionName);
             
-            float w = el.imgWidth > 0 ? el.imgWidth : tex.getWidth();
-            float h = el.imgHeight > 0 ? el.imgHeight : tex.getHeight();
+            if (region == null) {
+                // If loading failed completely (file not found)
+                throw new RuntimeException("Failed to load: " + el.imagePath);
+            }
+            
+            Image img = new Image(new TextureRegionDrawable(region));
+            
+            float w = el.imgWidth > 0 ? el.imgWidth : region.getRegionWidth();
+            float h = el.imgHeight > 0 ? el.imgHeight : region.getRegionHeight();
             
             img.setSize(w, h);
             addActor(img);
         } catch (Exception e) {
-            Gdx.app.error("RichText", "Failed to load image: " + el.imagePath);
+            Gdx.app.error("RichText", "Failed to load image: " + el.imagePath + (el.regionName!=null?"#"+el.regionName:""));
             VisLabel err = new VisLabel("[?]");
             err.setColor(Color.RED);
             addActor(err);

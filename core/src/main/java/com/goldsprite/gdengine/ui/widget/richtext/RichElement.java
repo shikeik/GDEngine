@@ -6,7 +6,10 @@ public class RichElement {
     public Type type;
     public String text;
     public String imagePath;
+    // [New] Region Name (optional, from #suffix)
+    public String regionName;
     public float imgWidth, imgHeight; // 0 means auto
+    
     public RichStyle style;
 
     public RichElement(String text, RichStyle style) {
@@ -16,9 +19,10 @@ public class RichElement {
     }
     
     // for image
-    public RichElement(String imagePath, float w, float h, RichStyle style) {
+    public RichElement(String imagePath, String regionName, float w, float h, RichStyle style) {
         this.type = Type.IMAGE;
         this.imagePath = imagePath;
+        this.regionName = regionName;
         this.imgWidth = w;
         this.imgHeight = h;
         this.style = style;

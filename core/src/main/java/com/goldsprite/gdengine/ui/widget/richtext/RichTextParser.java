@@ -94,10 +94,21 @@ public class RichTextParser {
             pushed = true;
         }
         else if (content.startsWith("img=")) {
-            // [img=path] or [img=path|32x32]
+            // [img=path] or [img=path|32x32] or [img=path#region|32x32]
             String val = content.substring(4);
             String[] parts = val.split("\\|");
-            String path = parts[0];
+            
+            // Parse path and optional region (#)
+            String fullPath = parts[0];
+            String path = fullPath;
+            String regionName = null;
+            
+            int hashIndex = fullPath.lastIndexOf('#');
+            if (hashIndex != -1) {
+                path = fullPath.substring(0, hashIndex);
+                regionName = fullPath.substring(hashIndex + 1);
+            }
+            
             float w = 0, h = 0;
             if (parts.length > 1) {
                 String[] size = parts[1].split("x");
@@ -108,7 +119,8 @@ public class RichTextParser {
                      } catch(Exception e){}
                 }
             }
-            elements.add(new RichElement(path, w, h, current));
+            
+            elements.add(new RichElement(path, regionName, w, h, current));
         }
         else if (content.equals("br") || content.equals("n")) {
              elements.add(new RichElement("\n", current));

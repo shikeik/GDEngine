@@ -1,0 +1,9 @@
+{
+  "gridWidth": 16,
+  "gridHeight": 16,
+  "regions": {
+    "sword": { "index": 0 },
+    "potion": { "index": 1 },
+    "shield": { "index": 16 }
+  }
+}

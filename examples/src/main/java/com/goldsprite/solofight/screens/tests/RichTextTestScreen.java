@@ -73,15 +73,19 @@ public class RichTextTestScreen extends GScreen {
         });
         container.add(rt4).row();
         
-        // [New] Test 5: New Icons (RavenFantasyIcons16x16.png)
-        // 这是一个 SpriteSheet，目前 RichText 还不支持 TextureRegion 切片，先测试直接加载看看效果，或者用 [img] 加载单个文件。
-        // 假设用户只是想看这个图能不能加载。
-        // 如果要支持 SpriteSheet 切片，RichTextParser 需要升级，暂时先显示整图或不测试切片。
-        // 既然用户提到了 "sprites/icons/RavenFantasyIcons16x16.png"，我们加一个测试项。
+        // [New] Test 5: New Icons (RavenFantasyIcons16x16.png) using Custom Atlas
+        // Syntax: [img=path/to/image.png#regionName]
         container.add(new VisLabel("----------------")).fillX().pad(5).row();
-        String text5 = "New Icon: [img=sprites/icons/RavenFantasyIcons16x16.png]";
-        container.add(new VisLabel("Test 5: Icons")).row();
+        
+        String text5 = "Atlas Test: [img=sprites/icons/RavenFantasyIcons16x16.png#sword] " +
+                       "[img=sprites/icons/RavenFantasyIcons16x16.png#potion] " +
+                       "[img=sprites/icons/RavenFantasyIcons16x16.png#shield]";
+                       
+        container.add(new VisLabel("Test 5: Custom Atlas (Sword, Potion, Shield)")).row();
         RichText rt5 = new RichText(text5, 500);
+        // 放大一点看清楚
+        rt5.setScale(2); 
+        rt5.setOrigin(0,0);
         container.add(rt5).row();
         
         VisScrollPane scroll = new VisScrollPane(container);
