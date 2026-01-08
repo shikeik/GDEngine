@@ -88,6 +88,16 @@ public class IconEditorDemo extends GScreen {
     // [新增] 拖拽管理器
     private DragAndDrop dragAndDrop;
 
+    // 对齐精度档位
+    private static final float[] ALIGN_PRECISIONS = {0.1f, 0.5f, 1.0f, 5.0f, 10.0f};
+    private int currentPrecisionIndex = 2; // 默认1.0f
+
+    // 网格对齐开关
+    private boolean isGridAlignEnabled = true;
+
+    // 默认旋转步长
+    private float defaultRotateStep = 15.0f;
+
     public IconEditorDemo() {
         // [修复] 设置 UI 视口缩放系数，解决分辨率过小问题
         // 参考 GScreen 默认值，或者根据需要调整。例如 PC 端稍微放大一点视野。
@@ -115,6 +125,26 @@ public class IconEditorDemo extends GScreen {
     public VisTree<UiNode, EditorTarget> getHierarchyTree() { return hierarchyTree; }
     public Inspector getInspector() { return inspector; }
     public OrthographicCamera getWorldCamera() { return worldCamera; } // Expose protected worldCamera
+    // 获取当前对齐精度
+    public float getCurrentAlignPrecision() { return ALIGN_PRECISIONS[currentPrecisionIndex]; }
+
+    // 获取网格大小
+    public float getGridSize() {
+        return isGridAlignEnabled ? 10.0f : 0.0f;
+    }
+
+    // 获取旋转步长
+    public float getRotationStep() { return defaultRotateStep; }
+
+    // 设置对齐精度
+    public void setAlignPrecisionIndex(int index) {
+        currentPrecisionIndex = Math.max(0, Math.min(index, ALIGN_PRECISIONS.length - 1));
+    }
+
+    // 设置网格对齐开关
+    public void setGridAlignEnabled(boolean enabled) {
+        isGridAlignEnabled = enabled;
+    }
 
     @Override
     public void create() {
@@ -696,6 +726,36 @@ public class IconEditorDemo extends GScreen {
 
         topBar.add().width(15); // Separator
 
+        // 网格对齐复选框
+        com.kotcrab.vis.ui.widget.VisCheckBox gridAlignCheck = new com.kotcrab.vis.ui.widget.VisCheckBox("Grid");
+        gridAlignCheck.setChecked(isGridAlignEnabled);
+        gridAlignCheck.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                isGridAlignEnabled = gridAlignCheck.isChecked();
+            }
+        });
+        topBar.add(gridAlignCheck).padRight(5);
+
+        // 对齐精度滑条
+        topBar.add(new VisLabel("Precision: ")).padRight(5);
+        com.kotcrab.vis.ui.widget.VisSlider precisionSlider = new com.kotcrab.vis.ui.widget.VisSlider(0, ALIGN_PRECISIONS.length - 1, 1, false);
+        precisionSlider.setValue(currentPrecisionIndex);
+        VisLabel precisionValueLabel = new VisLabel(String.valueOf(ALIGN_PRECISIONS[currentPrecisionIndex]));
+
+        precisionSlider.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                currentPrecisionIndex = (int) precisionSlider.getValue();
+                precisionValueLabel.setText(String.valueOf(ALIGN_PRECISIONS[currentPrecisionIndex]));
+            }
+        });
+
+        topBar.add(precisionSlider).width(100).padRight(5);
+        topBar.add(precisionValueLabel).padRight(5);
+
+        topBar.add().width(15); // Separator
+
         addToolBtn(topBar, "SAVE", () -> saveProject());
 
         centerStack.add(topBar);
@@ -733,7 +793,10 @@ public class IconEditorDemo extends GScreen {
     private void addToolBtn(Table t, String text, Runnable act) {
         VisTextButton b = new VisTextButton(text);
         b.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { act.run(); } });
-        t.add(b).size(30).padRight(5);
+        // 让按钮自动调整大小以适应内容，添加适当内边距防止文字突出
+        b.getLabelCell().pad(4, 8, 4, 8); // 添加内边距
+        b.pack();
+        t.add(b).padRight(5);
     }
 
     // ========================================================================

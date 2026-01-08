@@ -25,12 +25,6 @@ public class EditorInput extends InputAdapter {
     private float undoStartX, undoStartY, undoStartRot, undoStartSX, undoStartSY;
     private final CommandManager commandManager;
 
-    // 对齐功能参数
-    private static final float GRID_SIZE = 10.0f; // 网格大小
-    private static final float ROTATION_STEP = 15.0f; // 旋转增量（度）
-    private static final float SCALE_PRECISION = 0.1f; // 缩放精度（精确到0.1）
-    private static final float SCALE_PRECISION_LARGE = 1.0f; // 缩放精度（精确到1.0，按住Shift时使用）
-
     public EditorInput(IconEditorDemo screen, SceneManager sm, GizmoSystem gizmo, CommandManager cm) {
         this.screen = screen; this.sceneManager = sm; this.gizmo = gizmo; this.commandManager = cm;
     }
@@ -177,8 +171,27 @@ public class EditorInput extends InputAdapter {
             undoStartRot = sel.getRotation();
             undoStartSX = sel.getScaleX();
             undoStartSY = sel.getScaleY();
+
+            // [新增] 记录对齐基准位置
+            alignStartX = sel.getX();
+            alignStartY = sel.getY();
+            alignStartRot = sel.getRotation();
+            alignStartSX = sel.getScaleX();
+            alignStartSY = sel.getScaleY();
+
+            // [新增] 重置累积移动量
+            accumulatedDeltaX = 0;
+            accumulatedDeltaY = 0;
+            accumulatedDeltaRot = 0;
+            accumulatedDeltaSX = 0;
+            accumulatedDeltaSY = 0;
         }
     }
+
+    // [新增] 对齐基准变量
+    private float alignStartX, alignStartY, alignStartRot, alignStartSX, alignStartSY;
+    // [新增] 累积移动量变量
+    private float accumulatedDeltaX, accumulatedDeltaY, accumulatedDeltaRot, accumulatedDeltaSX, accumulatedDeltaSY;
 
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
@@ -191,18 +204,33 @@ public class EditorInput extends InputAdapter {
         // 检查是否按住Shift键（用于对齐功能）
         boolean shift = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT);
 
+        // 获取对齐精度设置
+        float gridSize = screen.getGridSize();
+        float rotationStep = screen.getRotationStep();
+        float scalePrecision = screen.getCurrentAlignPrecision();
+
         EditorTarget t = sceneManager.getSelection();
         float rad = t.getRotation() * MathUtils.degreesToRadians;
         float c = MathUtils.cos(rad), s = MathUtils.sin(rad);
 
         if (currentDragMode == DragMode.BODY) {
-            float newX = t.getX() + dx;
-            float newY = t.getY() + dy;
+            // 累积移动量
+            accumulatedDeltaX += dx;
+            accumulatedDeltaY += dy;
+
+            float newX, newY;
 
             // 应用网格对齐
             if (shift) {
-                newX = MathUtils.round(newX / GRID_SIZE) * GRID_SIZE;
-                newY = MathUtils.round(newY / GRID_SIZE) * GRID_SIZE;
+                // 基于起始位置和累积移动量计算对齐位置
+                float alignedDeltaX = MathUtils.round(accumulatedDeltaX / gridSize) * gridSize;
+                float alignedDeltaY = MathUtils.round(accumulatedDeltaY / gridSize) * gridSize;
+                newX = alignStartX + alignedDeltaX;
+                newY = alignStartY + alignedDeltaY;
+            } else {
+                // 非对齐模式下，直接应用累积移动量
+                newX = alignStartX + accumulatedDeltaX;
+                newY = alignStartY + accumulatedDeltaY;
             }
 
             t.setX(newX);
@@ -211,13 +239,24 @@ public class EditorInput extends InputAdapter {
         else if (currentDragMode == DragMode.MOVE_X) {
             // 投影增量到X轴方向
             float proj = dx * c + dy * s;
-            float newX = t.getX() + proj * c;
-            float newY = t.getY() + proj * s;
+
+            // 累积移动量（投影到X轴方向）
+            accumulatedDeltaX += proj * c;
+            accumulatedDeltaY += proj * s;
+
+            float newX, newY;
 
             // 应用网格对齐
             if (shift) {
-                newX = MathUtils.round(newX / GRID_SIZE) * GRID_SIZE;
-                newY = MathUtils.round(newY / GRID_SIZE) * GRID_SIZE;
+                // 基于起始位置和累积移动量计算对齐位置
+                float alignedDeltaX = MathUtils.round(accumulatedDeltaX / gridSize) * gridSize;
+                float alignedDeltaY = MathUtils.round(accumulatedDeltaY / gridSize) * gridSize;
+                newX = alignStartX + alignedDeltaX;
+                newY = alignStartY + alignedDeltaY;
+            } else {
+                // 非对齐模式下，直接应用累积移动量
+                newX = alignStartX + accumulatedDeltaX;
+                newY = alignStartY + accumulatedDeltaY;
             }
 
             t.setX(newX);
@@ -226,13 +265,24 @@ public class EditorInput extends InputAdapter {
         else if (currentDragMode == DragMode.MOVE_Y) {
             // 投影增量到Y轴方向
             float proj = dx * (-s) + dy * c;
-            float newX = t.getX() - proj * s;
-            float newY = t.getY() + proj * c;
+
+            // 累积移动量（投影到Y轴方向）
+            accumulatedDeltaX -= proj * s;
+            accumulatedDeltaY += proj * c;
+
+            float newX, newY;
 
             // 应用网格对齐
             if (shift) {
-                newX = MathUtils.round(newX / GRID_SIZE) * GRID_SIZE;
-                newY = MathUtils.round(newY / GRID_SIZE) * GRID_SIZE;
+                // 基于起始位置和累积移动量计算对齐位置
+                float alignedDeltaX = MathUtils.round(accumulatedDeltaX / gridSize) * gridSize;
+                float alignedDeltaY = MathUtils.round(accumulatedDeltaY / gridSize) * gridSize;
+                newX = alignStartX + alignedDeltaX;
+                newY = alignStartY + alignedDeltaY;
+            } else {
+                // 非对齐模式下，直接应用累积移动量
+                newX = alignStartX + accumulatedDeltaX;
+                newY = alignStartY + accumulatedDeltaY;
             }
 
             t.setX(newX);
@@ -244,11 +294,19 @@ public class EditorInput extends InputAdapter {
             float newAng = MathUtils.atan2(wPos.y - t.getY(), wPos.x - t.getX()) * MathUtils.radiansToDegrees;
             float deltaRot = newAng - oldAng;
 
-            float newRotation = t.getRotation() + deltaRot;
+            // 累积旋转量
+            accumulatedDeltaRot += deltaRot;
+
+            float newRotation;
 
             // 应用旋转对齐
             if (shift) {
-                newRotation = MathUtils.round(newRotation / ROTATION_STEP) * ROTATION_STEP;
+                // 基于起始旋转和累积旋转量计算对齐位置
+                float alignedDeltaRot = MathUtils.round(accumulatedDeltaRot / rotationStep) * rotationStep;
+                newRotation = alignStartRot + alignedDeltaRot;
+            } else {
+                // 非对齐模式下，直接应用累积旋转量
+                newRotation = alignStartRot + accumulatedDeltaRot;
             }
 
             t.setRotation(newRotation);
@@ -256,25 +314,48 @@ public class EditorInput extends InputAdapter {
         else if (currentDragMode == DragMode.SCALE_X || currentDragMode == DragMode.SCALE_Y) {
             // 投影增量到轴向 (Project delta onto local axis)
             float axisLen = GizmoSystem.AXIS_LEN * screen.getWorldCamera().zoom * 1.4f; // 归一化参考
-            float precision = shift ? SCALE_PRECISION_LARGE : SCALE_PRECISION;
 
             if (currentDragMode == DragMode.SCALE_X) {
                 // Dot product with X axis (c, s)
                 float proj = dx * c + dy * s;
-                float newScaleX = t.getScaleX() + (proj / axisLen) * startValX;
+                float scaleDelta = (proj / axisLen) * startValX;
+
+                // 累积缩放增量
+                accumulatedDeltaSX += scaleDelta;
+
+                float newScaleX;
 
                 // 应用缩放对齐
-                newScaleX = MathUtils.round(newScaleX / precision) * precision;
+                if (shift) {
+                    // 基于起始缩放和累积缩放增量计算对齐位置
+                    float alignedDeltaSX = MathUtils.round(accumulatedDeltaSX / scalePrecision) * scalePrecision;
+                    newScaleX = alignStartSX + alignedDeltaSX;
+                } else {
+                    // 非对齐模式下，直接应用累积缩放增量
+                    newScaleX = alignStartSX + accumulatedDeltaSX;
+                }
                 newScaleX = Math.max(0.1f, newScaleX); // 防止缩放到0
 
                 t.setScaleX(newScaleX);
             } else {
                 // Dot product with Y axis (-s, c)
                 float proj = dx * (-s) + dy * c;
-                float newScaleY = t.getScaleY() + (proj / axisLen) * startValY;
+                float scaleDelta = (proj / axisLen) * startValY;
+
+                // 累积缩放增量
+                accumulatedDeltaSY += scaleDelta;
+
+                float newScaleY;
 
                 // 应用缩放对齐
-                newScaleY = MathUtils.round(newScaleY / precision) * precision;
+                if (shift) {
+                    // 基于起始缩放和累积缩放增量计算对齐位置
+                    float alignedDeltaSY = MathUtils.round(accumulatedDeltaSY / scalePrecision) * scalePrecision;
+                    newScaleY = alignStartSY + alignedDeltaSY;
+                } else {
+                    // 非对齐模式下，直接应用累积缩放增量
+                    newScaleY = alignStartSY + accumulatedDeltaSY;
+                }
                 newScaleY = Math.max(0.1f, newScaleY); // 防止缩放到0
 
                 t.setScaleY(newScaleY);
