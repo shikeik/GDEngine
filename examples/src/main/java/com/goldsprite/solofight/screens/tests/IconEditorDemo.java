@@ -15,7 +15,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Widget;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
@@ -40,6 +39,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
 import com.kotcrab.vis.ui.widget.PopupMenu;
 import com.kotcrab.vis.ui.widget.MenuItem;
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonWriter.OutputType;
+import com.goldsprite.solofight.ui.widget.BioCodeEditor;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -63,6 +65,8 @@ public class IconEditorDemo extends GScreen {
 	// --- UI 引用 ---
 	private VisTree<UiNode, EditorTarget> hierarchyTree;
 	private VisTable inspectorTable;
+	private BioCodeEditor jsonEditor;
+	private Stack propertiesStack;
 
 	// --- 数据根节点 ---
 	private EditorTarget rootNode;
@@ -74,21 +78,62 @@ public class IconEditorDemo extends GScreen {
 	// [重构] 修复布局、菜单坐标、拖拽逻辑
 	public static class UiNode extends Tree.Node<UiNode, EditorTarget, VisTable> {
 		
-		public UiNode(EditorTarget target, IconEditorDemo screen) {
-			super(new VisTable() {
-				@Override
-				public void draw(com.badlogic.gdx.graphics.g2d.Batch batch, float parentAlpha) {
-					if (screen.hierarchyTree != null) {
-						float targetWidth = screen.hierarchyTree.getWidth() - getX();
-						if (targetWidth > 0 && getWidth() != targetWidth) {
-							setWidth(targetWidth);
-							invalidate(); 
-							validate();
-						}
+		public enum DropState { NONE, INSERT_ABOVE, INSERT_BELOW, REPARENT }
+		public DropState dropState = DropState.NONE;
+		
+		public static class UiNodeTable extends VisTable {
+			private UiNode node;
+			private final IconEditorDemo screen;
+			
+			public UiNodeTable(IconEditorDemo screen) {
+				this.screen = screen;
+			}
+			
+			public void setNode(UiNode node) { this.node = node; }
+			
+			@Override
+			public void draw(com.badlogic.gdx.graphics.g2d.Batch batch, float parentAlpha) {
+				if (screen.hierarchyTree != null) {
+					float targetWidth = screen.hierarchyTree.getWidth() - getX();
+					if (targetWidth > 0 && getWidth() != targetWidth) {
+						setWidth(targetWidth);
+						invalidate(); 
+						validate();
 					}
-					super.draw(batch, parentAlpha);
 				}
-			});
+				super.draw(batch, parentAlpha);
+				
+				if (node != null && node.dropState != DropState.NONE) {
+					com.badlogic.gdx.scenes.scene2d.utils.Drawable white = com.kotcrab.vis.ui.VisUI.getSkin().getDrawable("white");
+					if (white != null) {
+						float w = getWidth();
+						float h = getHeight();
+						float x = getX();
+						float y = getY();
+						
+						Color oldColor = batch.getColor();
+						batch.setColor(Color.CYAN);
+						
+						if (node.dropState == DropState.INSERT_ABOVE) {
+							white.draw(batch, x, y + h - 2, w, 2);
+						} else if (node.dropState == DropState.INSERT_BELOW) {
+							white.draw(batch, x, y, w, 2);
+						} else if (node.dropState == DropState.REPARENT) {
+							white.draw(batch, x, y, w, 2); // bottom
+							white.draw(batch, x, y + h - 2, w, 2); // top
+							white.draw(batch, x, y, 2, h); // left
+							white.draw(batch, x + w - 2, y, 2, h); // right
+						}
+						
+						batch.setColor(oldColor);
+					}
+				}
+			}
+		}
+		
+		public UiNode(EditorTarget target, IconEditorDemo screen) {
+			super(new UiNodeTable(screen));
+			((UiNodeTable)getActor()).setNode(this);
 			setValue(target);
 			
 			VisTable table = getActor();
@@ -193,12 +238,22 @@ public class IconEditorDemo extends GScreen {
 					if (dragging == target) return false;
 					if (isDescendant(dragging, target)) return false;
 					
-					getActor().setColor(Color.CYAN);
+					float h = getActor().getHeight();
+					if (y > h * 0.75f && target.getParent() != null) {
+						dropState = DropState.INSERT_ABOVE;
+					} else if (y < h * 0.25f && target.getParent() != null) {
+						dropState = DropState.INSERT_BELOW;
+					} else {
+						dropState = DropState.REPARENT;
+					}
+					
 					return true;
 				}
 
 				@Override
 				public void drop(Source source, Payload payload, float x, float y, int pointer) {
+					dropState = DropState.NONE; // Reset state
+					
 					EditorTarget dragging = (EditorTarget) payload.getObject();
 					if (dragging == target) return;
 
@@ -238,7 +293,7 @@ public class IconEditorDemo extends GScreen {
 				
 				@Override
 				public void reset(Source source, Payload payload) {
-					getActor().setColor(Color.WHITE);
+					dropState = DropState.NONE;
 				}
 			});
 		}
@@ -354,11 +409,58 @@ public class IconEditorDemo extends GScreen {
 		// 2. 右侧面板
 		VisTable rightPanel = new VisTable(true);
 		rightPanel.setBackground("window-bg");
-		rightPanel.add(new VisLabel("Properties")).pad(5).left().row();
+		
+		// Tabs
+		VisTable tabs = new VisTable();
+		VisTextButton btnInsp = new VisTextButton("Inspector");
+		VisTextButton btnJson = new VisTextButton("JSON");
+		tabs.add(btnInsp).growX();
+		tabs.add(btnJson).growX();
+		rightPanel.add(tabs).growX().row();
 
+		propertiesStack = new Stack();
+		
+		// Page 1: Inspector
+		VisTable pageInsp = new VisTable();
+		pageInsp.add(new VisLabel("Properties")).pad(5).left().row();
 		inspectorTable = new VisTable();
 		inspectorTable.top().left();
-		rightPanel.add(new VisScrollPane(inspectorTable)).grow();
+		pageInsp.add(new VisScrollPane(inspectorTable)).grow();
+		
+		// Page 2: JSON
+		VisTable pageJson = new VisTable();
+		jsonEditor = new BioCodeEditor();
+		VisTextButton btnApply = new VisTextButton("Apply to Scene");
+		btnApply.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent event, float x, float y) {
+				applyJsonChange();
+			}
+		});
+		pageJson.add(jsonEditor).grow().row();
+		pageJson.add(btnApply).growX().pad(5);
+		
+		propertiesStack.add(pageInsp);
+		propertiesStack.add(pageJson);
+		
+		// Tab Logic
+		btnInsp.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent event, float x, float y) {
+				pageInsp.setVisible(true);
+				pageJson.setVisible(false);
+			}
+		});
+		btnJson.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent event, float x, float y) {
+				pageInsp.setVisible(false);
+				pageJson.setVisible(true);
+				updateJsonView(context.selection); // Refresh on switch
+			}
+		});
+		
+		// Default
+		pageJson.setVisible(false);
+		
+		rightPanel.add(propertiesStack).grow();
 
 		// 3. 中间区域 (Stack 布局：视口占位符 + 悬浮工具栏)
 		Stack centerStack = new Stack();
@@ -391,6 +493,31 @@ public class IconEditorDemo extends GScreen {
 		t.add(b).size(30).padRight(5);
 	}
 
+	private String getUniqueName(EditorTarget parent, String baseName) {
+		boolean exists = false;
+		for (EditorTarget child : parent.getChildren()) {
+			if (child.getName().equals(baseName)) {
+				exists = true;
+				break;
+			}
+		}
+		if (!exists) return baseName;
+		
+		int i = 1;
+		while (true) {
+			String newName = baseName + "_" + i;
+			boolean found = false;
+			for (EditorTarget child : parent.getChildren()) {
+				if (child.getName().equals(newName)) {
+					found = true;
+					break;
+				}
+			}
+			if (!found) return newName;
+			i++;
+		}
+	}
+
 	public void addNewShape(EditorTarget parent, String type) {
 		// 1. 确定父节点
 		if (parent == null) parent = rootNode;
@@ -398,15 +525,15 @@ public class IconEditorDemo extends GScreen {
 		// 2. 创建
 		EditorTarget newShape = null;
 		if ("Circle".equals(type)) {
-			CircleShape c = new CircleShape("New Circle");
+			CircleShape c = new CircleShape(getUniqueName(parent, "New Circle"));
 			c.radius = 40;
 			newShape = c;
 		} else if ("Rectangle".equals(type)) {
-			RectShape r = new RectShape("New Rect");
+			RectShape r = new RectShape(getUniqueName(parent, "New Rect"));
 			r.width = 80; r.height = 80;
 			newShape = r;
 		} else if ("Group".equals(type)) {
-			newShape = new GroupNode("New Group");
+			newShape = new GroupNode(getUniqueName(parent, "New Group"));
 		}
 		
 		if (newShape != null) {
@@ -431,16 +558,12 @@ public class IconEditorDemo extends GScreen {
 		if ("Circle".equals(newType)) {
 			newNode = new CircleShape(target.getName());
 			if (target instanceof CircleShape) ((CircleShape)newNode).radius = ((CircleShape)target).radius;
-			if (target instanceof RectShape) ((CircleShape)newNode).color.set(((RectShape)target).color);
-			if (target instanceof CircleShape) ((CircleShape)newNode).color.set(((CircleShape)target).color);
 		} else if ("Rectangle".equals(newType)) {
 			newNode = new RectShape(target.getName());
 			if (target instanceof RectShape) {
 				((RectShape)newNode).width = ((RectShape)target).width;
 				((RectShape)newNode).height = ((RectShape)target).height;
 			}
-			if (target instanceof RectShape) ((RectShape)newNode).color.set(((RectShape)target).color);
-			if (target instanceof CircleShape) ((RectShape)newNode).color.set(((CircleShape)target).color);
 		} else if ("Group".equals(newType)) {
 			newNode = new GroupNode(target.getName());
 		}
@@ -453,6 +576,11 @@ public class IconEditorDemo extends GScreen {
 		newNode.setRotation(target.getRotation());
 		newNode.setScaleX(target.getScaleX());
 		newNode.setScaleY(target.getScaleY());
+		
+		// [新增] 复制颜色 (即使是 Group 也会保留颜色数据)
+		if (target instanceof BaseNode && newNode instanceof BaseNode) {
+			((BaseNode)newNode).color.set(((BaseNode)target).color);
+		}
 		
 		// 3. Move children
 		Array<EditorTarget> children = new Array<>(target.getChildren());
@@ -497,6 +625,7 @@ public class IconEditorDemo extends GScreen {
 	public void selectNode(EditorTarget node) {
 		context.selection = node;
 		inspector.build(inspectorTable, node);
+		updateJsonView(node);
 		
 		// [修复] 同步 Hierarchy 选中状态
 		if (hierarchyTree != null) {
@@ -508,6 +637,84 @@ public class IconEditorDemo extends GScreen {
 			} else {
 				hierarchyTree.getSelection().clear();
 			}
+		}
+	}
+
+	private void updateJsonView(EditorTarget node) {
+		if (jsonEditor == null) return;
+		if (node == null) {
+			jsonEditor.setText("");
+			return;
+		}
+		
+		try {
+			Json json = new Json();
+			json.setOutputType(OutputType.json);
+			json.setIgnoreUnknownFields(true);
+			String text = json.prettyPrint(node);
+			jsonEditor.setText(text);
+		} catch (Exception e) {
+			Gdx.app.error("Editor", "JSON serialization failed", e);
+			jsonEditor.setText("// Serialization Error: " + e.getMessage());
+		}
+	}
+
+	private void applyJsonChange() {
+		if (context.selection == null) return;
+		
+		String jsonText = jsonEditor.getText();
+		try {
+			Json json = new Json();
+			json.setIgnoreUnknownFields(true);
+			
+			Class<? extends EditorTarget> clazz = context.selection.getClass();
+			EditorTarget newObj = json.fromJson(clazz, jsonText);
+			
+			if (newObj != null) {
+				EditorTarget oldObj = context.selection;
+				EditorTarget parent = oldObj.getParent();
+				
+				if (parent != null) {
+					int idx = parent.getChildren().indexOf(oldObj, true);
+					oldObj.removeFromParent();
+					
+					// Manually attach without double-adding (since we are replacing)
+					// But wait, newObj is fresh. It needs to be added to parent.
+					// BaseNode.setParent handles it correctly (adds to parent's children).
+					newObj.setParent(parent);
+					
+					// Fix order
+					parent.getChildren().removeValue(newObj, true);
+					if (idx >= 0 && idx <= parent.getChildren().size) {
+						parent.getChildren().insert(idx, newObj);
+					} else {
+						parent.getChildren().add(newObj);
+					}
+				} else if (oldObj == rootNode) {
+					rootNode = newObj;
+				}
+				
+				// Fix transient parent references in children
+				fixParentRefs(newObj);
+				
+				rebuildTree();
+				selectNode(newObj);
+				
+				Gdx.app.log("Editor", "Applied JSON changes");
+			}
+		} catch (Exception e) {
+			Gdx.app.error("Editor", "Apply failed", e);
+			// Show error in editor?
+			// jsonEditor.setText(jsonEditor.getText() + "\n// Error: " + e.getMessage());
+		}
+	}
+	
+	private void fixParentRefs(EditorTarget node) {
+		for (EditorTarget child : node.getChildren()) {
+			if (child instanceof BaseNode) {
+				((BaseNode)child).parent = node;
+			}
+			fixParentRefs(child);
 		}
 	}
 
@@ -610,8 +817,9 @@ public class IconEditorDemo extends GScreen {
 	public static abstract class BaseNode implements EditorTarget {
 		public String name;
 		public float x, y, rotation = 0, scaleX = 1, scaleY = 1;
+		public Color color = new Color(Color.WHITE);
 		// [新增] 父节点引用
-		protected EditorTarget parent;
+		protected transient EditorTarget parent;
 		public Array<EditorTarget> children = new Array<>();
 
 		public BaseNode(String name) { this.name = name; }
@@ -671,7 +879,6 @@ public class IconEditorDemo extends GScreen {
 
 	public static class RectShape extends BaseNode {
 		public float width = 100, height = 100;
-		public Color color = new Color(Color.WHITE);
 		public RectShape(String name) { super(name); }
 		@Override public void render(NeonBatch batch) {
 			batch.drawRect(x - width/2*scaleX, y - height/2*scaleY, width*scaleX, height*scaleY, rotation, 0, color, true);
@@ -687,7 +894,6 @@ public class IconEditorDemo extends GScreen {
 
 	public static class CircleShape extends BaseNode {
 		public float radius = 50;
-		public Color color = new Color(Color.WHITE);
 		public CircleShape(String name) { super(name); }
 		@Override public void render(NeonBatch batch) {
 			batch.drawCircle(x, y, radius * Math.max(Math.abs(scaleX), Math.abs(scaleY)), 0, color, 32, true);

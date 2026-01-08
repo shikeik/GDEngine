@@ -63,7 +63,8 @@ public class SmartColorInput extends SmartInput<Color> {
 
 		final Color restoreColor = new Color(value);
 
-		sharedPicker.setColor(value);
+		// [修复] 先设置监听器，再设置颜色
+		// 否则 setColor 会触发上一个监听器，导致上一个被编辑的节点颜色被重置
 		sharedPicker.setListener(new ColorPickerAdapter() {
 				@Override
 				public void changed(Color newColor) {
@@ -80,6 +81,8 @@ public class SmartColorInput extends SmartInput<Color> {
 					notifyValueChanged(restoreColor);
 				}
 			});
+			
+		sharedPicker.setColor(value);
 
 		if (getStage() != null) {
 			if (sharedPicker.getStage() != getStage()) {
