@@ -126,7 +126,7 @@ public class GdxLauncher extends Game {
 			return;
 		}
 
-		if (Gdx.input.isKeyJustPressed(Input.Keys.Z)) {
+		if (Gdx.input.isKeyJustPressed(Input.Keys.F1)) {
 //			Debug.showDebugUI = !Debug.showDebugUI;
 			if(Debug.shortcuts) DebugConsole.autoSwitchState();
 		}

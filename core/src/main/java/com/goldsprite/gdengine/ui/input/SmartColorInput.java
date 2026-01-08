@@ -18,10 +18,7 @@ public class SmartColorInput extends SmartInput<Color> {
 	private final VisTextButton previewBtn;
 	private final TextureRegionDrawable drawable;
 
-	private java.util.function.BiConsumer<Color, Color> onCommand;
-    public void setOnCommand(java.util.function.BiConsumer<Color, Color> onCommand) { this.onCommand = onCommand; }
-
-	// 全局共享 Picker，避免每次 new (重量级组件)
+	// 全局共享 Picker
 	private static ColorPicker sharedPicker;
 
 	public SmartColorInput(String label, Color initValue, Consumer<Color> onChange) {
@@ -36,14 +33,13 @@ public class SmartColorInput extends SmartInput<Color> {
 
 		previewBtn = new VisTextButton(value.toString());
 
-		// [修复] 关键点：不要直接修改 getStyle() 返回的对象，那是全局共享的！
 		// 必须创建一个样式的副本 (Copy Style)，只作用于当前按钮
 		TextButton.TextButtonStyle originalStyle = previewBtn.getStyle();
 		TextButton.TextButtonStyle uniqueStyle = new TextButton.TextButtonStyle(originalStyle);
 
 		// 修改副本的背景图
 		uniqueStyle.up = drawable;
-		uniqueStyle.down = drawable; // 按下也保持颜色，或者你可以处理变暗逻辑
+		uniqueStyle.down = drawable; 
 
 		// 应用新样式
 		previewBtn.setStyle(uniqueStyle);
@@ -56,6 +52,8 @@ public class SmartColorInput extends SmartInput<Color> {
 			});
 
 		updateUI();
+		
+		// 颜色选择器不需要太宽
 		addContent(previewBtn);
 	}
 
@@ -66,8 +64,6 @@ public class SmartColorInput extends SmartInput<Color> {
 
 		final Color restoreColor = new Color(value);
 
-		// [修复] 先设置监听器，再设置颜色
-		// 否则 setColor 会触发上一个监听器，导致上一个被编辑的节点颜色被重置
 		sharedPicker.setListener(new ColorPickerAdapter() {
 				@Override
 				public void changed(Color newColor) {
@@ -83,9 +79,9 @@ public class SmartColorInput extends SmartInput<Color> {
 				public void finished(Color newColor) {
 					Color finalColor = new Color(newColor);
 					notifyValueChanged(finalColor);
-					if (onCommand != null && !finalColor.equals(restoreColor)) {
-						onCommand.accept(restoreColor, finalColor);
-					}
+					
+					// 触发基类的命令回调
+					notifyCommand(restoreColor, finalColor);
 				}
 			});
 			
@@ -103,7 +99,6 @@ public class SmartColorInput extends SmartInput<Color> {
 	@Override
 	protected void updateUI() {
 		// 更新按钮颜色 (Actor Color 会与 drawable 颜色相乘)
-		// 因为 drawable 是纯白的，所以按钮显示的就是 value 颜色
 		previewBtn.setColor(value);
 		previewBtn.setText(value.toString().toUpperCase());
 	}

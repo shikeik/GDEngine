@@ -22,6 +22,8 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.input.SmartColorInput;
 import com.goldsprite.gdengine.ui.input.SmartNumInput;
+import com.goldsprite.gdengine.ui.input.SmartTextInput;
+import com.goldsprite.gdengine.ui.input.SmartSelectInput;
 import com.goldsprite.gdengine.ui.widget.SimpleNumPad;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
@@ -1167,6 +1169,39 @@ public class IconEditorDemo extends GScreen {
 		public EditorInput(IconEditorDemo screen, SceneManager sm, GizmoSystem gizmo, CommandManager cm) {
 			this.screen = screen; this.sceneManager = sm; this.gizmo = gizmo; this.commandManager = cm;
 		}
+		
+		@Override
+		public boolean keyDown(int keycode) {
+			boolean ctrl = Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT);
+			boolean shift = Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT) || Gdx.input.isKeyPressed(Input.Keys.SHIFT_RIGHT);
+
+			if (ctrl) {
+				if (keycode == Input.Keys.Z) {
+					if (shift) {
+						commandManager.redo();
+					} else {
+						commandManager.undo();
+					}
+					return true;
+				} else if (keycode == Input.Keys.Y) {
+					commandManager.redo();
+					return true;
+				}
+			} else {
+				// MRS Mode Switch
+				if (keycode == Input.Keys.W) {
+					gizmo.mode = GizmoSystem.Mode.MOVE;
+					return true;
+				} else if (keycode == Input.Keys.E) {
+					gizmo.mode = GizmoSystem.Mode.ROTATE;
+					return true;
+				} else if (keycode == Input.Keys.R) {
+					gizmo.mode = GizmoSystem.Mode.SCALE;
+					return true;
+				}
+			}
+			return false;
+		}
 
 		private EditorTarget findTarget(float wx, float wy) {
 			return findRecursive(sceneManager.getRoot(), wx, wy);
@@ -1415,50 +1450,55 @@ public class IconEditorDemo extends GScreen {
 				return;
 			}
 
-			VisTable nameRow = new VisTable();
-			nameRow.add(new VisLabel("Name")).width(50);
-			VisTextField nameField = new VisTextField(target.getName());
-			nameField.addListener(new ChangeListener() {
-				@Override public void changed(ChangeEvent event, Actor actor) {
-					target.setName(nameField.getText());
-					// Update Tree Label
-					if (screen.hierarchyTree != null) {
-						UiNode node = screen.hierarchyTree.findNode(target);
-						if (node != null && node.getActor().getChildren().size > 0) {
-							Actor labelActor = node.getActor().getChildren().get(0);
-							if (labelActor instanceof VisLabel) {
-								((VisLabel) labelActor).setText(target.getName());
-							}
+			// Name Field using SmartTextInput
+			SmartTextInput nameInput = new SmartTextInput("Name", target.getName(), newName -> {
+				target.setName(newName);
+				// Update Tree Label
+				if (screen.hierarchyTree != null) {
+					UiNode node = screen.hierarchyTree.findNode(target);
+					if (node != null && node.getActor().getChildren().size > 0) {
+						Actor labelActor = node.getActor().getChildren().get(0);
+						if (labelActor instanceof VisLabel) {
+							((VisLabel) labelActor).setText(target.getName());
 						}
 					}
 				}
 			});
-			nameRow.add(nameField).growX(); 
-			table.add(nameRow).growX().pad(5).row();
+			// Bind Command for Undo/Redo
+			nameInput.setOnCommand((oldVal, newVal) -> {
+				commandManager.execute(new GenericPropertyChangeCommand<String>("Name", oldVal, newVal, 
+					v -> {
+						target.setName(v);
+						// Force refresh logic is same as above, maybe cleaner to extract
+						if (screen.hierarchyTree != null) {
+							UiNode node = screen.hierarchyTree.findNode(target);
+							if (node != null && node.getActor().getChildren().size > 0) {
+								((VisLabel)node.getActor().getChildren().get(0)).setText(v);
+							}
+						}
+					}, 
+					() -> refreshValues()
+				));
+			});
+			container.add(nameInput).growX().padBottom(2).row();
 
-			// Type Selection
+			// Type Selection using SmartSelectInput
 			if (target != screen.sceneManager.getRoot()) {
-				VisTable typeRow = new VisTable();
-				typeRow.add(new VisLabel("Type")).width(50);
-				
-				VisSelectBox<String> typeBox = new VisSelectBox<>();
 				com.badlogic.gdx.utils.Array<String> items = new com.badlogic.gdx.utils.Array<>();
 				for (String s : screen.sceneManager.getShapeRegistry().keySet()) items.add(s);
-				typeBox.setItems(items);
 				
-				typeBox.setSelected(target.getTypeName());
-				
-				typeBox.addListener(new ChangeListener() {
-					@Override public void changed(ChangeEvent event, Actor actor) {
-						String newType = typeBox.getSelected();
-						if (newType.equals(target.getTypeName())) return;
-						
+				SmartSelectInput<String> typeInput = new SmartSelectInput<>("Type", target.getTypeName(), items, newType -> {
+					if (!newType.equals(target.getTypeName())) {
 						screen.sceneManager.changeNodeType(target, newType);
 					}
 				});
+				// ChangeNodeType is complex and likely handles its own undo/redo or is destructive
+				// For now we assume changeNodeType handles logic, but SmartSelectInput also supports command.
+				// However, changing type replaces the object, so the 'target' reference becomes stale.
+				// This is a special case where we might not want standard property undo, but rely on sceneManager.
+				// Let's just use the onChange for now as it was before.
 				
-				typeRow.add(typeBox).growX();
-				table.add(typeRow).growX().pad(5).row();
+				container.add(typeInput).growX().padBottom(2).row();
 			}
 
 			InspectorStrategy strategy = strategies.get(target.getClass());
@@ -1587,6 +1627,24 @@ public class IconEditorDemo extends GScreen {
 		public PropertyChangeCommand(String name, float oldVal, float newVal, Consumer<Float> setter, Runnable refreshUI) {
 			this.name = name; this.oldVal = oldVal; this.newVal = newVal; this.setter = setter; this.refreshUI = refreshUI;
 		}
+
+		@Override public void execute() { setter.accept(newVal); if(refreshUI != null) refreshUI.run(); }
+		@Override public void undo() { setter.accept(oldVal); if(refreshUI != null) refreshUI.run(); }
+		@Override public String getName() { return "Set " + name; }
+		@Override public String getSource() { return "Inspector"; }
+		@Override public String getIcon() { return "P"; }
+	}
+	
+	public static class GenericPropertyChangeCommand<T> implements ICommand {
+		private final String name;
+		private final T oldVal, newVal;
+		private final Consumer<T> setter;
+		private final Runnable refreshUI;
+
+		public GenericPropertyChangeCommand(String name, T oldVal, T newVal, Consumer<T> setter, Runnable refreshUI) {
+			this.name = name; this.oldVal = oldVal; this.newVal = newVal; this.setter = setter; this.refreshUI = refreshUI;
+		}
+
 		@Override public void execute() { setter.accept(newVal); if(refreshUI != null) refreshUI.run(); }
 		@Override public void undo() { setter.accept(oldVal); if(refreshUI != null) refreshUI.run(); }
 		@Override public String getName() { return "Set " + name; }
