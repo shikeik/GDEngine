@@ -68,6 +68,14 @@ public class RichText extends WidgetGroup {
         rebuild(text);
     }
     
+    /**
+     * 设置富文本内容
+     * @param text 富文本字符串
+     */
+    public void setText(String text) {
+        rebuild(text);
+    }
+    
     private void rebuild(String text) {
         clearChildren();
         List<RichElement> elements = RichTextParser.parse(text, new RichStyle());

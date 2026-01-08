@@ -15,6 +15,7 @@ public class GameContentSelectionScreen extends BaseSelectionScreen {
 		map.put("H5 渐变血条测试", HealthBarDemoScreen.class);
 		map.put("Floating Text (飘字) 测试", TextTestScreen.class);
 		map.put("RichText (富文本) 测试", RichTextTestScreen.class);
+		map.put("RichText Layout (布局) 测试", RichTextLayoutTestScreen.class);
 		map.put("Neon Glow (辉光) 测试(原BioWar)", BloomDebugScreen.class);
 		map.put("Synth Audio (合成音效) 测试", AudioTestScreen.class);
 		map.put("SmartCamera (智能相机) 测试", CameraTestScreen.class);
