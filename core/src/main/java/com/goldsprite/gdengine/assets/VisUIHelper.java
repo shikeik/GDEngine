@@ -65,7 +65,7 @@ public class VisUIHelper {
 		skin.get("default-vertical", SplitPane.SplitPaneStyle.class).handle.setMinHeight(size);
 		skin.get("default-horizontal", SplitPane.SplitPaneStyle.class).handle.setMinWidth(size);
 
-		size = 12f;
+		size = 20f;
 		skin.get("default", VisTree.TreeStyle.class).plus.setMinWidth(size);
 		skin.get("default", VisTree.TreeStyle.class).plus.setMinHeight(size);
 		skin.get("default", VisTree.TreeStyle.class).minus.setMinWidth(size);
