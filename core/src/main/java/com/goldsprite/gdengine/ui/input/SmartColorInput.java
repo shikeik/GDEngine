@@ -18,6 +18,9 @@ public class SmartColorInput extends SmartInput<Color> {
 	private final VisTextButton previewBtn;
 	private final TextureRegionDrawable drawable;
 
+	private java.util.function.BiConsumer<Color, Color> onCommand;
+    public void setOnCommand(java.util.function.BiConsumer<Color, Color> onCommand) { this.onCommand = onCommand; }
+
 	// 全局共享 Picker，避免每次 new (重量级组件)
 	private static ColorPicker sharedPicker;
 
@@ -72,13 +75,17 @@ public class SmartColorInput extends SmartInput<Color> {
 				}
 
 				@Override
-				public void finished(Color newColor) {
-					notifyValueChanged(new Color(newColor));
+				public void canceled(Color oldColor) {
+					notifyValueChanged(restoreColor);
 				}
 
 				@Override
-				public void canceled(Color oldColor) {
-					notifyValueChanged(restoreColor);
+				public void finished(Color newColor) {
+					Color finalColor = new Color(newColor);
+					notifyValueChanged(finalColor);
+					if (onCommand != null && !finalColor.equals(restoreColor)) {
+						onCommand.accept(restoreColor, finalColor);
+					}
 				}
 			});
 			

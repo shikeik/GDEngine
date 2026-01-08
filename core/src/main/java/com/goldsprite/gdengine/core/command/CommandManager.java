@@ -1,0 +1,92 @@
+package com.goldsprite.gdengine.core.command;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
+
+public class CommandManager {
+    private final Stack<ICommand> undoStack = new Stack<>();
+    private final Stack<ICommand> redoStack = new Stack<>();
+    private final List<CommandListener> listeners = new ArrayList<>();
+    
+    private int maxHistorySize = 50;
+
+    public interface CommandListener {
+        default void onCommandExecuted(ICommand cmd) {}
+        default void onUndo(ICommand cmd) {}
+        default void onRedo(ICommand cmd) {}
+        default void onHistoryChanged() {}
+    }
+
+    public void execute(ICommand cmd) {
+        // 先执行，再入栈
+        // 注意：有些场景下 Command 可能在外部已经被执行了（比如实时拖拽），
+        // 这种情况下 Command 的 execute 应该设计为幂等，或者由调用者决定是否只 push 不 execute。
+        // 但为了统一，标准模式是：创建 Command -> 传给 Manager -> Manager 调用 execute。
+        // 如果是“后记录”模式（Action 已经发生），可以创建一个 flag 控制是否再次 execute，
+        // 或者简单地假定 execute() 包含了实际逻辑，调用者不应该自己改数据。
+        // 
+        // 在本项目中，为了保持一致性，我们约定：所有修改都通过 CommandManager.execute() 触发。
+        // 对于 Gizmo 拖拽这种连续操作，我们在拖拽结束时生成一个 Command，
+        // 这个 Command 的 execute() 可以是“应用最终值”，也可以是“什么都不做（因为值已经设了）”。
+        // 为了支持 Redo，execute() 必须包含设置新值的逻辑。
+        // 如果我们在拖拽结束时已经设好了新值，再次调用 execute() 设置相同的值是无害的。
+        
+        cmd.execute();
+        
+        undoStack.push(cmd);
+        redoStack.clear();
+        
+        if (undoStack.size() > maxHistorySize) {
+            undoStack.remove(0);
+        }
+        
+        notifyExecuted(cmd);
+        notifyHistoryChanged();
+    }
+
+    public void undo() {
+        if (undoStack.isEmpty()) return;
+        ICommand cmd = undoStack.pop();
+        cmd.undo();
+        redoStack.push(cmd);
+        
+        notifyUndo(cmd);
+        notifyHistoryChanged();
+    }
+
+    public void redo() {
+        if (redoStack.isEmpty()) return;
+        ICommand cmd = redoStack.pop();
+        cmd.execute();
+        undoStack.push(cmd);
+        
+        notifyRedo(cmd);
+        notifyHistoryChanged();
+    }
+    
+    public boolean canUndo() { return !undoStack.isEmpty(); }
+    public boolean canRedo() { return !redoStack.isEmpty(); }
+    
+    public void clear() {
+        undoStack.clear();
+        redoStack.clear();
+        notifyHistoryChanged();
+    }
+
+    public void addListener(CommandListener l) { listeners.add(l); }
+    public void removeListener(CommandListener l) { listeners.remove(l); }
+
+    private void notifyExecuted(ICommand cmd) {
+        for (CommandListener l : listeners) l.onCommandExecuted(cmd);
+    }
+    private void notifyUndo(ICommand cmd) {
+        for (CommandListener l : listeners) l.onUndo(cmd);
+    }
+    private void notifyRedo(ICommand cmd) {
+        for (CommandListener l : listeners) l.onRedo(cmd);
+    }
+    private void notifyHistoryChanged() {
+        for (CommandListener l : listeners) l.onHistoryChanged();
+    }
+}

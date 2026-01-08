@@ -42,6 +42,9 @@ import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter.OutputType;
 import com.goldsprite.solofight.ui.widget.BioCodeEditor;
+import com.goldsprite.solofight.ui.widget.CommandHistoryUI;
+import com.goldsprite.gdengine.core.command.CommandManager;
+import com.goldsprite.gdengine.core.command.ICommand;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -62,14 +65,16 @@ public class IconEditorDemo extends GScreen {
 	private CameraController cameraController;
 
 	// --- 业务逻辑 ---
-	private final SceneManager sceneManager = new SceneManager();
-	private final GizmoSystem gizmoSystem = new GizmoSystem(sceneManager);
-	private final EditorInput sceneInput = new EditorInput(this, sceneManager, gizmoSystem);
-	private final Inspector inspector = new Inspector(this, sceneManager);
+	private final CommandManager commandManager = new CommandManager();
+	private final SceneManager sceneManager = new SceneManager(commandManager);
+	private final GizmoSystem gizmoSystem = new GizmoSystem(sceneManager, commandManager);
+	private final EditorInput sceneInput = new EditorInput(this, sceneManager, gizmoSystem, commandManager);
+	private final Inspector inspector = new Inspector(this, sceneManager, commandManager);
 
 	// --- UI 引用 ---
 	private VisTree<UiNode, EditorTarget> hierarchyTree;
 	private VisTable inspectorTable;
+	private CommandHistoryUI historyPanel;
 	private BioCodeEditor jsonEditor;
 	private Stack propertiesStack;
 
@@ -91,13 +96,15 @@ public class IconEditorDemo extends GScreen {
         }
 
         private EditorTarget rootNode;
-        private EditorTarget selection;
-        private final List<EditorListener> listeners = new ArrayList<>();
-        private final Map<String, ShapeFactory> shapeRegistry = new LinkedHashMap<>();
-        
-        public SceneManager() {
-            registerDefaultShapes();
-        }
+		private EditorTarget selection;
+		private final List<EditorListener> listeners = new ArrayList<>();
+		private final Map<String, ShapeFactory> shapeRegistry = new LinkedHashMap<>();
+		private final CommandManager commandManager;
+		
+		public SceneManager(CommandManager cm) {
+			this.commandManager = cm;
+			registerDefaultShapes();
+		}
         
         private void registerDefaultShapes() {
             shapeRegistry.put("Group", GroupNode::new);
@@ -136,6 +143,11 @@ public class IconEditorDemo extends GScreen {
         
         public void deleteNode(EditorTarget node) {
             if (node == null || node == rootNode) return;
+            commandManager.execute(new DeleteNodeCommand(this, node));
+        }
+
+        public void internalDeleteNode(EditorTarget node) {
+            if (node == null || node == rootNode) return;
             node.removeFromParent();
             if (selection == node) selectNode(null);
             notifyStructureChanged();
@@ -143,8 +155,13 @@ public class IconEditorDemo extends GScreen {
         
         public void addNode(EditorTarget parent, String type) {
             if (parent == null) parent = rootNode;
+            commandManager.execute(new AddNodeCommand(this, parent, type));
+        }
+        
+        public EditorTarget internalAddNode(EditorTarget parent, String type) {
+            if (parent == null) parent = rootNode;
             ShapeFactory factory = shapeRegistry.get(type);
-            if (factory == null) return;
+            if (factory == null) return null;
             
             String name = getUniqueName(parent, "New " + type);
             EditorTarget newShape = factory.create(name);
@@ -156,9 +173,26 @@ public class IconEditorDemo extends GScreen {
                 notifyStructureChanged();
                 selectNode(newShape);
             }
+            return newShape;
+        }
+
+        public void internalAttachNode(EditorTarget node, EditorTarget parent, int index) {
+            if (node == null || parent == null) return;
+            node.setParent(parent);
+            if (index >= 0 && index <= parent.getChildren().size) {
+                parent.getChildren().removeValue(node, true);
+                parent.getChildren().insert(index, node);
+            }
+            notifyStructureChanged();
+            selectNode(node);
         }
         
         public void moveNode(EditorTarget node, EditorTarget newParent, int index) {
+			if (node == null || newParent == null) return;
+			commandManager.execute(new ReparentCommand(this, node, newParent, index));
+		}
+		
+		public void internalMoveNode(EditorTarget node, EditorTarget newParent, int index) {
 			if (node == null || newParent == null) return;
 			
 			node.setParent(newParent);
@@ -488,6 +522,23 @@ public class IconEditorDemo extends GScreen {
 
 		// Initialize Root
 		sceneManager.setRoot(new GroupNode("Root"));
+		
+		// Command Listener
+		commandManager.addListener(new CommandManager.CommandListener() {
+			@Override public void onCommandExecuted(ICommand cmd) {
+				if(historyPanel != null) {
+					String type = "raw";
+					if(cmd.getSource().equals("Gizmo")) type = "move";
+					historyPanel.addHistory("CMD_" + cmd.getName(), cmd.getSource(), type, cmd.getIcon());
+				}
+			}
+			@Override public void onUndo(ICommand cmd) {
+				 if(historyPanel != null) historyPanel.addHistory("UNDO " + cmd.getName(), "System", "raw", "U");
+			}
+			 @Override public void onRedo(ICommand cmd) {
+				 if(historyPanel != null) historyPanel.addHistory("REDO " + cmd.getName(), "System", "raw", "R");
+			}
+		});
 
 		buildTestScene();
 		buildLayout();
@@ -640,7 +691,31 @@ public class IconEditorDemo extends GScreen {
 		addToolBtn(topBar, "M", () -> gizmoSystem.mode = GizmoSystem.Mode.MOVE);
 		addToolBtn(topBar, "R", () -> gizmoSystem.mode = GizmoSystem.Mode.ROTATE);
 		addToolBtn(topBar, "S", () -> gizmoSystem.mode = GizmoSystem.Mode.SCALE);
+
+		topBar.add().width(15); // Separator
+
+		addToolBtn(topBar, "<", () -> commandManager.undo());
+		addToolBtn(topBar, ">", () -> commandManager.redo());
+
 		centerStack.add(topBar);
+		
+		// History Panel (右上角悬浮)
+		Table historyContainer = new Table();
+		historyContainer.top().right().pad(10);
+		
+		historyPanel = new CommandHistoryUI();
+		historyPanel.setVisible(false); // Default hidden
+		
+		VisTextButton btnHistory = new VisTextButton("History");
+		btnHistory.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent e, float x, float y) {
+				historyPanel.setVisible(!historyPanel.isVisible());
+			}
+		});
+		
+		historyContainer.add(btnHistory).right().row();
+		historyContainer.add(historyPanel).right().padTop(5);
+		centerStack.add(historyContainer);
 
 		// 4. 分割窗格组合
 		VisSplitPane rightSplit = new VisSplitPane(centerStack, rightPanel, false);
@@ -934,8 +1009,10 @@ public class IconEditorDemo extends GScreen {
 
 		// 缓存数组 (绘制箭头用)
 		private static final float[] tmpPoly = new float[8];
+		
+		private final CommandManager commandManager;
 
-		public GizmoSystem(SceneManager sm) { this.sceneManager = sm; }
+		public GizmoSystem(SceneManager sm, CommandManager cm) { this.sceneManager = sm; this.commandManager = cm; }
 
 		public void render(NeonBatch batch, float zoom) {
 			EditorTarget t = sceneManager.getSelection();
@@ -1062,9 +1139,12 @@ public class IconEditorDemo extends GScreen {
 
 		private float lastX, lastY;
 		private float startValX, startValY, startValRot; // 记录初始值用于精确计算
+		
+		private float undoStartX, undoStartY, undoStartRot, undoStartSX, undoStartSY;
+		private final CommandManager commandManager;
 
-		public EditorInput(IconEditorDemo screen, SceneManager sm, GizmoSystem gizmo) {
-			this.screen = screen; this.sceneManager = sm; this.gizmo = gizmo;
+		public EditorInput(IconEditorDemo screen, SceneManager sm, GizmoSystem gizmo, CommandManager cm) {
+			this.screen = screen; this.sceneManager = sm; this.gizmo = gizmo; this.commandManager = cm;
 		}
 
 		@Override
@@ -1133,9 +1213,17 @@ public class IconEditorDemo extends GScreen {
 			screen.getCameraController().setInputEnabled(false);
 
 			if(sceneManager.getSelection() != null) {
-				startValX = sceneManager.getSelection().getScaleX();
-				startValY = sceneManager.getSelection().getScaleY();
-				startValRot = sceneManager.getSelection().getRotation();
+				EditorTarget sel = sceneManager.getSelection();
+				startValX = sel.getScaleX();
+				startValY = sel.getScaleY();
+				startValRot = sel.getRotation();
+				
+				// [关键修复] 记录 Undo 初始状态
+				undoStartX = sel.getX();
+				undoStartY = sel.getY();
+				undoStartRot = sel.getRotation();
+				undoStartSX = sel.getScaleX();
+				undoStartSY = sel.getScaleY();
 			}
 		}
 
@@ -1189,6 +1277,21 @@ public class IconEditorDemo extends GScreen {
 			if (currentDragMode != DragMode.NONE) {
 				currentDragMode = DragMode.NONE;
 				screen.getCameraController().setInputEnabled(true);
+				
+				EditorTarget sel = sceneManager.getSelection();
+				if (sel != null) {
+					boolean changed = sel.getX() != undoStartX || sel.getY() != undoStartY || 
+									  sel.getRotation() != undoStartRot || 
+									  sel.getScaleX() != undoStartSX || sel.getScaleY() != undoStartSY;
+					
+					if (changed) {
+						commandManager.execute(new TransformCommand(sel, 
+							undoStartX, undoStartY, undoStartRot, undoStartSX, undoStartSY,
+							() -> screen.inspector.refreshValues()
+						));
+					}
+				}
+				
 				return true;
 			}
 			return false;
@@ -1203,6 +1306,7 @@ public class IconEditorDemo extends GScreen {
 		private VisTable container;
 		private final IconEditorDemo screen;
 		private final SceneManager sceneManager;
+		private final CommandManager commandManager;
 		private final Array<Runnable> refreshTasks = new Array<>();
 		
 		private final Map<Class<?>, InspectorStrategy> strategies = new HashMap<>();
@@ -1211,9 +1315,10 @@ public class IconEditorDemo extends GScreen {
 			void inspect(Inspector inspector, EditorTarget target);
 		}
 
-		public Inspector(IconEditorDemo screen, SceneManager sm) { 
+		public Inspector(IconEditorDemo screen, SceneManager sm, CommandManager cm) { 
 			this.screen = screen;
 			this.sceneManager = sm; 
+			this.commandManager = cm;
 			registerDefaultStrategies();
 		}
 		
@@ -1320,10 +1425,12 @@ public class IconEditorDemo extends GScreen {
 
 		public void addFloat(String label, Supplier<Float> getter, Consumer<Float> setter) {
 			SmartNumInput input = new SmartNumInput(label, getter.get(), 1.0f, setter);
-			// 简单的刷新逻辑：闭包捕获 getter 和 input
+			
+			input.setOnCommand((oldVal, newVal) -> {
+				commandManager.execute(new PropertyChangeCommand(label, oldVal, newVal, setter, () -> refreshValues()));
+			});
+
 			refreshTasks.add(() -> {
-				// 这里的 SmartNumInput 没有暴露 updateValue 接口给外部调用
-				// 如果需要实时刷新 UI (拖拽 Gizmo 时)，需要给 SmartNumInput 加一个 setValue(float, notify=false)
 				// 暂时忽略，或者你可以手动重建整个 Inspector
 			});
 			container.add(input).growX().padBottom(2).row();
@@ -1331,12 +1438,16 @@ public class IconEditorDemo extends GScreen {
 
 		public void addColor(String label, Supplier<Color> getter, Consumer<Color> setter) {
 			SmartColorInput input = new SmartColorInput(label, getter.get(), setter);
+			
+			// [新增] 注册 Command 回调
+			input.setOnCommand((oldVal, newVal) -> {
+				commandManager.execute(new ColorChangeCommand(sceneManager.getSelection(), oldVal, newVal, () -> refreshValues()));
+			});
+
 			container.add(input).growX().padBottom(2).row();
 		}
 
 		public void refreshValues() {
-			// 如果要完美支持拖拽时更新 UI，这里需要执行 tasks
-			// 简单粗暴的方式：直接 rebuild (虽然性能有损耗，但对于 Demo 足够)
 			if (sceneManager.getSelection() != null && container != null) {
 				build(container, sceneManager.getSelection());
 			}
@@ -1354,11 +1465,12 @@ public class IconEditorDemo extends GScreen {
 
 		public void update(float dt) {
 			if(!enabled) return;
-			float speed = 500 * dt * cam.zoom;
-			if(Gdx.input.isKeyPressed(Input.Keys.A)) cam.translate(-speed, 0);
-			if(Gdx.input.isKeyPressed(Input.Keys.D)) cam.translate(speed, 0);
-			if(Gdx.input.isKeyPressed(Input.Keys.W)) cam.translate(0, speed);
-			if(Gdx.input.isKeyPressed(Input.Keys.S)) cam.translate(0, -speed);
+			// [Fix] 禁用 WASD 移动
+			// float speed = 500 * dt * cam.zoom;
+			// if(Gdx.input.isKeyPressed(Input.Keys.A)) cam.translate(-speed, 0);
+			// if(Gdx.input.isKeyPressed(Input.Keys.D)) cam.translate(speed, 0);
+			// if(Gdx.input.isKeyPressed(Input.Keys.W)) cam.translate(0, speed);
+			// if(Gdx.input.isKeyPressed(Input.Keys.S)) cam.translate(0, -speed);
 			cam.update();
 		}
 
@@ -1385,5 +1497,134 @@ public class IconEditorDemo extends GScreen {
 			}
 			return false;
 		}
+	}
+
+	// ========================================================================
+	// 5. Commands
+	// ========================================================================
+
+	public static class TransformCommand implements ICommand {
+		private final EditorTarget target;
+		private final float oldX, oldY, oldRot, oldSX, oldSY;
+		private final float newX, newY, newRot, newSX, newSY;
+		private final Runnable refreshUI;
+
+		public TransformCommand(EditorTarget t, float ox, float oy, float or, float osx, float osy, Runnable refreshUI) {
+			this.target = t;
+			this.oldX = ox; this.oldY = oy; this.oldRot = or; this.oldSX = osx; this.oldSY = osy;
+			this.newX = t.getX(); this.newY = t.getY(); this.newRot = t.getRotation(); this.newSX = t.getScaleX(); this.newSY = t.getScaleY();
+			this.refreshUI = refreshUI;
+		}
+
+		@Override public void execute() { apply(newX, newY, newRot, newSX, newSY); }
+		@Override public void undo() { apply(oldX, oldY, oldRot, oldSX, oldSY); }
+		@Override public String getName() { return "Transform " + target.getName(); }
+		@Override public String getSource() { return "Gizmo"; }
+		@Override public String getIcon() { return "T"; }
+
+		private void apply(float x, float y, float r, float sx, float sy) {
+			target.setX(x); target.setY(y); target.setRotation(r); target.setScaleX(sx); target.setScaleY(sy);
+			if(refreshUI != null) refreshUI.run();
+		}
+	}
+
+	public static class PropertyChangeCommand implements ICommand {
+		private final String name;
+		private final float oldVal, newVal;
+		private final Consumer<Float> setter;
+		private final Runnable refreshUI;
+
+		public PropertyChangeCommand(String name, float oldVal, float newVal, Consumer<Float> setter, Runnable refreshUI) {
+			this.name = name; this.oldVal = oldVal; this.newVal = newVal; this.setter = setter; this.refreshUI = refreshUI;
+		}
+		@Override public void execute() { setter.accept(newVal); if(refreshUI != null) refreshUI.run(); }
+		@Override public void undo() { setter.accept(oldVal); if(refreshUI != null) refreshUI.run(); }
+		@Override public String getName() { return "Set " + name; }
+		@Override public String getSource() { return "Inspector"; }
+		@Override public String getIcon() { return "P"; }
+	}
+
+	public static class ColorChangeCommand implements ICommand {
+		private final EditorTarget target;
+		private final Color oldColor, newColor;
+		private final Runnable refreshUI;
+
+		public ColorChangeCommand(EditorTarget target, Color oldVal, Color newVal, Runnable refreshUI) {
+			this.target = target; 
+			this.oldColor = new Color(oldVal); 
+			this.newColor = new Color(newVal);
+			this.refreshUI = refreshUI;
+		}
+		@Override public void execute() { apply(newColor); }
+		@Override public void undo() { apply(oldColor); }
+		private void apply(Color c) { 
+			if(target instanceof BaseNode) ((BaseNode)target).color.set(c);
+			if(refreshUI != null) refreshUI.run(); 
+		}
+		@Override public String getName() { return "Color Change"; }
+		@Override public String getSource() { return "Inspector"; }
+		@Override public String getIcon() { return "C"; }
+	}
+
+	public static class AddNodeCommand implements ICommand {
+		private final SceneManager sm;
+		private final EditorTarget parent;
+		private final String type;
+		private EditorTarget createdNode;
+
+		public AddNodeCommand(SceneManager sm, EditorTarget parent, String type) {
+			this.sm = sm; this.parent = parent; this.type = type;
+		}
+		@Override public void execute() {
+			if (createdNode == null) {
+				createdNode = sm.internalAddNode(parent, type);
+			} else {
+				sm.internalAttachNode(createdNode, parent, -1);
+			}
+		}
+		@Override public void undo() {
+			if (createdNode != null) sm.internalDeleteNode(createdNode);
+		}
+		@Override public String getName() { return "Add " + type; }
+		@Override public String getSource() { return "Hierarchy"; }
+		@Override public String getIcon() { return "+"; }
+	}
+
+		public static class DeleteNodeCommand implements ICommand {
+		private final SceneManager sm;
+		private final EditorTarget target;
+		private final EditorTarget parent;
+		private final int index;
+
+		public DeleteNodeCommand(SceneManager sm, EditorTarget target) {
+			this.sm = sm; this.target = target;
+			this.parent = target.getParent();
+			this.index = parent.getChildren().indexOf(target, true);
+		}
+		@Override public void execute() { sm.internalDeleteNode(target); }
+		@Override public void undo() { sm.internalAttachNode(target, parent, index); }
+		@Override public String getName() { return "Delete " + target.getName(); }
+		@Override public String getSource() { return "Hierarchy"; }
+		@Override public String getIcon() { return "X"; }
+	}
+
+	public static class ReparentCommand implements ICommand {
+		private final SceneManager sm;
+		private final EditorTarget target;
+		private final EditorTarget oldParent, newParent;
+		private final int oldIndex, newIndex;
+
+		public ReparentCommand(SceneManager sm, EditorTarget target, EditorTarget newParent, int newIndex) {
+			this.sm = sm; this.target = target;
+			this.oldParent = target.getParent();
+			this.oldIndex = oldParent.getChildren().indexOf(target, true);
+			this.newParent = newParent;
+			this.newIndex = newIndex;
+		}
+		@Override public void execute() { sm.internalMoveNode(target, newParent, newIndex); }
+		@Override public void undo() { sm.internalMoveNode(target, oldParent, oldIndex); }
+		@Override public String getName() { return "Move " + target.getName(); }
+		@Override public String getSource() { return "Hierarchy"; }
+		@Override public String getIcon() { return "M"; }
 	}
 }

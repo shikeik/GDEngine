@@ -12,6 +12,7 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 public class SmartNumInput extends VisTable {
 
@@ -19,15 +20,21 @@ public class SmartNumInput extends VisTable {
 	private float currentValue;
 	private final float step;
 	private final Consumer<Float> onChange;
+	private BiConsumer<Float, Float> onCommand;
 
 	private static SimpleNumPad sharedNumPad;
+
+	public void setOnCommand(BiConsumer<Float, Float> onCommand) {
+		this.onCommand = onCommand;
+	}
 
 	// 带 Label 构造
 	public SmartNumInput(String label, float initValue, float step, Consumer<Float> onChange) {
 		this(initValue, step, onChange);
 		// 重新布局：把 Label 插到最前面
 		clearChildren();
-		add(new VisLabel(label)).width(80).left();
+		// [修改] 自适应宽度，防止遮挡或留白过多
+		add(new VisLabel(label)).left().padRight(5);
 		add(buildControls()).growX().minWidth(50);
 	}
 
@@ -53,17 +60,17 @@ public class SmartNumInput extends VisTable {
 		VisTextButton dragBtn = new VisTextButton("<>");
 		dragBtn.addListener(new InputListener() {
 				float lastStageX;
-				ScrollPane parentScroll; // 缓存找到的父级滚动窗
+				float startDragValue; // 记录拖拽开始时的值
+				ScrollPane parentScroll;
 
 				@Override
 				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
 					lastStageX = event.getStageX();
+					startDragValue = currentValue; // 记录初始值
 
-					// 【还原旧逻辑】向上查找 ScrollPane 并锁定
-					// 就像以前调用 screen.getInspectorScroll().setCancelTouchFocus(false) 一样
 					parentScroll = findParentScrollPane(SmartNumInput.this);
 					if (parentScroll != null) {
-						parentScroll.setCancelTouchFocus(false); // 禁止它抢走事件
+						parentScroll.setCancelTouchFocus(false);
 					}
 
 					return true;
@@ -81,10 +88,14 @@ public class SmartNumInput extends VisTable {
 
 				@Override
 				public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-					// 【还原旧逻辑】松手后恢复，让它能正常滚动
 					if (parentScroll != null) {
 						parentScroll.setCancelTouchFocus(true);
 						parentScroll = null;
+					}
+					
+					// [新增] 触发命令回调
+					if (onCommand != null && Math.abs(currentValue - startDragValue) > 0.0001f) {
+						onCommand.accept(startDragValue, currentValue);
 					}
 				}
 			});
@@ -126,10 +137,16 @@ public class SmartNumInput extends VisTable {
 			getStage().addActor(sharedNumPad);
 		}
 		sharedNumPad.toFront();
+		
+		float oldVal = currentValue;
 		sharedNumPad.show(textField, (res) -> {
 			try {
 				if (res.isEmpty() || res.equals("-")) return;
-				updateValue(Float.parseFloat(res));
+				float newVal = Float.parseFloat(res);
+				updateValue(newVal);
+				if (onCommand != null && Math.abs(newVal - oldVal) > 0.0001f) {
+					onCommand.accept(oldVal, newVal);
+				}
 			} catch (Exception ignored) {}
 		});
 	}
