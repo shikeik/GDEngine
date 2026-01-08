@@ -2,28 +2,32 @@
 "name": "Root",
 "children": [
 	{
+		"class": "Rectangle",
+		"name": "Rect",
+		"x": 200.99997,
+		"y": 37.000023
+	},
+	{
 		"class": "Circle",
 		"x": 127.000046,
 		"y": -174.00002,
 		"radius": 60
 	},
 	{
-		"class": "Rectangle",
-		"name": "Rect",
-		"x": 77.99995,
-		"y": 137.00003
+		"class": "Circle",
+		"name": "SubCircle",
+		"x": 3.0E-5,
+		"y": 1.0E-5,
+		"color": {
+			"r": 0.2509804,
+			"g": 1,
+			"b": 1,
+			"a": 1
+		}
 	},
 	{
 		"class": "Group",
-		"y": 100,
-		"children": [
-			{
-				"class": "Circle",
-				"name": "SubCircle",
-				"x": -192.00003,
-				"y": 38.00001
-			}
-		]
+		"y": 100
 	}
 ]
 }

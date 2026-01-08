@@ -1,4 +1,4 @@
-# SoloFight V1.9.6.3-beta
+# SoloFight V1.9.8.0
 - 始于2025.12.27
 
 ## 介绍:

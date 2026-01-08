@@ -40,6 +40,7 @@ import com.goldsprite.solofight.screens.tests.iconeditor.ui.UiNode;
 import com.goldsprite.solofight.screens.tests.iconeditor.utils.CameraController;
 import com.goldsprite.solofight.ui.widget.BioCodeEditor;
 import com.goldsprite.solofight.ui.widget.CommandHistoryUI;
+import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.MenuItem;
 import com.kotcrab.vis.ui.widget.PopupMenu;
 import com.kotcrab.vis.ui.widget.VisDialog;
@@ -80,13 +81,13 @@ public class IconEditorDemo extends GScreen {
     private FileHandle currentFile;
     private boolean isDirty = false;
     private static final String PROJECT_DIR = "IconProjects";
-    
+
     // [New] Undo/Redo Dirty State Tracking
     private ICommand savedHistoryState = null;
 
     // [新增] 拖拽管理器
     private DragAndDrop dragAndDrop;
-    
+
     public IconEditorDemo() {
         // [修复] 设置 UI 视口缩放系数，解决分辨率过小问题
         // 参考 GScreen 默认值，或者根据需要调整。例如 PC 端稍微放大一点视野。
@@ -125,6 +126,9 @@ public class IconEditorDemo extends GScreen {
 
         uiStage = new Stage(getUIViewport());
 
+        // 添加ToastUI到UI舞台
+        uiStage.addActor(new ToastUI());
+
         // [新增] 初始化拖拽系统
         dragAndDrop = new DragAndDrop();
         dragAndDrop.setDragActorPosition(0, 0); // 拖拽时图标跟随鼠标偏移
@@ -135,7 +139,7 @@ public class IconEditorDemo extends GScreen {
 
         // Initialize Root
         sceneManager.setRoot(new GroupNode("Root"));
-        
+
         // Command Listener
         commandManager.addListener(new CommandManager.CommandListener() {
             @Override public void onCommandExecuted(ICommand cmd) {
@@ -203,9 +207,9 @@ public class IconEditorDemo extends GScreen {
         if (files.length == 0) {
             createDefaultProject();
         }
-        
+
         reloadFileTree();
-        
+
         // Load first project by default if no current file
         if (currentFile == null && fileTree.getNodes().size > 0) {
             FileNode first = fileTree.getNodes().first();
@@ -217,12 +221,12 @@ public class IconEditorDemo extends GScreen {
     private void createDefaultProject() {
         FileHandle file = Gd.files.local(PROJECT_DIR + "/DefaultProject.json");
         GroupNode root = new GroupNode("Root");
-        
+
         // Add some default content
         RectShape r = new RectShape("Rect");
         r.width = 100; r.height = 100; r.color.set(Color.CYAN);
         r.setParent(root);
-        
+
         saveProjectToFile(root, file);
     }
 
@@ -230,10 +234,10 @@ public class IconEditorDemo extends GScreen {
         fileTree.clearChildren();
         FileHandle dir = Gdx.files.local(PROJECT_DIR);
         FileHandle[] files = dir.list("json");
-        
+
         for (FileHandle file : files) {
             FileNode node = new FileNode(file);
-            
+
             // [New] Node Context Menu & Click Logic
             node.getActor().addListener(new ActorGestureListener(20, 0.4f, 1.0f, 0.15f) {
                 private com.badlogic.gdx.utils.Timer.Task tapTask;
@@ -273,7 +277,7 @@ public class IconEditorDemo extends GScreen {
                     }
                 }
             });
-            
+
             fileTree.add(node);
             if (currentFile != null && file.equals(currentFile)) {
                 fileTree.getSelection().set(node);
@@ -281,7 +285,7 @@ public class IconEditorDemo extends GScreen {
             }
         }
     }
-    
+
     private void showLoadConfirmDialog(FileHandle file) {
         VisDialog dialog = new VisDialog("Open Project") {
             @Override
@@ -304,7 +308,7 @@ public class IconEditorDemo extends GScreen {
 
     private void showFileTreeMenu(FileNode node, float x, float y) {
         PopupMenu menu = new PopupMenu();
-        
+
         if (node == null) {
             // Background Menu
             menu.addItem(new MenuItem("New Project", new ChangeListener() {
@@ -330,33 +334,33 @@ public class IconEditorDemo extends GScreen {
                 }
             }));
         }
-        
+
         menu.showMenu(uiStage, x, y);
     }
-    
+
     private void createNewProject() {
         VisDialog dialog = new VisDialog("New Project");
         VisTextField nameField = new VisTextField("NewProject");
         dialog.add(new VisLabel("Name:")).padRight(5);
         dialog.add(nameField).growX().row();
-        
+
         VisTextButton btnCreate = new VisTextButton("Create");
         btnCreate.addListener(new ClickListener() {
             @Override public void clicked(InputEvent event, float x, float y) {
                 String name = nameField.getText();
                 if (name.isEmpty()) return;
                 if (!name.endsWith(".json")) name += ".json";
-                
+
                 FileHandle file = Gdx.files.local(PROJECT_DIR + "/" + name);
                 if (file.exists()) {
                     // Simple alert or just return
                     return;
                 }
-                
+
                 GroupNode root = new GroupNode("Root");
                 saveProjectToFile(root, file);
                 reloadFileTree();
-                
+
                 // Auto load
                 for (FileNode n : fileTree.getNodes()) {
                     if (n.getValue().equals(file)) {
@@ -365,17 +369,17 @@ public class IconEditorDemo extends GScreen {
                         break;
                     }
                 }
-                
+
                 dialog.fadeOut();
             }
         });
-        
+
         dialog.add(btnCreate).colspan(2).padTop(10);
         dialog.show(uiStage);
         dialog.centerWindow();
         uiStage.setKeyboardFocus(nameField);
     }
-    
+
     private void deleteProject(FileHandle file) {
         VisDialog dialog = new VisDialog("Delete Project") {
             @Override
@@ -396,34 +400,34 @@ public class IconEditorDemo extends GScreen {
         dialog.button("No", false);
         dialog.show(uiStage);
     }
-    
+
     private void renameProject(FileHandle file) {
         VisDialog dialog = new VisDialog("Rename Project");
         VisTextField nameField = new VisTextField(file.nameWithoutExtension());
         dialog.add(new VisLabel("New Name:")).padRight(5);
         dialog.add(nameField).growX().row();
-        
+
         VisTextButton btnConfirm = new VisTextButton("Rename");
         btnConfirm.addListener(new ClickListener() {
             @Override public void clicked(InputEvent event, float x, float y) {
                 String name = nameField.getText();
                 if (name.isEmpty()) return;
                 if (!name.endsWith(".json")) name += ".json";
-                
+
                 FileHandle newFile = file.sibling(name);
                 if (newFile.exists()) return;
-                
+
                 file.moveTo(newFile);
-                
+
                 if (currentFile != null && currentFile.equals(file)) {
                     currentFile = newFile;
                 }
-                
+
                 reloadFileTree();
                 dialog.fadeOut();
             }
         });
-        
+
         dialog.add(btnConfirm).colspan(2).padTop(10);
         dialog.show(uiStage);
     }
@@ -465,38 +469,41 @@ public class IconEditorDemo extends GScreen {
     private void saveProjectToFile(EditorTarget root, FileHandle file) {
         Json json = createJson();
         file.writeString(json.prettyPrint(root), false, "UTF-8");
-        
+
         savedHistoryState = commandManager.getLastCommand();
         markDirty(false);
-        
+
         Gdx.app.log("Editor", "Saved project to " + file.path());
+
+        // 显示保存成功提示
+        ToastUI.inst().show("Saved successfully!");
     }
 
     private void loadProject(FileHandle file) {
         try {
             Json json = createJson();
-            
+
             // Try to load as GroupNode (default root)
             GroupNode root = json.fromJson(GroupNode.class, file);
-            
+
             if (root != null) {
                 fixParentRefs(root);
-                
+
                 // [关键修复] 确保在设置新 Root 前清理旧状态
                 sceneManager.selectNode(null); // 先取消选中，避免引用到旧对象
                 sceneManager.setRoot(root);    // 设置新 Root，内部会触发 notifyStructureChanged -> onStructureChanged -> 重建 UI
-                
+
                 // [修复] 先清理旧文件的 dirty 状态，再切换 currentFile
                 if (isDirty) {
-                    markDirty(false); 
+                    markDirty(false);
                 }
 
                 currentFile = file;
                 // markDirty(false); // 已在上面处理
-                
+
                 commandManager.clear();
                 savedHistoryState = null;
-                
+
                 Gdx.app.log("Editor", "Loaded project from " + file.path());
             }
         } catch (Exception e) {
@@ -507,7 +514,7 @@ public class IconEditorDemo extends GScreen {
     public void markDirty(boolean dirty) {
         if (this.isDirty == dirty) return;
         this.isDirty = dirty;
-        
+
         if (currentFile != null) {
             for (FileNode node : fileTree.getNodes()) {
                 if (node.getValue().equals(currentFile)) {
@@ -531,7 +538,7 @@ public class IconEditorDemo extends GScreen {
         // A. File Tree Panel
         VisTable fileTreePanel = new VisTable(true);
         fileTreePanel.setBackground("window-bg");
-        
+
         VisTable fileToolbar = new VisTable();
         fileToolbar.add(new VisLabel("Projects")).expandX().left();
         // Refresh Button
@@ -542,14 +549,14 @@ public class IconEditorDemo extends GScreen {
 
         fileTree = new VisTree<>();
         fileTree.getSelection().setProgrammaticChangeEvents(false);
-        
+
         // [New] File Tree Context Menu & Background Click & Double Click Load
         fileTreePanel.addListener(new ActorGestureListener() {
             @Override
             public boolean longPress(Actor actor, float x, float y) {
                 // 如果点击的是节点，则忽略背景事件
                 if (fileTree.getOverNode() != null) return false;
-                
+
                 showFileTreeMenu(null, actor.localToStageCoordinates(new Vector2(x, y)).x, actor.localToStageCoordinates(new Vector2(x, y)).y);
                 return true;
             }
@@ -573,25 +580,25 @@ public class IconEditorDemo extends GScreen {
         VisTable leftToolbar = new VisTable();
         leftToolbar.add(new VisLabel("Hierarchy")).expandX().left();
         VisTextButton btnAdd = new VisTextButton("+");
-        btnAdd.addListener(new ClickListener() { 
-            @Override public void clicked(InputEvent e, float x, float y) { 
+        btnAdd.addListener(new ClickListener() {
+            @Override public void clicked(InputEvent e, float x, float y) {
                 PopupMenu menu = new PopupMenu();
                 for (String type : sceneManager.getShapeRegistry().keySet()) {
-                    menu.addItem(new MenuItem(type, new ChangeListener() { 
-                        @Override public void changed(ChangeEvent event, Actor actor) { 
-                            sceneManager.addNode(sceneManager.getRoot(), type); 
-                        } 
+                    menu.addItem(new MenuItem(type, new ChangeListener() {
+                        @Override public void changed(ChangeEvent event, Actor actor) {
+                            sceneManager.addNode(sceneManager.getRoot(), type);
+                        }
                     }));
                 }
                 menu.showMenu(uiStage, e.getStageX(), e.getStageY());
-            } 
+            }
         });
         leftToolbar.add(btnAdd);
         hierarchyPanel.add(leftToolbar).growX().pad(5).row();
 
         hierarchyTree = new VisTree<>();
         // [核心修复] 增加缩进宽度，让层级更明显
-        hierarchyTree.setIndentSpacing(25f); 
+        hierarchyTree.setIndentSpacing(25f);
         hierarchyTree.getSelection().setProgrammaticChangeEvents(false);
         hierarchyTree.addListener(new ChangeListener() {
                 @Override public void changed(ChangeEvent event, Actor actor) {
@@ -615,7 +622,7 @@ public class IconEditorDemo extends GScreen {
         // 2. 右侧面板
         VisTable rightPanel = new VisTable(true);
         rightPanel.setBackground("window-bg");
-        
+
         // Tabs
         VisTable tabs = new VisTable();
         VisTextButton btnInsp = new VisTextButton("Inspector");
@@ -625,14 +632,14 @@ public class IconEditorDemo extends GScreen {
         rightPanel.add(tabs).growX().row();
 
         propertiesStack = new Stack();
-        
+
         // Page 1: Inspector
         VisTable pageInsp = new VisTable();
         pageInsp.add(new VisLabel("Properties")).pad(5).left().row();
         inspectorTable = new VisTable();
         inspectorTable.top().left();
         pageInsp.add(new VisScrollPane(inspectorTable)).grow();
-        
+
         // Page 2: JSON
         VisTable pageJson = new VisTable();
         jsonEditor = new BioCodeEditor();
@@ -644,10 +651,10 @@ public class IconEditorDemo extends GScreen {
         });
         pageJson.add(jsonEditor).grow().row();
         pageJson.add(btnApply).growX().pad(5);
-        
+
         propertiesStack.add(pageInsp);
         propertiesStack.add(pageJson);
-        
+
         // Tab Logic
         btnInsp.addListener(new ClickListener() {
             @Override public void clicked(InputEvent event, float x, float y) {
@@ -662,17 +669,17 @@ public class IconEditorDemo extends GScreen {
                 updateJsonView(sceneManager.getSelection()); // Refresh on switch
             }
         });
-        
+
         // Default
         pageJson.setVisible(false);
-        
+
         rightPanel.add(propertiesStack).grow();
 
         // 3. 中间区域 (Stack 布局：视口占位符 + 悬浮工具栏)
         Stack centerStack = new Stack();
 
         // 占位符 (让出渲染空间)
-        Widget viewPlaceholder = new Widget(); 
+        Widget viewPlaceholder = new Widget();
         centerStack.add(viewPlaceholder);
 
         // 工具栏 (左上角悬浮)
@@ -687,22 +694,26 @@ public class IconEditorDemo extends GScreen {
         addToolBtn(topBar, "<", () -> commandManager.undo());
         addToolBtn(topBar, ">", () -> commandManager.redo());
 
+        topBar.add().width(15); // Separator
+
+        addToolBtn(topBar, "SAVE", () -> saveProject());
+
         centerStack.add(topBar);
-        
+
         // History Panel (右上角悬浮)
         Table historyContainer = new Table();
         historyContainer.top().right().pad(10);
-        
+
         historyPanel = new CommandHistoryUI();
         historyPanel.setVisible(false); // Default hidden
-        
+
         VisTextButton btnHistory = new VisTextButton("History");
         btnHistory.addListener(new ClickListener() {
             @Override public void clicked(InputEvent e, float x, float y) {
                 historyPanel.setVisible(!historyPanel.isVisible());
             }
         });
-        
+
         historyContainer.add(btnHistory).right().row();
         historyContainer.add(historyPanel).right().padTop(5);
         centerStack.add(historyContainer);
@@ -715,7 +726,7 @@ public class IconEditorDemo extends GScreen {
         mainSplit.setSplitAmount(0.2f);
 
         root.add(mainSplit).grow();
-        
+
         initProjectSystem();
     }
 
@@ -732,7 +743,7 @@ public class IconEditorDemo extends GScreen {
     private void onSelectionChanged(EditorTarget node) {
         inspector.build(inspectorTable, node);
         updateJsonView(node);
-        
+
         if (hierarchyTree != null) {
             UiNode uiNode = node == null ? null : hierarchyTree.findNode(node);
             if (uiNode != null) {
@@ -751,7 +762,7 @@ public class IconEditorDemo extends GScreen {
             jsonEditor.setText("");
             return;
         }
-        
+
         try {
             Json json = createJson();
             String text = json.prettyPrint(node);
@@ -764,18 +775,18 @@ public class IconEditorDemo extends GScreen {
 
     private void applyJsonChange() {
         if (sceneManager.getSelection() == null) return;
-        
+
         String jsonText = jsonEditor.getText();
         try {
             Json json = createJson();
-            
+
             Class<? extends EditorTarget> clazz = sceneManager.getSelection().getClass();
             EditorTarget newObj = json.fromJson(clazz, jsonText);
-            
+
             if (newObj != null) {
                 EditorTarget oldObj = sceneManager.getSelection();
                 EditorTarget parent = oldObj.getParent();
-                
+
                 if (parent != null) {
                     int idx = parent.getChildren().indexOf(oldObj, true);
                     oldObj.removeFromParent();
@@ -789,21 +800,21 @@ public class IconEditorDemo extends GScreen {
                 } else if (oldObj == sceneManager.getRoot()) {
                     sceneManager.setRoot(newObj);
                 }
-                
+
                 fixParentRefs(newObj);
-                
+
                 sceneManager.notifyStructureChanged();
                 sceneManager.selectNode(newObj);
-                
+
                 markDirty(true); // JSON edit breaks undo history, force dirty
-                
+
                 Gdx.app.log("Editor", "Applied JSON changes");
             }
         } catch (Exception e) {
             Gdx.app.error("Editor", "Apply failed", e);
         }
     }
-    
+
     private void fixParentRefs(EditorTarget node) {
         for (EditorTarget child : node.getChildren()) {
             if (child instanceof BaseNode) {
@@ -825,7 +836,7 @@ public class IconEditorDemo extends GScreen {
         if (sceneManager.getRoot() != null) {
             buildTreeRecursive(sceneManager.getRoot(), null);
         }
-        
+
         // 4. 恢复选中状态
         if (sceneManager.getSelection() != null) {
             onSelectionChanged(sceneManager.getSelection());
