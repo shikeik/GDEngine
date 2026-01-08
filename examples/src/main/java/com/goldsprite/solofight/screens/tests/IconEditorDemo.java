@@ -29,6 +29,8 @@ import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.kotcrab.vis.ui.widget.VisTextField;
+import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisTree;
 import com.badlogic.gdx.scenes.scene2d.ui.Tree;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
@@ -56,7 +58,7 @@ public class IconEditorDemo extends GScreen {
 	private final EditorContext context = new EditorContext();
 	private final GizmoSystem gizmoSystem = new GizmoSystem(context);
 	private final EditorInput sceneInput = new EditorInput(this, context, gizmoSystem);
-	private final Inspector inspector = new Inspector(context);
+	private final Inspector inspector = new Inspector(this, context);
 
 	// --- UI 引用 ---
 	private VisTree<UiNode, EditorTarget> hierarchyTree;
@@ -198,7 +200,38 @@ public class IconEditorDemo extends GScreen {
 				@Override
 				public void drop(Source source, Payload payload, float x, float y, int pointer) {
 					EditorTarget dragging = (EditorTarget) payload.getObject();
-					dragging.setParent(target);
+					if (dragging == target) return;
+
+					float h = getActor().getHeight();
+					boolean handled = false;
+					
+					// Insert Before (Top 25%)
+					if (y > h * 0.75f && target.getParent() != null) {
+						EditorTarget parent = target.getParent();
+						dragging.setParent(parent);
+						int targetIndex = parent.getChildren().indexOf(target, true);
+						parent.getChildren().removeValue(dragging, true);
+						if (targetIndex >= 0) parent.getChildren().insert(targetIndex, dragging);
+						else parent.getChildren().add(dragging);
+						handled = true;
+					} 
+					// Insert After (Bottom 25%)
+					else if (y < h * 0.25f && target.getParent() != null) {
+						EditorTarget parent = target.getParent();
+						dragging.setParent(parent);
+						int targetIndex = parent.getChildren().indexOf(target, true);
+						parent.getChildren().removeValue(dragging, true);
+						int newIndex = targetIndex + 1;
+						if (newIndex > parent.getChildren().size) newIndex = parent.getChildren().size;
+						if (targetIndex >= 0) parent.getChildren().insert(newIndex, dragging);
+						else parent.getChildren().add(dragging);
+						handled = true;
+					}
+					
+					if (!handled) {
+						dragging.setParent(target);
+					}
+					
 					screen.rebuildTree();
 					screen.selectNode(dragging);
 				}
@@ -388,6 +421,59 @@ public class IconEditorDemo extends GScreen {
 			rebuildTree();
 			selectNode(newShape);
 		}
+	}
+
+	public void changeNodeType(EditorTarget target, String newType) {
+		if (target == null || target == rootNode) return;
+		
+		// 1. Create new node
+		EditorTarget newNode = null;
+		if ("Circle".equals(newType)) {
+			newNode = new CircleShape(target.getName());
+			if (target instanceof CircleShape) ((CircleShape)newNode).radius = ((CircleShape)target).radius;
+			if (target instanceof RectShape) ((CircleShape)newNode).color.set(((RectShape)target).color);
+			if (target instanceof CircleShape) ((CircleShape)newNode).color.set(((CircleShape)target).color);
+		} else if ("Rectangle".equals(newType)) {
+			newNode = new RectShape(target.getName());
+			if (target instanceof RectShape) {
+				((RectShape)newNode).width = ((RectShape)target).width;
+				((RectShape)newNode).height = ((RectShape)target).height;
+			}
+			if (target instanceof RectShape) ((RectShape)newNode).color.set(((RectShape)target).color);
+			if (target instanceof CircleShape) ((RectShape)newNode).color.set(((CircleShape)target).color);
+		} else if ("Group".equals(newType)) {
+			newNode = new GroupNode(target.getName());
+		}
+		
+		if (newNode == null) return;
+		
+		// 2. Copy properties
+		newNode.setX(target.getX());
+		newNode.setY(target.getY());
+		newNode.setRotation(target.getRotation());
+		newNode.setScaleX(target.getScaleX());
+		newNode.setScaleY(target.getScaleY());
+		
+		// 3. Move children
+		Array<EditorTarget> children = new Array<>(target.getChildren());
+		for (EditorTarget child : children) {
+			child.setParent(newNode);
+		}
+		
+		// 4. Replace in parent
+		EditorTarget parent = target.getParent();
+		if (parent != null) {
+			int index = parent.getChildren().indexOf(target, true);
+			target.removeFromParent();
+			newNode.setParent(parent); // This appends
+			// Fix order
+			parent.getChildren().removeValue(newNode, true);
+			parent.getChildren().insert(index, newNode);
+		}
+		
+		// 5. Refresh
+		rebuildTree();
+		selectNode(newNode);
 	}
 
 	// [修复] 确保删除逻辑健壮
@@ -901,10 +987,14 @@ public class IconEditorDemo extends GScreen {
 	// ... (Inspector 代码保持原样) ...
 	public static class Inspector {
 		private VisTable container;
+		private final IconEditorDemo screen;
 		private final EditorContext ctx;
 		private final Array<Runnable> refreshTasks = new Array<>();
 
-		public Inspector(EditorContext ctx) { this.ctx = ctx; }
+		public Inspector(IconEditorDemo screen, EditorContext ctx) { 
+			this.screen = screen;
+			this.ctx = ctx; 
+		}
 
 		public void build(VisTable table, EditorTarget target) {
 			this.container = table;
@@ -918,8 +1008,53 @@ public class IconEditorDemo extends GScreen {
 
 			VisTable nameRow = new VisTable();
 			nameRow.add(new VisLabel("Name")).width(50);
-			nameRow.add(new VisLabel(target.getName())).growX(); 
+			VisTextField nameField = new VisTextField(target.getName());
+			nameField.addListener(new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					target.setName(nameField.getText());
+					// Update Tree Label
+					if (screen.hierarchyTree != null) {
+						UiNode node = screen.hierarchyTree.findNode(target);
+						if (node != null && node.getActor().getChildren().size > 0) {
+							Actor labelActor = node.getActor().getChildren().get(0);
+							if (labelActor instanceof VisLabel) {
+								((VisLabel) labelActor).setText(target.getName());
+							}
+						}
+					}
+				}
+			});
+			nameRow.add(nameField).growX(); 
 			table.add(nameRow).growX().pad(5).row();
+
+			// Type Selection
+			if (target != screen.rootNode) {
+				VisTable typeRow = new VisTable();
+				typeRow.add(new VisLabel("Type")).width(50);
+				
+				VisSelectBox<String> typeBox = new VisSelectBox<>();
+				typeBox.setItems("Group", "Rectangle", "Circle");
+				
+				String currentType = "Group";
+				if (target instanceof RectShape) currentType = "Rectangle";
+				else if (target instanceof CircleShape) currentType = "Circle";
+				typeBox.setSelected(currentType);
+				
+				typeBox.addListener(new ChangeListener() {
+					@Override public void changed(ChangeEvent event, Actor actor) {
+						String newType = typeBox.getSelected();
+						// Avoid trigger on init or same type
+						if (target instanceof RectShape && "Rectangle".equals(newType)) return;
+						if (target instanceof CircleShape && "Circle".equals(newType)) return;
+						if (target instanceof GroupNode && "Group".equals(newType)) return;
+						
+						screen.changeNodeType(target, newType);
+					}
+				});
+				
+				typeRow.add(typeBox).growX();
+				table.add(typeRow).growX().pad(5).row();
+			}
 
 			target.inspect(this);
 		}
