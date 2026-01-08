@@ -1,0 +1,35 @@
+{
+"name": "Root",
+"children": [
+	{
+		"class": "Rectangle",
+		"name": "New Rectangle",
+		"x": 305,
+		"y": 107.00001,
+		"color": {
+			"r": 0.5529412,
+			"g": 1,
+			"b": 1,
+			"a": 1
+		},
+		"children": [
+			{
+				"class": "Circle",
+				"name": "New Circle",
+				"x": -73.00003,
+				"y": -214.99997,
+				"scaleX": 2.6904767,
+				"color": {
+					"r": 1,
+					"g": 0.61960787,
+					"b": 0.78431374,
+					"a": 1
+				},
+				"radius": 40
+			}
+		],
+		"width": 80,
+		"height": 80
+	}
+]
+}
