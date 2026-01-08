@@ -43,8 +43,13 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter.OutputType;
 import com.goldsprite.solofight.ui.widget.BioCodeEditor;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Flat Icon 设计器原型 (Phase 1 - Fix Gizmo)
@@ -56,11 +61,11 @@ public class IconEditorDemo extends GScreen {
 	private Stage uiStage;
 	private CameraController cameraController;
 
-	// --- 编辑器子系统 ---
-	private final EditorContext context = new EditorContext();
-	private final GizmoSystem gizmoSystem = new GizmoSystem(context);
-	private final EditorInput sceneInput = new EditorInput(this, context, gizmoSystem);
-	private final Inspector inspector = new Inspector(this, context);
+	// --- 业务逻辑 ---
+	private final SceneManager sceneManager = new SceneManager();
+	private final GizmoSystem gizmoSystem = new GizmoSystem(sceneManager);
+	private final EditorInput sceneInput = new EditorInput(this, sceneManager, gizmoSystem);
+	private final Inspector inspector = new Inspector(this, sceneManager);
 
 	// --- UI 引用 ---
 	private VisTree<UiNode, EditorTarget> hierarchyTree;
@@ -69,10 +74,161 @@ public class IconEditorDemo extends GScreen {
 	private Stack propertiesStack;
 
 	// --- 数据根节点 ---
-	private EditorTarget rootNode;
+	// private EditorTarget rootNode; // Moved to SceneManager
 
 	// [新增] 拖拽管理器
     private DragAndDrop dragAndDrop;
+    
+    // --- Event System ---
+    public interface EditorListener {
+        default void onStructureChanged() {}
+        default void onSelectionChanged(EditorTarget selection) {}
+    }
+    
+    public static class SceneManager {
+        public interface ShapeFactory {
+            EditorTarget create(String name);
+        }
+
+        private EditorTarget rootNode;
+        private EditorTarget selection;
+        private final List<EditorListener> listeners = new ArrayList<>();
+        private final Map<String, ShapeFactory> shapeRegistry = new LinkedHashMap<>();
+        
+        public SceneManager() {
+            registerDefaultShapes();
+        }
+        
+        private void registerDefaultShapes() {
+            shapeRegistry.put("Group", GroupNode::new);
+            shapeRegistry.put("Rectangle", name -> {
+                RectShape r = new RectShape(name);
+                r.width = 80; r.height = 80;
+                return r;
+            });
+            shapeRegistry.put("Circle", name -> {
+                CircleShape c = new CircleShape(name);
+                c.radius = 40;
+                return c;
+            });
+        }
+        
+        public void setRoot(EditorTarget root) {
+            this.rootNode = root;
+            notifyStructureChanged();
+        }
+        
+        public EditorTarget getRoot() { return rootNode; }
+        public EditorTarget getSelection() { return selection; }
+        public Map<String, ShapeFactory> getShapeRegistry() { return shapeRegistry; }
+        
+        public void addListener(EditorListener l) { listeners.add(l); }
+        public void removeListener(EditorListener l) { listeners.remove(l); }
+        
+        public void notifyStructureChanged() {
+            for(EditorListener l : listeners) l.onStructureChanged();
+        }
+        
+        public void selectNode(EditorTarget node) {
+            this.selection = node;
+            for(EditorListener l : listeners) l.onSelectionChanged(node);
+        }
+        
+        public void deleteNode(EditorTarget node) {
+            if (node == null || node == rootNode) return;
+            node.removeFromParent();
+            if (selection == node) selectNode(null);
+            notifyStructureChanged();
+        }
+        
+        public void addNode(EditorTarget parent, String type) {
+            if (parent == null) parent = rootNode;
+            ShapeFactory factory = shapeRegistry.get(type);
+            if (factory == null) return;
+            
+            String name = getUniqueName(parent, "New " + type);
+            EditorTarget newShape = factory.create(name);
+            
+            if (newShape != null) {
+                newShape.setX(MathUtils.random(-20, 20));
+                newShape.setY(MathUtils.random(-20, 20));
+                newShape.setParent(parent);
+                notifyStructureChanged();
+                selectNode(newShape);
+            }
+        }
+        
+        public void moveNode(EditorTarget node, EditorTarget newParent, int index) {
+			if (node == null || newParent == null) return;
+			
+			node.setParent(newParent);
+			
+			if (index >= 0) {
+				newParent.getChildren().removeValue(node, true);
+				if (index > newParent.getChildren().size) index = newParent.getChildren().size;
+				newParent.getChildren().insert(index, node);
+			}
+			
+			notifyStructureChanged();
+			selectNode(node);
+		}
+		
+		public void changeNodeType(EditorTarget target, String newType) {
+            if (target == null || target == rootNode) return;
+            ShapeFactory factory = shapeRegistry.get(newType);
+            if (factory == null) return;
+            
+            EditorTarget newNode = factory.create(target.getName());
+            
+            if (target instanceof BaseNode && newNode instanceof BaseNode) {
+                BaseNode t = (BaseNode) target;
+                BaseNode n = (BaseNode) newNode;
+                n.x = t.x; n.y = t.y; n.rotation = t.rotation;
+                n.scaleX = t.scaleX; n.scaleY = t.scaleY;
+                n.color.set(t.color);
+            }
+            
+            Array<EditorTarget> children = new Array<>(target.getChildren());
+            for (EditorTarget child : children) child.setParent(newNode);
+            
+            EditorTarget parent = target.getParent();
+            if (parent != null) {
+                int idx = parent.getChildren().indexOf(target, true);
+                target.removeFromParent();
+                newNode.setParent(parent);
+                parent.getChildren().removeValue(newNode, true);
+                parent.getChildren().insert(idx, newNode);
+            }
+            
+            notifyStructureChanged();
+            selectNode(newNode);
+        }
+        
+        private String getUniqueName(EditorTarget parent, String baseName) {
+            boolean exists = false;
+            for (EditorTarget child : parent.getChildren()) {
+                if (child.getName().equals(baseName)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) return baseName;
+            
+            int i = 1;
+            while (true) {
+                String newName = baseName + "_" + i;
+                boolean found = false;
+                for (EditorTarget child : parent.getChildren()) {
+                    if (child.getName().equals(newName)) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) return newName;
+                i++;
+            }
+        }
+    }
 	
 	
 	// [重构] 修复布局、菜单坐标、拖拽逻辑
@@ -145,7 +301,7 @@ public class IconEditorDemo extends GScreen {
 			// 左键点击 -> 选中
 			nameLbl.addListener(new ClickListener() {
 				@Override public void clicked(InputEvent event, float x, float y) {
-					screen.selectNode(target);
+					screen.getSceneManager().selectNode(target);
 				}
 			});
 			// 右键/长按 -> 菜单
@@ -165,19 +321,23 @@ public class IconEditorDemo extends GScreen {
 					// 1. Add Shape (SubMenu)
 					MenuItem addItem = new MenuItem("Add Shape");
 					PopupMenu subMenu = new PopupMenu();
-					subMenu.addItem(new MenuItem("Circle", new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { screen.addNewShape(target, "Circle"); } }));
-					subMenu.addItem(new MenuItem("Rectangle", new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { screen.addNewShape(target, "Rectangle"); } }));
-					subMenu.addItem(new MenuItem("Group", new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { screen.addNewShape(target, "Group"); } }));
+					for (String type : screen.getSceneManager().getShapeRegistry().keySet()) {
+						subMenu.addItem(new MenuItem(type, new ChangeListener() { 
+							@Override public void changed(ChangeEvent event, Actor actor) { 
+								screen.getSceneManager().addNode(target, type); 
+							} 
+						}));
+					}
 					addItem.setSubMenu(subMenu);
 					menu.addItem(addItem);
 
 					// 2. Delete (根节点不能删除)
-					if (target != screen.rootNode) {
+					if (target != screen.getSceneManager().getRoot()) {
 						MenuItem delItem = new MenuItem("Delete");
 						delItem.getLabel().setColor(Color.RED);
 						delItem.addListener(new ChangeListener() {
 							@Override public void changed(ChangeEvent event, Actor actor) {
-								screen.deleteNode(target);
+								screen.getSceneManager().deleteNode(target);
 							}
 						});
 						menu.addItem(delItem);
@@ -194,7 +354,7 @@ public class IconEditorDemo extends GScreen {
 			table.add(nameLbl).expandX().fillX().left().padLeft(5);
 			
 			// 2. 拖拽把手 (右侧)
-			if (target != screen.rootNode) {
+			if (target != screen.getSceneManager().getRoot()) {
 				VisLabel handle = new VisLabel("::"); 
 				handle.setColor(Color.GRAY);
 				
@@ -258,37 +418,24 @@ public class IconEditorDemo extends GScreen {
 					if (dragging == target) return;
 
 					float h = getActor().getHeight();
-					boolean handled = false;
+					SceneManager sm = screen.getSceneManager();
 					
 					// Insert Before (Top 25%)
 					if (y > h * 0.75f && target.getParent() != null) {
 						EditorTarget parent = target.getParent();
-						dragging.setParent(parent);
 						int targetIndex = parent.getChildren().indexOf(target, true);
-						parent.getChildren().removeValue(dragging, true);
-						if (targetIndex >= 0) parent.getChildren().insert(targetIndex, dragging);
-						else parent.getChildren().add(dragging);
-						handled = true;
+						sm.moveNode(dragging, parent, targetIndex);
 					} 
 					// Insert After (Bottom 25%)
 					else if (y < h * 0.25f && target.getParent() != null) {
 						EditorTarget parent = target.getParent();
-						dragging.setParent(parent);
 						int targetIndex = parent.getChildren().indexOf(target, true);
-						parent.getChildren().removeValue(dragging, true);
-						int newIndex = targetIndex + 1;
-						if (newIndex > parent.getChildren().size) newIndex = parent.getChildren().size;
-						if (targetIndex >= 0) parent.getChildren().insert(newIndex, dragging);
-						else parent.getChildren().add(dragging);
-						handled = true;
+						sm.moveNode(dragging, parent, targetIndex + 1);
 					}
-					
-					if (!handled) {
-						dragging.setParent(target);
+					// Reparent
+					else {
+						sm.moveNode(dragging, target, -1);
 					}
-					
-					screen.rebuildTree();
-					screen.selectNode(dragging);
 				}
 				
 				@Override
@@ -319,6 +466,8 @@ public class IconEditorDemo extends GScreen {
 		autoCenterWorldCamera = false;
 	}
 
+	public SceneManager getSceneManager() { return sceneManager; }
+	
 	@Override
 	public void create() {
 		neonBatch = new NeonBatch();
@@ -328,7 +477,7 @@ public class IconEditorDemo extends GScreen {
 		cameraController = new CameraController(worldCamera);
 
 		uiStage = new Stage(getUIViewport());
-		
+
 		// [新增] 初始化拖拽系统
         dragAndDrop = new DragAndDrop();
         dragAndDrop.setDragActorPosition(0, 0); // 拖拽时图标跟随鼠标偏移
@@ -337,30 +486,42 @@ public class IconEditorDemo extends GScreen {
 		getImp().addProcessor(sceneInput);
 		getImp().addProcessor(cameraController);
 
+		// Initialize Root
+		sceneManager.setRoot(new GroupNode("Root"));
+
 		buildTestScene();
 		buildLayout();
 
-		if (rootNode.getChildren().size > 0) {
-			selectNode(rootNode.getChildren().get(0));
+		sceneManager.addListener(new EditorListener() {
+			@Override public void onStructureChanged() { IconEditorDemo.this.onStructureChanged(); }
+			@Override public void onSelectionChanged(EditorTarget s) { IconEditorDemo.this.onSelectionChanged(s); }
+		});
+
+		if (sceneManager.getRoot().getChildren().size > 0) {
+			sceneManager.selectNode(sceneManager.getRoot().getChildren().get(0));
 		}
 	}
 
 	public CameraController getCameraController() { return cameraController; }
 
 	private void buildTestScene() {
-		rootNode = new GroupNode("Root");
+		EditorTarget rootNode = sceneManager.getRoot();
 
-		RectShape bg = new RectShape("Background");
-		bg.width = 200; bg.height = 200; bg.color.set(Color.DARK_GRAY);
-		bg.setParent(rootNode);
+		CircleShape c1 = new CircleShape("Circle");
+		c1.radius = 60;
+		c1.setX(-50);
+		c1.setParent(rootNode);
 
-		CircleShape circle = new CircleShape("Circle");
-		circle.radius = 60; circle.color.set(Color.CYAN);
-		circle.setParent(rootNode);
+		RectShape r1 = new RectShape("Rect");
+		r1.setX(50);
+		r1.setParent(rootNode);
 
-		RectShape bar = new RectShape("Bar");
-		bar.width = 150; bar.height = 20; bar.y = -50; bar.color.set(Color.ORANGE);
-		bar.setParent(rootNode);
+		GroupNode g1 = new GroupNode("Group");
+		g1.setY(100);
+		g1.setParent(rootNode);
+
+		CircleShape c2 = new CircleShape("SubCircle");
+		c2.setParent(g1);
 	}
 
 	// ========================================================================
@@ -382,9 +543,13 @@ public class IconEditorDemo extends GScreen {
 		btnAdd.addListener(new ClickListener() { 
 			@Override public void clicked(InputEvent e, float x, float y) { 
 				PopupMenu menu = new PopupMenu();
-				menu.addItem(new MenuItem("Circle", new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { addNewShape(rootNode, "Circle"); } }));
-				menu.addItem(new MenuItem("Rectangle", new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { addNewShape(rootNode, "Rectangle"); } }));
-				menu.addItem(new MenuItem("Group", new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { addNewShape(rootNode, "Group"); } }));
+				for (String type : sceneManager.getShapeRegistry().keySet()) {
+					menu.addItem(new MenuItem(type, new ChangeListener() { 
+						@Override public void changed(ChangeEvent event, Actor actor) { 
+							sceneManager.addNode(sceneManager.getRoot(), type); 
+						} 
+					}));
+				}
 				menu.showMenu(uiStage, e.getStageX(), e.getStageY());
 			} 
 		});
@@ -398,12 +563,12 @@ public class IconEditorDemo extends GScreen {
 		hierarchyTree.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
 					UiNode sel = hierarchyTree.getSelection().first();
-					if (sel != null) selectNode(sel.getValue());
-					else selectNode(null);
+					if (sel != null) sceneManager.selectNode(sel.getValue());
+					else sceneManager.selectNode(null);
 				}
 			});
 
-		rebuildTree();
+		onStructureChanged();
 		leftPanel.add(new VisScrollPane(hierarchyTree)).grow();
 
 		// 2. 右侧面板
@@ -453,7 +618,7 @@ public class IconEditorDemo extends GScreen {
 			@Override public void clicked(InputEvent event, float x, float y) {
 				pageInsp.setVisible(false);
 				pageJson.setVisible(true);
-				updateJsonView(context.selection); // Refresh on switch
+				updateJsonView(sceneManager.getSelection()); // Refresh on switch
 			}
 		});
 		
@@ -493,143 +658,16 @@ public class IconEditorDemo extends GScreen {
 		t.add(b).size(30).padRight(5);
 	}
 
-	private String getUniqueName(EditorTarget parent, String baseName) {
-		boolean exists = false;
-		for (EditorTarget child : parent.getChildren()) {
-			if (child.getName().equals(baseName)) {
-				exists = true;
-				break;
-			}
-		}
-		if (!exists) return baseName;
-		
-		int i = 1;
-		while (true) {
-			String newName = baseName + "_" + i;
-			boolean found = false;
-			for (EditorTarget child : parent.getChildren()) {
-				if (child.getName().equals(newName)) {
-					found = true;
-					break;
-				}
-			}
-			if (!found) return newName;
-			i++;
-		}
-	}
-
-	public void addNewShape(EditorTarget parent, String type) {
-		// 1. 确定父节点
-		if (parent == null) parent = rootNode;
-
-		// 2. 创建
-		EditorTarget newShape = null;
-		if ("Circle".equals(type)) {
-			CircleShape c = new CircleShape(getUniqueName(parent, "New Circle"));
-			c.radius = 40;
-			newShape = c;
-		} else if ("Rectangle".equals(type)) {
-			RectShape r = new RectShape(getUniqueName(parent, "New Rect"));
-			r.width = 80; r.height = 80;
-			newShape = r;
-		} else if ("Group".equals(type)) {
-			newShape = new GroupNode(getUniqueName(parent, "New Group"));
-		}
-		
-		if (newShape != null) {
-			// 随机位置避免重叠 (仅对非 Group 有意义，但统一处理也没问题)
-			newShape.setX(MathUtils.random(-20, 20));
-			newShape.setY(MathUtils.random(-20, 20));
-			
-			// 3. 建立关系
-			newShape.setParent(parent);
-			
-			// 4. 刷新
-			rebuildTree();
-			selectNode(newShape);
-		}
-	}
-
-	public void changeNodeType(EditorTarget target, String newType) {
-		if (target == null || target == rootNode) return;
-		
-		// 1. Create new node
-		EditorTarget newNode = null;
-		if ("Circle".equals(newType)) {
-			newNode = new CircleShape(target.getName());
-			if (target instanceof CircleShape) ((CircleShape)newNode).radius = ((CircleShape)target).radius;
-		} else if ("Rectangle".equals(newType)) {
-			newNode = new RectShape(target.getName());
-			if (target instanceof RectShape) {
-				((RectShape)newNode).width = ((RectShape)target).width;
-				((RectShape)newNode).height = ((RectShape)target).height;
-			}
-		} else if ("Group".equals(newType)) {
-			newNode = new GroupNode(target.getName());
-		}
-		
-		if (newNode == null) return;
-		
-		// 2. Copy properties
-		newNode.setX(target.getX());
-		newNode.setY(target.getY());
-		newNode.setRotation(target.getRotation());
-		newNode.setScaleX(target.getScaleX());
-		newNode.setScaleY(target.getScaleY());
-		
-		// [新增] 复制颜色 (即使是 Group 也会保留颜色数据)
-		if (target instanceof BaseNode && newNode instanceof BaseNode) {
-			((BaseNode)newNode).color.set(((BaseNode)target).color);
-		}
-		
-		// 3. Move children
-		Array<EditorTarget> children = new Array<>(target.getChildren());
-		for (EditorTarget child : children) {
-			child.setParent(newNode);
-		}
-		
-		// 4. Replace in parent
-		EditorTarget parent = target.getParent();
-		if (parent != null) {
-			int index = parent.getChildren().indexOf(target, true);
-			target.removeFromParent();
-			newNode.setParent(parent); // This appends
-			// Fix order
-			parent.getChildren().removeValue(newNode, true);
-			parent.getChildren().insert(index, newNode);
-		}
-		
-		// 5. Refresh
-		rebuildTree();
-		selectNode(newNode);
-	}
-
-	// [修复] 确保删除逻辑健壮
-	public void deleteNode(EditorTarget node) {
-		if (node == null || node == rootNode) return;
-		Gdx.app.log("Editor", "Deleting node: " + node.getName());
-		// 1. 数据层移除
-		node.removeFromParent();
-		// 2. 如果删除的是当前选中的，清空选中
-		if (context.selection == node) {
-			selectNode(null);
-		}
-		// 3. UI 刷新
-		rebuildTree();
-	}
-
 	// ========================================================================
 	// Logic & Render
 	// ========================================================================
 
-	public void selectNode(EditorTarget node) {
-		context.selection = node;
+	private void onSelectionChanged(EditorTarget node) {
 		inspector.build(inspectorTable, node);
 		updateJsonView(node);
 		
-		// [修复] 同步 Hierarchy 选中状态
 		if (hierarchyTree != null) {
-			UiNode uiNode = hierarchyTree.findNode(node);
+			UiNode uiNode = node == null ? null : hierarchyTree.findNode(node);
 			if (uiNode != null) {
 				if (!hierarchyTree.getSelection().contains(uiNode)) {
 					hierarchyTree.getSelection().set(uiNode);
@@ -660,52 +698,43 @@ public class IconEditorDemo extends GScreen {
 	}
 
 	private void applyJsonChange() {
-		if (context.selection == null) return;
+		if (sceneManager.getSelection() == null) return;
 		
 		String jsonText = jsonEditor.getText();
 		try {
 			Json json = new Json();
 			json.setIgnoreUnknownFields(true);
 			
-			Class<? extends EditorTarget> clazz = context.selection.getClass();
+			Class<? extends EditorTarget> clazz = sceneManager.getSelection().getClass();
 			EditorTarget newObj = json.fromJson(clazz, jsonText);
 			
 			if (newObj != null) {
-				EditorTarget oldObj = context.selection;
+				EditorTarget oldObj = sceneManager.getSelection();
 				EditorTarget parent = oldObj.getParent();
 				
 				if (parent != null) {
 					int idx = parent.getChildren().indexOf(oldObj, true);
 					oldObj.removeFromParent();
-					
-					// Manually attach without double-adding (since we are replacing)
-					// But wait, newObj is fresh. It needs to be added to parent.
-					// BaseNode.setParent handles it correctly (adds to parent's children).
 					newObj.setParent(parent);
-					
-					// Fix order
 					parent.getChildren().removeValue(newObj, true);
 					if (idx >= 0 && idx <= parent.getChildren().size) {
 						parent.getChildren().insert(idx, newObj);
 					} else {
 						parent.getChildren().add(newObj);
 					}
-				} else if (oldObj == rootNode) {
-					rootNode = newObj;
+				} else if (oldObj == sceneManager.getRoot()) {
+					sceneManager.setRoot(newObj);
 				}
 				
-				// Fix transient parent references in children
 				fixParentRefs(newObj);
 				
-				rebuildTree();
-				selectNode(newObj);
+				sceneManager.notifyStructureChanged();
+				sceneManager.selectNode(newObj);
 				
 				Gdx.app.log("Editor", "Applied JSON changes");
 			}
 		} catch (Exception e) {
 			Gdx.app.error("Editor", "Apply failed", e);
-			// Show error in editor?
-			// jsonEditor.setText(jsonEditor.getText() + "\n// Error: " + e.getMessage());
 		}
 	}
 	
@@ -718,20 +747,21 @@ public class IconEditorDemo extends GScreen {
 		}
 	}
 
-	// [修复] 重建树前清理 DragAndDrop
-	private void rebuildTree() {
+	private void onStructureChanged() {
 		// 1. 清理 UI
-		hierarchyTree.clearChildren();
-		// 2. [关键] 清理旧的拖拽源和目标，防止幽灵节点
+		hierarchyTree.clear();
+		// 2. [关键] 清理旧的拖拽源和目标
 		if (dragAndDrop != null) {
 			dragAndDrop.clear();
 		}
 		// 3. 重建
-		buildTreeRecursive(rootNode, null);
+		if (sceneManager.getRoot() != null) {
+			buildTreeRecursive(sceneManager.getRoot(), null);
+		}
 		
-		// 4. [修复] 恢复选中状态
-		if (context.selection != null) {
-			selectNode(context.selection);
+		// 4. 恢复选中状态
+		if (sceneManager.getSelection() != null) {
+			onSelectionChanged(sceneManager.getSelection());
 		}
 	}
 
@@ -756,7 +786,9 @@ public class IconEditorDemo extends GScreen {
 		neonBatch.begin();
 
 		drawGrid(neonBatch);
-		drawNodeRecursive(rootNode, neonBatch);
+		if (sceneManager.getRoot() != null) {
+			drawNodeRecursive(sceneManager.getRoot(), neonBatch);
+		}
 
 		// [修复] Gizmo 渲染
 		gizmoSystem.render(neonBatch, getWorldCamera().zoom);
@@ -799,6 +831,7 @@ public class IconEditorDemo extends GScreen {
 	public interface EditorTarget {
 		String getName();
 		void setName(String name);
+        String getTypeName(); // [New]
 		float getX(); void setX(float v);
 		float getY(); void setY(float v);
 		float getRotation(); void setRotation(float v);
@@ -811,7 +844,6 @@ public class IconEditorDemo extends GScreen {
 		Array<EditorTarget> getChildren();
 		void addChild(EditorTarget child); // 仅添加数据，不处理逻辑
 		void render(NeonBatch batch);
-		void inspect(Inspector inspector);
 	}
 
 	public static abstract class BaseNode implements EditorTarget {
@@ -860,49 +892,29 @@ public class IconEditorDemo extends GScreen {
 		@Override public void removeFromParent() {
 			setParent(null);
 		}
-		
-		@Override
-		public void inspect(Inspector inspector) {
-			inspector.addSection("Transform");
-			inspector.addFloat("X", this::getX, this::setX);
-			inspector.addFloat("Y", this::getY, this::setY);
-			inspector.addFloat("Rot", this::getRotation, this::setRotation);
-			inspector.addFloat("Scl X", this::getScaleX, this::setScaleX);
-			inspector.addFloat("Scl Y", this::getScaleY, this::setScaleY);
-		}
 	}
 
 	public static class GroupNode extends BaseNode {
 		public GroupNode(String name) { super(name); }
+		@Override public String getTypeName() { return "Group"; }
 		@Override public void render(NeonBatch batch) {}
 	}
 
 	public static class RectShape extends BaseNode {
 		public float width = 100, height = 100;
 		public RectShape(String name) { super(name); }
+		@Override public String getTypeName() { return "Rectangle"; }
 		@Override public void render(NeonBatch batch) {
 			batch.drawRect(x - width/2*scaleX, y - height/2*scaleY, width*scaleX, height*scaleY, rotation, 0, color, true);
-		}
-		@Override public void inspect(Inspector inspector) {
-			super.inspect(inspector);
-			inspector.addSection("Rectangle");
-			inspector.addFloat("Width", () -> width, v -> width = v);
-			inspector.addFloat("Height", () -> height, v -> height = v);
-			inspector.addColor("Color", () -> color, c -> color.set(c));
 		}
 	}
 
 	public static class CircleShape extends BaseNode {
 		public float radius = 50;
 		public CircleShape(String name) { super(name); }
+		@Override public String getTypeName() { return "Circle"; }
 		@Override public void render(NeonBatch batch) {
 			batch.drawCircle(x, y, radius * Math.max(Math.abs(scaleX), Math.abs(scaleY)), 0, color, 32, true);
-		}
-		@Override public void inspect(Inspector inspector) {
-			super.inspect(inspector);
-			inspector.addSection("Circle");
-			inspector.addFloat("Radius", () -> radius, v -> radius = v);
-			inspector.addColor("Color", () -> color, c -> color.set(c));
 		}
 	}
 
@@ -910,14 +922,10 @@ public class IconEditorDemo extends GScreen {
 	// 2. Editor Context & Systems (修复 Gizmo 绘制)
 	// ========================================================================
 
-	public static class EditorContext {
-		public EditorTarget selection;
-	}
-
 	public static class GizmoSystem {
 		public enum Mode { MOVE, ROTATE, SCALE }
 		public Mode mode = Mode.MOVE;
-		private final EditorContext ctx;
+		private final SceneManager sceneManager;
 
 		// [复刻] 视觉配置 (参考 BioGizmoDrawer)
 		static float HANDLE_SIZE = 15f;
@@ -927,10 +935,10 @@ public class IconEditorDemo extends GScreen {
 		// 缓存数组 (绘制箭头用)
 		private static final float[] tmpPoly = new float[8];
 
-		public GizmoSystem(EditorContext ctx) { this.ctx = ctx; }
+		public GizmoSystem(SceneManager sm) { this.sceneManager = sm; }
 
 		public void render(NeonBatch batch, float zoom) {
-			EditorTarget t = ctx.selection;
+			EditorTarget t = sceneManager.getSelection();
 			if (t == null) return;
 
 			float x = t.getX();
@@ -1046,7 +1054,7 @@ public class IconEditorDemo extends GScreen {
 
 	public static class EditorInput extends InputAdapter {
 		private final IconEditorDemo screen;
-		private final EditorContext ctx;
+		private final SceneManager sceneManager;
 		private final GizmoSystem gizmo;
 
 		private enum DragMode { NONE, BODY, ROTATE, SCALE_X, SCALE_Y }
@@ -1055,14 +1063,14 @@ public class IconEditorDemo extends GScreen {
 		private float lastX, lastY;
 		private float startValX, startValY, startValRot; // 记录初始值用于精确计算
 
-		public EditorInput(IconEditorDemo screen, EditorContext ctx, GizmoSystem gizmo) {
-			this.screen = screen; this.ctx = ctx; this.gizmo = gizmo;
+		public EditorInput(IconEditorDemo screen, SceneManager sm, GizmoSystem gizmo) {
+			this.screen = screen; this.sceneManager = sm; this.gizmo = gizmo;
 		}
 
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 			Vector2 wPos = screen.screenToWorldCoord(screenX, screenY);
-			EditorTarget t = ctx.selection;
+			EditorTarget t = sceneManager.getSelection();
 
 			if (t != null) {
 				float zoom = screen.getWorldCamera().zoom * 1.4f; // 匹配渲染缩放
@@ -1124,22 +1132,22 @@ public class IconEditorDemo extends GScreen {
 			lastX = pos.x; lastY = pos.y;
 			screen.getCameraController().setInputEnabled(false);
 
-			if(ctx.selection != null) {
-				startValX = ctx.selection.getScaleX();
-				startValY = ctx.selection.getScaleY();
-				startValRot = ctx.selection.getRotation();
+			if(sceneManager.getSelection() != null) {
+				startValX = sceneManager.getSelection().getScaleX();
+				startValY = sceneManager.getSelection().getScaleY();
+				startValRot = sceneManager.getSelection().getRotation();
 			}
 		}
 
 		@Override
 		public boolean touchDragged(int screenX, int screenY, int pointer) {
-			if (currentDragMode == DragMode.NONE || ctx.selection == null) return false;
+			if (currentDragMode == DragMode.NONE || sceneManager.getSelection() == null) return false;
 
 			Vector2 wPos = screen.screenToWorldCoord(screenX, screenY);
 			float dx = wPos.x - lastX;
 			float dy = wPos.y - lastY;
 
-			EditorTarget t = ctx.selection;
+			EditorTarget t = sceneManager.getSelection();
 
 			if (currentDragMode == DragMode.BODY) {
 				t.setX(t.getX() + dx);
@@ -1194,12 +1202,52 @@ public class IconEditorDemo extends GScreen {
 	public static class Inspector {
 		private VisTable container;
 		private final IconEditorDemo screen;
-		private final EditorContext ctx;
+		private final SceneManager sceneManager;
 		private final Array<Runnable> refreshTasks = new Array<>();
+		
+		private final Map<Class<?>, InspectorStrategy> strategies = new HashMap<>();
 
-		public Inspector(IconEditorDemo screen, EditorContext ctx) { 
+		public interface InspectorStrategy {
+			void inspect(Inspector inspector, EditorTarget target);
+		}
+
+		public Inspector(IconEditorDemo screen, SceneManager sm) { 
 			this.screen = screen;
-			this.ctx = ctx; 
+			this.sceneManager = sm; 
+			registerDefaultStrategies();
+		}
+		
+		private void registerDefaultStrategies() {
+			InspectorStrategy transformStrategy = (inspector, target) -> {
+				if (target instanceof BaseNode) {
+					BaseNode n = (BaseNode) target;
+					inspector.addSection("Transform");
+					inspector.addFloat("X", n::getX, n::setX);
+					inspector.addFloat("Y", n::getY, n::setY);
+					inspector.addFloat("Rot", n::getRotation, n::setRotation);
+					inspector.addFloat("Scl X", n::getScaleX, n::setScaleX);
+					inspector.addFloat("Scl Y", n::getScaleY, n::setScaleY);
+				}
+			};
+			
+			strategies.put(GroupNode.class, transformStrategy);
+			
+			strategies.put(RectShape.class, (inspector, target) -> {
+				transformStrategy.inspect(inspector, target);
+				RectShape r = (RectShape) target;
+				inspector.addSection("Rectangle");
+				inspector.addFloat("Width", () -> r.width, v -> r.width = v);
+				inspector.addFloat("Height", () -> r.height, v -> r.height = v);
+				inspector.addColor("Color", () -> r.color, newColor -> r.color.set(newColor));
+			});
+			
+			strategies.put(CircleShape.class, (inspector, target) -> {
+				transformStrategy.inspect(inspector, target);
+				CircleShape c = (CircleShape) target;
+				inspector.addSection("Circle");
+				inspector.addFloat("Radius", () -> c.radius, v -> c.radius = v);
+				inspector.addColor("Color", () -> c.color, newColor -> c.color.set(newColor));
+			});
 		}
 
 		public void build(VisTable table, EditorTarget target) {
@@ -1234,27 +1282,23 @@ public class IconEditorDemo extends GScreen {
 			table.add(nameRow).growX().pad(5).row();
 
 			// Type Selection
-			if (target != screen.rootNode) {
+			if (target != screen.sceneManager.getRoot()) {
 				VisTable typeRow = new VisTable();
 				typeRow.add(new VisLabel("Type")).width(50);
 				
 				VisSelectBox<String> typeBox = new VisSelectBox<>();
-				typeBox.setItems("Group", "Rectangle", "Circle");
+				com.badlogic.gdx.utils.Array<String> items = new com.badlogic.gdx.utils.Array<>();
+				for (String s : screen.sceneManager.getShapeRegistry().keySet()) items.add(s);
+				typeBox.setItems(items);
 				
-				String currentType = "Group";
-				if (target instanceof RectShape) currentType = "Rectangle";
-				else if (target instanceof CircleShape) currentType = "Circle";
-				typeBox.setSelected(currentType);
+				typeBox.setSelected(target.getTypeName());
 				
 				typeBox.addListener(new ChangeListener() {
 					@Override public void changed(ChangeEvent event, Actor actor) {
 						String newType = typeBox.getSelected();
-						// Avoid trigger on init or same type
-						if (target instanceof RectShape && "Rectangle".equals(newType)) return;
-						if (target instanceof CircleShape && "Circle".equals(newType)) return;
-						if (target instanceof GroupNode && "Group".equals(newType)) return;
+						if (newType.equals(target.getTypeName())) return;
 						
-						screen.changeNodeType(target, newType);
+						screen.sceneManager.changeNodeType(target, newType);
 					}
 				});
 				
@@ -1262,7 +1306,10 @@ public class IconEditorDemo extends GScreen {
 				table.add(typeRow).growX().pad(5).row();
 			}
 
-			target.inspect(this);
+			InspectorStrategy strategy = strategies.get(target.getClass());
+			if (strategy != null) {
+				strategy.inspect(this, target);
+			}
 		}
 
 		public void addSection(String title) {
@@ -1290,8 +1337,8 @@ public class IconEditorDemo extends GScreen {
 		public void refreshValues() {
 			// 如果要完美支持拖拽时更新 UI，这里需要执行 tasks
 			// 简单粗暴的方式：直接 rebuild (虽然性能有损耗，但对于 Demo 足够)
-			if (ctx.selection != null && container != null) {
-				build(container, ctx.selection);
+			if (sceneManager.getSelection() != null && container != null) {
+				build(container, sceneManager.getSelection());
 			}
 		}
 	}
