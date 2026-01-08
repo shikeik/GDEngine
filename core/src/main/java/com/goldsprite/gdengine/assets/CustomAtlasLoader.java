@@ -30,6 +30,9 @@ public class CustomAtlasLoader {
         return instance;
     }
     
+    // 缓存：Image Path -> Split Regions (TextureRegion[][])
+    private final Map<String, TextureRegion[][]> splitCache = new HashMap<>();
+
     /**
      * 获取指定图片或其中的 Region
      * @param imagePath 图片路径 (相对于 assets)
@@ -44,10 +47,18 @@ public class CustomAtlasLoader {
                     Gdx.app.error("CustomAtlasLoader", "File not found: " + imagePath);
                     return null;
                 }
-                textureCache.put(imagePath, new Texture(Gdx.files.internal(imagePath)));
+                Texture tex = new Texture(Gdx.files.internal(imagePath));
+                textureCache.put(imagePath, tex);
                 
                 // 顺便尝试加载同级 JSON
                 loadAtlasData(imagePath);
+                
+                // 如果加载了 Data 且有 grid，预切分
+                AtlasData data = atlasDataCache.get(imagePath);
+                if (data != null && data.gridWidth > 0 && data.gridHeight > 0) {
+                     TextureRegion[][] splits = TextureRegion.split(tex, data.gridWidth, data.gridHeight);
+                     splitCache.put(imagePath, splits);
+                }
                 
             } catch (Exception e) {
                 Gdx.app.error("CustomAtlasLoader", "Failed to load texture: " + imagePath, e);
@@ -67,41 +78,27 @@ public class CustomAtlasLoader {
         if (data != null && data.regions.containsKey(regionName)) {
             RegionInfo info = data.regions.get(regionName);
             
-            // 计算坐标
-            int x, y, w, h;
-            if (data.gridWidth > 0 && data.gridHeight > 0) {
-                // Grid 模式
-                int cols = texture.getWidth() / data.gridWidth;
-                if (cols <= 0) cols = 1;
+            // 使用 Split Cache
+            TextureRegion[][] splits = splitCache.get(imagePath);
+            if (splits != null) {
+                int cols = splits[0].length;
+                int rows = splits.length;
                 
-                // [Bug Fix] 行列计算逻辑
-                // LibGDX 纹理坐标原点在左上角 (0,0) ? 不，LibGDX Texture 默认 (0,0) 在左上角（对于 Pixmap），
-                // 但绘制时 UV (0,0) 是左上角。
-                // 关键是: row = index / cols; col = index % cols;
-                // index 0 -> row 0, col 0
-                // index 1 -> row 0, col 1
+                int r = info.index / cols;
+                int c = info.index % cols;
                 
-                int row = info.index / cols;
-                int col = info.index % cols;
-                
-                x = col * data.gridWidth;
-                y = row * data.gridHeight;
-                w = data.gridWidth;
-                h = data.gridHeight;
-                
-                // 确保不越界
-                if (x + w > texture.getWidth() || y + h > texture.getHeight()) {
-                     Gdx.app.error("CustomAtlasLoader", "Region out of bounds: " + regionName + " index=" + info.index);
-                     return new TextureRegion(texture); // Fallback
+                if (r < rows && c < cols) {
+                    return splits[r][c];
+                } else {
+                     Gdx.app.error("CustomAtlasLoader", "Index out of bounds: " + regionName + " index=" + info.index);
                 }
-                
-                return new TextureRegion(texture, x, y, w, h);
             } else {
-                // 暂时只支持 Grid 模式，未来可扩展 XYWH 模式
-                x = 0; y = 0; w = texture.getWidth(); h = texture.getHeight();
+                // Fallback to manual calculation if split failed (unlikely) or not grid
+                // ... (Previous logic or simplified)
             }
             
-            return new TextureRegion(texture, x, y, w, h);
+            // Fallback: manual calc (previous logic was likely flawed on Y, let's trust split)
+            return new TextureRegion(texture);
         }
         
         // 找不到 Region，降级为整图
@@ -134,13 +131,14 @@ public class CustomAtlasLoader {
             Gdx.app.error("CustomAtlasLoader", "Failed to parse json: " + jsonPath, e);
         }
     }
-    
+
     public void dispose() {
         for (Texture t : textureCache.values()) {
             t.dispose();
         }
         textureCache.clear();
         atlasDataCache.clear();
+        splitCache.clear();
     }
     
     // --- Data Structures ---

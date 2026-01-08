@@ -133,7 +133,11 @@ public class RichTextParser {
         try {
             return Color.valueOf(str);
         } catch (Exception e) {
-            return Colors.get(str);
+            Color c = Colors.get(str);
+            if (c == null) {
+                c = Colors.get(str.toUpperCase());
+            }
+            return c;
         }
     }
 }
