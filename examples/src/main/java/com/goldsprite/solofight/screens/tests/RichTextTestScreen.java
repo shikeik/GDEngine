@@ -73,6 +73,17 @@ public class RichTextTestScreen extends GScreen {
         });
         container.add(rt4).row();
         
+        // [New] Test 5: New Icons (RavenFantasyIcons16x16.png)
+        // 这是一个 SpriteSheet，目前 RichText 还不支持 TextureRegion 切片，先测试直接加载看看效果，或者用 [img] 加载单个文件。
+        // 假设用户只是想看这个图能不能加载。
+        // 如果要支持 SpriteSheet 切片，RichTextParser 需要升级，暂时先显示整图或不测试切片。
+        // 既然用户提到了 "sprites/icons/RavenFantasyIcons16x16.png"，我们加一个测试项。
+        container.add(new VisLabel("----------------")).fillX().pad(5).row();
+        String text5 = "New Icon: [img=sprites/icons/RavenFantasyIcons16x16.png]";
+        container.add(new VisLabel("Test 5: Icons")).row();
+        RichText rt5 = new RichText(text5, 500);
+        container.add(rt5).row();
+        
         VisScrollPane scroll = new VisScrollPane(container);
         uiStage.addActor(scroll);
         scroll.setFillParent(true);
@@ -83,6 +94,17 @@ public class RichTextTestScreen extends GScreen {
             uiStage.addActor(ToastUI.inst());
         } else {
             ToastUI.inst().toFront();
+        }
+    }
+    
+    @Override
+    public void resize(int width, int height) {
+        super.resize(width, height);
+        // 强制 UI 视口以左下角为 (0,0)，不居中，避免坐标混乱
+        if (getUIViewport() != null) {
+             getUIViewport().update(width, height, true); // GScreen 默认是 true (CenterCamera)
+             // 如果用户觉得 "trigger文本又在0,0" 是偏移问题，可能是因为 WorldCamera 和 UICamera 不一致。
+             // 这里 RichText 是 UI 组件，只受 UICamera 影响。
         }
     }
 

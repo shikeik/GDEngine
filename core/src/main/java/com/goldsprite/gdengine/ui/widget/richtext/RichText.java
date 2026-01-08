@@ -18,6 +18,38 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 富文本组件 (RichText)
+ * <p>
+ * 一个基于 Scene2D 的富文本容器，支持通过 BBCode 风格的标签混合显示不同样式文本和图片。
+ * 支持流式布局 (Flow Layout)，自动换行。
+ * </p>
+ *
+ * <h2>支持的标签 (Tags):</h2>
+ * <ul>
+ *     <li><b>Color:</b> {@code [color=red]Text[/color]} 或 {@code [#RRGGBB]Text[/color]}</li>
+ *     <li><b>Size:</b> {@code [size=32]Text[/size]} (绝对字号)</li>
+ *     <li><b>Image:</b> {@code [img=path/to/icon.png]} 或 {@code [img=path|widthxheight]}</li>
+ *     <li><b>Event:</b> {@code [event=my_event]Click Me[/event]} (点击触发 {@link RichTextEvent})</li>
+ *     <li><b>Break:</b> {@code [br]} 或 {@code [n]} (强制换行)</li>
+ * </ul>
+ *
+ * <h2>使用示例:</h2>
+ * <pre>
+ * RichText rt = new RichText("获得物品: [color=gold]传说之剑[/color] [img=icon.png|32x32]");
+ * stage.addActor(rt);
+ *
+ * // 监听点击事件
+ * rt.addListener(new InputListener() {
+ *     public boolean handle(Event e) {
+ *         if (e instanceof RichTextEvent) {
+ *             // 处理点击
+ *         }
+ *         return false;
+ *     }
+ * });
+ * </pre>
+ */
 public class RichText extends WidgetGroup {
     
     private static final Map<Integer, BitmapFont> fontCache = new HashMap<>();

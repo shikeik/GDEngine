@@ -20,8 +20,17 @@ public class ToastUI extends Label {
 
 	public void show(String msg) {
 		setText(msg);
+		pack(); // 重新计算尺寸
+		
+		if (getStage() != null) {
+			// 居中显示在屏幕下方 20% 处
+			float stageW = getStage().getWidth();
+			float stageH = getStage().getHeight();
+			setPosition((stageW - getWidth()) / 2, stageH * 0.2f);
+		}
+		
 		clearActions();
-
+		
 		// Reset state
 		getColor().a = 0;
 
