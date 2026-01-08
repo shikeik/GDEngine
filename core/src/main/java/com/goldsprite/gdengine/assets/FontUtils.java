@@ -51,8 +51,8 @@ public class FontUtils {
 		FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal(fntPath));
 		FreeTypeFontParameter parameter = new FreeTypeFontParameter();
 
-        clarity = 3.0f;
-        parameter.size = Math.round(fntSize * clarity);
+		//clarity = 3.0f;
+		parameter.size = Math.round(fntSize * clarity);
 		//parameter.size = (int) Math.ceil(fntSize * clarity);
 		parameter.mono = false; // [关键] 强制等宽，保证选区对齐
 		parameter.incremental = true;
@@ -60,13 +60,15 @@ public class FontUtils {
 		// 稍微增加间距，防止缩小后字符粘连
 		parameter.spaceX = 1;
 
-		// [核心 1] 开启 MipMap：解决大图缩小后的“变形/噪点”问题
-		parameter.genMipMaps = true;
+		// [核心 1] 关闭 MipMap：incremental 模式下开启 MipMap 开销巨大且不稳定
+		parameter.genMipMaps = false;
 
-		// [核心 2] 过滤模式：使用三线性过滤 (MipMapLinearLinear)
-		// 这是画质最好的过滤模式，虽然稍微耗一点点性能
-		parameter.minFilter = Texture.TextureFilter.MipMapLinearLinear;
+		// [核心 2] 过滤模式：
+		parameter.minFilter = Texture.TextureFilter.Linear;
 		parameter.magFilter = Texture.TextureFilter.Linear;
+
+		// 显式设置基础字符集 (ASCII)，防止某些情况下初始为空
+		parameter.characters = FreeTypeFontGenerator.DEFAULT_CHARS;
 
 		BitmapFont fnt = generator.generateFont(parameter);
 		fnt.getData().setScale(1 / clarity);

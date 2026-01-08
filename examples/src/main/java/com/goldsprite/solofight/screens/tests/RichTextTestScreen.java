@@ -4,16 +4,22 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.ui.widget.richtext.RichText;
 import com.goldsprite.gdengine.ui.widget.richtext.RichTextEvent;
-import com.goldsprite.gdengine.ui.widget.ToastUI;
+import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 
 public class RichTextTestScreen extends GScreen {
     
+    private Stage uiStage;
+
     @Override
-    public void show() {
-        super.show();
+    public void create() {
+        super.create();
+        
+        uiStage = new Stage(getUIViewport());
+        getImp().addProcessor(uiStage);
         
         VisTable container = new VisTable();
         container.defaults().pad(10).left();
@@ -57,7 +63,9 @@ public class RichTextTestScreen extends GScreen {
             public boolean handle(com.badlogic.gdx.scenes.scene2d.Event e) {
                 if (e instanceof RichTextEvent) {
                     RichTextEvent re = (RichTextEvent)e;
-                    ToastUI.inst().show("Event: " + re.eventId);
+                    if (ToastUI.inst() != null) {
+                        ToastUI.inst().show("Event: " + re.eventId);
+                    }
                     return true;
                 }
                 return false;
@@ -76,5 +84,19 @@ public class RichTextTestScreen extends GScreen {
         } else {
             ToastUI.inst().toFront();
         }
+    }
+
+    @Override
+    public void render0(float delta) {
+        if (uiStage != null) {
+            uiStage.act(delta);
+            uiStage.draw();
+        }
+    }
+    
+    @Override
+    public void dispose() {
+        super.dispose();
+        if (uiStage != null) uiStage.dispose();
     }
 }
