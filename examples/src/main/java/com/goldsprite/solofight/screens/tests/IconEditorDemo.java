@@ -31,6 +31,13 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTree;
 import com.badlogic.gdx.scenes.scene2d.ui.Tree;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
+import com.kotcrab.vis.ui.widget.PopupMenu;
+import com.kotcrab.vis.ui.widget.MenuItem;
+import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -58,9 +65,128 @@ public class IconEditorDemo extends GScreen {
 	// --- 数据根节点 ---
 	private EditorTarget rootNode;
 
-	// [新增] 修复 UiNode 定义
-	public static class UiNode extends Tree.Node<UiNode, EditorTarget, VisLabel> {
-		public UiNode(VisLabel actor) { super(actor); }
+	// [新增] 拖拽管理器
+    private DragAndDrop dragAndDrop;
+	
+	
+	// [重构] 复杂的 UI 节点：支持拖拽把手 + 上下文菜单
+	public static class UiNode extends Tree.Node<UiNode, EditorTarget, VisTable> {
+
+		public UiNode(EditorTarget target, IconEditorDemo screen) {
+			super(new VisTable());
+			setValue(target);
+
+			VisTable table = getActor();
+			table.setBackground("button"); // 给个默认背景方便看范围，或者透明
+
+			// 1. 名字 Label (左侧)
+			VisLabel nameLbl = new VisLabel(target.getName());
+			// 左键点击 -> 选中
+			nameLbl.addListener(new ClickListener() {
+					@Override public void clicked(InputEvent event, float x, float y) {
+						screen.selectNode(target);
+					}
+				});
+			// 右键/长按 -> 菜单
+			ActorGestureListener menuListener = new ActorGestureListener() {
+				@Override
+				public boolean longPress(Actor actor, float x, float y) {
+					showMenu(); return true;
+				}
+				@Override
+				public void tap(InputEvent event, float x, float y, int count, int button) {
+					if (button == Input.Buttons.RIGHT) showMenu();
+				}
+
+				private void showMenu() {
+					// 根节点不能删除
+					if (target == screen.rootNode) return;
+
+					PopupMenu menu = new PopupMenu();
+					MenuItem delItem = new MenuItem("Delete");
+					delItem.getLabel().setColor(Color.RED);
+					delItem.addListener(new ChangeListener() {
+							@Override public void changed(ChangeEvent event, Actor actor) {
+								screen.deleteNode(target);
+							}
+						});
+					menu.addItem(delItem);
+					menu.showMenu(screen.uiStage, Gdx.input.getX(), Gdx.input.getY());
+				}
+			};
+			nameLbl.addListener(menuListener);
+
+			table.add(nameLbl).expandX().left().padLeft(5);
+
+			// 2. 拖拽把手 (右侧)
+			// 根节点不能被拖拽
+			if (target != screen.rootNode) {
+				VisLabel handle = new VisLabel("::"); // 把手图标
+				handle.setColor(Color.GRAY);
+				handle.addListener(new ClickListener() {
+						@Override public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+							handle.setColor(Color.CYAN); // Hover 高亮
+						}
+						@Override public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+							handle.setColor(Color.GRAY);
+						}
+					});
+				table.add(handle).padRight(5);
+
+				// [注册拖拽源]
+				screen.dragAndDrop.addSource(new Source(handle) {
+						@Override
+						public Payload dragStart(InputEvent event, float x, float y, int pointer) {
+							Payload payload = new Payload();
+							payload.setObject(target); // 携带数据
+
+							// 拖拽时的视觉替身
+							VisLabel dragActor = new VisLabel(target.getName());
+							dragActor.setColor(Color.YELLOW);
+							payload.setDragActor(dragActor);
+
+							return payload;
+						}
+					});
+			}
+
+			// [注册拖拽目标] (所有节点都可以是目标)
+			screen.dragAndDrop.addTarget(new Target(table) {
+					@Override
+					public boolean drag(Source source, Payload payload, float x, float y, int pointer) {
+						EditorTarget dragging = (EditorTarget) payload.getObject();
+						// 检查合法性：不能拖给自己，也不能拖给自己的子孙 (循环引用)
+						if (dragging == target) return false;
+						if (isDescendant(dragging, target)) return false;
+
+						getActor().setColor(Color.CYAN); // 高亮目标
+						return true;
+					}
+
+					@Override
+					public void drop(Source source, Payload payload, float x, float y, int pointer) {
+						EditorTarget dragging = (EditorTarget) payload.getObject();
+						// 执行认亲逻辑
+						dragging.setParent(target);
+						screen.rebuildTree();
+						screen.selectNode(dragging); // 保持选中
+					}
+
+					@Override
+					public void reset(Source source, Payload payload) {
+						getActor().setColor(Color.WHITE); // 恢复颜色
+					}
+				});
+		}
+
+		// 辅助：检查 B 是否是 A 的子孙
+		private boolean isDescendant(EditorTarget root, EditorTarget check) {
+			if (root == check) return true;
+			for (EditorTarget child : root.getChildren()) {
+				if (isDescendant(child, check)) return true;
+			}
+			return false;
+		}
 	}
 
 	@Override
@@ -84,6 +210,10 @@ public class IconEditorDemo extends GScreen {
 		cameraController = new CameraController(worldCamera);
 
 		uiStage = new Stage(getUIViewport());
+		
+		// [新增] 初始化拖拽系统
+        dragAndDrop = new DragAndDrop();
+        dragAndDrop.setDragActorPosition(0, 0); // 拖拽时图标跟随鼠标偏移
 
 		getImp().addProcessor(uiStage);
 		getImp().addProcessor(sceneInput);
@@ -189,13 +319,37 @@ public class IconEditorDemo extends GScreen {
 	}
 
 	private void addNewShape() {
-		// 临时逻辑：添加到根节点
+		// 1. 确定父节点：如果有选中且不是根，则加在选中项下面；否则加在根下面
+		EditorTarget parent = rootNode;
+		if (context.selection != null) {
+			parent = context.selection;
+		}
+
+		// 2. 创建 (随机位置避免重叠)
 		CircleShape c = new CircleShape("New Circle");
-		c.x = MathUtils.random(-50, 50);
-		c.y = MathUtils.random(-50, 50);
-		rootNode.addChild(c);
+		c.x = MathUtils.random(-20, 20);
+		c.y = MathUtils.random(-20, 20);
+
+		// 3. 建立关系
+		c.setParent(parent);
+
+		// 4. 刷新
 		rebuildTree();
 		selectNode(c);
+	}
+
+	// [新增] 删除逻辑
+	public void deleteNode(EditorTarget node) {
+		if (node == null || node == rootNode) return;
+
+		node.removeFromParent();
+
+		// 如果删的是当前选中的，清空选中
+		if (context.selection == node) {
+			selectNode(null);
+		}
+
+		rebuildTree();
 	}
 
 	// ========================================================================
@@ -213,8 +367,9 @@ public class IconEditorDemo extends GScreen {
 	}
 
 	private void buildTreeRecursive(EditorTarget node, UiNode parent) {
-		UiNode uiNode = new UiNode(new VisLabel(node.getName()));
-		uiNode.setValue(node);
+		// [修改] 传入 this (screen 实例)
+		UiNode uiNode = new UiNode(node, this);
+
 		if(parent == null) hierarchyTree.add(uiNode);
 		else parent.add(uiNode);
 
@@ -280,8 +435,12 @@ public class IconEditorDemo extends GScreen {
 		float getRotation(); void setRotation(float v);
 		float getScaleX(); void setScaleX(float v);
 		float getScaleY(); void setScaleY(float v);
+		// [新增] 亲缘关系
+		EditorTarget getParent();
+		void setParent(EditorTarget parent);
+		void removeFromParent(); // 从父级移除自己
 		Array<EditorTarget> getChildren();
-		void addChild(EditorTarget child);
+		void addChild(EditorTarget child); // 仅添加数据，不处理逻辑
 		void render(NeonBatch batch);
 		void inspect(Inspector inspector);
 	}
@@ -289,6 +448,8 @@ public class IconEditorDemo extends GScreen {
 	public static abstract class BaseNode implements EditorTarget {
 		public String name;
 		public float x, y, rotation = 0, scaleX = 1, scaleY = 1;
+		// [新增] 父节点引用
+		protected EditorTarget parent;
 		public Array<EditorTarget> children = new Array<>();
 
 		public BaseNode(String name) { this.name = name; }
@@ -307,7 +468,29 @@ public class IconEditorDemo extends GScreen {
 		@Override public void setScaleY(float v) { scaleY = v; }
 		@Override public Array<EditorTarget> getChildren() { return children; }
 		@Override public void addChild(EditorTarget child) { children.add(child); }
+		// [新增] 实现亲缘管理
+		@Override public EditorTarget getParent() { return parent; }
 
+		@Override public void setParent(EditorTarget newParent) {
+			if (this.parent == newParent) return;
+
+			// 1. 从旧父级移除
+			if (this.parent != null) {
+				this.parent.getChildren().removeValue(this, true);
+			}
+
+			this.parent = newParent;
+
+			// 2. 加入新父级
+			if (newParent != null) {
+				newParent.addChild(this);
+			}
+		}
+
+		@Override public void removeFromParent() {
+			setParent(null);
+		}
+		
 		@Override
 		public void inspect(Inspector inspector) {
 			inspector.addSection("Transform");
