@@ -1,4 +1,4 @@
-# SoloFight V1.9.0.3-fix
+# SoloFight V1.9.2.0-alpha
 - 始于2025.12.27
 
 ## 介绍:
