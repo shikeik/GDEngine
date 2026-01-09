@@ -135,17 +135,6 @@ public class EditorController implements EditorListener {
 		spriteSystem = new SpriteSystem(spriteBatch, gameCamera);
 		skeletonRenderSystem = new SkeletonRenderSystem(neonBatch, gameCamera);
 
-		// 注册到 GameWorld (可选: 如果希望 GameWorld.update 自动驱动它们，但这里我们手动驱动)
-		// GameWorld.inst().registerSystem(spriteSystem);
-		// GameWorld.inst().registerSystem(skeletonRenderSystem);
-
-		// 注意：GameWorld.update() 可能会自动运行所有 registered systems
-		// 为了避免在非 FBO 环境下渲染，我们选择**不**注册它们到 GameWorld，
-		// 而是像之前计划的那样，在 render() 中手动调用它们的 update()。
-
-		// 确保游戏视口大小正确
-		gameViewport.update(fboW, fboH, true);
-
 		initTestScene();
 
 		// 7. 设置场景根节点
@@ -154,8 +143,8 @@ public class EditorController implements EditorListener {
 		// 初始化输入处理
 		editorInput = new EditorInput(gameCamera, sceneManager, gizmoSystem);
 		inputMultiplexer = new InputMultiplexer();
-		inputMultiplexer.addProcessor(stage);
 		inputMultiplexer.addProcessor(editorInput);
+		inputMultiplexer.addProcessor(stage);
 		// 这里临时处理
 		if(screen != null)screen.getImp().addProcessor(inputMultiplexer);
 		else Gdx.input.setInputProcessor(inputMultiplexer);
@@ -256,7 +245,7 @@ public class EditorController implements EditorListener {
 		}
 		// Apply updates
 		if (gameTarget != null) {
-			gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight(), true);
+			gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight(), false); // 世界相机应在0,0原点
 		}
 	}
 
@@ -265,8 +254,9 @@ public class EditorController implements EditorListener {
 	private void createGameWindow() {
 		VisWindow win = new VisWindow("Game View");
 		win.setResizable(true);
-		win.setSize(500, 350);
-		win.setPosition(50, 50);
+		// 设置窗口占据上半屏，宽度为整个屏幕宽度，高度为屏幕高度的一半
+		win.setSize(stage.getWidth(), stage.getHeight()/2);
+		win.setPosition(0, 0);
 
 		gameWidget = new ViewWidget(gameTarget);
 
@@ -363,12 +353,37 @@ public class EditorController implements EditorListener {
 	private void createSceneWindow() {
 		VisWindow win = new VisWindow("Scene View");
 		win.setResizable(true);
-		win.setSize(400, 300);
-		win.setPosition(600, 50);
+		// 设置窗口占据下半屏，宽度为整个屏幕宽度，高度为屏幕高度的一半
+		win.setSize(stage.getWidth(), stage.getHeight()/2);
+		win.setPosition(0, stage.getHeight()/2);
 
 		sceneWidget = new ViewWidget(sceneTarget);
 		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 
+		// 添加编辑器输入处理
+		sceneWidget.addListener(new InputListener() {
+			@Override
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				if (button != 0) return false; // 只处理左键
+
+				// 转换为世界坐标
+				Vector2 worldPos = sceneWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY(), sceneCamera);
+
+				// 检查是否点击了对象
+				EditorTarget hitTarget = editorInput.hitTest(worldPos.x, worldPos.y);
+				if (hitTarget != null) {
+					sceneManager.selectNode(hitTarget);
+					return true;
+				} else {
+					// 点击空白处，取消选择
+					sceneManager.selectNode(null);
+				}
+
+				return false;
+			}
+		});
+
+		// 添加拖拽和缩放支持
 		sceneWidget.addListener(new DragListener() {
 				@Override
 				public void drag(InputEvent event, float x, float y, int pointer) {
@@ -392,12 +407,22 @@ public class EditorController implements EditorListener {
 	}
 
 	public void render(float delta) {
-		// 1. 逻辑更新 (Input -> Logic)
-		// 简单的摇杆控制逻辑
+		// 1. 逻辑更新 (Input -> Logic)// 优先使用键盘输入，如果没有键盘输入则使用摇杆
 		if (player != null) {
 			float speed = 200 * delta;
-			float dx = joystick.getKnobPercentX() * speed;
-			float dy = joystick.getKnobPercentY() * speed;
+			float dx = 0, dy = 0;
+
+			// 获取键盘方向
+			Vector2 keyboardDir = editorInput.getKeyboardDirection();
+			if (keyboardDir.len() > 0) {
+				// 有键盘输入，使用键盘方向
+				dx = keyboardDir.x * speed;
+				dy = keyboardDir.y * speed;
+			} else {
+				// 没有键盘输入，使用摇杆方向
+				dx = joystick.getKnobPercentX() * speed;
+				dy = joystick.getKnobPercentY() * speed;
+			}
 
 			TransformComponent trans = player.getComponent(TransformComponent.class);
 			if (trans != null) {

@@ -110,7 +110,32 @@ public class ViewWidget extends Widget {
 
 	/**
 	 * [修改后] 原有的 screenToWorld 现在复用上面的逻辑
-	 * 增加参数 Viewport: 因为 Gd.view 已经移除了，需要外部传入 GameWorld 的视口
+	 * 增加参数 OrthographicCamera: 直接使用相机进行坐标转换
+	 */
+	public Vector2 screenToWorld(float screenX, float screenY, OrthographicCamera camera) {
+		// 1. 先拿到 FBO 像素坐标
+		Vector2 fboPos = mapScreenToFbo(screenX, screenY);
+		float fboPixelX = fboPos.x;
+		float fboPixelY = fboPos.y;
+
+		// 2. FBO 像素坐标转换为世界坐标
+		// 获取FBO的中心点
+		float fboCenterX = target.getFboWidth() / 2f;
+		float fboCenterY = target.getFboHeight() / 2f;
+
+		// 计算相对于FBO中心的偏移
+		float offsetX = fboPixelX - fboCenterX;
+		float offsetY = fboPixelY - fboCenterY;
+
+		// 考虑相机缩放
+		float worldX = camera.position.x + offsetX * camera.zoom;
+		float worldY = camera.position.y + offsetY * camera.zoom;
+
+		return new Vector2(worldX, worldY);
+	}
+
+	/**
+	 * 保留原有的screenToWorld方法，使用Viewport参数
 	 */
 	public Vector2 screenToWorld(float screenX, float screenY, Viewport vp) {
 		// 1. 先拿到 FBO 像素坐标
@@ -119,7 +144,6 @@ public class ViewWidget extends Widget {
 		float fboPixelY = fboPos.y;
 
 		// 2. FBO 内部 Viewport 映射 (NDC转换)
-		// Viewport vp = Gd.view.getGameViewport(); // [删除旧代码]
 
 		// 必须拿到 FBO 内部视口的实际偏移和大小
 		float vpX = vp.getScreenX();

@@ -1,6 +1,7 @@
 package com.goldsprite.gdengine.screens.ecs.editor;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -27,6 +28,15 @@ public class EditorInput extends InputAdapter {
     // Gizmo操作状态
     private boolean isGizmoDragging = false;
     private GizmoSystem.Mode gizmoMode = GizmoSystem.Mode.MOVE;
+
+    // WASD键盘状态
+    private boolean wPressed = false;
+    private boolean aPressed = false;
+    private boolean sPressed = false;
+    private boolean dPressed = false;
+
+    // 键盘方向向量
+    private final Vector2 keyboardDirection = new Vector2();
 
     public EditorInput(OrthographicCamera camera, SceneManager sceneManager, GizmoSystem gizmoSystem) {
         this.camera = camera;
@@ -117,8 +127,28 @@ public class EditorInput extends InputAdapter {
 
     @Override
     public boolean keyDown(int keycode) {
+        // WASD键按下处理
+        switch (keycode) {
+            case Input.Keys.W:
+                wPressed = true;
+                updateKeyboardDirection();
+                return true;
+            case Input.Keys.A:
+                aPressed = true;
+                updateKeyboardDirection();
+                return true;
+            case Input.Keys.S:
+                sPressed = true;
+                updateKeyboardDirection();
+                return true;
+            case Input.Keys.D:
+                dPressed = true;
+                updateKeyboardDirection();
+                return true;
+        }
+
         // 切换Gizmo模式
-        if (keycode == com.badlogic.gdx.Input.Keys.G) {
+        if (keycode == Input.Keys.G) {
             switch (gizmoMode) {
                 case MOVE:
                     gizmoMode = GizmoSystem.Mode.ROTATE;
@@ -135,7 +165,7 @@ public class EditorInput extends InputAdapter {
         }
 
         // 删除选中的对象
-        if (keycode == com.badlogic.gdx.Input.Keys.DEL || keycode == com.badlogic.gdx.Input.Keys.FORWARD_DEL) {
+        if (keycode == Input.Keys.DEL || keycode == Input.Keys.FORWARD_DEL) {
             EditorTarget selection = sceneManager.getSelection();
             if (selection != null) {
                 sceneManager.deleteNode(selection);
@@ -146,10 +176,60 @@ public class EditorInput extends InputAdapter {
         return false;
     }
 
+    @Override
+    public boolean keyUp(int keycode) {
+        // WASD键释放处理
+        switch (keycode) {
+            case Input.Keys.W:
+                wPressed = false;
+                updateKeyboardDirection();
+                return true;
+            case Input.Keys.A:
+                aPressed = false;
+                updateKeyboardDirection();
+                return true;
+            case Input.Keys.S:
+                sPressed = false;
+                updateKeyboardDirection();
+                return true;
+            case Input.Keys.D:
+                dPressed = false;
+                updateKeyboardDirection();
+                return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 更新键盘方向向量
+     */
+    private void updateKeyboardDirection() {
+        keyboardDirection.set(0, 0);
+
+        if (wPressed) keyboardDirection.y += 1;
+        if (sPressed) keyboardDirection.y -= 1;
+        if (aPressed) keyboardDirection.x -= 1;
+        if (dPressed) keyboardDirection.x += 1;
+
+        // 归一化，确保对角线移动速度一致
+        if (keyboardDirection.len() > 0) {
+            keyboardDirection.nor();
+        }
+    }
+
+    /**
+     * 获取键盘方向向量
+     * @return 键盘方向向量，如果没有按键则返回(0,0)
+     */
+    public Vector2 getKeyboardDirection() {
+        return keyboardDirection.cpy();
+    }
+
     /**
      * 简单的点击测试，返回点击的对象
      */
-    private EditorTarget hitTest(float worldX, float worldY) {
+    public EditorTarget hitTest(float worldX, float worldY) {
         // 这里应该实现更精确的点击测试
         // 暂时使用简单的边界框测试
 
