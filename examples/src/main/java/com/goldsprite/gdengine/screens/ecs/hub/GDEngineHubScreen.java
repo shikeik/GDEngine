@@ -91,7 +91,7 @@ public class GDEngineHubScreen extends GScreen {
 		neonBatch = new NeonBatch();
 
 		initMainLayout();
-		refreshList(); // 这里不刷新, 改为show判断引导并刷新
+		// 移除这里的refreshList()调用，改为在show()中调用
 	}
 
 	private void initMainLayout() {
@@ -343,6 +343,11 @@ public class GDEngineHubScreen extends GScreen {
 		}
 
 		public static Array<FileHandle> listProjects() {
+			// 添加null检查，防止NullPointerException
+			if (Gd.engineConfig == null) {
+				return new Array<>(); // 返回空列表而不是抛出异常
+			}
+
 			FileHandle root = Gd.engineConfig.getProjectsDir();
 			FileHandle[] files = root.list();
 			Array<FileHandle> projects = new Array<>();
@@ -433,7 +438,7 @@ public class GDEngineHubScreen extends GScreen {
 					// 这里的 build.gradle 已经包含了我们注入的 idea {} 魔法代码
 					tempRoot.child("build.gradle").writeString(content, false, "UTF-8");
 				}
-				
+
 				if (commonSettings.exists()) {
 					String content = commonSettings.readString("UTF-8");
 					// 替换项目名称占位符 (如果存在)
@@ -448,7 +453,7 @@ public class GDEngineHubScreen extends GScreen {
 				if (!libsSource.exists()) {
 					libsSource = Gdx.files.internal("assets/engine/libs");
 				}
-				
+
 				FileHandle libsTarget = tempRoot.child("libs");
 				libsTarget.mkdirs();
 				for (FileHandle jar : libsSource.list(".jar")) {
