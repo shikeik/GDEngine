@@ -697,10 +697,10 @@ public class GDEngineEditorScreen extends GScreen {
 	public static class FileNode extends Tree.Node<FileNode, FileHandle, VisLabel> {
 		public FileNode(FileHandle file) {
 			super(new VisLabel(file.name()));
-			setValue(file);
+			setValue(file);int k;
 			VisLabel label = getActor();
 			if (file.isDirectory()) label.setColor(Color.GOLD);
-			label.setFontScale(1.1f);
+			//label.setFontScale(1.1f);
 		}
 	}
 }

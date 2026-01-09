@@ -76,21 +76,22 @@ public class CustomAtlasLoader {
         // 3. 查找 Region
         AtlasData data = atlasDataCache.get(imagePath);
         if (data != null && data.regions.containsKey(regionName)) {
-            RegionInfo info = data.regions.get(regionName);
-            
+            String[] info = data.regions.get(regionName);
+            int index = Integer.parseInt(info[0]);
+			
             // 使用 Split Cache
             TextureRegion[][] splits = splitCache.get(imagePath);
             if (splits != null) {
                 int cols = splits[0].length;
                 int rows = splits.length;
                 
-                int r = info.index / cols;
-                int c = info.index % cols;
+                int r = index / cols;
+                int c = index % cols;
                 
                 if (r < rows && c < cols) {
                     return splits[r][c];
                 } else {
-                     Gdx.app.error("CustomAtlasLoader", "Index out of bounds: " + regionName + " index=" + info.index);
+                     Gdx.app.error("CustomAtlasLoader", "Index out of bounds: " + regionName + " index=" + index);
                 }
             } else {
                 // Fallback to manual calculation if split failed (unlikely) or not grid
@@ -119,11 +120,7 @@ public class CustomAtlasLoader {
             JsonValue regions = root.get("regions");
             if (regions != null) {
                 for (JsonValue entry : regions) {
-                    RegionInfo info = new RegionInfo();
-                    if (entry.isLong()) {
-                        info.index = entry.asInt();
-                    }
-                    data.regions.put(entry.name, info);
+                    data.regions.put(entry.name, entry.asStringArray());
                 }
             }
             atlasDataCache.put(imagePath, data);
@@ -146,7 +143,7 @@ public class CustomAtlasLoader {
     private static class AtlasData {
         int gridWidth;
         int gridHeight;
-        Map<String, RegionInfo> regions = new HashMap<>();
+        Map<String, String[]> regions = new HashMap<>();
     }
     
     private static class RegionInfo {

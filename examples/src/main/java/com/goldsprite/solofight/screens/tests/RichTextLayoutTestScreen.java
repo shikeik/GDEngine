@@ -53,7 +53,7 @@ public class RichTextLayoutTestScreen extends GScreen {
         editorTable.add(new VisLabel("源码编辑器:")).left().row();
         
         String defaultCode = "欢迎使用 [color=gold]富文本编辑器[/color]！\n" +
-                             "这里可以测试 [size=20]布局[/size] 和 [img=sprites/icons/RavenFantasyIcons16x16.png#sword] 图标。\n" +
+                             "这里可以测试 [size=20]布局[/size] 和 铁剑 [img=sprites/icons/RavenFantasyIcons16x16.png#sword_iron] 图标。\n" +
                              "[color=green]尝试输入更多文字来测试自动换行...[/color]";
         
         final VisTextArea textArea = new VisTextArea(defaultCode);

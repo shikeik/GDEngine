@@ -103,7 +103,7 @@ public class GDEngineHubScreen extends GScreen {
 		// 1. Top Bar
 		VisTable topBar = new VisTable();
 		VisLabel titleLabel = new VisLabel("GDProject Hub");
-		titleLabel.setFontScale(1.5f);
+		//titleLabel.setFontScale(1.5f);
 		titleLabel.setColor(Color.CYAN);
 
 		// [新增] 设置按钮
@@ -169,8 +169,8 @@ public class GDEngineHubScreen extends GScreen {
 			item.pad(10);
 
 			VisLabel nameLbl = new VisLabel(projDir.name());
-			nameLbl.setFontScale(1.3f);
-			item.add(new VisLabel("📁 ")).padRight(10);
+			//nameLbl.setFontScale(1.3f);
+			item.add(new VisLabel("📁 ")).padRight(10);int k2;
 			item.add(nameLbl).expandX().left();
 
 			// 读取项目配置获取版本
@@ -186,7 +186,7 @@ public class GDEngineHubScreen extends GScreen {
 			// UI 展示
 			VisLabel pathLabel = new VisLabel("Engine: " + projDir.path() + " | " + projEngineVer);
 			pathLabel.setColor(Color.GRAY);
-			pathLabel.setFontScale(0.8f);
+			//pathLabel.setFontScale(0.8f);
 			item.add(pathLabel).right().padRight(20);
 
 			// [修改] 统一交互逻辑：单击弹窗(延时)，双击直达

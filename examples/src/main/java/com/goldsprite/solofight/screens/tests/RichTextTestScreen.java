@@ -1,18 +1,23 @@
 package com.goldsprite.solofight.screens.tests;
 
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.richtext.RichText;
 import com.goldsprite.gdengine.ui.widget.richtext.RichTextEvent;
 import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 
 public class RichTextTestScreen extends GScreen {
     
     private Stage uiStage;
+	
+    @Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Landscape;
+    }
 
     @Override
     public void create() {
@@ -71,17 +76,17 @@ public class RichTextTestScreen extends GScreen {
                 return false;
             }
         });
-        container.add(rt4).row();
+        container.add(rt4).row();int k2;
         
         // [New] Test 5: New Icons (RavenFantasyIcons16x16.png) using Custom Atlas
         // Syntax: [img=path/to/image.png#regionName]
         container.add(new VisLabel("----------------")).fillX().pad(5).row();
         
-        String text5 = "Atlas Test: [img=sprites/icons/RavenFantasyIcons16x16.png#sword] " +
-                       "[img=sprites/icons/RavenFantasyIcons16x16.png#potion] " +
-                       "[img=sprites/icons/RavenFantasyIcons16x16.png#shield]";
+        container.add(new VisLabel("Test 5: 自定义资源图标 (pot_clay, helmet_iron, orbs_magic)")).row();
+        String text5 = "Atlas Test: [img=sprites/icons/RavenFantasyIcons16x16.png#pot_clay] " +
+                       "[img=sprites/icons/RavenFantasyIcons16x16.png#helmet_iron] " +
+                       "[img=sprites/icons/RavenFantasyIcons16x16.png#orbs_magic]";
                        
-        container.add(new VisLabel("Test 5: 自定义资源图标 (Sword, Potion, Shield)")).row();
         RichText rt5 = new RichText(text5, 500);
         // 放大一点看清楚
         rt5.setScale(2); 
