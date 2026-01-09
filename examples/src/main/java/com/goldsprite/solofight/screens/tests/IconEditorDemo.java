@@ -21,6 +21,7 @@ import com.badlogic.gdx.utils.JsonWriter.OutputType;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.command.CommandManager;
+import com.goldsprite.gdengine.core.command.CommandManager.CommandListener;
 import com.goldsprite.gdengine.core.command.ICommand;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
@@ -189,6 +190,11 @@ public class IconEditorDemo extends GScreen {
                 ICommand current = commandManager.getLastCommand();
                 boolean dirty = (current != savedHistoryState);
                 markDirty(dirty);
+            }
+            @Override public void onHistoryNavigated(int position) {
+                if(historyPanel != null) {
+                    historyPanel.updateCurrentIndex(position);
+                }
             }
         });
 
@@ -682,6 +688,7 @@ public class IconEditorDemo extends GScreen {
         pageJson.add(jsonEditor).grow().row();
         pageJson.add(btnApply).growX().pad(5);
 
+        // 添加页面到propertiesStack
         propertiesStack.add(pageInsp);
         propertiesStack.add(pageJson);
 
@@ -760,23 +767,12 @@ public class IconEditorDemo extends GScreen {
 
         centerStack.add(topBar);
 
-        // History Panel (右上角悬浮)
-        Table historyContainer = new Table();
-        historyContainer.top().right().pad(10);
+        // History Panel (附着于检查器面板左边下方)
+        historyPanel = new CommandHistoryUI(commandManager, rightPanel);
+        historyPanel.setVisible(true); // 默认显示
 
-        historyPanel = new CommandHistoryUI();
-        historyPanel.setVisible(false); // Default hidden
-
-        VisTextButton btnHistory = new VisTextButton("History");
-        btnHistory.addListener(new ClickListener() {
-            @Override public void clicked(InputEvent e, float x, float y) {
-                historyPanel.setVisible(!historyPanel.isVisible());
-            }
-        });
-
-        historyContainer.add(btnHistory).right().row();
-        historyContainer.add(historyPanel).right().padTop(5);
-        centerStack.add(historyContainer);
+        // 添加到UI舞台，使用附着逻辑定位
+        uiStage.addActor(historyPanel);
 
         // 4. 分割窗格组合
         VisSplitPane rightSplit = new VisSplitPane(centerStack, rightPanel, false);

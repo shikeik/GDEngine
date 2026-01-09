@@ -4,8 +4,8 @@
 	{
 		"class": "Rectangle",
 		"name": "New Rectangle",
-		"x": 240,
-		"y": -60,
+		"x": -30.000061,
+		"y": 4.0000076,
 		"color": {
 			"r": 0.5529412,
 			"g": 1,

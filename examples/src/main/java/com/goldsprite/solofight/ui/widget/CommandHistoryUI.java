@@ -1,189 +1,398 @@
 package com.goldsprite.solofight.ui.widget;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Group;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
-import com.badlogic.gdx.scenes.scene2d.ui.Cell;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.ScrollPane;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.assets.FontUtils;
+import com.goldsprite.gdengine.core.command.CommandManager;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * 指令历史 UI (v3.0 视觉复刻版)
+ * 指令历史 UI (v4.0 重设计版)
  * 改进：
- * 1. 抛弃静态纹理，使用 Vertex Color 实现真正的 Linear Gradient。
- * 2. 1:1 复刻 H5 CSS 样式 (Raw: Dark, Move: Gradient Cyan)。
+ * 1. 移动到右下角
+ * 2. 当前节点亮色，其他节点暗色
+ * 3. 滑动布局
+ * 4. 半透明白净背景
+ * 5. 无最大显示数量限制
+ * 6. 点击历史节点可切换操作历史
+ * 7. 可展开/收起面板
  */
-public class CommandHistoryUI extends Table {
+public class CommandHistoryUI extends WidgetGroup {
+    private static final float ITEM_WIDTH = 220; // 加宽以容纳更多内容
+    private static final float ITEM_HEIGHT = 28; // 增加高度提升可读性
+    private static final float PANEL_WIDTH = 250; // 面板宽度
+    private static final float MAX_PANEL_HEIGHT = 400; // 最大面板高度
+    private static final float COLLAPSE_BUTTON_SIZE = 24; // 展开/收起按钮大小
 
-	private final int MAX_ITEMS = 8;
-	private final float ITEM_WIDTH = 180; // 稍微加宽一点以容纳长文本
-	private final float ITEM_HEIGHT = 24; // 高度微调
+    // 静态资源
+    private static TextureRegion whitePixel;
+    private static Label.LabelStyle styleItem, styleCurrentItem;
+    private static boolean isInit = false;
 
-	// 静态资源
-	private static TextureRegion whitePixel;
-	private static Label.LabelStyle styleIcon, styleNameMove, styleNameRaw, styleSrc;
-	private static boolean isInit = false;
+    // 颜色常量
+    private final Color COL_BG_PANEL = new Color(1, 1, 1, 1f); // 半透明白色背景
+    private final Color COL_BORDER = new Color(0.3f, 0.3f, 0.3f, 1f); // 边框颜色
+    private final Color COL_ITEM_NORMAL = new Color(0, 0, 0, 1); // 普通项文字颜色（深色以便在白色背景上显示）
+    private final Color COL_ITEM_CURRENT = new Color(0, 0, 1, 1); // 当前项文字颜色（更深色）
+    private final Color COL_ITEM_BACKGROUND = new Color(1, 1, 1, 1f); // 项背景色（白色半透明）
+    private final Color COL_ITEM_CURRENT_BACKGROUND = new Color(1, 1, 1, 1f); // 当前项背景色（白色半透明，更不透明）
 
-	// 颜色常量 (H5 1:1)
-	private static final Color COL_BORDER_RAW = Color.valueOf("555555");
-	private static final Color COL_BG_RAW = new Color(0, 0, 0, 0.6f); // 实色黑底
+    // 组件
+    private Table contentTable;
+    private ScrollPane scrollPane;
+    private Table container;
+    private Actor collapseButton;
+    private boolean isExpanded = true;
 
-	private static final Color COL_BORDER_MOVE = Color.valueOf("00eaff");
-	private static final Color COL_BG_MOVE_START = new Color(0/255f, 234/255f, 255/255f, 0.25f); // 渐变起始
-	private static final Color COL_BG_MOVE_END = new Color(0/255f, 234/255f, 255/255f, 0f);      // 渐变结束(透明)
+    // 历史数据
+    private List<HistoryItem> historyItems = new ArrayList<>();
+    private int currentHistoryIndex = -1;
+    private CommandManager commandManager;
+    private com.badlogic.gdx.scenes.scene2d.Actor inspectorPanel;
 
-	public CommandHistoryUI() {
-		top().left();
-		initResources();
-	}
+    public CommandHistoryUI() {
+        this(null, null);
+    }
 
-	private void initResources() {
-		if (isInit) return;
+    public CommandHistoryUI(CommandManager commandManager) {
+        this(commandManager, null);
+    }
 
-		// 1. 生成 1x1 白点用于绘制
-		Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-		p.setColor(Color.WHITE);
-		p.fill();
-		whitePixel = new TextureRegion(new Texture(p));
-		p.dispose();
+    public CommandHistoryUI(CommandManager commandManager, com.badlogic.gdx.scenes.scene2d.Actor inspectorPanel) {
+        this.commandManager = commandManager;
+        this.inspectorPanel = inspectorPanel;
+        initResources();
+        initUI();
+        initListeners();
+    }
 
-		// 2. 字体样式
-		BitmapFont font12 = FontUtils.generate(14); // 稍微加大字体
-		BitmapFont font9 = FontUtils.generate(10);
+    private void initResources() {
+        if (isInit) return;
 
-		styleIcon = new Label.LabelStyle(font12, Color.WHITE);
+        // 1. 生成 1x1 白点用于绘制
+        Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        p.setColor(new Color(1, 1, 1, 1)); // 使用自己的白色副本，避免全局污染
+        p.fill();
+        whitePixel = new TextureRegion(new Texture(p));
+        p.dispose();
 
-		// Move: 亮青色文字
-		styleNameMove = new Label.LabelStyle(font12, Color.valueOf("00eaff"));
-		// Raw: 灰白色文字
-		styleNameRaw = new Label.LabelStyle(font12, Color.valueOf("cccccc"));
+        // 2. 字体样式
+        BitmapFont font = FontUtils.generate(14);
 
-		styleSrc = new Label.LabelStyle(font9, Color.valueOf("777777"));
+        styleItem = new Label.LabelStyle(font, COL_ITEM_NORMAL);
+        styleCurrentItem = new Label.LabelStyle(font, COL_ITEM_CURRENT);
 
-		isInit = true;
-	}
+        isInit = true;
+    }
 
-	public void addHistory(String cmdId, String src, String type, String icon) {
-		if (getCells().size >= MAX_ITEMS) {
-			Cell c = getCells().first();
-			c.getActor().remove();
-			getCells().removeIndex(0);
-		}
+    private void initUI() {
+        // 创建容器
+        container = new Table();
+        container.setSize(PANEL_WIDTH, MAX_PANEL_HEIGHT);
+        container.setPosition(0, 0);
 
-		HistoryItem item = new HistoryItem(cmdId, src, type, icon);
-		add(item).width(ITEM_WIDTH).height(ITEM_HEIGHT).padTop(3).row(); // 增加间距
+        // 创建内容表格
+        contentTable = new Table();
+        contentTable.top().left();
 
-		pack();
+        // 创建滚动面板
+        scrollPane = new ScrollPane(contentTable);
+        scrollPane.setOverscroll(false, false);
+        scrollPane.setFadeScrollBars(false); // 禁用滑动条淡出效果，使其始终可见
+        scrollPane.setScrollbarsVisible(true); // 确保滑动条始终可见
+        scrollPane.setForceScroll(false, true); // 禁用水平滚动，启用垂直滚动
+        scrollPane.setFlickScroll(false); // 禁用拖拽滑动
+        scrollPane.setClamp(true); // 确保内容不会超出边界
+        scrollPane.setTouchable(Touchable.childrenOnly); // 只允许子组件接收触摸事件，禁用面板拖拽
 
-		// 动画: Slide In
-		item.getColor().a = 0;
-		item.addAction(Actions.parallel(
-			Actions.fadeIn(0.1f),
-			Actions.sequence(
-				Actions.moveBy(-15, 0),
-				Actions.moveBy(15, 0, 0.15f)
-			)
-		));
-	}
+        // 创建展开/收起按钮
+        collapseButton = createCollapseButton();
 
-	private class HistoryItem extends Group {
-		private final boolean isMove;
+        // 添加到容器
+        container.add(collapseButton).width(COLLAPSE_BUTTON_SIZE).height(COLLAPSE_BUTTON_SIZE).pad(5).top().right();
+        container.row();
+        container.add(scrollPane).grow().pad(5);
 
-		public HistoryItem(String cmdId, String src, String type, String icon) {
-			setSize(ITEM_WIDTH, ITEM_HEIGHT);
-			this.isMove = type.equals("move");
+        // 添加容器到WidgetGroup
+        addActor(container);
 
-			// Icon (Bold)
-			Label lIcon = new Label(icon, styleIcon);
-			lIcon.setPosition(8, 4);
-			addActor(lIcon);
+        // 设置WidgetGroup大小
+        setSize(PANEL_WIDTH, MAX_PANEL_HEIGHT);
 
-			// Name
-			String name = cmdId.replace("CMD_", "");
-			Label lName = new Label(name, isMove ? styleNameMove : styleNameRaw);
-			lName.setPosition(30, 4); // icon后移一点
-			addActor(lName);
+        // 定位到检查器面板的左边下方
+        updatePosition();
+    }
 
-			// Source
-			Label lSrc = new Label(src, styleSrc);
-			lSrc.setAlignment(Align.right);
-			lSrc.setPosition(180 - lSrc.getPrefWidth() - 6, 5);
-			addActor(lSrc);
-		}
+    /**
+     * 更新面板位置，使其附着于检查器面板的左边下方
+     */
+    private void updatePosition() {
+        // 如果没有检查器面板引用，使用默认位置
+        if (inspectorPanel == null) {
+            // 获取屏幕尺寸
+            float screenWidth = Gdx.graphics.getWidth();
 
-		@Override
-		public void draw(Batch batch, float parentAlpha) {
-			Color c = getColor();
-			float alpha = c.a * parentAlpha;
-			if (alpha <= 0) return;
+            // 计算检查器面板的左边界位置（屏幕宽度的75%处）
+            float inspectorLeft = screenWidth * 0.75f;
 
-			float x = getX();
-			float y = getY();
-			float w = getWidth();
-			float h = getHeight();
+            // 设置历史面板的位置（检查器面板的左边下方）
+            // 向左偏移10像素，距离底部10像素
+            float panelX = inspectorLeft - PANEL_WIDTH - 10;
+            float panelY = 10; // 距离底部10像素
 
-			// 1. 绘制左侧边框 (3px width)
-			Color borderColor = isMove ? COL_BORDER_MOVE : COL_BORDER_RAW;
-			batch.setColor(borderColor.r, borderColor.g, borderColor.b, alpha);
-			batch.draw(whitePixel, x, y, 3, h);
+            setPosition(panelX, panelY);
+            return;
+        }
 
-			// 2. 绘制背景 (Raw: 纯色, Move: 渐变)
-			if (isMove) {
-				// 绘制水平渐变 (Left -> Right)
-				drawGradientRect(batch, x + 3, y, w - 3, h, COL_BG_MOVE_START, COL_BG_MOVE_END, alpha);
-			} else {
-				// 绘制纯色背景
-				batch.setColor(COL_BG_RAW.r, COL_BG_RAW.g, COL_BG_RAW.b, alpha);
-				batch.draw(whitePixel, x + 3, y, w - 3, h);
-			}
+        // 获取检查器面板的实际位置
+        float inspectorX = inspectorPanel.getX();
+        float inspectorY = inspectorPanel.getY();
+        float inspectorWidth = inspectorPanel.getWidth();
+        float inspectorHeight = inspectorPanel.getHeight();
 
-			// 3. 绘制子组件 (Label)
-			super.draw(batch, parentAlpha);
-		}
+        // 将检查器面板的局部坐标转换为屏幕坐标
+        com.badlogic.gdx.scenes.scene2d.Actor parent = inspectorPanel.getParent();
+        while (parent != null) {
+            inspectorX += parent.getX();
+            inspectorY += parent.getY();
+            parent = parent.getParent();
+        }
 
-		/**
-		 * 辅助方法：使用 Batch 绘制水平渐变矩形
-		 */
-		private void drawGradientRect(Batch batch, float x, float y, float w, float h, Color start, Color end, float alpha) {
-			float c1 = start.toFloatBits(); // 预乘 Alpha 需要注意，这里假设 Color 自身 Alpha 已正确设置
-			// 但 Batch 的 setColor 会影响 draw，这里我们需要手动构建顶点颜色
-			// 简单的做法是利用 Batch.draw(texture, vertices...)
+        // 设置历史面板的位置（检查器面板的左边下方）
+        // 向左偏移10像素，距离底部10像素
+        float panelX = inspectorX - PANEL_WIDTH - 10;
+        float panelY = inspectorY + 10; // 距离检查器面板底部10像素
 
-			// 重新计算带 Alpha 的颜色 Bits
-			float startBits = tempColor(start, alpha);
-			float endBits = tempColor(end, alpha);
+        setPosition(panelX, panelY);
+    }
 
-			float[] v = tempVerts;
-			float u = whitePixel.getU();
-			float v2 = whitePixel.getV2(); // V2 is usually top in Y-up? No, standard UV.
-			float v1 = whitePixel.getV();
-			// LibGDX SpriteBatch vertices: x, y, color, u, v
+    @Override
+    public void act(float delta) {
+        super.act(delta);
+        // 每帧更新位置，确保始终附着于检查器面板
+        updatePosition();
+    }
 
-			// BL (Start Color)
-			v[0] = x; v[1] = y; v[2] = startBits; v[3] = u; v[4] = v2;
-			// TL (Start Color)
-			v[5] = x; v[6] = y+h; v[7] = startBits; v[8] = u; v[9] = v1;
-			// TR (End Color)
-			v[10] = x+w; v[11] = y+h; v[12] = endBits; v[13] = u; v[14] = v1;
-			// BR (End Color)
-			v[15] = x+w; v[16] = y; v[17] = endBits; v[18] = u; v[19] = v2;
+    private Actor createCollapseButton() {
+        Group button = new Group();
+        button.setSize(COLLAPSE_BUTTON_SIZE, COLLAPSE_BUTTON_SIZE);
+        button.setTouchable(Touchable.enabled);
 
-			batch.draw(whitePixel.getTexture(), v, 0, 20);
-		}
-	}
+        // 创建箭头图标
+        TextureRegion arrow = createArrowTexture();
+        Actor arrowActor = new Actor() {
+            @Override
+            public void draw(Batch batch, float parentAlpha) {
+                Color color = getColor();
+                batch.setColor(color.r, color.g, color.b, color.a * parentAlpha);
+                batch.draw(arrow, getX(), getY(), getWidth(), getHeight());
+            }
+        };
+        arrowActor.setSize(16, 16);
+        arrowActor.setPosition((COLLAPSE_BUTTON_SIZE - 16) / 2, (COLLAPSE_BUTTON_SIZE - 16) / 2);
+        button.addActor(arrowActor);
 
-	// 缓存数组避免 GC
-	private static final float[] tempVerts = new float[20];
-	private static final Color tmpC = new Color();
+        // 添加点击事件
+        button.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                toggleCollapse();
+            }
+        });
 
-	private static float tempColor(Color c, float alpha) {
-		return tmpC.set(c).mul(1, 1, 1, alpha).toFloatBits();
-	}
+        return button;
+    }
+
+    private TextureRegion createArrowTexture() {
+        Pixmap p = new Pixmap(16, 16, Pixmap.Format.RGBA8888);
+        p.setColor(new Color(1, 1, 1, 1)); // 使用自己的白色副本，避免全局污染
+
+        // 绘制向下箭头
+        int centerX = 8;
+        int centerY = 8;
+        int size = 6;
+
+        for (int i = 0; i <= size; i++) {
+            int x = centerX - i;
+            int y = centerY + i - size / 2;
+            p.drawLine(x, y, x + i * 2, y);
+        }
+
+        Texture texture = new Texture(p);
+        p.dispose();
+        return new TextureRegion(texture);
+    }
+
+    private void initListeners() {
+        // 监听窗口大小变化，保持在右下角
+        addListener(new ClickListener() {
+            @Override
+            public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+                // 鼠标进入时，添加轻微高亮效果
+                container.setColor(1, 1, 1, 1f); // alpha设置为低于1将导致字体完全不可见
+            }
+
+            @Override
+            public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+                // 鼠标离开时，恢复正常效果
+                container.setColor(1, 1, 1, 1f); // alpha设置为低于1将导致字体完全不可见
+            }
+        });
+    }
+
+    public void addHistory(String cmdId, String src, String type, String icon) {
+        HistoryItem item = new HistoryItem(cmdId, src, type, icon, historyItems.size());
+        historyItems.add(item);
+        contentTable.add(item).width(ITEM_WIDTH).height(ITEM_HEIGHT).padBottom(2).row();
+
+        // 更新当前历史索引
+        currentHistoryIndex = historyItems.size() - 1;
+        updateItemStates();
+
+        // 滚动到底部
+        scrollPane.layout();
+        scrollPane.scrollTo(0, 0, 0, 0);
+    }
+
+    public void updateCurrentIndex(int newIndex) {
+        currentHistoryIndex = newIndex;
+        updateItemStates();
+    }
+
+    private void updateItemStates() {
+        for (int i = 0; i < historyItems.size(); i++) {
+            HistoryItem item = historyItems.get(i);
+            item.setCurrent(i == currentHistoryIndex);
+        }
+    }
+
+    private void toggleCollapse() {
+        isExpanded = !isExpanded;
+
+        if (isExpanded) {
+            // 展开面板
+            container.addAction(Actions.sizeTo(PANEL_WIDTH, MAX_PANEL_HEIGHT, 0.3f));
+            scrollPane.addAction(Actions.fadeIn(0.3f));
+        } else {
+            // 收起面板
+            container.addAction(Actions.sizeTo(PANEL_WIDTH, COLLAPSE_BUTTON_SIZE + 10, 0.3f));
+            scrollPane.addAction(Actions.fadeOut(0.3f));
+        }
+
+        setSize(PANEL_WIDTH, container.getHeight());
+    }
+
+    @Override
+    public void draw(Batch batch, float parentAlpha) {
+        // 绘制不透明背景
+        Color c = getColor();
+        float alpha = c.a * parentAlpha;
+
+        float x = getX();
+        float y = getY();
+        float w = container.getWidth();
+        float h = container.getHeight();
+
+        // 绘制面板背景（不透明）
+        batch.setColor(0.2f, 0.2f, 0.2f, 0.9f); // 深灰色半透明背景，增加不透明度
+        batch.draw(whitePixel, x, y, w, h);
+
+        // 绘制边框
+        batch.setColor(0.5f, 0.5f, 0.5f, 0.8f); // 边框颜色
+        batch.draw(whitePixel, x, y, w, 2); // 上边框
+        batch.draw(whitePixel, x, y + h - 2, w, 2); // 下边框
+        batch.draw(whitePixel, x, y, 2, h); // 左边框
+        batch.draw(whitePixel, x + w - 2, y, 2, h); // 右边框
+
+        // 绘制子组件
+        super.draw(batch, parentAlpha);
+    }
+
+    private class HistoryItem extends Group {
+        private final String cmdId;
+        private final String src;
+        private final String type;
+        private final String icon;
+        private final int index;
+        private boolean isCurrent = false;
+
+        private Label label;
+
+        public HistoryItem(String cmdId, String src, String type, String icon, int index) {
+            this.cmdId = cmdId;
+            this.src = src;
+            this.type = type;
+            this.icon = icon;
+            this.index = index;
+
+            setSize(ITEM_WIDTH, ITEM_HEIGHT);
+            initItem();
+        }
+
+        private void initItem() {
+            // 设置可触摸
+            setTouchable(Touchable.enabled);
+
+            // 创建标签文本
+            String displayText = icon + " " + cmdId.replace("CMD_", "") + " - " + src;
+            label = new Label(displayText, styleItem);
+            label.setPosition(8, 4);
+            addActor(label);
+
+            // 添加点击事件
+            addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    // 点击历史节点，切换到该历史
+                    if (commandManager != null) {
+                        commandManager.navigateToHistory(index);
+                    }
+                }
+            });
+        }
+
+        public void setCurrent(boolean current) {
+            isCurrent = current;
+            label.setStyle(current ? styleCurrentItem : styleItem);
+        }
+
+        @Override
+        public void draw(Batch batch, float parentAlpha) {
+            Color c = getColor();
+            float alpha = c.a * parentAlpha;
+
+            float x = getX();
+            float y = getY();
+            float w = getWidth();
+            float h = getHeight();
+
+            // 绘制白色半透明背景
+            if (isCurrent) {
+                batch.setColor(1, 1, 1, 0.7f); // 当前项白色背景，更不透明
+            } else {
+                batch.setColor(1, 1, 1, 0.5f); // 普通项白色背景，半透明
+            }
+            batch.draw(whitePixel, x, y, w, h);
+
+            // 绘制子组件
+            super.draw(batch, parentAlpha);
+        }
+    }
 }

@@ -3,12 +3,13 @@ package com.goldsprite.gdengine.core.command;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
+import java.util.Collections;
 
 public class CommandManager {
     private final Stack<ICommand> undoStack = new Stack<>();
     private final Stack<ICommand> redoStack = new Stack<>();
     private final List<CommandListener> listeners = new ArrayList<>();
-    
+
     private int maxHistorySize = 50;
 
     public interface CommandListener {
@@ -16,6 +17,7 @@ public class CommandManager {
         default void onUndo(ICommand cmd) {}
         default void onRedo(ICommand cmd) {}
         default void onHistoryChanged() {}
+        default void onHistoryNavigated(int position) {}
     }
 
     public void execute(ICommand cmd) {
@@ -27,16 +29,16 @@ public class CommandManager {
         // 这个 Command 的 execute() 可以是“应用最终值”，也可以是“什么都不做（因为值已经设了）”。
         // 为了支持 Redo，execute() 必须包含设置新值的逻辑。
         // 如果我们在拖拽结束时已经设好了新值，再次调用 execute() 设置相同的值是无害的。
-        
+
         cmd.execute();
-        
+
         undoStack.push(cmd);
         redoStack.clear();
-        
+
         if (undoStack.size() > maxHistorySize) {
             undoStack.remove(0);
         }
-        
+
         notifyExecuted(cmd);
         notifyHistoryChanged();
     }
@@ -46,7 +48,7 @@ public class CommandManager {
         ICommand cmd = undoStack.pop();
         cmd.undo();
         redoStack.push(cmd);
-        
+
         notifyUndo(cmd);
         notifyHistoryChanged();
     }
@@ -56,14 +58,16 @@ public class CommandManager {
         ICommand cmd = redoStack.pop();
         cmd.execute();
         undoStack.push(cmd);
-        
+
         notifyRedo(cmd);
         notifyHistoryChanged();
     }
-    
+
     public boolean canUndo() { return !undoStack.isEmpty(); }
     public boolean canRedo() { return !redoStack.isEmpty(); }
-    
+    public int getUndoStackSize() { return undoStack.size(); }
+    public int getRedoStackSize() { return redoStack.size(); }
+
     /**
      * 获取当前 Undo 栈顶的命令（即最近执行的命令）。
      * 用于状态比对（如检测文件是否变脏）。
@@ -72,7 +76,7 @@ public class CommandManager {
     public ICommand getLastCommand() {
         return undoStack.isEmpty() ? null : undoStack.peek();
     }
-    
+
     public void clear() {
         undoStack.clear();
         redoStack.clear();
@@ -91,7 +95,33 @@ public class CommandManager {
     private void notifyRedo(ICommand cmd) {
         for (CommandListener l : listeners) l.onRedo(cmd);
     }
+    /**
+     * 跳转到指定的历史节点位置
+     * @param position 目标位置（0表示最早的历史，undoStack.size()-1表示最近的历史）
+     */
+    public void navigateToHistory(int position) {
+        if (position < 0 || position >= undoStack.size()) return;
+
+        // 计算需要撤销的步数
+        int stepsToUndo = undoStack.size() - 1 - position;
+
+        // 执行撤销操作直到到达目标位置
+        for (int i = 0; i < stepsToUndo; i++) {
+            ICommand cmd = undoStack.pop();
+            cmd.undo();
+            redoStack.push(cmd);
+            notifyUndo(cmd);
+        }
+
+        notifyHistoryChanged();
+        notifyHistoryNavigated(position);
+    }
+
     private void notifyHistoryChanged() {
         for (CommandListener l : listeners) l.onHistoryChanged();
+    }
+
+    private void notifyHistoryNavigated(int position) {
+        for (CommandListener l : listeners) l.onHistoryNavigated(position);
     }
 }
