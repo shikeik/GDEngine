@@ -13,7 +13,7 @@ public class EditorGameScreen extends GScreen {
 
 	@Override
 	public void create() {
-		realGame = new EditorController();
+		realGame = new EditorController(this);
 		realGame.create();
 	}
 

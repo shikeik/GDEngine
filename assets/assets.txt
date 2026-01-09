@@ -60,3 +60,4 @@ sprites/roles/TobiDark01.png
 sprites/roles/TobiDark02.png
 sprites/roles/enma/enma.ase
 sprites/roles/enma/enma01.png
+sprites/tempBack.png

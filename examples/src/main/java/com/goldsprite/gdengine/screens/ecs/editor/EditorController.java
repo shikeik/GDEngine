@@ -53,6 +53,7 @@ import com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.SceneManager;
 
 public class EditorController implements EditorListener {
+	private EditorGameScreen screen;
 	Stage stage;
 	// GameWorld gameWorld; // Replaced by core.ecs.GameWorld.inst()
 	ViewTarget gameTarget, sceneTarget;
@@ -80,6 +81,12 @@ public class EditorController implements EditorListener {
 	private NeonBatch neonBatch;
 	private SpriteSystem spriteSystem;
 	private SkeletonRenderSystem skeletonRenderSystem;
+
+	public EditorController() {
+	}
+	public EditorController(EditorGameScreen screen) {
+		this.screen = screen;
+	}
 
 	public void create() {
 		if (!VisUI.isLoaded()) VisUI.load();
@@ -149,7 +156,9 @@ public class EditorController implements EditorListener {
 		inputMultiplexer = new InputMultiplexer();
 		inputMultiplexer.addProcessor(stage);
 		inputMultiplexer.addProcessor(editorInput);
-		Gdx.input.setInputProcessor(inputMultiplexer);
+		// 这里临时处理
+		if(screen != null)screen.getImp().addProcessor(inputMultiplexer);
+		else Gdx.input.setInputProcessor(inputMultiplexer);
 	}
 
 	private void setupSceneRoot() {
@@ -207,7 +216,7 @@ public class EditorController implements EditorListener {
 		try {
 			// 使用 GDX 原生加载确保稳定
 			Texture tex = new Texture(Gdx.files.internal("sprites/roles/enma/enma01.png"));
-			sprite.setRegion(new TextureRegion(tex));
+			sprite.setRegion(new TextureRegion(tex, 0, 0, 80, 80));
 		} catch (Exception e) {
 			Gdx.app.error("Editor", "Failed to load sprite", e);
 		}
@@ -223,7 +232,7 @@ public class EditorController implements EditorListener {
 		SpriteComponent bgSprite = bgObj.addComponent(SpriteComponent.class);
 		try {
 			Texture tex = new Texture(Gdx.files.internal("sprites/roles/Abaddon01.png"));
-			bgSprite.setRegion(new TextureRegion(tex));
+			bgSprite.setRegion(new TextureRegion(tex, 0, 0, 80, 80));
 		} catch (Exception e) {}
 		bgSprite.setEnable(true);
 
@@ -404,7 +413,21 @@ public class EditorController implements EditorListener {
 
 		GameWorld.inst().update(delta);
 
-		// 2. 更新相机
+		// 2. 更新相机 - 添加跟随玩家的逻辑
+		if (player != null) {
+			TransformComponent trans = player.getComponent(TransformComponent.class);
+			if (trans != null) {
+				// 让游戏相机跟随玩家
+				float camX = gameCamera.position.x;
+				float camY = gameCamera.position.y;
+				float targetX = trans.position.x;
+				float targetY = trans.position.y;
+
+				// 平滑跟随
+				gameCamera.position.x += (targetX - camX) * 5 * delta;
+				gameCamera.position.y += (targetY - camY) * 5 * delta;
+			}
+		}
 		gameCamera.update();
 		sceneCamera.update();
 
