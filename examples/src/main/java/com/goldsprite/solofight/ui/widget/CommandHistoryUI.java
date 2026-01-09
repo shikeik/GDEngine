@@ -19,6 +19,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.WidgetGroup;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.assets.FontUtils;
 import com.goldsprite.gdengine.core.command.CommandManager;
+import com.goldsprite.gdengine.core.command.ICommand;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +82,72 @@ public class CommandHistoryUI extends WidgetGroup {
         initResources();
         initUI();
         initListeners();
+
+        // 加载已有的历史命令
+        loadExistingHistory();
+
+        // 注册命令管理器监听器
+        if (commandManager != null) {
+            commandManager.addListener(new CommandManager.CommandListener() {
+                @Override
+                public void onCommandExecuted(ICommand cmd) {
+                    // 添加新的历史项
+                    String type = "raw";
+                    if(cmd.getSource().equals("Gizmo")) type = "move";
+                    addHistory("CMD_" + cmd.getName(), cmd.getSource(), type, cmd.getIcon());
+                }
+
+                @Override
+                public void onUndo(ICommand cmd) {
+                    // 重新加载历史命令，不更新当前索引
+                    loadExistingHistory();
+                }
+
+                @Override
+                public void onRedo(ICommand cmd) {
+                    // 重新加载历史命令，不更新当前索引
+                    loadExistingHistory();
+                }
+
+                @Override
+                public void onHistoryChanged() {
+                    // 历史变化时重新加载所有历史命令
+                    loadExistingHistory();
+                }
+
+                @Override
+                public void onHistoryNavigated(int position) {
+                    // 当导航到特定历史位置时更新索引
+                    updateCurrentIndex(position);
+                }
+            });
+        }
+    }
+
+    /**
+     * 加载CommandManager中已有的历史命令
+     */
+    private void loadExistingHistory() {
+        if (commandManager == null) return;
+
+        // 清空当前历史项
+        historyItems.clear();
+        contentTable.clear();
+
+        // 获取所有历史命令（包括undo和redo栈中的命令）
+        List<ICommand> commands = commandManager.getAllHistoryCommands();
+
+        // 为每个命令创建历史项，不更新当前索引
+        for (int i = 0; i < commands.size(); i++) {
+            ICommand cmd = commands.get(i);
+            String type = "raw";
+            if(cmd.getSource().equals("Gizmo")) type = "move";
+            addHistory("CMD_" + cmd.getName(), cmd.getSource(), type, cmd.getIcon(), false);
+        }
+
+        // 设置当前历史索引
+        currentHistoryIndex = commandManager.getUndoStackSize() - 1;
+        updateItemStates();
     }
 
     private void initResources() {
@@ -118,7 +185,7 @@ public class CommandHistoryUI extends WidgetGroup {
         scrollPane.setFadeScrollBars(false); // 禁用滑动条淡出效果，使其始终可见
         scrollPane.setScrollbarsVisible(true); // 确保滑动条始终可见
         scrollPane.setForceScroll(false, true); // 禁用水平滚动，启用垂直滚动
-        scrollPane.setFlickScroll(false); // 禁用拖拽滑动
+        scrollPane.setFlickScroll(true); // 禁用拖拽滑动
         scrollPane.setClamp(true); // 确保内容不会超出边界
         scrollPane.setTouchable(Touchable.childrenOnly); // 只允许子组件接收触摸事件，禁用面板拖拽
 
@@ -258,17 +325,31 @@ public class CommandHistoryUI extends WidgetGroup {
     }
 
     public void addHistory(String cmdId, String src, String type, String icon) {
+        addHistory(cmdId, src, type, icon, true);
+    }
+
+    /**
+     * 添加历史项
+     * @param cmdId 命令ID
+     * @param src 来源
+     * @param type 类型
+     * @param icon 图标
+     * @param updateCurrentIndex 是否更新当前历史索引
+     */
+    public void addHistory(String cmdId, String src, String type, String icon, boolean updateCurrentIndex) {
         HistoryItem item = new HistoryItem(cmdId, src, type, icon, historyItems.size());
         historyItems.add(item);
         contentTable.add(item).width(ITEM_WIDTH).height(ITEM_HEIGHT).padBottom(2).row();
 
-        // 更新当前历史索引
-        currentHistoryIndex = historyItems.size() - 1;
-        updateItemStates();
+        // 更新当前历史索引（仅在需要时）
+        if (updateCurrentIndex) {
+            currentHistoryIndex = historyItems.size() - 1;
+            updateItemStates();
+        }
 
-        // 滚动到底部
-        scrollPane.layout();
-        scrollPane.scrollTo(0, 0, 0, 0);
+        // 移除自动滚动，让用户手动控制滚动位置
+        // scrollPane.layout();
+        // scrollPane.scrollTo(0, 0, 0, 0);
     }
 
     public void updateCurrentIndex(int newIndex) {
@@ -362,6 +443,7 @@ public class CommandHistoryUI extends WidgetGroup {
                 public void clicked(InputEvent event, float x, float y) {
                     // 点击历史节点，切换到该历史
                     if (commandManager != null) {
+                        // 直接使用index作为历史位置，因为现在历史列表包含了所有命令
                         commandManager.navigateToHistory(index);
                     }
                 }

@@ -174,17 +174,14 @@ public class IconEditorDemo extends GScreen {
         // Command Listener
         commandManager.addListener(new CommandManager.CommandListener() {
             @Override public void onCommandExecuted(ICommand cmd) {
-                if(historyPanel != null) {
-                    String type = "raw";
-                    if(cmd.getSource().equals("Gizmo")) type = "move";
-                    historyPanel.addHistory("CMD_" + cmd.getName(), cmd.getSource(), type, cmd.getIcon());
-                }
+                // 历史项添加现在由CommandHistoryUI自己处理
+                // 不再需要在这里添加历史项
             }
             @Override public void onUndo(ICommand cmd) {
-                 if(historyPanel != null) historyPanel.addHistory("UNDO " + cmd.getName(), "System", "raw", "U");
+                // 撤销操作不再添加历史项，由CommandHistoryUI自己处理
             }
-             @Override public void onRedo(ICommand cmd) {
-                 if(historyPanel != null) historyPanel.addHistory("REDO " + cmd.getName(), "System", "raw", "R");
+            @Override public void onRedo(ICommand cmd) {
+                // 重做操作不再添加历史项，由CommandHistoryUI自己处理
             }
             @Override public void onHistoryChanged() {
                 ICommand current = commandManager.getLastCommand();

@@ -229,7 +229,7 @@ public class ComponentManager {
 
 	/**
 	 * 位运算判断：source 是否包含 target 的所有位
-	 * <br>逻辑: (source & target) == target
+	 * <br>逻辑: (source AND target) == target
 	 */
 	private static boolean containsAllBits(BitSet source, BitSet target) {
 		if (source == null || target == null) return false;

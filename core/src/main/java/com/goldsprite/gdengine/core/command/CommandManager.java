@@ -69,6 +69,37 @@ public class CommandManager {
     public int getRedoStackSize() { return redoStack.size(); }
 
     /**
+     * 获取undo栈中的所有命令的副本
+     * @return 包含所有命令的列表，最早执行的命令在列表开头
+     */
+    public List<ICommand> getUndoCommands() {
+        // 返回undo栈的副本，保持原始顺序（最早执行的命令在列表开头）
+        List<ICommand> result = new ArrayList<>(undoStack);
+        Collections.reverse(result); // 反转列表，使最早的命令在开头
+        return result;
+    }
+
+    /**
+     * 获取所有历史命令（包括undo和redo栈中的命令）
+     * @return 包含所有命令的列表，按执行顺序排列
+     */
+    public List<ICommand> getAllHistoryCommands() {
+        List<ICommand> result = new ArrayList<>();
+
+        // 添加undo栈中的命令（最早执行的命令在列表开头）
+        List<ICommand> undoCommands = new ArrayList<>(undoStack);
+        Collections.reverse(undoCommands);
+        result.addAll(undoCommands);
+
+        // 添加redo栈中的命令（按重做顺序）
+        List<ICommand> redoCommands = new ArrayList<>(redoStack);
+        Collections.reverse(redoCommands); // 反转redo栈，使最早撤销的命令在前面
+        result.addAll(redoCommands);
+
+        return result;
+    }
+
+    /**
      * 获取当前 Undo 栈顶的命令（即最近执行的命令）。
      * 用于状态比对（如检测文件是否变脏）。
      * @return 栈顶命令，如果栈为空则返回 null
@@ -100,17 +131,35 @@ public class CommandManager {
      * @param position 目标位置（0表示最早的历史，undoStack.size()-1表示最近的历史）
      */
     public void navigateToHistory(int position) {
-        if (position < 0 || position >= undoStack.size()) return;
+        if (position < 0 || position >= undoStack.size() + redoStack.size()) return;
 
-        // 计算需要撤销的步数
-        int stepsToUndo = undoStack.size() - 1 - position;
+        int currentPosition = undoStack.size() - 1;
 
-        // 执行撤销操作直到到达目标位置
-        for (int i = 0; i < stepsToUndo; i++) {
-            ICommand cmd = undoStack.pop();
-            cmd.undo();
-            redoStack.push(cmd);
-            notifyUndo(cmd);
+        // 如果目标位置在当前节点之前（需要撤销）
+        if (position < currentPosition) {
+            // 计算需要撤销的步数
+            int stepsToUndo = currentPosition - position;
+
+            // 执行撤销操作直到到达目标位置
+            for (int i = 0; i < stepsToUndo; i++) {
+                ICommand cmd = undoStack.pop();
+                cmd.undo();
+                redoStack.push(cmd);
+                notifyUndo(cmd);
+            }
+        }
+        // 如果目标位置在当前节点之后（需要重做）
+        else if (position > currentPosition) {
+            // 计算需要重做的步数
+            int stepsToRedo = position - currentPosition;
+
+            // 执行重做操作直到到达目标位置
+            for (int i = 0; i < stepsToRedo; i++) {
+                ICommand cmd = redoStack.pop();
+                cmd.execute();
+                undoStack.push(cmd);
+                notifyRedo(cmd);
+            }
         }
 
         notifyHistoryChanged();
