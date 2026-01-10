@@ -135,9 +135,10 @@ public class VisUIHelper {
 		Skin skin = VisUI.getSkin();
 		
 		// [新增] 移植 GlobalAssets 的 SplitPane handle 逻辑
-		float splitBarThickness = 12;
+		float splitBarThickness = 15;int k3;
 		Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-		pm.setColor(new Color(0, 0, 0, 0.2f));
+		float g = 0.4f;
+		pm.setColor(new Color(g, g, g, 0.4f));
 		pm.fill();
 		TextureRegionDrawable cDrawable = new TextureRegionDrawable(new TextureRegion(new Texture(pm)));
 		
@@ -151,6 +152,14 @@ public class VisUIHelper {
 		splitPaneStyleHori.handle = cDrawable;
 		splitPaneStyleHori.handle.setMinWidth(splitBarThickness);
 
+		VisSplitPane.VisSplitPaneStyle visSplitPaneStyle = skin.get("default-vertical", VisSplitPane.VisSplitPaneStyle.class);
+		visSplitPaneStyle.handle = cDrawable;
+		visSplitPaneStyle.handle.setMinWidth(splitBarThickness);
+
+		VisSplitPane.VisSplitPaneStyle visSplitPaneStyleHori = skin.get("default-horizontal", VisSplitPane.VisSplitPaneStyle.class);
+		visSplitPaneStyleHori.handle = cDrawable;
+		visSplitPaneStyleHori.handle.setMinHeight(splitBarThickness);
+		
 		// VisTree fixes
 		skin.get("default", VisTree.TreeStyle.class).plus.setMinWidth(size);
 		skin.get("default", VisTree.TreeStyle.class).plus.setMinHeight(size);

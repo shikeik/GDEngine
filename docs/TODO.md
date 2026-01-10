@@ -7,6 +7,7 @@ ignored: indentFix codeFormatFix
 - [ ] 没有渲染层级属性
 - [ ] 完善更多形状
 - [ ] 将 ECS 系统正式接入编辑器（通过实现 EditorTarget 适配器）
+- [ ] 自动检测更新和云端模板包
 
 
 

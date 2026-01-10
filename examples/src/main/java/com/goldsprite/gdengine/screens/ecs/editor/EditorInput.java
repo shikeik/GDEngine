@@ -92,8 +92,9 @@ public class EditorInput extends InputAdapter {
 			return true; // [关键] 拦截事件
 		}
 
-		// 3. 点击空白处 -> 取消选择，并且不拦截事件 (让 Stage 处理相机拖动)
-		sceneManager.selectNode(null);
+		//// 3. 点击空白处 -> 取消选择，并且不拦截事件 (让 Stage 处理相机拖动)
+		//TODO: 暂时注释，因为判定需要改为仅Scene视图内
+		//sceneManager.selectNode(null);
 		return false;
 	}
 

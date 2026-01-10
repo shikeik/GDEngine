@@ -63,6 +63,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
 
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.kotcrab.vis.ui.widget.VisScrollPane;
 
 public class EditorController implements EditorListener, EditorUIProvider {
 	private EditorGameScreen screen;
@@ -113,8 +114,8 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		if (!VisUI.isLoaded()) VisUI.load();
 
 		// 1. FBO 环境
-		int fboW = 1280;
-		int fboH = 720;
+		int fboW = 960;
+		int fboH = 540;
 		gameTarget = new ViewTarget(fboW, fboH);
 		sceneTarget = new ViewTarget(fboW, fboH);
 		sceneCamera = new OrthographicCamera(fboW, fboH);
@@ -124,7 +125,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		reloadGameViewport();
 
 		// 2. UI 环境
-		float scl = 1.2f;
+		float scl = 1.3f;
 		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
 		// 3. 初始化编辑器系统组件
@@ -293,7 +294,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		}
 		// Apply updates
 		if (gameTarget != null) {
-			gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight(), true);
+			gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight(), false);
 		}
 	}
 
@@ -316,6 +317,8 @@ public class EditorController implements EditorListener, EditorUIProvider {
 
         // Inspector Panel
         inspectorTable = new VisTable();
+		VisScrollPane inspecScrollPane = new VisScrollPane(inspectorTable);
+		inspecScrollPane.setOverscroll(false, false);
         inspectorTable.setBackground(VisUI.getSkin().getDrawable("window-bg"));
 
         // Central Area (Scene View + Game View + Toolbar)
@@ -333,8 +336,8 @@ public class EditorController implements EditorListener, EditorUIProvider {
         centralStack.add(createToolbar());
 
         // Split Panes
-        VisSplitPane rightSplit = new VisSplitPane(centralStack, inspectorTable, false);
-        rightSplit.setSplitAmount(0.8f);
+        VisSplitPane rightSplit = new VisSplitPane(centralStack, inspecScrollPane, false);
+        rightSplit.setSplitAmount(0.65f);
 
         VisSplitPane mainSplit = new VisSplitPane(hierarchyTable, rightSplit, false);
         mainSplit.setSplitAmount(0.2f);

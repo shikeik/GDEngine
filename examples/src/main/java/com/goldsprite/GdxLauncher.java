@@ -27,7 +27,7 @@ import com.goldsprite.gdengine.screens.ecs.editor.EditorGameScreen;
 import com.goldsprite.solofight.screens.editor.SoloEditorScreen;
 import com.kotcrab.vis.ui.VisUI;
 
-public class GdxLauncher extends Game {
+public class GdxLauncher extends Game {int k10;
 	private IScriptCompiler scriptCompiler; // 去掉 final，允许后期注入
 	public SpriteBatch batch;
 	public Debug debug;
@@ -80,8 +80,7 @@ public class GdxLauncher extends Game {
 		ScreenManager.getInstance()
 //			.addScreen(new SoloEditorScreen())
 			.addScreen(new ExampleSelectScreen())
-			.addScreen(new EditorGameScreen())
-			.setLaunchScreen(EditorGameScreen.class);
+			.setLaunchScreen(ExampleSelectScreen.class);
 
 		// Auto-launch SoloEditor as requested
 //		Timer.schedule(new Timer.Task() {
