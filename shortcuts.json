@@ -1,0 +1,42 @@
+[
+{
+	"class": "com.goldsprite.gdengine.core.input.KeyBind",
+	"actionId": "TOOL_MOVE",
+	"trigger": "W"
+},
+{
+	"class": "com.goldsprite.gdengine.core.input.KeyBind",
+	"actionId": "TOOL_ROTATE",
+	"trigger": "E"
+},
+{
+	"class": "com.goldsprite.gdengine.core.input.KeyBind",
+	"actionId": "TOOL_SCALE",
+	"trigger": "R"
+},
+{
+	"class": "com.goldsprite.gdengine.core.input.KeyBind",
+	"actionId": "ACTION_UNDO",
+	"trigger": "Ctrl+Z"
+},
+{
+	"class": "com.goldsprite.gdengine.core.input.KeyBind",
+	"actionId": "ACTION_REDO",
+	"trigger": "Ctrl+Shift+Z"
+},
+{
+	"class": "com.goldsprite.gdengine.core.input.KeyBind",
+	"actionId": "ACTION_SAVE",
+	"trigger": "Ctrl+S"
+},
+{
+	"class": "com.goldsprite.gdengine.core.input.KeyBind",
+	"actionId": "ACTION_DELETE",
+	"trigger": "FORWARD_DEL"
+},
+{
+	"class": "com.goldsprite.gdengine.core.input.KeyBind",
+	"actionId": "ACTION_FOCUS",
+	"trigger": "F"
+}
+]

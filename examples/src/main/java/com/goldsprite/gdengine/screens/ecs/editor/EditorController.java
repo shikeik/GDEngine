@@ -32,6 +32,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.command.CommandManager;
+import com.goldsprite.gdengine.core.input.ShortcutManager;
 import com.goldsprite.gdengine.core.utils.GdxJsonSetup;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.component.Component;
@@ -91,7 +92,9 @@ public class EditorController {
 	private SkeletonRenderSystem skeletonRenderSystem;
 	private Stack gameWidgetStack;
 
-	private boolean hierarchyDirty = false; // [新增] UI脏标记
+	private boolean hierarchyDirty = false; // UI脏标记
+
+	private ShortcutManager shortcutManager;
 
 	public EditorController(EditorGameScreen screen) {
 		this.screen = screen;
@@ -121,6 +124,20 @@ public class EditorController {
 		// 4. 依赖注入引擎
 		Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(gameTarget), Gd.compiler);
 
+		// --- [新增] 初始化快捷键系统 ---
+		shortcutManager = new ShortcutManager(stage);
+		// 注册业务逻辑
+		shortcutManager.register("TOOL_MOVE", () -> gizmoSystem.mode = EditorGizmoSystem.Mode.MOVE);
+		shortcutManager.register("TOOL_ROTATE", () -> gizmoSystem.mode = EditorGizmoSystem.Mode.ROTATE);
+		shortcutManager.register("TOOL_SCALE", () -> gizmoSystem.mode = EditorGizmoSystem.Mode.SCALE);
+		shortcutManager.register("ACTION_UNDO", () -> commandManager.undo());
+		shortcutManager.register("ACTION_REDO", () -> commandManager.redo());
+		shortcutManager.register("ACTION_SAVE", this::saveScene);
+		shortcutManager.register("ACTION_DELETE", () -> {
+			// 调用 SceneManager 删除当前选中
+			sceneManager.deleteSelection(); // 假设您在 EditorSceneManager 里实现了这个方法
+		});
+
 		// 5. 初始化 ECS 世界
 		if (GameWorld.inst() == null) new GameWorld();
 		GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
@@ -145,8 +162,9 @@ public class EditorController {
 		// 9. 输入处理
 		NativeEditorInput editorInput = new NativeEditorInput();
 		InputMultiplexer multiplexer = new InputMultiplexer();
-		multiplexer.addProcessor(stage);
-		multiplexer.addProcessor(editorInput);
+		multiplexer.addProcessor(stage);           // 1. UI 优先 (点击按钮、输入框)
+		multiplexer.addProcessor(shortcutManager); // 2. [新增] 快捷键次之 (Ctrl+S, W/E/R)
+		multiplexer.addProcessor(editorInput);     // 3. 场景拖拽最后
 
 		if (screen != null && screen.getImp() != null) {
 			screen.getImp().addProcessor(multiplexer);
