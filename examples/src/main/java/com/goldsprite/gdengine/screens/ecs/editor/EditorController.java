@@ -174,7 +174,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		} else {
 			Gdx.input.setInputProcessor(inputMultiplexer);
 		}
-		
+
 		Gdx.app.log("EditorController", "InputProcessor initialized. Multiplexer size: " + inputMultiplexer.getProcessors().size);
 	}
 
@@ -295,7 +295,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
         // Hierarchy Panel
         hierarchyTable = new VisTable();
         hierarchyTable.setBackground(VisUI.getSkin().getDrawable("window-bg"));
-        
+
         // Inspector Panel
         inspectorTable = new VisTable();
         inspectorTable.setBackground(VisUI.getSkin().getDrawable("window-bg"));
@@ -321,7 +321,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 
     private void createGameWidget() {
         gameWidget = new ViewWidget(gameTarget);
-        
+
         // Listener
         gameWidget.addListener(new InputListener() {
             @Override
@@ -349,9 +349,9 @@ public class EditorController implements EditorListener, EditorUIProvider {
                 }
             }
         });
-        
+
         gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
-        
+
         // Joystick initialization (retained for potential use)
         Texture bg = createSolidTexture(100, 100, Color.DARK_GRAY);
         Texture knob = createSolidTexture(30, 30, Color.LIGHT_GRAY);
@@ -373,13 +373,13 @@ public class EditorController implements EditorListener, EditorUIProvider {
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
                 if (editorInput.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button)) {
                     isEditorHandling = true;
-                    return true; 
+                    return true;
                 }
                 isEditorHandling = false;
-                sceneManager.selectNode(null); 
+                sceneManager.selectNode(null);
                 lastX = Gdx.input.getX();
                 lastY = Gdx.input.getY();
-                return true; 
+                return true;
             }
 
             @Override
@@ -434,7 +434,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 
         addToolBtn(toolbar, "<", () -> commandManager.undo());
         addToolBtn(toolbar, ">", () -> commandManager.redo());
-        
+
         return toolbar;
     }
 
@@ -456,7 +456,6 @@ public class EditorController implements EditorListener, EditorUIProvider {
 	}
 
 	public void render(float delta) {
-		Debug.log("场景相机位置: %s", sceneCamera.position);
 		// 1. 逻辑更新 (Input -> Logic)// 优先使用键盘输入，如果没有键盘输入则使用摇杆
 		if (player != null) {
 			float speed = 200 * delta;
@@ -599,12 +598,12 @@ public class EditorController implements EditorListener, EditorUIProvider {
 
         hierarchyTree = new VisTree<>();
         hierarchyTree.getSelection().setProgrammaticChangeEvents(false);
-        
+
         EditorTarget root = sceneManager.getRoot();
         if (root != null) {
             buildTree(root, null);
         }
-        
+
         hierarchyTree.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -627,7 +626,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
         } else {
             parentNode.add(node);
         }
-        
+
         // Auto expand if it has children
         if (target.getChildren().size > 0) node.setExpanded(true);
 
@@ -639,7 +638,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
     private void updatePropertyPanel(EditorTarget selection) {
         if (inspectorTable == null || inspector == null) return;
         inspector.build(inspectorTable, selection);
-        
+
         // Sync selection in Tree
         if (hierarchyTree != null && selection != null) {
             UiNode node = hierarchyTree.findNode(selection);
@@ -668,7 +667,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
         // 1. 处理 ECS 层级关系
         // 如果 GObject 已经在 ECS 中有父节点，我们不需要手动干预 Adapter 的 parent，
         // 因为 Adapter.getParent() 会动态从 GObject 获取。
-        
+
         // 2. 处理 编辑器 层级关系 (挂载到 Root)
         // 如果 GObject 是顶层对象 (没有父节点)，它必须被挂载到 sceneManager.getRoot() 下，
         // 否则 SceneManager 遍历不到它。

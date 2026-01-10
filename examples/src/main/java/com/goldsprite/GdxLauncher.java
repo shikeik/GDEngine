@@ -74,21 +74,21 @@ public class GdxLauncher extends Game {
 		// 【修改点】注入原生实现和编译器
 		Gd.init(Gd.Mode.RELEASE, Gdx.input, Gdx.graphics, scriptCompiler);
 		Debug.logT("Engine", "[GREEN]Gd initialized. Compiler available: %b[WHITE]", (scriptCompiler != null));
-		
+
 		new GameWorld();
 
 		ScreenManager.getInstance()
-			.addScreen(new SoloEditorScreen())
+//			.addScreen(new SoloEditorScreen())
 			.addScreen(new ExampleSelectScreen())
 			.setLaunchScreen(ExampleSelectScreen.class);
-			
+
 		// Auto-launch SoloEditor as requested
-		Timer.schedule(new Timer.Task() {
-			@Override
-			public void run() {
-				ScreenManager.getInstance().setCurScreen(SoloEditorScreen.class);
-			}
-		}, 0.1f);
+//		Timer.schedule(new Timer.Task() {
+//			@Override
+//			public void run() {
+//				ScreenManager.getInstance().setCurScreen(SoloEditorScreen.class);
+//			}
+//		}, 0.1f);
 
 		//startVisualCheckSequence();
 
@@ -97,9 +97,9 @@ public class GdxLauncher extends Game {
 
     private void startVisualCheckSequence() {
         Debug.logT("VisualCheck", "Starting visual check sequence...");
-        
+
         ScreenManager sm = ScreenManager.getInstance();
-        
+
         // Add all screens first
         sm.addScreen(new TransformTestScreen());
         sm.addScreen(new EcsVisualTestScreen());
@@ -119,9 +119,9 @@ public class GdxLauncher extends Game {
         Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(TextTestScreen.class); } }, 12f);
         Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(SpriteVisualScreen.class); } }, 15f);
         Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(JsonLiveEditScreen.class); } }, 18f);
-        Timer.schedule(new Timer.Task() { @Override public void run() { 
+        Timer.schedule(new Timer.Task() { @Override public void run() {
             Debug.logT("VisualCheck", "Sequence completed.");
-            sm.setCurScreen(ExampleSelectScreen.class); 
+            sm.setCurScreen(ExampleSelectScreen.class);
         } }, 21f);
     }
 

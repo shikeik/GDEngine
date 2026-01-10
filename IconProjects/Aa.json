@@ -1,0 +1,45 @@
+{
+"name": "Root",
+"children": [
+	{
+		"class": "Circle",
+		"name": "New Circle",
+		"x": 199.14342,
+		"y": -22.689209,
+		"rotation": 139.23555,
+		"scaleX": 2.6904767,
+		"color": {
+			"r": 0.29803923,
+			"g": 0.61960787,
+			"b": 0.78431374,
+			"a": 1
+		},
+		"radius": 40
+	},
+	{
+		"class": "Rectangle",
+		"name": "New Rectangle",
+		"x": -19,
+		"y": 6,
+		"width": 80,
+		"height": 80
+	},
+	{
+		"class": "Rectangle",
+		"name": "New Rectangle",
+		"x": -161.49557,
+		"y": -144.88177,
+		"rotation": -237.9023,
+		"scaleX": 1.1785347,
+		"scaleY": 1.0365181,
+		"color": {
+			"r": 0.5529412,
+			"g": 1,
+			"b": 1,
+			"a": 1
+		},
+		"width": 80,
+		"height": 80
+	}
+]
+}

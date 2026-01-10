@@ -18,7 +18,7 @@ import java.util.Map;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 
 /**
- * 游戏世界容器 (ECS 上下文 & 核心循环)
+ * 游戏世界容器 (ECS 上下文 核心循环)
  * <p>
  * <b>职责：</b>
  * <ol>
