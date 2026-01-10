@@ -19,7 +19,7 @@ import com.kotcrab.vis.ui.widget.MenuItem;
 import com.kotcrab.vis.ui.widget.PopupMenu;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
-import com.goldsprite.solofight.screens.tests.IconEditorDemo;
+import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorUIProvider;
 import com.goldsprite.solofight.screens.tests.iconeditor.model.EditorTarget;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.SceneManager;
 
@@ -30,9 +30,9 @@ public class UiNode extends Tree.Node<UiNode, EditorTarget, VisTable> {
     
     public static class UiNodeTable extends VisTable {
         private UiNode node;
-        private final IconEditorDemo screen;
+        private final EditorUIProvider screen;
         
-        public UiNodeTable(IconEditorDemo screen) {
+        public UiNodeTable(EditorUIProvider screen) {
             this.screen = screen;
         }
         
@@ -78,7 +78,7 @@ public class UiNode extends Tree.Node<UiNode, EditorTarget, VisTable> {
         }
     }
     
-    public UiNode(EditorTarget target, IconEditorDemo screen) {
+    public UiNode(EditorTarget target, EditorUIProvider screen) {
         super(new UiNodeTable(screen));
         ((UiNodeTable)getActor()).setNode(this);
         setValue(target);

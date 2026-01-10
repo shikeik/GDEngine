@@ -15,7 +15,7 @@ import com.goldsprite.gdengine.ui.input.SmartSelectInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
-import com.goldsprite.solofight.screens.tests.IconEditorDemo;
+import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorUIProvider;
 import com.goldsprite.solofight.screens.tests.iconeditor.commands.ColorChangeCommand;
 import com.goldsprite.solofight.screens.tests.iconeditor.commands.GenericPropertyChangeCommand;
 import com.goldsprite.solofight.screens.tests.iconeditor.commands.PropertyChangeCommand;
@@ -28,14 +28,14 @@ import com.goldsprite.solofight.screens.tests.iconeditor.system.SceneManager;
 
 public class Inspector {
     private VisTable container;
-    private final IconEditorDemo screen;
+    private final EditorUIProvider screen;
     private final SceneManager sceneManager;
     private final CommandManager commandManager;
     private final Array<Runnable> refreshTasks = new Array<>();
     
     private final Map<Class<?>, InspectorStrategy> strategies = new HashMap<>();
 
-    public Inspector(IconEditorDemo screen, SceneManager sm, CommandManager cm) { 
+    public Inspector(EditorUIProvider screen, SceneManager sm, CommandManager cm) { 
         this.screen = screen;
         this.sceneManager = sm; 
         this.commandManager = cm;

@@ -33,6 +33,7 @@ import com.goldsprite.solofight.screens.tests.iconeditor.model.GroupNode;
 import com.goldsprite.solofight.screens.tests.iconeditor.model.RectShape;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorInput;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorListener;
+import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorUIProvider;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.SceneManager;
 import com.goldsprite.solofight.screens.tests.iconeditor.ui.FileNode;
@@ -56,7 +57,7 @@ import com.kotcrab.vis.ui.widget.VisTree;
 /**
  * Flat Icon 设计器原型 (Phase 1 - Fix Gizmo)
  */
-public class IconEditorDemo extends GScreen {
+public class IconEditorDemo extends GScreen implements EditorUIProvider {
 
     // --- 核心组件 ---
     private NeonBatch neonBatch;

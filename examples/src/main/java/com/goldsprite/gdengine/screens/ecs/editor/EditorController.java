@@ -47,16 +47,23 @@ import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectAdapter;
 import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectWrapperCache;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
+import com.kotcrab.vis.ui.widget.VisSplitPane;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTree;
 import com.kotcrab.vis.ui.widget.VisWindow;
 import com.goldsprite.solofight.screens.tests.iconeditor.model.EditorTarget;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorListener;
+import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorUIProvider;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.SceneManager;
+import com.goldsprite.solofight.screens.tests.iconeditor.ui.Inspector;
+import com.goldsprite.solofight.screens.tests.iconeditor.ui.UiNode;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
 
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 
-public class EditorController implements EditorListener {
+public class EditorController implements EditorListener, EditorUIProvider {
 	private EditorGameScreen screen;
 	Stage stage;
 	// GameWorld gameWorld; // Replaced by core.ecs.GameWorld.inst()
@@ -79,6 +86,13 @@ public class EditorController implements EditorListener {
 	// 输入处理
 	private EditorInput editorInput;
 	private InputMultiplexer inputMultiplexer;
+
+	// UI 组件
+	private DragAndDrop dragAndDrop;
+	private Inspector inspector;
+	private VisTree<UiNode, EditorTarget> hierarchyTree;
+	private VisTable hierarchyTable;
+	private VisTable inspectorTable;
 
 	// Rendering Systems (Managed manually for Editor FBOs)
 	private SpriteBatch spriteBatch;
@@ -117,8 +131,7 @@ public class EditorController implements EditorListener {
 		sceneManager.addListener(this);
 		gizmoSystem = new GizmoSystem(sceneManager, commandManager);
 
-		createGameWindow();
-		createSceneWindow();
+		createUI();
 
 		// 4. 依赖注入
 		EditorGameInput inputImpl = new EditorGameInput(gameWidget);
@@ -266,208 +279,173 @@ public class EditorController implements EditorListener {
 
 	public InputProcessor getInputProcessor() { return stage; }
 
-	private void createGameWindow() {
-		VisWindow win = new VisWindow("Game View");
-		win.setResizable(true);
-		// 设置窗口占据上半屏，宽度为整个屏幕宽度，高度为屏幕高度的一半
-		win.setSize(stage.getWidth(), stage.getHeight()/2);
-		win.setPosition(0, 0);
+    private void createUI() {
+        // 1. Initialize Components
+        dragAndDrop = new DragAndDrop();
+        inspector = new Inspector(this, sceneManager, commandManager);
 
-		gameWidget = new ViewWidget(gameTarget);
+        // 2. Create Widgets
+        createGameWidget();
+        createSceneWidget();
 
-		// 输入监听与注入
-		gameWidget.addListener(new InputListener() {
-				@Override
-				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-					((EditorGameInput) Gd.input).setTouched(true, pointer);
-					if (Gd.input.getInputProcessor() != null) {
-						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-						Gd.input.getInputProcessor().touchDown((int) fboPos.x, (int) fboPos.y, pointer, button);
-					}
-					// 坐标验证 & 逻辑 (暂时移除旧 GameWorld 逻辑)
-					// Vector2 worldPos = gameWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY(), gameViewport);
-					// GameWorld.inst()... // Handle input logic here later
-					return true;
-				}
-				@Override
-				public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-					((EditorGameInput) Gd.input).setTouched(false, pointer);
-					if (Gd.input.getInputProcessor() != null) {
-						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-						Gd.input.getInputProcessor().touchUp((int) fboPos.x, (int) fboPos.y, pointer, button);
-					}
-				}
-				@Override
-				public void touchDragged(InputEvent event, float x, float y, int pointer) {
-					if (Gd.input.getInputProcessor() != null) {
-						Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-						Gd.input.getInputProcessor().touchDragged((int) fboPos.x, (int) fboPos.y, pointer);
-					}
-				}
-			});
+        // 3. Build Layout
+        VisTable root = new VisTable();
+        root.setFillParent(true);
 
-		// 摇杆
-		Texture bg = createSolidTexture(100, 100, Color.DARK_GRAY);
-		Texture knob = createSolidTexture(30, 30, Color.LIGHT_GRAY);
-		Touchpad.TouchpadStyle style = new Touchpad.TouchpadStyle();
-		style.background = new TextureRegionDrawable(new TextureRegion(bg));
-		style.knob = new TextureRegionDrawable(new TextureRegion(knob));
-		joystick = new Touchpad(10, style);
+        // Hierarchy Panel
+        hierarchyTable = new VisTable();
+        hierarchyTable.setBackground(VisUI.getSkin().getDrawable("window-bg"));
+        
+        // Inspector Panel
+        inspectorTable = new VisTable();
+        inspectorTable.setBackground(VisUI.getSkin().getDrawable("window-bg"));
 
-		// 配置修改器
-		VisSelectBox<String> box = new VisSelectBox<>();
-		box.setItems("FIT", "STRETCH", "EXTEND");
-		box.addListener(new ChangeListener() {
-				@Override
-				public void changed(ChangeEvent event, Actor actor) {
-					String mode = box.getSelected();
+        // Central Area (Scene View + Toolbar)
+        Stack centralStack = new Stack();
+        centralStack.add(sceneWidget);
+        centralStack.add(createToolbar());
 
-					if (mode.equals("FIT")) {
-						Gd.config.viewportType = Gd.ViewportType.FIT;
-						gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
-					} else if (mode.equals("STRETCH")) {
-						Gd.config.viewportType = Gd.ViewportType.STRETCH;
-						gameWidget.setDisplayMode(ViewWidget.DisplayMode.STRETCH);
-					} else if (mode.equals("EXTEND")) {
-						Gd.config.viewportType = Gd.ViewportType.EXTEND;
-						gameWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
-					}
+        // Split Panes
+        VisSplitPane rightSplit = new VisSplitPane(centralStack, inspectorTable, false);
+        rightSplit.setSplitAmount(0.8f);
 
-					reloadGameViewport();
-					Gdx.app.log("Editor", "Viewport Changed to: " + mode);
-				}
-			});
+        VisSplitPane mainSplit = new VisSplitPane(hierarchyTable, rightSplit, false);
+        mainSplit.setSplitAmount(0.2f);
 
-		gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
+        root.add(mainSplit).grow();
+        stage.addActor(root);
 
-		Table uiTable = new Table();
-		uiTable.setFillParent(true);
-		uiTable.add(box).expandX().top().right().width(80).pad(5);
-		uiTable.row();
-		uiTable.add().expand().fill();
-		uiTable.row();
-		uiTable.add(joystick).bottom().left().pad(10);
+        // Initial Update
+        updateSceneHierarchy();
+    }
 
-		Stack stack = new Stack();
-		stack.add(gameWidget);
-		stack.add(uiTable);
+    private void createGameWidget() {
+        gameWidget = new ViewWidget(gameTarget);
+        
+        // Listener
+        gameWidget.addListener(new InputListener() {
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                ((EditorGameInput) Gd.input).setTouched(true, pointer);
+                if (Gd.input.getInputProcessor() != null) {
+                    Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+                    Gd.input.getInputProcessor().touchDown((int) fboPos.x, (int) fboPos.y, pointer, button);
+                }
+                return true;
+            }
+            @Override
+            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                ((EditorGameInput) Gd.input).setTouched(false, pointer);
+                if (Gd.input.getInputProcessor() != null) {
+                    Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+                    Gd.input.getInputProcessor().touchUp((int) fboPos.x, (int) fboPos.y, pointer, button);
+                }
+            }
+            @Override
+            public void touchDragged(InputEvent event, float x, float y, int pointer) {
+                if (Gd.input.getInputProcessor() != null) {
+                    Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+                    Gd.input.getInputProcessor().touchDragged((int) fboPos.x, (int) fboPos.y, pointer);
+                }
+            }
+        });
+        
+        gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
+        
+        // Joystick initialization (retained for potential use)
+        Texture bg = createSolidTexture(100, 100, Color.DARK_GRAY);
+        Texture knob = createSolidTexture(30, 30, Color.LIGHT_GRAY);
+        Touchpad.TouchpadStyle style = new Touchpad.TouchpadStyle();
+        style.background = new TextureRegionDrawable(new TextureRegion(bg));
+        style.knob = new TextureRegionDrawable(new TextureRegion(knob));
+        joystick = new Touchpad(10, style);
+    }
 
-		win.add(stack).grow();
-		stage.addActor(win);
-	}
+    private void createSceneWidget() {
+        sceneWidget = new ViewWidget(sceneTarget);
+        sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 
-	private Texture createSolidTexture(int w, int h, Color c) {
-		Pixmap p = new Pixmap(w, h, Pixmap.Format.RGBA8888);
-		p.setColor(c);
-		p.fill();
-		Texture t = new Texture(p);
-		p.dispose();
-		return t;
-	}
+        sceneWidget.addListener(new InputListener() {
+            private boolean isEditorHandling = false;
+            private float lastX, lastY;
 
-	private void createSceneWindow() {
-		VisWindow win = new VisWindow("Scene View");
-		win.setResizable(true);
-		win.setSize(stage.getWidth(), stage.getHeight()/2);
-		win.setPosition(0, stage.getHeight()/2);
+            @Override
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                if (editorInput.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button)) {
+                    isEditorHandling = true;
+                    return true; 
+                }
+                isEditorHandling = false;
+                sceneManager.selectNode(null); 
+                lastX = Gdx.input.getX();
+                lastY = Gdx.input.getY();
+                return true; 
+            }
 
-		sceneWidget = new ViewWidget(sceneTarget);
-		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
+            @Override
+            public void touchDragged(InputEvent event, float x, float y, int pointer) {
+                if (isEditorHandling) {
+                    editorInput.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
+                } else {
+                    float currX = Gdx.input.getX();
+                    float currY = Gdx.input.getY();
+                    float dx = currX - lastX;
+                    float dy = currY - lastY;
+                    lastX = currX;
+                    lastY = currY;
+                    float zoom = sceneCamera.zoom;
+                    float ratio = 1.0f;
+                    if (sceneWidget.getWidth() > 0) {
+                        ratio = sceneTarget.getFboWidth() / sceneWidget.getWidth();
+                    }
+                    sceneCamera.translate(-dx * ratio * zoom, dy * ratio * zoom, 0);
+                    sceneCamera.update();
+                }
+            }
 
-		// [核心修复 1] 移除这里的 InputListener (touchDown)，因为它和 EditorInput 冲突
-		// editorInput 已经在 InputMultiplexer 中作为全局处理器添加了，它会负责点击判定。
-		// 如果点中物体，它会拦截；如果没点中，它会放行，然后下面的 DragListener 会工作。
+            @Override
+            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                if (isEditorHandling) {
+                    editorInput.touchUp(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
+                }
+                isEditorHandling = false;
+            }
 
-		// [核心修复 2] 修正相机拖拽手感
-		sceneWidget.addListener(new InputListener() {
-			private boolean isEditorHandling = false;
-			private float lastX, lastY;
+            @Override
+            public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
+                sceneCamera.zoom += amountY * 0.1f * sceneCamera.zoom;
+                if (sceneCamera.zoom < 0.1f) sceneCamera.zoom = 0.1f;
+                if (sceneCamera.zoom > 10f) sceneCamera.zoom = 10f;
+                sceneCamera.update();
+                return true;
+            }
+        });
+    }
 
-			@Override
-			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-				// 1. 尝试交给编辑器处理 (Gizmo / 选择)
-				if (editorInput.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button)) {
-					isEditorHandling = true;
-					return true; // 拦截，不进行相机拖拽
-				}
+    private Table createToolbar() {
+        Table toolbar = new Table();
+        toolbar.top().left().pad(5);
 
-				// 2. 编辑器未处理 -> 点击了空白处
-				isEditorHandling = false;
-				sceneManager.selectNode(null); // 取消选择
+        addToolBtn(toolbar, "M", () -> gizmoSystem.mode = GizmoSystem.Mode.MOVE);
+        addToolBtn(toolbar, "R", () -> gizmoSystem.mode = GizmoSystem.Mode.ROTATE);
+        addToolBtn(toolbar, "S", () -> gizmoSystem.mode = GizmoSystem.Mode.SCALE);
 
-				// 3. 开启相机拖拽 (记录起始点)
-				lastX = Gdx.input.getX();
-				lastY = Gdx.input.getY();
-				return true; // 拦截，准备接收 touchDragged
-			}
+        toolbar.add().width(15);
 
-			@Override
-			public void touchDragged(InputEvent event, float x, float y, int pointer) {
-				if (isEditorHandling) {
-					editorInput.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
-				} else {
-					// 相机拖拽逻辑
-					float currX = Gdx.input.getX();
-					float currY = Gdx.input.getY();
-					float dx = currX - lastX;
-					float dy = currY - lastY;
-					
-					lastX = currX;
-					lastY = currY;
+        addToolBtn(toolbar, "<", () -> commandManager.undo());
+        addToolBtn(toolbar, ">", () -> commandManager.redo());
+        
+        return toolbar;
+    }
 
-					float zoom = sceneCamera.zoom;
-					// 计算比例 (同原逻辑)
-					float ratio = 1.0f;
-					if (sceneWidget.getWidth() > 0) {
-						ratio = sceneTarget.getFboWidth() / sceneWidget.getWidth();
-					}
-
-					// Gdx.input.getY() 是向下增加 (Top-Left origin)
-					// Drag Down (dy > 0) -> Camera Up (+Y) -> World moves Down (Google Maps style)
-					sceneCamera.translate(-dx * ratio * zoom, dy * ratio * zoom, 0);
-					sceneCamera.update();
-				}
-			}
-
-			@Override
-			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-				if (isEditorHandling) {
-					editorInput.touchUp(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
-				}
-				isEditorHandling = false;
-			}
-
-			@Override
-			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-				sceneCamera.zoom += amountY * 0.1f * sceneCamera.zoom;
-				if (sceneCamera.zoom < 0.1f) sceneCamera.zoom = 0.1f;
-				if (sceneCamera.zoom > 10f) sceneCamera.zoom = 10f;
-				sceneCamera.update();
-				return true;
-			}
-		});
-
-		// [新增] 工具栏叠加层
-		Stack stack = new Stack();
-		stack.add(sceneWidget);
-
-		Table toolbar = new Table();
-		toolbar.top().left().pad(5);
-
-		addToolBtn(toolbar, "M", () -> gizmoSystem.mode = GizmoSystem.Mode.MOVE);
-		addToolBtn(toolbar, "R", () -> gizmoSystem.mode = GizmoSystem.Mode.ROTATE);
-		addToolBtn(toolbar, "S", () -> gizmoSystem.mode = GizmoSystem.Mode.SCALE);
-
-		toolbar.add().width(15);
-
-		addToolBtn(toolbar, "<", () -> commandManager.undo());
-		addToolBtn(toolbar, ">", () -> commandManager.redo());
-
-		stack.add(toolbar);
-
-		win.add(stack).grow();
-		stage.addActor(win);
-	}
+    private Texture createSolidTexture(int w, int h, Color c) {
+        Pixmap p = new Pixmap(w, h, Pixmap.Format.RGBA8888);
+        p.setColor(c);
+        p.fill();
+        Texture t = new Texture(p);
+        p.dispose();
+        return t;
+    }
 
 	private void addToolBtn(Table table, String text, Runnable action) {
 		VisTextButton btn = new VisTextButton(text);
@@ -616,14 +594,69 @@ public class EditorController implements EditorListener {
     }
 
     private void updateSceneHierarchy() {
-        // 更新场景层次结构视图
-        // 这里可以添加更新UI的代码
+        if (hierarchyTable == null) return;
+        hierarchyTable.clearChildren();
+
+        hierarchyTree = new VisTree<>();
+        hierarchyTree.getSelection().setProgrammaticChangeEvents(false);
+        
+        EditorTarget root = sceneManager.getRoot();
+        if (root != null) {
+            buildTree(root, null);
+        }
+        
+        hierarchyTree.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                UiNode node = (UiNode) hierarchyTree.getNodeAt(y);
+                if (node != null) {
+                    sceneManager.selectNode(node.getValue());
+                } else {
+                    sceneManager.selectNode(null);
+                }
+            }
+        });
+
+        hierarchyTable.add(hierarchyTree).expand().fill().top().left();
+    }
+
+    private void buildTree(EditorTarget target, UiNode parentNode) {
+        UiNode node = new UiNode(target, this);
+        if (parentNode == null) {
+            hierarchyTree.add(node);
+        } else {
+            parentNode.add(node);
+        }
+        
+        // Auto expand if it has children
+        if (target.getChildren().size > 0) node.setExpanded(true);
+
+        for (EditorTarget child : target.getChildren()) {
+            buildTree(child, node);
+        }
     }
 
     private void updatePropertyPanel(EditorTarget selection) {
-        // 更新属性面板
-        // 这里可以添加更新UI的代码
+        if (inspectorTable == null || inspector == null) return;
+        inspector.build(inspectorTable, selection);
+        
+        // Sync selection in Tree
+        if (hierarchyTree != null && selection != null) {
+            UiNode node = hierarchyTree.findNode(selection);
+            if (node != null) {
+                hierarchyTree.getSelection().clear();
+                hierarchyTree.getSelection().add(node);
+                node.expandTo();
+            }
+        }
     }
+
+    // EditorUIProvider Implementation
+    @Override public VisTree<UiNode, EditorTarget> getHierarchyTree() { return hierarchyTree; }
+    @Override public SceneManager getSceneManager() { return sceneManager; }
+    @Override public CommandManager getCommandManager() { return commandManager; }
+    @Override public Stage getUiStage() { return stage; }
+    @Override public DragAndDrop getDragAndDrop() { return dragAndDrop; }
 
     // 添加GObject到编辑器系统
     public void addGObjectToEditor(GObject gObject) {
