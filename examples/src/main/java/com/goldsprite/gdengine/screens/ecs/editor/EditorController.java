@@ -91,6 +91,8 @@ public class EditorController {
 	private SkeletonRenderSystem skeletonRenderSystem;
 	private Stack gameWidgetStack;
 
+	private boolean hierarchyDirty = false; // [新增] UI脏标记
+
 	public EditorController(EditorGameScreen screen) {
 		this.screen = screen;
 	}
@@ -137,7 +139,7 @@ public class EditorController {
 		createUI();
 
 		// 8. 监听事件
-		sceneManager.onStructureChanged.add(o -> refreshHierarchy());
+		sceneManager.onStructureChanged.add(o -> hierarchyDirty = true);
 		sceneManager.onSelectionChanged.add(this::refreshInspector);
 
 		// 9. 输入处理
@@ -466,7 +468,13 @@ public class EditorController {
 	// =======================================================
 
 	public void render(float delta) {
+		// 1. 更新逻辑 (这里会执行 flushEntities，把 pendingAdds 里的物体真正加进去)
 		GameWorld.inst().update(delta);
+		// [新增] 核心修复：数据准备好后，如果标记为脏，则刷新 UI
+		if (hierarchyDirty) {
+			refreshHierarchy();
+			hierarchyDirty = false;
+		}
 		gameCamera.update();
 		sceneCamera.update();
 
