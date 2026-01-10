@@ -8,7 +8,6 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gdengine.core.command.CommandManager;
 import com.goldsprite.gdengine.ecs.component.Component;
 import com.goldsprite.gdengine.ecs.component.SpriteComponent;
@@ -46,6 +45,7 @@ public class Inspector {
     public void build(VisTable table, EditorTarget target) {
         this.container = table;
         table.clearChildren();
+		table.top();
 
         if (target == null) {
             table.add(new VisLabel("No Selection")).pad(10);
@@ -67,7 +67,7 @@ public class Inspector {
     }
 
     private void updateHierarchyLabel(EditorTarget target) {
-        // This is a simplified way to update the label if possible, 
+        // This is a simplified way to update the label if possible,
         // or we rely on the Hierarchy system to refresh itself.
         // For now, we assume the hierarchy might need a full refresh or the user accepts delay.
         if (screen instanceof com.goldsprite.gdengine.screens.ecs.editor.EditorController) {
@@ -78,14 +78,14 @@ public class Inspector {
 
     private void buildGObjectInspector(GObjectAdapter adapter) {
         GObject gobj = adapter.getRealObject();
-        
+
         // Header
         container.add(new VisLabel("GObject")).colspan(2).left().pad(5).row();
-        
+
         // Name
         SmartTextInput nameInput = new SmartTextInput("Name", gobj.getName(), v -> {
             gobj.setName(v);
-            // updateHierarchyLabel(adapter); 
+            // updateHierarchyLabel(adapter);
         });
         container.add(nameInput).growX().colspan(2).row();
 
@@ -101,7 +101,7 @@ public class Inspector {
         addBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                showAddComponentDialog(gobj);
+                showAddComponentDialog(gobj, event.getStageX(), event.getStageY());
             }
         });
         container.add(addBtn).fillX().padTop(10).colspan(2).row();
@@ -110,7 +110,7 @@ public class Inspector {
     private void buildComponentInspector(Component c, GObject gobj) {
         VisTable header = new VisTable();
         header.add(new VisLabel(c.getClass().getSimpleName())).expandX().left();
-        
+
         VisTextButton removeBtn = new VisTextButton("X");
         removeBtn.setColor(Color.RED);
         removeBtn.addListener(new ClickListener() {
@@ -121,7 +121,7 @@ public class Inspector {
             }
         });
         header.add(removeBtn).size(20, 20);
-        
+
         container.add(header).growX().colspan(2).padTop(10).padBottom(5).row();
 
         // Reflection
@@ -164,15 +164,16 @@ public class Inspector {
         }
     }
 
-    private void showAddComponentDialog(GObject gobj) {
+	Vector2 tmpVec2 = new Vector2();
+    private void showAddComponentDialog(GObject gobj, float x, float y) {
         PopupMenu menu = new PopupMenu();
-        
+
         // Add known components
         addComponentMenuItem(menu, gobj, SpriteComponent.class);
         addComponentMenuItem(menu, gobj, TransformComponent.class);
         // Add more components as needed
-        
-        menu.showMenu(container.getStage(), Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
+
+        menu.showMenu(container.getStage(), x, y);
     }
 
     private void addComponentMenuItem(PopupMenu menu, GObject gobj, Class<? extends Component> clazz) {

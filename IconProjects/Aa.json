@@ -4,8 +4,8 @@
 	{
 		"class": "Circle",
 		"name": "New Circle",
-		"x": 199.14342,
-		"y": -22.689209,
+		"x": 218.1435,
+		"y": 200.31082,
 		"rotation": 139.23555,
 		"scaleX": 2.6904767,
 		"color": {
@@ -19,16 +19,16 @@
 	{
 		"class": "Rectangle",
 		"name": "New Rectangle",
-		"x": -19,
-		"y": 6,
+		"x": -148.99997,
+		"y": 107.00001,
 		"width": 80,
 		"height": 80
 	},
 	{
 		"class": "Rectangle",
 		"name": "New Rectangle",
-		"x": -161.49557,
-		"y": -144.88177,
+		"x": -241.49557,
+		"y": -159.88179,
 		"rotation": -237.9023,
 		"scaleX": 1.1785347,
 		"scaleY": 1.0365181,

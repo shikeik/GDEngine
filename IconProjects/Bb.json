@@ -1,0 +1,13 @@
+{
+"name": "Root",
+"children": [
+	{
+		"class": "Rectangle",
+		"name": "New Rectangle",
+		"x": 18,
+		"y": 15,
+		"width": 80,
+		"height": 80
+	}
+]
+}

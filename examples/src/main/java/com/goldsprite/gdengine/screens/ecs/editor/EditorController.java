@@ -1,8 +1,6 @@
 package com.goldsprite.gdengine.screens.ecs.editor;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
@@ -15,25 +13,21 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Image;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.scenes.scene2d.utils.DragListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.command.CommandManager;
 import com.goldsprite.gdengine.ecs.GameWorld;
@@ -42,7 +36,6 @@ import com.goldsprite.gdengine.ecs.component.SpriteComponent;
 import com.goldsprite.gdengine.ecs.component.TransformComponent;
 import com.goldsprite.gdengine.ecs.system.SkeletonRenderSystem;
 import com.goldsprite.gdengine.ecs.system.SpriteSystem;
-import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectAdapter;
 import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectWrapperCache;
@@ -51,7 +44,6 @@ import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTree;
-import com.kotcrab.vis.ui.widget.VisWindow;
 import com.goldsprite.solofight.screens.tests.iconeditor.model.EditorTarget;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorListener;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorUIProvider;
@@ -87,7 +79,6 @@ public class EditorController implements EditorListener, EditorUIProvider {
 
 	// 输入处理
 	private EditorInput editorInput;
-	private InputMultiplexer inputMultiplexer;
 
 	// UI 组件
 	private DragAndDrop dragAndDrop;
@@ -103,6 +94,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 	private ShapeRenderer shapeRenderer;
 	private SpriteSystem spriteSystem;
 	private SkeletonRenderSystem skeletonRenderSystem;
+	private Stack gameWidgetStack;
 
 	public EditorController() {
 	}
@@ -114,8 +106,8 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		if (!VisUI.isLoaded()) VisUI.load();
 
 		// 1. FBO 环境
-		int fboW = 960;
-		int fboH = 540;
+		int fboW = 1280;
+		int fboH = 720;
 		gameTarget = new ViewTarget(fboW, fboH);
 		sceneTarget = new ViewTarget(fboW, fboH);
 		sceneCamera = new OrthographicCamera(fboW, fboH);
@@ -125,7 +117,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		reloadGameViewport();
 
 		// 2. UI 环境
-		float scl = 1.3f;
+		float scl = PlatformImpl.isAndroidUser() ? 1.3f : 2.0f;
 		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
 		// 3. 初始化编辑器系统组件
@@ -167,7 +159,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		editorInput = new EditorInput(sceneCamera, sceneManager, gizmoSystem, commandManager);
 		editorInput.setViewWidget(sceneWidget); // <--- 注入 Widget
 
-		inputMultiplexer = new InputMultiplexer();
+		InputMultiplexer inputMultiplexer = new InputMultiplexer();
 		// 优先处理 UI (防止 Toolbar 点击导致 Gizmo 失去焦点)
 		inputMultiplexer.addProcessor(stage);
 		// 其次处理 Gizmo 操作
@@ -323,15 +315,13 @@ public class EditorController implements EditorListener, EditorUIProvider {
 
         // Central Area (Scene View + Game View + Toolbar)
         Stack centralStack = new Stack();
-        
+
         // Split Game/Scene (Vertical Split)
         VisTable gameViewContainer = new VisTable();
-        gameViewContainer.add(createGameToolbar()).growX().row();
-        gameViewContainer.add(gameWidget).grow();
 
-        VisSplitPane viewSplit = new VisSplitPane(sceneWidget, gameViewContainer, true);
+        VisSplitPane viewSplit = new VisSplitPane(sceneWidget, gameWidgetStack, true);
         viewSplit.setSplitAmount(0.5f);
-        
+
         centralStack.add(viewSplit);
         centralStack.add(createToolbar());
 
@@ -350,49 +340,90 @@ public class EditorController implements EditorListener, EditorUIProvider {
     }
 
     private void createGameWidget() {
-        gameWidget = new ViewWidget(gameTarget);
+		gameWidget = new ViewWidget(gameTarget);
 
-        // Listener
-        gameWidget.addListener(new InputListener() {
-            @Override
-            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                focusedWidget = gameWidget; // Focus Logic
-                ((EditorGameInput) Gd.input).setTouched(true, pointer);
-                if (Gd.input.getInputProcessor() != null) {
-                    Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-                    Gd.input.getInputProcessor().touchDown((int) fboPos.x, (int) fboPos.y, pointer, button);
-                }
-                return true;
-            }
-            @Override
-            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-                ((EditorGameInput) Gd.input).setTouched(false, pointer);
-                if (Gd.input.getInputProcessor() != null) {
-                    Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-                    Gd.input.getInputProcessor().touchUp((int) fboPos.x, (int) fboPos.y, pointer, button);
-                }
-            }
-            @Override
-            public void touchDragged(InputEvent event, float x, float y, int pointer) {
-                if (Gd.input.getInputProcessor() != null) {
-                    Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-                    Gd.input.getInputProcessor().touchDragged((int) fboPos.x, (int) fboPos.y, pointer);
-                }
-            }
-        });
+		// 输入监听与注入
+		gameWidget.addListener(new InputListener() {
+			@Override
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				focusedWidget = gameWidget; // Focus Logic
+				((EditorGameInput) Gd.input).setTouched(true, pointer);
+				if (Gd.input.getInputProcessor() != null) {
+					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+					Gd.input.getInputProcessor().touchDown((int) fboPos.x, (int) fboPos.y, pointer, button);
+				}
+				return true;
+			}
+			@Override
+			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+				((EditorGameInput) Gd.input).setTouched(false, pointer);
+				if (Gd.input.getInputProcessor() != null) {
+					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+					Gd.input.getInputProcessor().touchUp((int) fboPos.x, (int) fboPos.y, pointer, button);
+				}
+			}
+			@Override
+			public void touchDragged(InputEvent event, float x, float y, int pointer) {
+				if (Gd.input.getInputProcessor() != null) {
+					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
+					Gd.input.getInputProcessor().touchDragged((int) fboPos.x, (int) fboPos.y, pointer);
+				}
+			}
+		});
 
-        gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
+		gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
 
-        // Joystick initialization (retained for potential use)
-        Texture bg = createSolidTexture(100, 100, Color.DARK_GRAY);
-        Texture knob = createSolidTexture(30, 30, Color.LIGHT_GRAY);
-        Touchpad.TouchpadStyle style = new Touchpad.TouchpadStyle();
-        style.background = new TextureRegionDrawable(new TextureRegion(bg));
-        style.knob = new TextureRegionDrawable(new TextureRegion(knob));
-        joystick = new Touchpad(10, style);
+		// 摇杆
+		Texture bg = createSolidTexture(100, 100, Color.DARK_GRAY);
+		Texture knob = createSolidTexture(30, 30, Color.LIGHT_GRAY);
+		Touchpad.TouchpadStyle style = new Touchpad.TouchpadStyle();
+		style.background = new TextureRegionDrawable(new TextureRegion(bg));
+		style.knob = new TextureRegionDrawable(new TextureRegion(knob));
+		joystick = new Touchpad(10, style);
+
+		// 配置修改器
+		VisSelectBox<String> box = getVpSelectBox();
+
+		VisTable uiTable = new VisTable();
+		uiTable.setFillParent(true);
+		uiTable.add(box).expandX().top().right().width(80).pad(5);
+		uiTable.row();
+		uiTable.add().expand().fill();
+		uiTable.row();
+		uiTable.add(joystick).bottom().left().pad(10);
+
+		gameWidgetStack = new Stack();
+		gameWidgetStack.add(gameWidget);
+		gameWidgetStack.add(uiTable);
     }
 
-    private void createSceneWidget() {
+	private VisSelectBox<String> getVpSelectBox() {
+		VisSelectBox<String> box = new VisSelectBox<>();
+		box.setItems("FIT", "STRETCH", "EXTEND");
+		box.addListener(new ChangeListener() {
+			@Override
+			public void changed(ChangeEvent event, Actor actor) {
+				String mode = box.getSelected();
+
+				if (mode.equals("FIT")) {
+					Gd.config.viewportType = Gd.ViewportType.FIT;
+					gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
+				} else if (mode.equals("STRETCH")) {
+					Gd.config.viewportType = Gd.ViewportType.STRETCH;
+					gameWidget.setDisplayMode(ViewWidget.DisplayMode.STRETCH);
+				} else if (mode.equals("EXTEND")) {
+					Gd.config.viewportType = Gd.ViewportType.EXTEND;
+					gameWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
+				}
+
+				reloadGameViewport();
+				Gdx.app.log("Editor", "Viewport Changed to: " + mode);
+			}
+		});
+		return box;
+	}
+
+	private void createSceneWidget() {
         sceneWidget = new ViewWidget(sceneTarget);
         sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 
@@ -446,7 +477,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
             @Override
             public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
                 if (focusedWidget != sceneWidget) return false;
-                
+
                 // Zoom Logic
                 sceneCamera.zoom += amountY * 0.1f * sceneCamera.zoom;
                 if (sceneCamera.zoom < 0.1f) sceneCamera.zoom = 0.1f;
@@ -455,27 +486,6 @@ public class EditorController implements EditorListener, EditorUIProvider {
                 return true;
             }
         });
-    }
-
-    private Table createGameToolbar() {
-        Table toolbar = new Table();
-        toolbar.left().pad(2);
-        toolbar.setBackground(VisUI.getSkin().getDrawable("window-bg")); // 简单的背景
-
-        addToolBtn(toolbar, "Fit", () -> {
-            Gd.config.viewportType = Gd.ViewportType.FIT;
-            reloadGameViewport();
-        });
-        addToolBtn(toolbar, "Fill", () -> {
-            Gd.config.viewportType = Gd.ViewportType.EXTEND;
-            reloadGameViewport();
-        });
-        addToolBtn(toolbar, "Stretch", () -> {
-            Gd.config.viewportType = Gd.ViewportType.STRETCH;
-            reloadGameViewport();
-        });
-
-        return toolbar;
     }
 
     private Table createToolbar() {
@@ -615,10 +625,10 @@ public class EditorController implements EditorListener, EditorUIProvider {
             shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
             shapeRenderer.setColor(Color.ORANGE);
             Gdx.gl.glLineWidth(2f);
-            
+
             Vector2 p = focusedWidget.localToStageCoordinates(new Vector2(0,0));
             shapeRenderer.rect(p.x, p.y, focusedWidget.getWidth(), focusedWidget.getHeight());
-            
+
             shapeRenderer.end();
             Gdx.gl.glLineWidth(1f);
         }
