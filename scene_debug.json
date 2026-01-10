@@ -4,30 +4,30 @@
 	"components": [
 		{
 			"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
-			"gid": 4,
+			"gid": 36,
 			"name": "TransformComponent",
 			"isEnabled": true,
 			"isDestroyed": false,
 			"position": {
-				"x": 382.3431,
-				"y": 122.77212
+				"x": 111.45525,
+				"y": -15.948263
 			},
-			"scale": 1.0919291,
-			"rotation": 0.6142813,
+			"scale": 2.46196,
+			"rotation": -356.56607,
 			"worldTransform": {
-				"m00": 1.0918684,
-				"m01": -0.011515399,
-				"m02": 382.3431,
-				"m10": 0.011515399,
-				"m11": 1.0918684,
-				"m12": 122.77212
+				"m00": 2.4574707,
+				"m01": -0.1486132,
+				"m02": 111.45525,
+				"m10": 0.1486132,
+				"m11": 2.4574707,
+				"m12": -15.948263
 			},
 			"worldPosition": {
-				"x": 382.3431,
-				"y": 122.77212
+				"x": 111.45525,
+				"y": -15.948263
 			},
-			"worldRotation": 0.6142813,
-			"worldScale": 1.0919291
+			"worldRotation": -356.56607,
+			"worldScale": 2.46196
 		},
 		{
 			"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
@@ -37,14 +37,14 @@
 			"isDestroyed": false,
 			"assetPath": "gd_icon.png",
 			"color": {
-				"r": 1,
-				"g": 1,
-				"b": 1,
+				"r": 0.67058825,
+				"g": 0.28627452,
+				"b": 0.28627452,
 				"a": 1
 			},
 			"flipX": false,
 			"flipY": false,
-			"offsetX": 0,
+			"offsetX": 1.0666622,
 			"offsetY": 0,
 			"width": 100,
 			"height": 100
@@ -56,30 +56,30 @@
 			"components": [
 				{
 					"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
-					"gid": 8,
+					"gid": 40,
 					"name": "TransformComponent",
 					"isEnabled": true,
 					"isDestroyed": false,
 					"position": {
-						"x": -252.21758,
-						"y": -26.073391
+						"x": 121.858505,
+						"y": 9.4602165
 					},
-					"scale": 0.5,
-					"rotation": 47.330868,
+					"scale": 0.51441777,
+					"rotation": 45.59547,
 					"worldTransform": {
-						"m00": 0.39464524,
-						"m01": -0.44682825,
-						"m02": 498.3989,
-						"m10": 0.44682825,
-						"m11": 0.39464524,
-						"m12": 223.8029
+						"m00": 1.8970191,
+						"m01": -2.4745357,
+						"m02": 1114.0453,
+						"m10": 2.4745357,
+						"m11": 1.8970191,
+						"m12": 107.35443
 					},
 					"worldPosition": {
-						"x": 107.254944,
-						"y": 91.39902
+						"x": 409.51306,
+						"y": 25.409723
 					},
-					"worldRotation": 47.94515,
-					"worldScale": 0.54596454
+					"worldRotation": -310.9706,
+					"worldScale": 1.266476
 				},
 				{
 					"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
@@ -87,11 +87,11 @@
 					"name": "SpriteComponent",
 					"isEnabled": true,
 					"isDestroyed": false,
-					"assetPath": "gd_icon.png",
+					"assetPath": "back.png",
 					"color": {
 						"r": 1,
-						"g": 0,
-						"b": 0,
+						"g": 1,
+						"b": 1,
 						"a": 1
 					},
 					"flipX": false,
