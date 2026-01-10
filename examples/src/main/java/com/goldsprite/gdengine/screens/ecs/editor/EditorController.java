@@ -41,6 +41,7 @@ import com.goldsprite.gdengine.ecs.component.SpriteComponent;
 import com.goldsprite.gdengine.ecs.component.TransformComponent;
 import com.goldsprite.gdengine.ecs.system.SkeletonRenderSystem;
 import com.goldsprite.gdengine.ecs.system.SpriteSystem;
+import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectAdapter;
 import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectWrapperCache;
@@ -51,6 +52,9 @@ import com.goldsprite.solofight.screens.tests.iconeditor.model.EditorTarget;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorListener;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.SceneManager;
+
+import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 
 public class EditorController implements EditorListener {
 	private EditorGameScreen screen;
@@ -135,19 +139,30 @@ public class EditorController implements EditorListener {
 		spriteSystem = new SpriteSystem(spriteBatch, gameCamera);
 		skeletonRenderSystem = new SkeletonRenderSystem(neonBatch, gameCamera);
 
-		initTestScene();
-
-		// 7. 设置场景根节点
+		// 7. 设置场景根节点 (必须在添加对象之前！)
 		setupSceneRoot();
 
+		initTestScene();
+
 		// 初始化输入处理
-		editorInput = new EditorInput(gameCamera, sceneManager, gizmoSystem);
+		// [核心修复] 重新实例化正确的 Input (使用 sceneCamera)，并绑定 Widget
+		editorInput = new EditorInput(sceneCamera, sceneManager, gizmoSystem, commandManager);
+		editorInput.setViewWidget(sceneWidget); // <--- 注入 Widget
+
 		inputMultiplexer = new InputMultiplexer();
-		inputMultiplexer.addProcessor(editorInput);
+		// 优先处理 UI (防止 Toolbar 点击导致 Gizmo 失去焦点)
 		inputMultiplexer.addProcessor(stage);
+		// 其次处理 Gizmo 操作
+		inputMultiplexer.addProcessor(editorInput);
+
 		// 这里临时处理
-		if(screen != null)screen.getImp().addProcessor(inputMultiplexer);
-		else Gdx.input.setInputProcessor(inputMultiplexer);
+		if(screen != null && screen.getImp() != null) {
+			screen.getImp().addProcessor(inputMultiplexer);
+		} else {
+			Gdx.input.setInputProcessor(inputMultiplexer);
+		}
+		
+		Gdx.app.log("EditorController", "InputProcessor initialized. Multiplexer size: " + inputMultiplexer.getProcessors().size);
 	}
 
 	private void setupSceneRoot() {
@@ -353,60 +368,117 @@ public class EditorController implements EditorListener {
 	private void createSceneWindow() {
 		VisWindow win = new VisWindow("Scene View");
 		win.setResizable(true);
-		// 设置窗口占据下半屏，宽度为整个屏幕宽度，高度为屏幕高度的一半
 		win.setSize(stage.getWidth(), stage.getHeight()/2);
 		win.setPosition(0, stage.getHeight()/2);
 
 		sceneWidget = new ViewWidget(sceneTarget);
 		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 
-		// 添加编辑器输入处理
+		// [核心修复 1] 移除这里的 InputListener (touchDown)，因为它和 EditorInput 冲突
+		// editorInput 已经在 InputMultiplexer 中作为全局处理器添加了，它会负责点击判定。
+		// 如果点中物体，它会拦截；如果没点中，它会放行，然后下面的 DragListener 会工作。
+
+		// [核心修复 2] 修正相机拖拽手感
 		sceneWidget.addListener(new InputListener() {
+			private boolean isEditorHandling = false;
+			private float lastX, lastY;
+
 			@Override
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-				if (button != 0) return false; // 只处理左键
-
-				// 转换为世界坐标
-				Vector2 worldPos = sceneWidget.screenToWorld(Gdx.input.getX(), Gdx.input.getY(), sceneCamera);
-
-				// 检查是否点击了对象
-				EditorTarget hitTarget = editorInput.hitTest(worldPos.x, worldPos.y);
-				if (hitTarget != null) {
-					sceneManager.selectNode(hitTarget);
-					return true;
-				} else {
-					// 点击空白处，取消选择
-					sceneManager.selectNode(null);
+				// 1. 尝试交给编辑器处理 (Gizmo / 选择)
+				if (editorInput.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button)) {
+					isEditorHandling = true;
+					return true; // 拦截，不进行相机拖拽
 				}
 
-				return false;
+				// 2. 编辑器未处理 -> 点击了空白处
+				isEditorHandling = false;
+				sceneManager.selectNode(null); // 取消选择
+
+				// 3. 开启相机拖拽 (记录起始点)
+				lastX = Gdx.input.getX();
+				lastY = Gdx.input.getY();
+				return true; // 拦截，准备接收 touchDragged
+			}
+
+			@Override
+			public void touchDragged(InputEvent event, float x, float y, int pointer) {
+				if (isEditorHandling) {
+					editorInput.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
+				} else {
+					// 相机拖拽逻辑
+					float currX = Gdx.input.getX();
+					float currY = Gdx.input.getY();
+					float dx = currX - lastX;
+					float dy = currY - lastY;
+					
+					lastX = currX;
+					lastY = currY;
+
+					float zoom = sceneCamera.zoom;
+					// 计算比例 (同原逻辑)
+					float ratio = 1.0f;
+					if (sceneWidget.getWidth() > 0) {
+						ratio = sceneTarget.getFboWidth() / sceneWidget.getWidth();
+					}
+
+					// Gdx.input.getY() 是向下增加 (Top-Left origin)
+					// Drag Down (dy > 0) -> Camera Up (+Y) -> World moves Down (Google Maps style)
+					sceneCamera.translate(-dx * ratio * zoom, dy * ratio * zoom, 0);
+					sceneCamera.update();
+				}
+			}
+
+			@Override
+			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+				if (isEditorHandling) {
+					editorInput.touchUp(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
+				}
+				isEditorHandling = false;
+			}
+
+			@Override
+			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
+				sceneCamera.zoom += amountY * 0.1f * sceneCamera.zoom;
+				if (sceneCamera.zoom < 0.1f) sceneCamera.zoom = 0.1f;
+				if (sceneCamera.zoom > 10f) sceneCamera.zoom = 10f;
+				sceneCamera.update();
+				return true;
 			}
 		});
 
-		// 添加拖拽和缩放支持
-		sceneWidget.addListener(new DragListener() {
-				@Override
-				public void drag(InputEvent event, float x, float y, int pointer) {
-					float dx = getDeltaX(); float dy = getDeltaY();
-					float zoom = sceneCamera.zoom;
-					sceneCamera.translate(-dx * 2 * zoom, -dy * 2 * zoom, 0);
-					sceneCamera.update();
-				}
-				@Override
-				public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-					sceneCamera.zoom += amountY * 0.1f;
-					if (sceneCamera.zoom < 0.1f) sceneCamera.zoom = 0.1f;
-					if (sceneCamera.zoom > 5f) sceneCamera.zoom = 5f;
-					sceneCamera.update();
-					return true;
-				}
-			});
+		// [新增] 工具栏叠加层
+		Stack stack = new Stack();
+		stack.add(sceneWidget);
 
-		win.add(sceneWidget).grow();
+		Table toolbar = new Table();
+		toolbar.top().left().pad(5);
+
+		addToolBtn(toolbar, "M", () -> gizmoSystem.mode = GizmoSystem.Mode.MOVE);
+		addToolBtn(toolbar, "R", () -> gizmoSystem.mode = GizmoSystem.Mode.ROTATE);
+		addToolBtn(toolbar, "S", () -> gizmoSystem.mode = GizmoSystem.Mode.SCALE);
+
+		toolbar.add().width(15);
+
+		addToolBtn(toolbar, "<", () -> commandManager.undo());
+		addToolBtn(toolbar, ">", () -> commandManager.redo());
+
+		stack.add(toolbar);
+
+		win.add(stack).grow();
 		stage.addActor(win);
 	}
 
+	private void addToolBtn(Table table, String text, Runnable action) {
+		VisTextButton btn = new VisTextButton(text);
+		btn.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent e, float x, float y) { action.run(); }
+		});
+		table.add(btn).size(30, 30).padRight(5);
+	}
+
 	public void render(float delta) {
+		Debug.log("场景相机位置: %s", sceneCamera.position);
 		// 1. 逻辑更新 (Input -> Logic)// 优先使用键盘输入，如果没有键盘输入则使用摇杆
 		if (player != null) {
 			float speed = 200 * delta;
@@ -560,17 +632,20 @@ public class EditorController implements EditorListener {
         // 获取或创建GObjectAdapter
         GObjectAdapter adapter = wrapperCache.get(gObject);
 
-        // 获取父节点
-        EditorTarget parent = sceneManager.getRoot();
-        if (gObject.getParent() != null) {
-            GObjectAdapter parentAdapter = wrapperCache.get(gObject.getParent());
-            if (parentAdapter != null) {
-                parent = parentAdapter;
-            }
+        // 1. 处理 ECS 层级关系
+        // 如果 GObject 已经在 ECS 中有父节点，我们不需要手动干预 Adapter 的 parent，
+        // 因为 Adapter.getParent() 会动态从 GObject 获取。
+        
+        // 2. 处理 编辑器 层级关系 (挂载到 Root)
+        // 如果 GObject 是顶层对象 (没有父节点)，它必须被挂载到 sceneManager.getRoot() 下，
+        // 否则 SceneManager 遍历不到它。
+        if (gObject.getParent() == null) {
+            EditorTarget root = sceneManager.getRoot();
+            // [核心修复] 显式添加到 Root 的子节点列表
+            // 注意：这里不能调用 adapter.setParent(root)，因为 GObject 不能认 Root 为父。
+            // 我们利用 RootAdapter 的 addChild 实现来管理这份“虚拟”关系。
+            root.addChild(adapter);
         }
-
-        // 添加到场景管理器
-        adapter.setParent(parent);
 
         // 通知结构变化
         sceneManager.notifyStructureChanged();
