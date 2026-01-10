@@ -1,28 +1,32 @@
 package com.goldsprite.gdengine.screens.ecs.editor;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.Touchpad;
+import com.badlogic.gdx.scenes.scene2d.ui.Tree;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
@@ -31,64 +35,59 @@ import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.command.CommandManager;
 import com.goldsprite.gdengine.ecs.GameWorld;
-import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.ecs.component.Component;
 import com.goldsprite.gdengine.ecs.component.SpriteComponent;
 import com.goldsprite.gdengine.ecs.component.TransformComponent;
+import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.ecs.system.SkeletonRenderSystem;
 import com.goldsprite.gdengine.ecs.system.SpriteSystem;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
-import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectAdapter;
-import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectWrapperCache;
+import com.goldsprite.gdengine.screens.ecs.editor.core.EditorGizmoSystem;
+import com.goldsprite.gdengine.screens.ecs.editor.core.EditorSceneManager;
+import com.goldsprite.gdengine.ui.input.SmartNumInput;
+import com.goldsprite.gdengine.ui.input.SmartTextInput;
 import com.kotcrab.vis.ui.VisUI;
+import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
-import com.kotcrab.vis.ui.widget.VisTree;
-import com.goldsprite.solofight.screens.tests.iconeditor.model.EditorTarget;
-import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorListener;
-import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorUIProvider;
-import com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem;
-import com.goldsprite.solofight.screens.tests.iconeditor.system.SceneManager;
-import com.goldsprite.solofight.screens.tests.iconeditor.ui.Inspector;
-import com.goldsprite.solofight.screens.tests.iconeditor.ui.UiNode;
-import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
-
 import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.kotcrab.vis.ui.widget.VisScrollPane;
+import com.kotcrab.vis.ui.widget.VisTree;
 
-public class EditorController implements EditorListener, EditorUIProvider {
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.List;
+
+/**
+ * 这里的 EditorController 已经是完全“原生”的了。
+ * 它直接操作 GObject，不再使用任何 Adapter 或 IconEditor 的遗留代码。
+ */
+public class EditorController {
 	private EditorGameScreen screen;
-	Stage stage;
-	// GameWorld gameWorld; // Replaced by core.ecs.GameWorld.inst()
-	ViewTarget gameTarget, sceneTarget;
-	ViewWidget gameWidget, sceneWidget;
-	Touchpad joystick;
+	private Stage stage;
 
-	private GObject player;
+	// 渲染核心 (FBO)
+	private ViewTarget gameTarget, sceneTarget;
+	private ViewWidget gameWidget, sceneWidget;
 
-	private OrthographicCamera sceneCamera;
-	private OrthographicCamera gameCamera;
+	// 相机系统
+	private OrthographicCamera sceneCamera; // 上帝视角
+	private OrthographicCamera gameCamera;  // 游戏视角
 	private Viewport gameViewport;
 
-	// 编辑器系统组件
+	// 编辑器内核
 	private CommandManager commandManager;
-	private SceneManager sceneManager;
-	private GizmoSystem gizmoSystem;
-	private GObjectWrapperCache wrapperCache;
-
-	// 输入处理
-	private EditorInput editorInput;
+	private EditorSceneManager sceneManager;
+	private EditorGizmoSystem gizmoSystem;
 
 	// UI 组件
-	private DragAndDrop dragAndDrop;
-	private Inspector inspector;
-	private VisTree<UiNode, EditorTarget> hierarchyTree;
-	private VisTable hierarchyTable;
-	private VisTable inspectorTable;
+	private VisTree<GObjectNode, GObject> hierarchyTree;
+	private VisTable hierarchyContainer;
+	private VisTable inspectorContainer;
 	private ViewWidget focusedWidget;
 
-	// Rendering Systems (Managed manually for Editor FBOs)
+	// 渲染系统
 	private SpriteBatch spriteBatch;
 	private NeonBatch neonBatch;
 	private ShapeRenderer shapeRenderer;
@@ -96,8 +95,6 @@ public class EditorController implements EditorListener, EditorUIProvider {
 	private SkeletonRenderSystem skeletonRenderSystem;
 	private Stack gameWidgetStack;
 
-	public EditorController() {
-	}
 	public EditorController(EditorGameScreen screen) {
 		this.screen = screen;
 	}
@@ -105,746 +102,440 @@ public class EditorController implements EditorListener, EditorUIProvider {
 	public void create() {
 		if (!VisUI.isLoaded()) VisUI.load();
 
-		// 1. FBO 环境
+		// 1. 初始化 FBO 环境
 		int fboW = 1280;
 		int fboH = 720;
 		gameTarget = new ViewTarget(fboW, fboH);
 		sceneTarget = new ViewTarget(fboW, fboH);
+
 		sceneCamera = new OrthographicCamera(fboW, fboH);
+		gameCamera = new OrthographicCamera(); // 大小由 Viewport 决定
 
-		// Game Camera Init
-		gameCamera = new OrthographicCamera();
-		reloadGameViewport();
-
-		// 2. UI 环境
+		// 2. 初始化 UI 环境
 		float scl = PlatformImpl.isAndroidUser() ? 1.3f : 2.0f;
 		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
-		// 3. 初始化编辑器系统组件
+		// 3. 初始化编辑器内核 (Native)
 		commandManager = new CommandManager();
-		wrapperCache = new GObjectWrapperCache();
-		sceneManager = new SceneManager(commandManager);
-		sceneManager.addListener(this);
-		gizmoSystem = new GizmoSystem(sceneManager, commandManager);
+		sceneManager = new EditorSceneManager(commandManager);
+		gizmoSystem = new EditorGizmoSystem(sceneManager);
 
-		createUI();
+		// 4. 依赖注入引擎
+		// [关键] 我们把自己包装好的 Input/Graphics 注入进去，让游戏觉得它在跑全屏
+		Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(gameTarget), Gd.compiler);
 
-		// 4. 依赖注入
-		EditorGameInput inputImpl = new EditorGameInput(gameWidget);
-		EditorGameGraphics graphicsImpl = new EditorGameGraphics(gameTarget);
-		Gd.init(Gd.Mode.EDITOR, inputImpl, graphicsImpl, Gd.compiler);
-
-		// 5. ECS 游戏世界初始化
-		if (GameWorld.inst() == null) {
-			new GameWorld();
-		}
-		// 注入视口和相机 (主要用于逻辑计算)
+		// 5. 初始化 ECS 世界
+		if (GameWorld.inst() == null) new GameWorld();
+		// 将游戏相机绑定给世界 (用于射线检测等逻辑)
 		GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
 
-		// 6. 初始化渲染系统
+		reloadGameViewport(); // 初始化游戏视口
+
+		// 6. 初始化渲染管线
 		spriteBatch = new SpriteBatch();
 		neonBatch = new NeonBatch();
 		shapeRenderer = new ShapeRenderer();
-		// 初始相机暂时设为 gameCamera，但在 render 时会切换
+
+		// 这些 System 主要是用来画游戏内容的，我们在 render 时手动调用
 		spriteSystem = new SpriteSystem(spriteBatch, gameCamera);
 		skeletonRenderSystem = new SkeletonRenderSystem(neonBatch, gameCamera);
 
-		// 7. 设置场景根节点 (必须在添加对象之前！)
-		setupSceneRoot();
+		// 7. 构建 UI 布局
+		createUI();
 
-		initTestScene();
+		// 8. 监听事件 (UI 刷新)
+		sceneManager.onStructureChanged.add(o -> refreshHierarchy());
+		sceneManager.onSelectionChanged.add(this::refreshInspector);
 
-		// 初始化输入处理
-		// [核心修复] 重新实例化正确的 Input (使用 sceneCamera)，并绑定 Widget
-		editorInput = new EditorInput(sceneCamera, sceneManager, gizmoSystem, commandManager);
-		editorInput.setViewWidget(sceneWidget); // <--- 注入 Widget
+		// 9. 输入处理 (Input Pipeline)
+		// 创建一个内部类来处理场景操作 (Gizmo/Select)
+		NativeEditorInput editorInput = new NativeEditorInput();
 
-		InputMultiplexer inputMultiplexer = new InputMultiplexer();
-		// 优先处理 UI (防止 Toolbar 点击导致 Gizmo 失去焦点)
-		inputMultiplexer.addProcessor(stage);
-		// 其次处理 Gizmo 操作
-		inputMultiplexer.addProcessor(editorInput);
+		InputMultiplexer multiplexer = new InputMultiplexer();
+		multiplexer.addProcessor(stage); // UI 优先
+		multiplexer.addProcessor(editorInput); // 场景操作次之
 
-		// 这里临时处理
-		if(screen != null && screen.getImp() != null) {
-			screen.getImp().addProcessor(inputMultiplexer);
+		if (screen != null && screen.getImp() != null) {
+			screen.getImp().addProcessor(multiplexer);
 		} else {
-			Gdx.input.setInputProcessor(inputMultiplexer);
+			Gdx.input.setInputProcessor(multiplexer);
 		}
 
-		Gdx.app.log("EditorController", "InputProcessor initialized. Multiplexer size: " + inputMultiplexer.getProcessors().size);
-	}
-
-	private void setupSceneRoot() {
-		// 创建一个虚拟的根节点，作为所有GObject的父节点
-		// 由于GObjectAdapter不能接受null，我们创建一个特殊的根节点适配器
-		EditorTarget rootAdapter = new EditorTarget() {
-			private final Array<EditorTarget> children = new Array<>();
-			private String name = "Scene Root";
-
-			@Override public String getName() { return name; }
-			@Override public void setName(String name) { this.name = name; }
-			@Override public String getTypeName() { return "Root"; }
-
-			@Override public float getX() { return 0; }
-			@Override public void setX(float v) {}
-			@Override public float getY() { return 0; }
-			@Override public void setY(float v) {}
-			@Override public float getRotation() { return 0; }
-			@Override public void setRotation(float v) {}
-			@Override public float getScaleX() { return 1; }
-			@Override public void setScaleX(float v) {}
-			@Override public float getScaleY() { return 1; }
-			@Override public void setScaleY(float v) {}
-
-			@Override public EditorTarget getParent() { return null; }
-			@Override public void setParent(EditorTarget parent) {}
-			@Override public void removeFromParent() {}
-			@Override public Array<EditorTarget> getChildren() { return children; }
-			@Override public void addChild(EditorTarget child) {
-				if (child != null && !children.contains(child, true)) {
-					children.add(child);
-				}
-			}
-
-			@Override public boolean hitTest(float wx, float wy) { return false; }
-			@Override public void render(com.goldsprite.gdengine.neonbatch.NeonBatch batch) {}
-		};
-
-		sceneManager.setRoot(rootAdapter);
+		// 10. 加载初始测试场景
+		initTestScene();
 	}
 
 	private void initTestScene() {
-		GameWorld world = GameWorld.inst();
+		// 清空旧物体 (如果有)
+		// GameWorld.inst().clear(); // TODO: GameWorld 需要支持 clear
 
-		// 0. 创建背景 (TempBack)
-		GObject tempBack = new GObject("TempBack");
-		TransformComponent backTrans = tempBack.addComponent(TransformComponent.class);
-		backTrans.position.set(0, 0);
-		SpriteComponent backSprite = tempBack.addComponent(SpriteComponent.class);
-		try {
-			Texture tex = new Texture(Gdx.files.internal("sprites/tempBack.png"));
-			backSprite.setRegion(new TextureRegion(tex));
-		} catch (Exception e) {
-			Gdx.app.error("Editor", "Failed to load tempBack", e);
-		}
-		backSprite.setEnable(true);
-		addGObjectToEditor(tempBack);
+		GObject player = new GObject("Player");
+		player.transform.setPosition(0, 0);
+		SpriteComponent sp = player.addComponent(SpriteComponent.class);
+		sp.setRegion(new TextureRegion(new Texture(Gdx.files.internal("gd_icon.png"))));
+		sp.width = 100; sp.height = 100;
 
-		// 1. 创建主角
-		player = new GObject("Player");
+		GObject child = new GObject("Child (Weapon)");
+		child.setParent(player);
+		child.transform.setPosition(80, 0);
+		child.transform.scale = 0.5f;
+		SpriteComponent sp2 = child.addComponent(SpriteComponent.class);
+		sp2.setRegion(new TextureRegion(new Texture(Gdx.files.internal("gd_icon.png"))));
+		sp2.width = 100; sp2.height = 100;
+		sp2.color.set(Color.RED);
 
-		// Transform
-		TransformComponent trans = player.addComponent(TransformComponent.class);
-		trans.position.set(0, 0);
-		trans.scale = 0.5f;
-
-		// Sprite
-		SpriteComponent sprite = player.addComponent(SpriteComponent.class);
-		try {
-			// 使用 GDX 原生加载确保稳定
-			Texture tex = new Texture(Gdx.files.internal("sprites/roles/enma/enma01.png"));
-			sprite.setRegion(new TextureRegion(tex, 0, 0, 80, 80));
-		} catch (Exception e) {
-			Gdx.app.error("Editor", "Failed to load sprite", e);
-		}
-		sprite.setEnable(true);
-
-		// 添加到编辑器系统
-		addGObjectToEditor(player);
-
-		// 2. 创建一个参照物
-		GObject bgObj = new GObject("Abaddon");
-		TransformComponent bgTrans = bgObj.addComponent(TransformComponent.class);
-		bgTrans.position.set(200, 100);
-		SpriteComponent bgSprite = bgObj.addComponent(SpriteComponent.class);
-		try {
-			Texture tex = new Texture(Gdx.files.internal("sprites/roles/Abaddon01.png"));
-			bgSprite.setRegion(new TextureRegion(tex, 0, 0, 80, 80));
-		} catch (Exception e) {}
-		bgSprite.setEnable(true);
-
-		// 添加到编辑器系统
-		addGObjectToEditor(bgObj);
+		// 刷新 UI
+		sceneManager.notifyStructureChanged();
 	}
 
-	public InputProcessor getInputProcessor() { return stage; }
+	private void createUI() {
+		// 1. Widget 创建
+		createGameWidget();
+		createSceneWidget();
 
-	private void reloadGameViewport() {
-		Gd.Config conf = Gd.config;
+		// 2. 根布局
+		VisTable root = new VisTable();
+		root.setFillParent(true);
+		root.setBackground("window-bg");
 
-		switch (conf.viewportType) {
-			case FIT:
-				gameViewport = new FitViewport(conf.logicWidth, conf.logicHeight, gameCamera);
-				break;
-			case STRETCH:
-				gameViewport = new StretchViewport(conf.logicWidth, conf.logicHeight, gameCamera);
-				break;
-			case EXTEND:
-				gameViewport = new ExtendViewport(conf.logicWidth, conf.logicHeight, gameCamera);
-				break;
-		}
-		// Apply updates
-		if (gameTarget != null) {
-			gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight(), false);
-		}
+		// 3. 左侧：Hierarchy
+		hierarchyContainer = new VisTable();
+		hierarchyContainer.setBackground("button");
+		hierarchyContainer.top().left();
+		VisScrollPane hierarchyScroll = new VisScrollPane(hierarchyContainer);
+		hierarchyScroll.setFadeScrollBars(false);
+
+		// 4. 右侧：Inspector
+		inspectorContainer = new VisTable();
+		inspectorContainer.setBackground("button");
+		inspectorContainer.top().left();
+		VisScrollPane inspectorScroll = new VisScrollPane(inspectorContainer);
+
+		// 5. 中间：视图 + 工具栏
+		Stack centerStack = new Stack();
+
+		// 分割 Scene 和 Game 视图
+		VisSplitPane viewSplit = new VisSplitPane(sceneWidget, gameWidgetStack, true);
+		viewSplit.setSplitAmount(0.5f);
+		centerStack.add(viewSplit);
+
+		// 悬浮工具栏
+		Table toolbar = new Table();
+		toolbar.top().left().pad(5);
+		addToolBtn(toolbar, "M (Move)", () -> gizmoSystem.mode = EditorGizmoSystem.Mode.MOVE);
+		addToolBtn(toolbar, "R (Rot)", () -> gizmoSystem.mode = EditorGizmoSystem.Mode.ROTATE);
+		addToolBtn(toolbar, "S (Scl)", () -> gizmoSystem.mode = EditorGizmoSystem.Mode.SCALE);
+		centerStack.add(toolbar);
+
+		// 6. 整体组装 (Left | Center | Right)
+		VisSplitPane rightSplit = new VisSplitPane(centerStack, inspectorScroll, false);
+		rightSplit.setSplitAmount(0.75f);
+
+		VisSplitPane mainSplit = new VisSplitPane(hierarchyScroll, rightSplit, false);
+		mainSplit.setSplitAmount(0.2f);
+
+		root.add(mainSplit).grow();
+		stage.addActor(root);
+
+		refreshHierarchy();
 	}
 
-    private void createUI() {
-        // 1. Initialize Components
-        dragAndDrop = new DragAndDrop();
-        inspector = new Inspector(this, sceneManager, commandManager);
-
-        // 2. Create Widgets
-        createGameWidget();
-        createSceneWidget();
-
-        // 3. Build Layout
-        VisTable root = new VisTable();
-        root.setFillParent(true);
-
-        // Hierarchy Panel
-        hierarchyTable = new VisTable();
-        hierarchyTable.setBackground(VisUI.getSkin().getDrawable("window-bg"));
-
-        // Inspector Panel
-        inspectorTable = new VisTable();
-		VisScrollPane inspecScrollPane = new VisScrollPane(inspectorTable);
-		inspecScrollPane.setOverscroll(false, false);
-        inspectorTable.setBackground(VisUI.getSkin().getDrawable("window-bg"));
-
-        // Central Area (Scene View + Game View + Toolbar)
-        Stack centralStack = new Stack();
-
-        // Split Game/Scene (Vertical Split)
-        VisTable gameViewContainer = new VisTable();
-
-        VisSplitPane viewSplit = new VisSplitPane(sceneWidget, gameWidgetStack, true);
-        viewSplit.setSplitAmount(0.5f);
-
-        centralStack.add(viewSplit);
-        centralStack.add(createToolbar());
-
-        // Split Panes
-        VisSplitPane rightSplit = new VisSplitPane(centralStack, inspecScrollPane, false);
-        rightSplit.setSplitAmount(0.65f);
-
-        VisSplitPane mainSplit = new VisSplitPane(hierarchyTable, rightSplit, false);
-        mainSplit.setSplitAmount(0.2f);
-
-        root.add(mainSplit).grow();
-        stage.addActor(root);
-
-        // Initial Update
-        updateSceneHierarchy();
-    }
-
-    private void createGameWidget() {
+	private void createGameWidget() {
 		gameWidget = new ViewWidget(gameTarget);
-
-		// 输入监听与注入
-		gameWidget.addListener(new InputListener() {
-			@Override
-			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-				focusedWidget = gameWidget; // Focus Logic
-				((EditorGameInput) Gd.input).setTouched(true, pointer);
-				if (Gd.input.getInputProcessor() != null) {
-					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-					Gd.input.getInputProcessor().touchDown((int) fboPos.x, (int) fboPos.y, pointer, button);
-				}
-				return true;
-			}
-			@Override
-			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-				((EditorGameInput) Gd.input).setTouched(false, pointer);
-				if (Gd.input.getInputProcessor() != null) {
-					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-					Gd.input.getInputProcessor().touchUp((int) fboPos.x, (int) fboPos.y, pointer, button);
-				}
-			}
-			@Override
-			public void touchDragged(InputEvent event, float x, float y, int pointer) {
-				if (Gd.input.getInputProcessor() != null) {
-					Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
-					Gd.input.getInputProcessor().touchDragged((int) fboPos.x, (int) fboPos.y, pointer);
-				}
-			}
-		});
-
 		gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
 
-		// 摇杆
-		Texture bg = createSolidTexture(100, 100, Color.DARK_GRAY);
-		Texture knob = createSolidTexture(30, 30, Color.LIGHT_GRAY);
-		Touchpad.TouchpadStyle style = new Touchpad.TouchpadStyle();
-		style.background = new TextureRegionDrawable(new TextureRegion(bg));
-		style.knob = new TextureRegionDrawable(new TextureRegion(knob));
-		joystick = new Touchpad(10, style);
-
-		// 配置修改器
-		VisSelectBox<String> box = getVpSelectBox();
-
-		VisTable uiTable = new VisTable();
-		uiTable.setFillParent(true);
-		uiTable.add(box).expandX().top().right().width(80).pad(5);
-		uiTable.row();
-		uiTable.add().expand().fill();
-		uiTable.row();
-		uiTable.add(joystick).bottom().left().pad(10);
-
-		gameWidgetStack = new Stack();
-		gameWidgetStack.add(gameWidget);
-		gameWidgetStack.add(uiTable);
-    }
-
-	private VisSelectBox<String> getVpSelectBox() {
+		// 简单的视口切换
 		VisSelectBox<String> box = new VisSelectBox<>();
 		box.setItems("FIT", "STRETCH", "EXTEND");
 		box.addListener(new ChangeListener() {
-			@Override
-			public void changed(ChangeEvent event, Actor actor) {
+			@Override public void changed(ChangeEvent event, Actor actor) {
 				String mode = box.getSelected();
-
-				if (mode.equals("FIT")) {
-					Gd.config.viewportType = Gd.ViewportType.FIT;
-					gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
-				} else if (mode.equals("STRETCH")) {
-					Gd.config.viewportType = Gd.ViewportType.STRETCH;
-					gameWidget.setDisplayMode(ViewWidget.DisplayMode.STRETCH);
-				} else if (mode.equals("EXTEND")) {
-					Gd.config.viewportType = Gd.ViewportType.EXTEND;
-					gameWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
-				}
-
+				if(mode.equals("FIT")) Gd.config.viewportType = Gd.ViewportType.FIT;
+				if(mode.equals("STRETCH")) Gd.config.viewportType = Gd.ViewportType.STRETCH;
+				if(mode.equals("EXTEND")) Gd.config.viewportType = Gd.ViewportType.EXTEND;
 				reloadGameViewport();
-				Gdx.app.log("Editor", "Viewport Changed to: " + mode);
 			}
 		});
-		return box;
+
+		VisTable uiOverlay = new VisTable();
+		uiOverlay.add(box).top().right().expand().pad(5);
+
+		gameWidgetStack = new Stack();
+		gameWidgetStack.add(gameWidget);
+		gameWidgetStack.add(uiOverlay);
 	}
 
 	private void createSceneWidget() {
-        sceneWidget = new ViewWidget(sceneTarget);
-        sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
+		sceneWidget = new ViewWidget(sceneTarget);
+		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 
-        sceneWidget.addListener(new InputListener() {
-            private boolean isEditorHandling = false;
-            private float lastX, lastY;
-
-            @Override
-            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                focusedWidget = sceneWidget; // Focus Logic
-                if (editorInput.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button)) {
-                    isEditorHandling = true;
-                    return true;
-                }
-                isEditorHandling = false;
-                sceneManager.selectNode(null);
-                lastX = Gdx.input.getX();
-                lastY = Gdx.input.getY();
-                return true;
-            }
-
-            @Override
-            public void touchDragged(InputEvent event, float x, float y, int pointer) {
-                if (isEditorHandling) {
-                    editorInput.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
-                } else {
-                    float currX = Gdx.input.getX();
-                    float currY = Gdx.input.getY();
-                    float dx = currX - lastX;
-                    float dy = currY - lastY;
-                    lastX = currX;
-                    lastY = currY;
-                    float zoom = sceneCamera.zoom;
-                    float ratio = 1.0f;
-                    if (sceneWidget.getWidth() > 0) {
-                        ratio = sceneTarget.getFboWidth() / sceneWidget.getWidth();
-                    }
-                    sceneCamera.translate(-dx * ratio * zoom, dy * ratio * zoom, 0);
-                    sceneCamera.update();
-                }
-            }
-
-            @Override
-            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-                if (isEditorHandling) {
-                    editorInput.touchUp(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
-                }
-                isEditorHandling = false;
-            }
-
-            @Override
-            public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-                if (focusedWidget != sceneWidget) return false;
-
-                // Zoom Logic
-                sceneCamera.zoom += amountY * 0.1f * sceneCamera.zoom;
-                if (sceneCamera.zoom < 0.1f) sceneCamera.zoom = 0.1f;
-                if (sceneCamera.zoom > 10f) sceneCamera.zoom = 10f;
-                sceneCamera.update();
-                return true;
-            }
-        });
-    }
-
-    private Table createToolbar() {
-        Table toolbar = new Table();
-        toolbar.top().left().pad(5);
-
-        addToolBtn(toolbar, "M", () -> gizmoSystem.mode = GizmoSystem.Mode.MOVE);
-        addToolBtn(toolbar, "R", () -> gizmoSystem.mode = GizmoSystem.Mode.ROTATE);
-        addToolBtn(toolbar, "S", () -> gizmoSystem.mode = GizmoSystem.Mode.SCALE);
-
-        toolbar.add().width(15);
-
-        addToolBtn(toolbar, "<", () -> commandManager.undo());
-        addToolBtn(toolbar, ">", () -> commandManager.redo());
-
-        return toolbar;
-    }
-
-    private Texture createSolidTexture(int w, int h, Color c) {
-        Pixmap p = new Pixmap(w, h, Pixmap.Format.RGBA8888);
-        p.setColor(c);
-        p.fill();
-        Texture t = new Texture(p);
-        p.dispose();
-        return t;
-    }
-
-	private void addToolBtn(Table table, String text, Runnable action) {
-		VisTextButton btn = new VisTextButton(text);
-		btn.addListener(new ClickListener() {
-			@Override public void clicked(InputEvent e, float x, float y) { action.run(); }
-		});
-		table.add(btn).size(50, 30).padRight(5);
-	}
-
-	public void render(float delta) {
-		// [新增] 每一帧检查是否需要重置视口
-		// 因为 Gd.config.viewportType 可能会在运行时被改变（通过Toolbar按钮）
-		// 但为了性能，最好只在变化时调用，或者在按钮回调里调用。
-		// 这里我们简化处理，假设 createGameToolbar 里已经正确调用了 reloadGameViewport()。
-		// 但这里必须定义 reloadGameViewport() 供 create() 和 Toolbar 使用。
-
-		// 1. 逻辑更新 (Input -> Logic)// 优先使用键盘输入，如果没有键盘输入则使用摇杆
-		if (player != null) {
-			float speed = 200 * delta;
-			float dx = 0, dy = 0;
-
-			// 获取键盘方向
-			Vector2 keyboardDir = editorInput.getKeyboardDirection();
-			if (keyboardDir.len() > 0) {
-				// 有键盘输入，使用键盘方向
-				dx = keyboardDir.x * speed;
-				dy = keyboardDir.y * speed;
-			} else {
-				// 没有键盘输入，使用摇杆方向
-				dx = joystick.getKnobPercentX() * speed;
-				dy = joystick.getKnobPercentY() * speed;
+		// 简单的场景漫游输入
+		sceneWidget.addListener(new InputListener() {
+			float lastX, lastY;
+			@Override public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				if(button == Input.Buttons.RIGHT) { lastX = x; lastY = y; return true; }
+				return false;
 			}
-
-			TransformComponent trans = player.getComponent(TransformComponent.class);
-			if (trans != null) {
-				trans.position.add(dx, dy);
-
-				// 面向调整
-				SpriteComponent sprite = player.getComponent(SpriteComponent.class);
-				if (sprite != null && dx != 0) {
-					sprite.flipX = dx < 0;
+			@Override public void touchDragged(InputEvent event, float x, float y, int pointer) {
+				if(Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
+					float z = sceneCamera.zoom;
+					// ViewWidget 内部可能有缩放，这里简单处理
+					sceneCamera.translate(-(x - lastX)*z, (y - lastY)*z);
+					sceneCamera.update();
+					lastX = x; lastY = y;
 				}
 			}
+			@Override public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
+				sceneCamera.zoom += amountY * 0.1f * sceneCamera.zoom;
+				sceneCamera.zoom = MathUtils.clamp(sceneCamera.zoom, 0.1f, 10f);
+				sceneCamera.update();
+				return true;
+			}
+		});
+	}
+
+	private void addToolBtn(Table t, String text, Runnable act) {
+		VisTextButton b = new VisTextButton(text);
+		b.addListener(new ClickListener() { @Override public void clicked(InputEvent e, float x, float y) { act.run(); } });
+		t.add(b).padRight(5);
+	}
+
+	private void reloadGameViewport() {
+		Gd.Config conf = Gd.config;
+		if (conf.viewportType == Gd.ViewportType.FIT) gameViewport = new FitViewport(conf.logicWidth, conf.logicHeight, gameCamera);
+		else if (conf.viewportType == Gd.ViewportType.STRETCH) gameViewport = new StretchViewport(conf.logicWidth, conf.logicHeight, gameCamera);
+		else gameViewport = new ExtendViewport(conf.logicWidth, conf.logicHeight, gameCamera);
+		if (gameTarget != null) gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight());
+	}
+
+	// =======================================================
+	// 核心逻辑: Hierarchy (GObject Tree)
+	// =======================================================
+
+	private void refreshHierarchy() {
+		hierarchyContainer.clearChildren();
+		hierarchyTree = new VisTree<>();
+		hierarchyTree.getSelection().setProgrammaticChangeEvents(false);
+
+		// 从 GameWorld 获取根物体
+		List<GObject> roots = GameWorld.inst().getRootEntities();
+		for(GObject root : roots) {
+			buildTreeNode(root, null);
 		}
 
-		GameWorld.inst().update(delta);
+		hierarchyContainer.add(hierarchyTree).grow().top();
+	}
 
-		// 2. 更新相机 - 添加跟随玩家的逻辑
-		if (player != null) {
-			TransformComponent trans = player.getComponent(TransformComponent.class);
-			if (trans != null) {
-				// 让游戏相机跟随玩家
-				float camX = gameCamera.position.x;
-				float camY = gameCamera.position.y;
-				float targetX = trans.position.x;
-				float targetY = trans.position.y;
+	private void buildTreeNode(GObject obj, GObjectNode parent) {
+		GObjectNode node = new GObjectNode(obj);
+		if(parent == null) hierarchyTree.add(node);
+		else parent.add(node);
 
-				// 平滑跟随
-				gameCamera.position.x += (targetX - camX) * 5 * delta;
-				gameCamera.position.y += (targetY - camY) * 5 * delta;
+		for(GObject child : obj.getChildren()) {
+			buildTreeNode(child, node);
+		}
+		node.setExpanded(true);
+	}
+
+	// 简单的树节点实现
+	class GObjectNode extends Tree.Node<GObjectNode, GObject, VisLabel> {
+		public GObjectNode(GObject obj) {
+			super(new VisLabel(obj.getName()));
+			setValue(obj);
+			getActor().addListener(new ClickListener() {
+				@Override public void clicked(InputEvent event, float x, float y) {
+					sceneManager.select(obj);
+				}
+			});
+		}
+	}
+
+	// =======================================================
+	// 核心逻辑: Inspector (Reflection)
+	// =======================================================
+
+	private void refreshInspector(GObject selection) {
+		inspectorContainer.clearChildren();
+		if (selection == null) {
+			inspectorContainer.add(new VisLabel("No Selection")).pad(10);
+			return;
+		}
+
+		// 1. GObject 基础属性
+		inspectorContainer.add(new VisLabel("Name:")).left();
+		inspectorContainer.add(new SmartTextInput(null, selection.getName(), selection::setName)).growX().row();
+
+		// 2. 遍历组件
+		for (List<Component> comps : selection.getComponentsMap().values()) {
+			for (Component c : comps) {
+				buildComponentUI(c);
 			}
 		}
+	}
+
+	private void buildComponentUI(Component c) {
+		// 标题栏
+		VisTable header = new VisTable();
+		header.setBackground("button");
+		header.add(new VisLabel(c.getClass().getSimpleName())).expandX().left().pad(5);
+		inspectorContainer.add(header).growX().padTop(5).row();
+
+		VisTable body = new VisTable();
+		body.padLeft(10);
+
+		// 简单的反射 UI
+		Field[] fields = c.getClass().getFields();
+		for (Field f : fields) {
+			if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers())) continue;
+			try {
+				String name = f.getName();
+				Object val = f.get(c);
+				Class<?> type = f.getType();
+
+				body.add(new VisLabel(name)).left().width(80);
+
+				if (type == float.class) {
+					body.add(new SmartNumInput(null, (float)val, 0.1f, v -> { try{f.setFloat(c,v);}catch(Exception e){} })).growX();
+				} else if (type == String.class) {
+					body.add(new SmartTextInput(null, (String)val, v -> { try{f.set(c,v);}catch(Exception e){} })).growX();
+				} else {
+					body.add(new VisLabel(val != null ? val.toString() : "null")).growX();
+				}
+				body.row();
+
+			} catch (Exception e) {}
+		}
+		inspectorContainer.add(body).growX().row();
+	}
+
+	// =======================================================
+	// 渲染循环
+	// =======================================================
+
+	public void render(float delta) {
+		// 1. 更新逻辑
+		GameWorld.inst().update(delta);
 		gameCamera.update();
 		sceneCamera.update();
 
-		// 3. 渲染 Game View (使用游戏相机)
+		// 2. 渲染 Game View (FBO)
 		gameTarget.renderToFbo(() -> {
 			gameViewport.apply();
-
-			// 手动驱动渲染系统
+			// 手动驱动 RenderSystem (使用 GameCamera)
 			spriteSystem.setCamera(gameCamera);
 			spriteSystem.update(delta);
-
 			skeletonRenderSystem.setCamera(gameCamera);
 			skeletonRenderSystem.update(delta);
-
-			// Debug 渲染 (如果有)
-			// renderDebug(gameCamera);
 		});
 
-		// 4. 渲染 Scene View (使用上帝相机)
+		// 3. 渲染 Scene View (FBO)
 		sceneTarget.renderToFbo(() -> {
 			Gdx.gl.glViewport(0, 0, sceneTarget.getFboWidth(), sceneTarget.getFboHeight());
-			Gdx.gl.glClearColor(0, 0, 0, 0);
+			Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
 			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 			// 绘制网格
 			drawGrid(sceneCamera);
 
-			// 渲染游戏世界
+			// 绘制物体 (使用 SceneCamera)
 			spriteSystem.setCamera(sceneCamera);
 			spriteSystem.update(delta);
-
 			skeletonRenderSystem.setCamera(sceneCamera);
 			skeletonRenderSystem.update(delta);
 
-			// 渲染编辑器系统
-			renderEditorSystem(sceneCamera);
+			// 绘制 Gizmo
+			neonBatch.setProjectionMatrix(sceneCamera.combined);
+			neonBatch.begin();
+			// 绘制选中框
+			if(sceneManager.getSelection() != null) {
+				GObject sel = sceneManager.getSelection();
+				float x = sel.transform.worldPosition.x;
+				float y = sel.transform.worldPosition.y;
+				neonBatch.drawRect(x-25, y-25, 50, 50, sel.transform.worldRotation, 2, Color.YELLOW, false);
+			}
+			gizmoSystem.render(neonBatch, sceneCamera.zoom);
+			neonBatch.end();
 		});
 
+		// 4. 上屏 UI
 		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		Gdx.gl.glClearColor(0, 0, 0, 1);
+		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
 		stage.act(delta);
 		stage.draw();
-
-        // 5. Draw Focus Border
-        if (focusedWidget != null) {
-            shapeRenderer.setProjectionMatrix(stage.getCamera().combined);
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setColor(Color.ORANGE);
-            Gdx.gl.glLineWidth(2f);
-
-            Vector2 p = focusedWidget.localToStageCoordinates(new Vector2(0,0));
-            shapeRenderer.rect(p.x, p.y, focusedWidget.getWidth(), focusedWidget.getHeight());
-
-            shapeRenderer.end();
-            Gdx.gl.glLineWidth(1f);
-        }
 	}
 
-	private void renderEditorSystem(OrthographicCamera camera) {
-		// 渲染Gizmo
-		if (gizmoSystem != null) {
-			float zoom = camera.zoom;
-			neonBatch.setProjectionMatrix(camera.combined);
-			neonBatch.begin();
-			gizmoSystem.render(neonBatch, zoom);
-			neonBatch.end();
-		}
-
-		// 渲染选择高亮
-		EditorTarget selection = sceneManager.getSelection();
-		if (selection != null && selection instanceof GObjectAdapter) {
-			GObjectAdapter adapter = (GObjectAdapter) selection;
-			neonBatch.setProjectionMatrix(camera.combined);
-			neonBatch.begin();
-			adapter.render(neonBatch);
-			neonBatch.end();
-		}
+	private void drawGrid(OrthographicCamera cam) {
+		shapeRenderer.setProjectionMatrix(cam.combined);
+		Gdx.gl.glEnable(GL20.GL_BLEND);
+		shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+		shapeRenderer.setColor(1, 1, 1, 0.1f);
+		float s = 1000;
+		shapeRenderer.line(-s, 0, s, 0);
+		shapeRenderer.line(0, -s, 0, s);
+		shapeRenderer.end();
 	}
-
-    private void drawGrid(OrthographicCamera camera) {
-        if (shapeRenderer == null) return;
-
-        Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
-
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-
-        float zoom = camera.zoom;
-        float step = 100f; // Grid size
-
-        // Viewport bounds
-        float w = camera.viewportWidth * zoom;
-        float h = camera.viewportHeight * zoom;
-        float x = camera.position.x;
-        float y = camera.position.y;
-
-        // Calculate visible range
-        float startX = (float)Math.floor((x - w / 2) / step) * step;
-        float endX = (float)Math.ceil((x + w / 2) / step) * step;
-        float startY = (float)Math.floor((y - h / 2) / step) * step;
-        float endY = (float)Math.ceil((y + h / 2) / step) * step;
-
-        shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 0.5f); // Grey
-
-        for (float i = startX; i <= endX; i += step) {
-            if (i == 0) continue;
-            shapeRenderer.line(i, y - h / 2, i, y + h / 2);
-        }
-
-        for (float i = startY; i <= endY; i += step) {
-            if (i == 0) continue;
-            shapeRenderer.line(x - w / 2, i, x + w / 2, i);
-        }
-
-        // Axes (Red X, Blue Y at 0,0)
-        shapeRenderer.setColor(Color.RED);
-        shapeRenderer.line(x - w / 2, 0, x + w / 2, 0);
-
-        shapeRenderer.setColor(Color.BLUE);
-        shapeRenderer.line(0, y - h / 2, 0, y + h / 2);
-
-        shapeRenderer.end();
-        Gdx.gl.glDisable(GL20.GL_BLEND);
-    }
 
 	public void resize(int width, int height) {
-        stage.getViewport().update(width, height, true);
-    }
+		stage.getViewport().update(width, height, true);
+	}
 
-    public void dispose() {
-        VisUI.dispose();
-        // GameWorld.dispose(); // GameWorld 目前没有 dispose 方法，也许需要添加
-        if (spriteBatch != null) spriteBatch.dispose();
-        if (neonBatch != null) neonBatch.dispose();
-        if (shapeRenderer != null) shapeRenderer.dispose();
-        gameTarget.dispose();
-        sceneTarget.dispose();
-        gameWidget.dispose();
-        stage.dispose();
-    }
+	public void dispose() {
+		stage.dispose();
+		gameTarget.dispose(); sceneTarget.dispose();
+		spriteBatch.dispose(); neonBatch.dispose(); shapeRenderer.dispose();
+	}
 
-    // EditorListener 接口实现
-    @Override
-    public void onStructureChanged() {
-        // 当场景结构发生变化时，更新编辑器UI
-        updateSceneHierarchy();
-    }
+	// =======================================================
+	// 输入处理 (Inner Class for Simplicity)
+	// =======================================================
 
-    @Override
-    public void onSelectionChanged(EditorTarget selection) {
-        // 当选择发生变化时，更新属性面板
-        updatePropertyPanel(selection);
-    }
+	private class NativeEditorInput extends InputAdapter {
+		private boolean isDragging = false;
 
-    private void updateSceneHierarchy() {
-        if (hierarchyTable == null) return;
-        hierarchyTable.clearChildren();
+		// 简单的 Gizmo 命中检测与拖拽逻辑
+		@Override
+		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+			Vector2 worldPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
 
-        hierarchyTree = new VisTree<>();
-        hierarchyTree.getSelection().setProgrammaticChangeEvents(false);
+			// 1. 尝试选中 Gizmo (这里简化处理，只做物体点击)
+			if (button == Input.Buttons.LEFT) {
+				GObject hit = hitTestGObject(worldPos);
+				sceneManager.select(hit);
+				if (hit != null) isDragging = true;
+				return hit != null; // 拦截事件
+			}
+			return false;
+		}
 
-        EditorTarget root = sceneManager.getRoot();
-        if (root != null) {
-            buildTree(root, null);
-        }
+		@Override
+		public boolean touchDragged(int screenX, int screenY, int pointer) {
+			if (isDragging && sceneManager.getSelection() != null) {
+				Vector2 worldPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
+				// 简单的跟随鼠标移动 (实际应该结合 Gizmo 轴向)
+				sceneManager.getSelection().transform.setPosition(worldPos.x, worldPos.y);
 
-        hierarchyTree.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                UiNode node = (UiNode) hierarchyTree.getNodeAt(y);
-                if (node != null) {
-                    sceneManager.selectNode(node.getValue());
-                } else {
-                    sceneManager.selectNode(null);
-                }
-            }
-        });
+				// 实时刷新 Inspector
+				refreshInspector(sceneManager.getSelection());
+				return true;
+			}
+			return false;
+		}
 
-        hierarchyTable.add(hierarchyTree).expand().fill().top().left();
-    }
+		@Override
+		public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+			isDragging = false;
+			return false;
+		}
 
-    private void buildTree(EditorTarget target, UiNode parentNode) {
-        UiNode node = new UiNode(target, this);
-        if (parentNode == null) {
-            hierarchyTree.add(node);
-        } else {
-            parentNode.add(node);
-        }
-
-        // Auto expand if it has children
-        if (target.getChildren().size > 0) node.setExpanded(true);
-
-        for (EditorTarget child : target.getChildren()) {
-            buildTree(child, node);
-        }
-    }
-
-    private void updatePropertyPanel(EditorTarget selection) {
-        if (inspectorTable == null || inspector == null) return;
-        inspector.build(inspectorTable, selection);
-
-        // Sync selection in Tree
-        if (hierarchyTree != null && selection != null) {
-            UiNode node = hierarchyTree.findNode(selection);
-            if (node != null) {
-                hierarchyTree.getSelection().clear();
-                hierarchyTree.getSelection().add(node);
-                node.expandTo();
-            }
-        }
-    }
-
-    // EditorUIProvider Implementation
-    @Override public VisTree<UiNode, EditorTarget> getHierarchyTree() { return hierarchyTree; }
-    @Override public SceneManager getSceneManager() { return sceneManager; }
-    @Override public CommandManager getCommandManager() { return commandManager; }
-    @Override public Stage getUiStage() { return stage; }
-    @Override public DragAndDrop getDragAndDrop() { return dragAndDrop; }
-
-    // 添加GObject到编辑器系统
-    public void addGObjectToEditor(GObject gObject) {
-        if (gObject == null) return;
-
-        // 获取或创建GObjectAdapter
-        GObjectAdapter adapter = wrapperCache.get(gObject);
-
-        // 1. 处理 ECS 层级关系
-        // 如果 GObject 已经在 ECS 中有父节点，我们不需要手动干预 Adapter 的 parent，
-        // 因为 Adapter.getParent() 会动态从 GObject 获取。
-
-        // 2. 处理 编辑器 层级关系 (挂载到 Root)
-        // 如果 GObject 是顶层对象 (没有父节点)，它必须被挂载到 sceneManager.getRoot() 下，
-        // 否则 SceneManager 遍历不到它。
-        if (gObject.getParent() == null) {
-            EditorTarget root = sceneManager.getRoot();
-            // [核心修复] 显式添加到 Root 的子节点列表
-            // 注意：这里不能调用 adapter.setParent(root)，因为 GObject 不能认 Root 为父。
-            // 我们利用 RootAdapter 的 addChild 实现来管理这份“虚拟”关系。
-            root.addChild(adapter);
-        }
-
-        // 通知结构变化
-        sceneManager.notifyStructureChanged();
-    }
-
-    // 从编辑器系统移除GObject
-    public void removeGObjectFromEditor(GObject gObject) {
-        if (gObject == null) return;
-
-        GObjectAdapter adapter = wrapperCache.get(gObject);
-        if (adapter != null) {
-            adapter.removeFromParent();
-            sceneManager.notifyStructureChanged();
-        }
-    }
-
-    // 清理编辑器系统
-    public void clearEditor() {
-        // 清理缓存
-        wrapperCache.clear();
-
-        // 重置选择
-        sceneManager.selectNode(null);
-
-        // 重置场景根节点
-        setupSceneRoot();
-
-        // 通知结构变化
-        sceneManager.notifyStructureChanged();
-    }
+		private GObject hitTestGObject(Vector2 p) {
+			// 简单的距离检测 (遍历所有顶层物体)
+			for(GObject root : GameWorld.inst().getRootEntities()) {
+				if(p.dst(root.transform.worldPosition) < 50) return root; // 半径50
+				// TODO: 递归检测子物体
+			}
+			return null;
+		}
+	}
 }

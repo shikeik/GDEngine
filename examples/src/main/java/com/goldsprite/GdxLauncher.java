@@ -78,7 +78,6 @@ public class GdxLauncher extends Game {int k10;
 		new GameWorld();
 
 		ScreenManager.getInstance()
-//			.addScreen(new SoloEditorScreen())
 			.addScreen(new ExampleSelectScreen())
 			.setLaunchScreen(ExampleSelectScreen.class);
 
