@@ -48,7 +48,7 @@ public class Debug {
 	private static final Logger logger = new Logger(LOG_TAG);
 
 	// 数据层 (构造时即可用)
-	private static List<String> logMessages = new ArrayList<>();
+	public static List<String> logMessages = new ArrayList<>();
 	private static List<String> logInfos = new ArrayList<>();
 	public static boolean showDebugUI = true;
 	public static boolean shortcuts = true;
@@ -110,6 +110,10 @@ public class Debug {
 	}
 
 	// --- 数据接口 ---
+
+	public static List<String> getAllLogs() {
+		return logMessages;
+	}
 
 	public static List<String> getLogs() {
 		return getInstance().logMessages;

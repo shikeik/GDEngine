@@ -53,11 +53,10 @@ public class GObjectSerializer {
                             if (c instanceof TransformComponent) {
                                 TransformComponent existing = gobject.transform;
                                 TransformComponent newTrans = (TransformComponent) c;
-                                existing.x = newTrans.x;
-                                existing.y = newTrans.y;
+                                existing.position.x = newTrans.position.x;
+                                existing.position.y = newTrans.position.y;
                                 existing.rotation = newTrans.rotation;
-                                existing.scaleX = newTrans.scaleX;
-                                existing.scaleY = newTrans.scaleY;
+                                existing.scale = newTrans.scale;
                             } else {
                                 gobject.addComponent(c);
                             }

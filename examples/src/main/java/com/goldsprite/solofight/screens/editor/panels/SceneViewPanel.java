@@ -224,10 +224,10 @@ public class SceneViewPanel extends BaseEditorPanel {
         private void drawEntitiesDebug(java.util.List<GObject> entities) {
             for (GObject obj : entities) {
                 shapeRenderer.setColor(Color.WHITE);
-                shapeRenderer.circle(obj.transform.x, obj.transform.y, 20);
+                shapeRenderer.circle(obj.transform.position.x, obj.transform.position.y, 20);
                 if (context.getSelection() == obj) {
                     shapeRenderer.setColor(Color.YELLOW);
-                    shapeRenderer.circle(obj.transform.x, obj.transform.y, 25);
+                    shapeRenderer.circle(obj.transform.position.x, obj.transform.position.y, 25);
                 }
                 drawEntitiesDebug(obj.getChildren());
             }

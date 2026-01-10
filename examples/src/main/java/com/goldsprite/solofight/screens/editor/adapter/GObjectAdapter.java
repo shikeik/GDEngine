@@ -33,22 +33,22 @@ public class GObjectAdapter implements EditorTarget {
 
     @Override
     public float getX() {
-        return gobject.transform.x;
+        return gobject.transform.position.x;
     }
 
     @Override
     public void setX(float v) {
-        gobject.transform.x = v;
+        gobject.transform.position.x = v;
     }
 
     @Override
     public float getY() {
-        return gobject.transform.y;
+        return gobject.transform.position.y;
     }
 
     @Override
     public void setY(float v) {
-        gobject.transform.y = v;
+        gobject.transform.position.y = v;
     }
 
     @Override
@@ -63,22 +63,22 @@ public class GObjectAdapter implements EditorTarget {
 
     @Override
     public float getScaleX() {
-        return gobject.transform.scaleX;
+        return gobject.transform.scale;
     }
 
     @Override
     public void setScaleX(float v) {
-        gobject.transform.scaleX = v;
+        gobject.transform.scale = v;
     }
 
     @Override
     public float getScaleY() {
-        return gobject.transform.scaleY;
+        return gobject.transform.scale;
     }
 
     @Override
     public void setScaleY(float v) {
-        gobject.transform.scaleY = v;
+        gobject.transform.scale = v;
     }
 
     @Override
@@ -120,7 +120,7 @@ public class GObjectAdapter implements EditorTarget {
     @Override
     public boolean hitTest(float x, float y) {
         // Simple bounding box check (20 units radius)
-        float dist = com.badlogic.gdx.math.Vector2.dst(gobject.transform.x, gobject.transform.y, x, y);
+        float dist = com.badlogic.gdx.math.Vector2.dst(gobject.transform.position.x, gobject.transform.position.y, x, y);
         return dist < 20; 
     }
 

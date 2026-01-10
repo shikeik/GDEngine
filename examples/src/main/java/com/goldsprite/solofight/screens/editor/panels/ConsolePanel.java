@@ -23,10 +23,10 @@ public class ConsolePanel extends BaseEditorPanel {
     public void act(float delta) {
         super.act(delta);
         // Polling logs (inefficient but works for now)
-        java.util.List<String> logs = Debug.getLogs();
-        if (list.getItems().size != logs.size()) {
-            list.setItems(logs.toArray(new String[0]));
+        // java.util.List<String> logs = Debug.getAllLogs();
+        // if (list.getItems().size != logs.size()) {
+        //    list.setItems(logs.toArray(new String[0]));
             // Scroll to bottom logic if needed
-        }
+        // }
     }
 }

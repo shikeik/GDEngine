@@ -65,12 +65,12 @@ public class InspectorPanel extends BaseEditorPanel {
                 Object value = f.get(c);
                 
                 if (type == float.class || type == Float.class) {
-                    contentTable.add(new SmartNumInput(name, (float)value, v -> {
+                    contentTable.add(new SmartNumInput(name, (float)value, 0.1f, v -> {
                         try { f.setFloat(c, v); } catch(Exception e) {}
                     })).growX().colspan(2).row();
                 } else if (type == int.class || type == Integer.class) {
-                    contentTable.add(new SmartNumInput(name, (float)(int)value, v -> {
-                        try { f.setInt(c, (int)v); } catch(Exception e) {}
+                    contentTable.add(new SmartNumInput(name, (float)(int)value, 1f, v -> {
+                        try { f.setInt(c, v.intValue()); } catch(Exception e) {}
                     })).growX().colspan(2).row();
                 } else if (type == boolean.class || type == Boolean.class) {
                     contentTable.add(new SmartBooleanInput(name, (boolean)value, v -> {
@@ -84,8 +84,8 @@ public class InspectorPanel extends BaseEditorPanel {
                     Vector2 v = (Vector2) value;
                     contentTable.add(new VisLabel(name)).left();
                     Table row = new Table();
-                    row.add(new SmartNumInput("X", v.x, val -> v.x = val)).growX().padRight(5);
-                    row.add(new SmartNumInput("Y", v.y, val -> v.y = val)).growX();
+                    row.add(new SmartNumInput("X", v.x, 0.1f, val -> v.x = val)).growX().padRight(5);
+                    row.add(new SmartNumInput("Y", v.y, 0.1f, val -> v.y = val)).growX();
                     contentTable.add(row).growX().row();
                 }
             } catch (IllegalAccessException e) {
