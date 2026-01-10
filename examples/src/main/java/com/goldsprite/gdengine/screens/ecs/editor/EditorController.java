@@ -537,81 +537,259 @@ public class EditorController {
 	}
 
 	// =======================================================
-	// 输入处理
+	// 输入处理 (Gizmo Interaction Core)
 	// =======================================================
 
 	private class NativeEditorInput extends InputAdapter {
-		private boolean isDragging = false;
+		private enum DragMode { NONE, BODY, MOVE_X, MOVE_Y, ROTATE, SCALE_X, SCALE_Y }
+		private DragMode currentDragMode = DragMode.NONE;
+
+		private float lastX, lastY;
+		private float startValScale; // 用于缩放计算
+
+		// 碰撞检测辅助
+		private Vector2 tmpVec = new Vector2();
 
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-			Vector2 worldPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
+			if (button != Input.Buttons.LEFT) return false;
 
-			if (button == Input.Buttons.LEFT) {
-				GObject hit = hitTestGObject(worldPos);
-				sceneManager.select(hit);
-				if (hit != null) isDragging = true;
-				return hit != null;
+			Vector2 wPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
+			GObject sel = sceneManager.getSelection();
+
+			// 1. 优先检测 Gizmo (如果已选中物体)
+			if (sel != null) {
+				DragMode gizmoHit = hitTestGizmo(sel, wPos);
+				if (gizmoHit != DragMode.NONE) {
+					startDrag(gizmoHit, wPos);
+					return true; // 拦截！不让 ViewWidget 拖动相机
+				}
 			}
+
+			// 2. 检测物体点击
+			GObject hit = hitTestGObject(wPos);
+			if (hit != null) {
+				// 如果点的不是当前选中的，切换选中
+				if (hit != sel) {
+					sceneManager.select(hit);
+				}
+				startDrag(DragMode.BODY, wPos);
+				return true;
+			}
+
+			// 3. 点击空白 -> 取消选中
+			if (sel != null) {
+				sceneManager.select(null);
+			}
+
 			return false;
+		}
+
+		private void startDrag(DragMode mode, Vector2 pos) {
+			currentDragMode = mode;
+			lastX = pos.x;
+			lastY = pos.y;
+
+			// 记录初始状态 (用于 Scale 计算或其他 Undo 逻辑)
+			if (sceneManager.getSelection() != null) {
+				startValScale = sceneManager.getSelection().transform.scale;
+			}
 		}
 
 		@Override
 		public boolean touchDragged(int screenX, int screenY, int pointer) {
-			if (isDragging && sceneManager.getSelection() != null) {
-				Vector2 mouseWorldPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
-				GObject target = sceneManager.getSelection();
+			if (currentDragMode == DragMode.NONE || sceneManager.getSelection() == null) return false;
 
-				// [核心修复] 坐标逆变换: World -> Local
-				// 如果有父级，需要把鼠标的世界坐标转换到父级的局部空间
-				// 公式: LocalPos = ParentWorldMatrix_Inverse * MouseWorldPos
+			Vector2 wPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
+			float dx = wPos.x - lastX;
+			float dy = wPos.y - lastY;
 
-				GObject parent = target.getParent();
-				if (parent != null) {
-					// 利用 TransformComponent 现有的 worldToLocal 方法
-					// 将鼠标点转为 parent 的局部坐标？不对。
-					// 目标是: target.transform.position = ?
-					// target.position 是相对于 parent 的。
-					// parent.transform.worldToLocal(mouseWorldPos) 得到的就是相对于 parent 的坐标！
+			GObject t = sceneManager.getSelection();
+			applyTransform(t, dx, dy, wPos);
 
-					Vector2 localPos = new Vector2(); // 临时变量，最好复用
-					parent.transform.worldToLocal(mouseWorldPos, localPos);
-					target.transform.setPosition(localPos.x, localPos.y);
-				} else {
-					// 没有父级，局部坐标 = 世界坐标
-					target.transform.setPosition(mouseWorldPos.x, mouseWorldPos.y);
-				}
+			refreshInspector(t);
+			lastX = wPos.x;
+			lastY = wPos.y;
+			return true;
+		}
 
-				refreshInspector(target);
+		@Override
+		public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+			if (currentDragMode != DragMode.NONE) {
+				currentDragMode = DragMode.NONE;
 				return true;
 			}
 			return false;
 		}
 
-		@Override
-		public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-			isDragging = false;
-			return false;
+		// --- 核心数学逻辑 ---
+
+		private void applyTransform(GObject t, float dx, float dy, Vector2 currPos) {
+			// 准备数据
+			float rot = t.transform.worldRotation;
+			float rad = rot * MathUtils.degreesToRadians;
+			float c = MathUtils.cos(rad);
+			float s = MathUtils.sin(rad);
+
+			// 如果有父级，位移需要转换到父级局部空间
+			// 但 Gizmo 的计算是基于 World Delta 的投影。
+			// 策略：
+			// 1. 计算世界坐标下的理想位移量 (World Delta)
+			// 2. 将其应用到 worldPosition (临时)
+			// 3. 使用 transform.worldToLocal (父级逆矩阵) 反算 localPosition
+
+			Vector2 targetWorldPos = t.transform.worldPosition.cpy(); // 起始世界坐标
+
+			switch (currentDragMode) {
+				case BODY:
+					// 自由移动: 直接加
+					targetWorldPos.add(dx, dy);
+					applyWorldPosToLocal(t, targetWorldPos);
+					break;
+
+				case MOVE_X:
+					// 投影到物体 X 轴 (World Space)
+					// X轴方向向量: (c, s)
+					float projX = dx * c + dy * s;
+					targetWorldPos.add(projX * c, projX * s);
+					applyWorldPosToLocal(t, targetWorldPos);
+					break;
+
+				case MOVE_Y:
+					// 投影到物体 Y 轴 (World Space)
+					// Y轴方向向量: (-s, c)
+					float projY = dx * (-s) + dy * c;
+					targetWorldPos.add(-projY * s, projY * c);
+					applyWorldPosToLocal(t, targetWorldPos);
+					break;
+
+				case ROTATE:
+					// 计算角度差 (Atan2)
+					// 中心点
+					float cx = t.transform.worldPosition.x;
+					float cy = t.transform.worldPosition.y;
+
+					Vector2 prevDir = new Vector2(lastX - cx, lastY - cy);
+					Vector2 currDir = new Vector2(currPos.x - cx, currPos.y - cy);
+					float angleDelta = currDir.angleDeg() - prevDir.angleDeg();
+
+					t.transform.rotation += angleDelta;
+					break;
+
+				case SCALE_X: // 简化：统一缩放
+				case SCALE_Y:
+//				case SCALE: // 如果有的话
+					// 计算离中心的距离变化
+					float distOld = Vector2.dst(lastX, lastY, t.transform.worldPosition.x, t.transform.worldPosition.y);
+					float distNew = Vector2.dst(currPos.x, currPos.y, t.transform.worldPosition.x, t.transform.worldPosition.y);
+
+					if (distOld > 0.1f) {
+						float ratio = distNew / distOld;
+						t.transform.scale *= ratio;
+					}
+					break;
+			}
+		}
+
+		// 辅助：将计算出的 World Position 转为 Local Position 并赋值
+		private void applyWorldPosToLocal(GObject t, Vector2 targetWorldPos) {
+			GObject parent = t.getParent();
+			if (parent != null) {
+				// Local = ParentWorldInv * TargetWorld
+				// 使用 parent.transform.worldToLocal 可以把一个世界点转为相对于 parent 的局部点
+				Vector2 local = new Vector2();
+				parent.transform.worldToLocal(targetWorldPos, local);
+				t.transform.position.set(local);
+			} else {
+				t.transform.position.set(targetWorldPos);
+			}
+		}
+
+		private DragMode hitTestGizmo(GObject t, Vector2 pos) {
+			float zoom = sceneCamera.zoom * 1.4f; // 匹配 Render 的缩放
+			float axisLen = EditorGizmoSystem.AXIS_LEN * zoom;
+			float hitR = 20f * zoom; // 点击半径
+
+			float tx = t.transform.worldPosition.x;
+			float ty = t.transform.worldPosition.y;
+			float rot = t.transform.worldRotation;
+
+			float rad = rot * MathUtils.degreesToRadians;
+			float c = MathUtils.cos(rad);
+			float s = MathUtils.sin(rad);
+
+			EditorGizmoSystem.Mode mode = gizmoSystem.mode;
+
+			if (mode == EditorGizmoSystem.Mode.MOVE) {
+				// X Axis Tip
+				float xx = tx + c * axisLen;
+				float xy = ty + s * axisLen;
+				if (pos.dst(xx, xy) < hitR) return DragMode.MOVE_X;
+
+				// Y Axis Tip
+				float yx = tx - s * axisLen;
+				float yy = ty + c * axisLen;
+				if (pos.dst(yx, yy) < hitR) return DragMode.MOVE_Y;
+			}
+			else if (mode == EditorGizmoSystem.Mode.ROTATE) {
+				// Rotate Handle
+				float hx = tx + c * axisLen;
+				float hy = ty + s * axisLen;
+				if (pos.dst(hx, hy) < hitR) return DragMode.ROTATE;
+			}
+			else if (mode == EditorGizmoSystem.Mode.SCALE) {
+				// Scale Tip (X)
+				float xx = tx + c * axisLen;
+				float xy = ty + s * axisLen;
+				if (pos.dst(xx, xy) < hitR) return DragMode.SCALE_X; // 暂时只用 X 代表整体缩放
+			}
+
+			// Body Hit (Center) - 如果点中中心，也可以移动
+			if (pos.dst(tx, ty) < 15 * zoom) return DragMode.BODY;
+
+			return DragMode.NONE;
 		}
 
 		private GObject hitTestGObject(Vector2 p) {
+			// 遍历 GameWorld 的根物体 (简单的圆形检测)
+			// 实际应该递归检测所有子物体，且按渲染顺序倒序检测
+			// 这里简化：只检测所有有 Sprite 的物体
+
+			// 为了支持点选子物体，我们需要一个递归查找方法
+			// 或者利用 ECS 的 SpriteSystem 列表？
+			// 最简单的方式：递归遍历 root entities
+
 			for(GObject root : GameWorld.inst().getRootEntities()) {
-				// 简单的碰撞检测，为了方便选中，半径稍微给大点
-				if(p.dst(root.transform.worldPosition) < 60) return root;
-				// 递归检测子物体 (简单实现)
-				GObject childHit = hitTestRecursive(root, p);
-				if (childHit != null) return childHit;
+				GObject hit = recursiveHitTest(root, p);
+				if (hit != null) return hit;
 			}
 			return null;
 		}
 
-		private GObject hitTestRecursive(GObject parent, Vector2 p) {
-			for (GObject child : parent.getChildren()) {
-				if(p.dst(child.transform.worldPosition) < 60) return child;
-				GObject hit = hitTestRecursive(child, p);
+		private GObject recursiveHitTest(GObject node, Vector2 p) {
+			// 先查子物体 (后渲染的在上面，所以倒序查？List 顺序通常是渲染顺序)
+			// 我们应该倒序遍历子物体，以符合“点中上层”的直觉
+			for (int i = node.getChildren().size() - 1; i >= 0; i--) {
+				GObject hit = recursiveHitTest(node.getChildren().get(i), p);
 				if (hit != null) return hit;
 			}
+
+			// 查自己
+			if (checkHit(node, p)) return node;
 			return null;
+		}
+
+		private boolean checkHit(GObject obj, Vector2 p) {
+			// 简单的半径检测 (World Space)
+			float radius = 40; // 默认半径
+
+			// 如果有 Sprite，尝试用 Sprite 尺寸
+			SpriteComponent sp = obj.getComponent(SpriteComponent.class);
+			if (sp != null && sp.width > 0) {
+				radius = Math.min(sp.width, sp.height) / 2f * obj.transform.worldScale;
+			}
+
+			return p.dst(obj.transform.worldPosition) < radius;
 		}
 	}
 }
