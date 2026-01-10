@@ -94,6 +94,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 	private VisTree<UiNode, EditorTarget> hierarchyTree;
 	private VisTable hierarchyTable;
 	private VisTable inspectorTable;
+	private ViewWidget focusedWidget;
 
 	// Rendering Systems (Managed manually for Editor FBOs)
 	private SpriteBatch spriteBatch;
@@ -223,6 +224,20 @@ public class EditorController implements EditorListener, EditorUIProvider {
 	private void initTestScene() {
 		GameWorld world = GameWorld.inst();
 
+		// 0. 创建背景 (TempBack)
+		GObject tempBack = new GObject("TempBack");
+		TransformComponent backTrans = tempBack.addComponent(TransformComponent.class);
+		backTrans.position.set(0, 0);
+		SpriteComponent backSprite = tempBack.addComponent(SpriteComponent.class);
+		try {
+			Texture tex = new Texture(Gdx.files.internal("sprites/tempBack.png"));
+			backSprite.setRegion(new TextureRegion(tex));
+		} catch (Exception e) {
+			Gdx.app.error("Editor", "Failed to load tempBack", e);
+		}
+		backSprite.setEnable(true);
+		addGObjectToEditor(tempBack);
+
 		// 1. 创建主角
 		player = new GObject("Player");
 
@@ -246,7 +261,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		addGObjectToEditor(player);
 
 		// 2. 创建一个参照物
-		GObject bgObj = new GObject("Reference");
+		GObject bgObj = new GObject("Abaddon");
 		TransformComponent bgTrans = bgObj.addComponent(TransformComponent.class);
 		bgTrans.position.set(200, 100);
 		SpriteComponent bgSprite = bgObj.addComponent(SpriteComponent.class);
@@ -259,6 +274,8 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		// 添加到编辑器系统
 		addGObjectToEditor(bgObj);
 	}
+
+	public InputProcessor getInputProcessor() { return stage; }
 
 	private void reloadGameViewport() {
 		Gd.Config conf = Gd.config;
@@ -276,11 +293,9 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		}
 		// Apply updates
 		if (gameTarget != null) {
-			gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight(), false); // 世界相机应在0,0原点
+			gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight(), true);
 		}
 	}
-
-	public InputProcessor getInputProcessor() { return stage; }
 
     private void createUI() {
         // 1. Initialize Components
@@ -290,11 +305,6 @@ public class EditorController implements EditorListener, EditorUIProvider {
         // 2. Create Widgets
         createGameWidget();
         createSceneWidget();
-
-        // Add tempBack at the bottom layer
-        Image tempBack = new Image(createSolidTexture(1, 1, new Color(0.15f, 0.15f, 0.15f, 1)));
-        tempBack.setFillParent(true);
-        stage.addActor(tempBack);
 
         // 3. Build Layout
         VisTable root = new VisTable();
@@ -312,7 +322,11 @@ public class EditorController implements EditorListener, EditorUIProvider {
         Stack centralStack = new Stack();
         
         // Split Game/Scene (Vertical Split)
-        VisSplitPane viewSplit = new VisSplitPane(sceneWidget, gameWidget, true);
+        VisTable gameViewContainer = new VisTable();
+        gameViewContainer.add(createGameToolbar()).growX().row();
+        gameViewContainer.add(gameWidget).grow();
+
+        VisSplitPane viewSplit = new VisSplitPane(sceneWidget, gameViewContainer, true);
         viewSplit.setSplitAmount(0.5f);
         
         centralStack.add(viewSplit);
@@ -339,6 +353,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
         gameWidget.addListener(new InputListener() {
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                focusedWidget = gameWidget; // Focus Logic
                 ((EditorGameInput) Gd.input).setTouched(true, pointer);
                 if (Gd.input.getInputProcessor() != null) {
                     Vector2 fboPos = gameWidget.mapScreenToFbo(Gdx.input.getX(), Gdx.input.getY());
@@ -384,6 +399,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                focusedWidget = sceneWidget; // Focus Logic
                 if (editorInput.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button)) {
                     isEditorHandling = true;
                     return true;
@@ -426,6 +442,9 @@ public class EditorController implements EditorListener, EditorUIProvider {
 
             @Override
             public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
+                if (focusedWidget != sceneWidget) return false;
+                
+                // Zoom Logic
                 sceneCamera.zoom += amountY * 0.1f * sceneCamera.zoom;
                 if (sceneCamera.zoom < 0.1f) sceneCamera.zoom = 0.1f;
                 if (sceneCamera.zoom > 10f) sceneCamera.zoom = 10f;
@@ -433,6 +452,27 @@ public class EditorController implements EditorListener, EditorUIProvider {
                 return true;
             }
         });
+    }
+
+    private Table createGameToolbar() {
+        Table toolbar = new Table();
+        toolbar.left().pad(2);
+        toolbar.setBackground(VisUI.getSkin().getDrawable("window-bg")); // 简单的背景
+
+        addToolBtn(toolbar, "Fit", () -> {
+            Gd.config.viewportType = Gd.ViewportType.FIT;
+            reloadGameViewport();
+        });
+        addToolBtn(toolbar, "Fill", () -> {
+            Gd.config.viewportType = Gd.ViewportType.EXTEND;
+            reloadGameViewport();
+        });
+        addToolBtn(toolbar, "Stretch", () -> {
+            Gd.config.viewportType = Gd.ViewportType.STRETCH;
+            reloadGameViewport();
+        });
+
+        return toolbar;
     }
 
     private Table createToolbar() {
@@ -465,10 +505,16 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		btn.addListener(new ClickListener() {
 			@Override public void clicked(InputEvent e, float x, float y) { action.run(); }
 		});
-		table.add(btn).size(30, 30).padRight(5);
+		table.add(btn).size(50, 30).padRight(5);
 	}
 
 	public void render(float delta) {
+		// [新增] 每一帧检查是否需要重置视口
+		// 因为 Gd.config.viewportType 可能会在运行时被改变（通过Toolbar按钮）
+		// 但为了性能，最好只在变化时调用，或者在按钮回调里调用。
+		// 这里我们简化处理，假设 createGameToolbar 里已经正确调用了 reloadGameViewport()。
+		// 但这里必须定义 reloadGameViewport() 供 create() 和 Toolbar 使用。
+
 		// 1. 逻辑更新 (Input -> Logic)// 优先使用键盘输入，如果没有键盘输入则使用摇杆
 		if (player != null) {
 			float speed = 200 * delta;
@@ -559,6 +605,20 @@ public class EditorController implements EditorListener, EditorUIProvider {
 
 		stage.act(delta);
 		stage.draw();
+
+        // 5. Draw Focus Border
+        if (focusedWidget != null) {
+            shapeRenderer.setProjectionMatrix(stage.getCamera().combined);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+            shapeRenderer.setColor(Color.ORANGE);
+            Gdx.gl.glLineWidth(2f);
+            
+            Vector2 p = focusedWidget.localToStageCoordinates(new Vector2(0,0));
+            shapeRenderer.rect(p.x, p.y, focusedWidget.getWidth(), focusedWidget.getHeight());
+            
+            shapeRenderer.end();
+            Gdx.gl.glLineWidth(1f);
+        }
 	}
 
 	private void renderEditorSystem(OrthographicCamera camera) {

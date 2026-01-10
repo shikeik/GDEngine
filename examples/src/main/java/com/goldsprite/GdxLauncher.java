@@ -80,7 +80,8 @@ public class GdxLauncher extends Game {
 		ScreenManager.getInstance()
 //			.addScreen(new SoloEditorScreen())
 			.addScreen(new ExampleSelectScreen())
-			.setLaunchScreen(ExampleSelectScreen.class);
+			.addScreen(new EditorGameScreen())
+			.setLaunchScreen(EditorGameScreen.class);
 
 		// Auto-launch SoloEditor as requested
 //		Timer.schedule(new Timer.Task() {

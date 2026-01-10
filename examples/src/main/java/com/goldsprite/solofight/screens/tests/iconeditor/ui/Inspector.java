@@ -1,174 +1,191 @@
 package com.goldsprite.solofight.screens.tests.iconeditor.ui;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gdengine.core.command.CommandManager;
-import com.goldsprite.gdengine.ui.input.SmartColorInput;
+import com.goldsprite.gdengine.ecs.component.Component;
+import com.goldsprite.gdengine.ecs.component.SpriteComponent;
+import com.goldsprite.gdengine.ecs.component.TransformComponent;
+import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectAdapter;
+import com.goldsprite.gdengine.ui.input.SmartBooleanInput;
 import com.goldsprite.gdengine.ui.input.SmartNumInput;
-import com.goldsprite.gdengine.ui.input.SmartSelectInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
+import com.goldsprite.solofight.screens.tests.iconeditor.model.EditorTarget;
+import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorUIProvider;
+import com.goldsprite.solofight.screens.tests.iconeditor.system.SceneManager;
+import com.kotcrab.vis.ui.widget.MenuItem;
+import com.kotcrab.vis.ui.widget.PopupMenu;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
-import com.goldsprite.solofight.screens.tests.iconeditor.system.EditorUIProvider;
-import com.goldsprite.solofight.screens.tests.iconeditor.commands.ColorChangeCommand;
-import com.goldsprite.solofight.screens.tests.iconeditor.commands.GenericPropertyChangeCommand;
-import com.goldsprite.solofight.screens.tests.iconeditor.commands.PropertyChangeCommand;
-import com.goldsprite.solofight.screens.tests.iconeditor.model.BaseNode;
-import com.goldsprite.solofight.screens.tests.iconeditor.model.CircleShape;
-import com.goldsprite.solofight.screens.tests.iconeditor.model.EditorTarget;
-import com.goldsprite.solofight.screens.tests.iconeditor.model.GroupNode;
-import com.goldsprite.solofight.screens.tests.iconeditor.model.RectShape;
-import com.goldsprite.solofight.screens.tests.iconeditor.system.SceneManager;
+import com.kotcrab.vis.ui.widget.VisTextButton;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.List;
 
 public class Inspector {
     private VisTable container;
     private final EditorUIProvider screen;
     private final SceneManager sceneManager;
     private final CommandManager commandManager;
-    private final Array<Runnable> refreshTasks = new Array<>();
-    
-    private final Map<Class<?>, InspectorStrategy> strategies = new HashMap<>();
 
-    public Inspector(EditorUIProvider screen, SceneManager sm, CommandManager cm) { 
+    public Inspector(EditorUIProvider screen, SceneManager sm, CommandManager cm) {
         this.screen = screen;
-        this.sceneManager = sm; 
+        this.sceneManager = sm;
         this.commandManager = cm;
-        registerDefaultStrategies();
-    }
-    
-    private void registerDefaultStrategies() {
-        InspectorStrategy transformStrategy = (inspector, target) -> {
-            if (target instanceof BaseNode) {
-                BaseNode n = (BaseNode) target;
-                inspector.addSection("Transform");
-                inspector.addFloat("X", n::getX, n::setX);
-                inspector.addFloat("Y", n::getY, n::setY);
-                inspector.addFloat("Rot", n::getRotation, n::setRotation);
-                inspector.addFloat("Scl X", n::getScaleX, n::setScaleX);
-                inspector.addFloat("Scl Y", n::getScaleY, n::setScaleY);
-            }
-        };
-        
-        strategies.put(GroupNode.class, transformStrategy);
-        
-        strategies.put(RectShape.class, (inspector, target) -> {
-            transformStrategy.inspect(inspector, target);
-            RectShape r = (RectShape) target;
-            inspector.addSection("Rectangle");
-            inspector.addFloat("Width", () -> r.width, v -> r.width = v);
-            inspector.addFloat("Height", () -> r.height, v -> r.height = v);
-            inspector.addColor("Color", () -> r.color, newColor -> r.color.set(newColor));
-        });
-        
-        strategies.put(CircleShape.class, (inspector, target) -> {
-            transformStrategy.inspect(inspector, target);
-            CircleShape c = (CircleShape) target;
-            inspector.addSection("Circle");
-            inspector.addFloat("Radius", () -> c.radius, v -> c.radius = v);
-            inspector.addColor("Color", () -> c.color, newColor -> c.color.set(newColor));
-        });
     }
 
     public void build(VisTable table, EditorTarget target) {
         this.container = table;
         table.clearChildren();
-        refreshTasks.clear();
 
         if (target == null) {
             table.add(new VisLabel("No Selection")).pad(10);
             return;
         }
 
-        // Name Field using SmartTextInput
+        // Special handling for GObjectAdapter
+        if (target instanceof GObjectAdapter) {
+            buildGObjectInspector((GObjectAdapter) target);
+            return;
+        }
+
+        // Basic Name field for non-GObject targets (like Root)
         SmartTextInput nameInput = new SmartTextInput("Name", target.getName(), newName -> {
             target.setName(newName);
-            // Update Tree Label
-            if (screen.getHierarchyTree() != null) {
-                UiNode node = screen.getHierarchyTree().findNode(target);
-                if (node != null && node.getActor().getChildren().size > 0) {
-                    Actor labelActor = node.getActor().getChildren().get(0);
-                    if (labelActor instanceof VisLabel) {
-                        ((VisLabel) labelActor).setText(target.getName());
-                    }
-                }
-            }
-        });
-        // Bind Command for Undo/Redo
-        nameInput.setOnCommand((oldVal, newVal) -> {
-            commandManager.execute(new GenericPropertyChangeCommand<String>("Name", oldVal, newVal, 
-                v -> {
-                    target.setName(v);
-                    // Force refresh logic is same as above, maybe cleaner to extract
-                    if (screen.getHierarchyTree() != null) {
-                        UiNode node = screen.getHierarchyTree().findNode(target);
-                        if (node != null && node.getActor().getChildren().size > 0) {
-                            ((VisLabel)node.getActor().getChildren().get(0)).setText(v);
-                        }
-                    }
-                }, 
-                () -> refreshValues()
-            ));
+            updateHierarchyLabel(target);
         });
         container.add(nameInput).growX().padBottom(2).row();
+    }
 
-        // Type Selection using SmartSelectInput
-        if (target != sceneManager.getRoot()) {
-            com.badlogic.gdx.utils.Array<String> items = new com.badlogic.gdx.utils.Array<>();
-            for (String s : sceneManager.getShapeRegistry().keySet()) items.add(s);
-            
-            SmartSelectInput<String> typeInput = new SmartSelectInput<>("Type", target.getTypeName(), items, newType -> {
-                if (!newType.equals(target.getTypeName())) {
-                    sceneManager.changeNodeType(target, newType);
+    private void updateHierarchyLabel(EditorTarget target) {
+        // This is a simplified way to update the label if possible, 
+        // or we rely on the Hierarchy system to refresh itself.
+        // For now, we assume the hierarchy might need a full refresh or the user accepts delay.
+        if (screen instanceof com.goldsprite.gdengine.screens.ecs.editor.EditorController) {
+            // ((com.goldsprite.gdengine.screens.ecs.editor.EditorController) screen).updateSceneHierarchy();
+            // Calling updateSceneHierarchy is expensive, maybe just ignore for now or add a specific method.
+        }
+    }
+
+    private void buildGObjectInspector(GObjectAdapter adapter) {
+        GObject gobj = adapter.getRealObject();
+        
+        // Header
+        container.add(new VisLabel("GObject")).colspan(2).left().pad(5).row();
+        
+        // Name
+        SmartTextInput nameInput = new SmartTextInput("Name", gobj.getName(), v -> {
+            gobj.setName(v);
+            // updateHierarchyLabel(adapter); 
+        });
+        container.add(nameInput).growX().colspan(2).row();
+
+        // Components
+        for (List<Component> comps : gobj.getComponentsMap().values()) {
+            for (Component c : comps) {
+                buildComponentInspector(c, gobj);
+            }
+        }
+
+        // Add Component Button
+        VisTextButton addBtn = new VisTextButton("Add Component");
+        addBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                showAddComponentDialog(gobj);
+            }
+        });
+        container.add(addBtn).fillX().padTop(10).colspan(2).row();
+    }
+
+    private void buildComponentInspector(Component c, GObject gobj) {
+        VisTable header = new VisTable();
+        header.add(new VisLabel(c.getClass().getSimpleName())).expandX().left();
+        
+        VisTextButton removeBtn = new VisTextButton("X");
+        removeBtn.setColor(Color.RED);
+        removeBtn.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                gobj.removeComponent(c);
+                refreshValues();
+            }
+        });
+        header.add(removeBtn).size(20, 20);
+        
+        container.add(header).growX().colspan(2).padTop(10).padBottom(5).row();
+
+        // Reflection
+        Field[] fields = c.getClass().getFields();
+        for (Field f : fields) {
+            if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers())) continue;
+
+            try {
+                Class<?> type = f.getType();
+                String name = f.getName();
+                Object value = f.get(c);
+
+                if (type == float.class || type == Float.class) {
+                    container.add(new SmartNumInput(name, (float)value, 0.1f, v -> {
+                        try { f.setFloat(c, v); } catch(Exception e) {}
+                    })).growX().colspan(2).row();
+                } else if (type == int.class || type == Integer.class) {
+                    container.add(new SmartNumInput(name, (float)(int)value, 1f, v -> {
+                        try { f.setInt(c, v.intValue()); } catch(Exception e) {}
+                    })).growX().colspan(2).row();
+                } else if (type == boolean.class || type == Boolean.class) {
+                    container.add(new SmartBooleanInput(name, (boolean)value, v -> {
+                        try { f.setBoolean(c, v); } catch(Exception e) {}
+                    })).growX().colspan(2).row();
+                } else if (type == String.class) {
+                    container.add(new SmartTextInput(name, (String)value, v -> {
+                        try { f.set(c, v); } catch(Exception e) {}
+                    })).growX().colspan(2).row();
+                } else if (type == Vector2.class) {
+                    Vector2 v = (Vector2) value;
+                    container.add(new VisLabel(name)).left();
+                    Table row = new Table();
+                    row.add(new SmartNumInput("X", v.x, 0.1f, val -> v.x = val)).growX().padRight(5);
+                    row.add(new SmartNumInput("Y", v.y, 0.1f, val -> v.y = val)).growX();
+                    container.add(row).growX().row();
                 }
-            });
-            
-            container.add(typeInput).growX().padBottom(2).row();
-        }
-
-        InspectorStrategy strategy = strategies.get(target.getClass());
-        if (strategy != null) {
-            strategy.inspect(this, target);
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    public void addSection(String title) {
-        VisLabel l = new VisLabel(title);
-        l.setColor(Color.CYAN);
-        container.add(l).left().padTop(10).padBottom(5).row();
+    private void showAddComponentDialog(GObject gobj) {
+        PopupMenu menu = new PopupMenu();
+        
+        // Add known components
+        addComponentMenuItem(menu, gobj, SpriteComponent.class);
+        addComponentMenuItem(menu, gobj, TransformComponent.class);
+        // Add more components as needed
+        
+        menu.showMenu(container.getStage(), Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
     }
 
-    public void addFloat(String label, Supplier<Float> getter, Consumer<Float> setter) {
-        SmartNumInput input = new SmartNumInput(label, getter.get(), 1.0f, setter);
-        
-        input.setOnCommand((oldVal, newVal) -> {
-            commandManager.execute(new PropertyChangeCommand(label, oldVal, newVal, setter, () -> refreshValues()));
-        });
-
-        refreshTasks.add(() -> {
-            // 暂时忽略，或者你可以手动重建整个 Inspector
-        });
-        container.add(input).growX().padBottom(2).row();
-    }
-
-    public void addColor(String label, Supplier<Color> getter, Consumer<Color> setter) {
-        SmartColorInput input = new SmartColorInput(label, getter.get(), setter);
-        
-        // [新增] 注册 Command 回调
-        input.setOnCommand((oldVal, newVal) -> {
-            commandManager.execute(new ColorChangeCommand(sceneManager.getSelection(), oldVal, newVal, () -> refreshValues()));
-        });
-
-        container.add(input).growX().padBottom(2).row();
+    private void addComponentMenuItem(PopupMenu menu, GObject gobj, Class<? extends Component> clazz) {
+        menu.addItem(new MenuItem(clazz.getSimpleName(), new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                gobj.addComponent(clazz);
+                refreshValues();
+            }
+        }));
     }
 
     public void refreshValues() {
-        // screen.markDirty(true); // Handled by CommandManager
         if (sceneManager.getSelection() != null && container != null) {
             build(container, sceneManager.getSelection());
         }
