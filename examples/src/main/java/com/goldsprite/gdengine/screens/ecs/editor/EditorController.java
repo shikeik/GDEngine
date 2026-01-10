@@ -551,9 +551,30 @@ public class EditorController {
 		@Override
 		public boolean touchDragged(int screenX, int screenY, int pointer) {
 			if (isDragging && sceneManager.getSelection() != null) {
-				Vector2 worldPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
-				sceneManager.getSelection().transform.setPosition(worldPos.x, worldPos.y);
-				refreshInspector(sceneManager.getSelection());
+				Vector2 mouseWorldPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
+				GObject target = sceneManager.getSelection();
+
+				// [核心修复] 坐标逆变换: World -> Local
+				// 如果有父级，需要把鼠标的世界坐标转换到父级的局部空间
+				// 公式: LocalPos = ParentWorldMatrix_Inverse * MouseWorldPos
+
+				GObject parent = target.getParent();
+				if (parent != null) {
+					// 利用 TransformComponent 现有的 worldToLocal 方法
+					// 将鼠标点转为 parent 的局部坐标？不对。
+					// 目标是: target.transform.position = ?
+					// target.position 是相对于 parent 的。
+					// parent.transform.worldToLocal(mouseWorldPos) 得到的就是相对于 parent 的坐标！
+
+					Vector2 localPos = new Vector2(); // 临时变量，最好复用
+					parent.transform.worldToLocal(mouseWorldPos, localPos);
+					target.transform.setPosition(localPos.x, localPos.y);
+				} else {
+					// 没有父级，局部坐标 = 世界坐标
+					target.transform.setPosition(mouseWorldPos.x, mouseWorldPos.y);
+				}
+
+				refreshInspector(target);
 				return true;
 			}
 			return false;

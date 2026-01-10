@@ -8,21 +8,23 @@ import com.goldsprite.gdengine.ecs.entity.GObject;
 public abstract class Component extends EcsObject {
 
 	// ==========================================
-	// 1. 核心引用区
+	// 1. 核心引用区 (不序列化)
 	// ==========================================
-
-	// [修复] 加上 transient 关键字，防止 JSON 序列化死循环
-	// 这些引用会在反序列化后的 addComponent 阶段自动重新链接
 	protected transient GObject gobject;
 	protected transient TransformComponent transform;
 
 	// ==========================================
 	// 2. 状态标志位
 	// ==========================================
-	protected boolean isEnabled = true; // 逻辑开关 (对应 Unity .enabled)
-	protected boolean isAwake = false;  // 防止重复唤醒
-	protected boolean isStarted = false; // 防止重复 Start
+
+	// [保留] 启用状态应该被保存 (比如你在编辑器里关掉了一个组件)
+	protected boolean isEnabled = true;
 	protected boolean isDestroyed = false;
+
+	// [修复] 核心生命周期标记必须是 transient (不保存)
+	// 否则加载回来 isAwake=true 会导致 awake() 方法直接 return，跳过初始化
+	protected transient boolean isAwake = false;
+	protected transient boolean isStarted = false;
 
 	// ==========================================
 	// 3. 构造阶段 (Phase 1)
@@ -131,8 +133,8 @@ public abstract class Component extends EcsObject {
 
 	/** 开关控制 */
 	public void setEnable(boolean enable) {
-		if (this.isEnabled != enable) {
-			this.isEnabled = enable;
+		if (isEnabled != enable) {
+			isEnabled = enable;
 			// 状态切换时触发回调
 			if (enable) onEnable();
 			else onDisable();

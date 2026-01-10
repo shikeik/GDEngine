@@ -16,6 +16,8 @@ public class TransformComponent extends Component {
 	public final Affine2 worldTransform = new Affine2();
 	public final Vector2 worldPosition = new Vector2();
 	public float worldRotation = 0f;
+	// 世界缩放 (假设只支持等比缩放)
+	public float worldScale = 1f;
 
 	public TransformComponent() {
 		super();
@@ -36,9 +38,15 @@ public class TransformComponent extends Component {
 
 		// 4. 提取近似世界旋转 (非倾斜情况下)
 		if (parentTransform != null) {
+			worldTransform.preMul(parentTransform.worldTransform);
+
+			// 计算世界旋转和缩放
+			// 简单的加法/乘法传递 (仅适用于无剪切变换的情况)
 			worldRotation = parentTransform.worldRotation + rotation;
+			worldScale = parentTransform.worldScale * scale;
 		} else {
 			worldRotation = rotation;
+			worldScale = scale;
 		}
 	}
 

@@ -7,36 +7,33 @@
 			"gid": 4,
 			"name": "TransformComponent",
 			"isEnabled": true,
-			"isAwake": true,
-			"isStarted": true,
 			"isDestroyed": false,
 			"position": {
-				"x": -95.255005,
-				"y": -36.970184
+				"x": -345.74713,
+				"y": 107.89279
 			},
-			"scale": 1,
-			"rotation": 0,
+			"scale": 1.8000245,
+			"rotation": 4.800007,
 			"worldTransform": {
-				"m00": 1,
-				"m01": 0,
-				"m02": -95.255005,
-				"m10": 0,
-				"m11": 1,
-				"m12": -36.970184
+				"m00": 1.7937089,
+				"m01": -0.15065427,
+				"m02": -345.74713,
+				"m10": 0.15065427,
+				"m11": 1.7937089,
+				"m12": 107.89279
 			},
 			"worldPosition": {
-				"x": -95.255005,
-				"y": -36.970184
+				"x": -345.74713,
+				"y": 107.89279
 			},
-			"worldRotation": 0
+			"worldRotation": 4.800007,
+			"worldScale": 1.8000245
 		},
 		{
 			"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
 			"gid": 5,
 			"name": "SpriteComponent",
 			"isEnabled": true,
-			"isAwake": true,
-			"isStarted": true,
 			"isDestroyed": false,
 			"assetPath": "gd_icon.png",
 			"color": {
@@ -59,39 +56,36 @@
 			"components": [
 				{
 					"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
-					"gid": 7,
+					"gid": 8,
 					"name": "TransformComponent",
 					"isEnabled": true,
-					"isAwake": true,
-					"isStarted": true,
 					"isDestroyed": false,
 					"position": {
-						"x": 280.4834,
-						"y": -15.844391
+						"x": -183.04349,
+						"y": -25.848213
 					},
 					"scale": 0.5,
 					"rotation": 0,
 					"worldTransform": {
-						"m00": 0.5,
-						"m01": 0,
-						"m02": 185.2284,
-						"m10": 0,
-						"m11": 0.5,
-						"m12": -52.814575
+						"m00": 1.5973475,
+						"m01": -0.2702299,
+						"m02": -1552.9697,
+						"m10": 0.2702299,
+						"m11": 1.5973475,
+						"m12": 67.827965
 					},
 					"worldPosition": {
-						"x": 185.2284,
-						"y": -52.814575
+						"x": -670.17975,
+						"y": 33.95234
 					},
-					"worldRotation": 0
+					"worldRotation": 4.800007,
+					"worldScale": 0.90001225
 				},
 				{
 					"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
 					"gid": 8,
 					"name": "SpriteComponent",
 					"isEnabled": true,
-					"isAwake": true,
-					"isStarted": true,
 					"isDestroyed": false,
 					"assetPath": "gd_icon.png",
 					"color": {
