@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <exe4j version="10.0" transformSequenceNumber="3">
   <directoryPresets config="C:/Users/26670/.jdks" />
-  <application name="SoloFight" distributionSourceDir="E:/WorkSpaces/Libgdx_WSpace/Projs/SoloFight/outputs" />
-  <executable name="SoloFight_V1.9.9.0" wrapperType="embed" iconSet="true" iconFile="E:/WorkSpaces/Libgdx_WSpace/Projs/SoloFight/assets/icon.ico" executableDir="." executableMode="gui" checkConsoleParameter="true" />
+  <application name="SoloFight" distributionSourceDir="E:/WorkSpaces/Libgdx_WSpace/Projs/ReMake/SoloFight/outputs" />
+  <executable name="SoloFight_V1.9.9.0" wrapperType="embed" iconSet="true" iconFile="E:/WorkSpaces/Libgdx_WSpace/Projs/ReMake/SoloFight/assets/icon.ico" executableDir="." executableMode="gui" checkConsoleParameter="true" />
   <java mainClass="com.goldsprite.solofight.lwjgl3.Lwjgl3Launcher" minVersion="17">
     <searchSequence>
       <registry />
@@ -11,7 +11,7 @@
       <directory location="C:/Users/26670/.jdks/jdk-17" />
     </searchSequence>
     <classPath>
-      <archive location="E:/WorkSpaces/Libgdx_WSpace/Projs/SoloFight/outputs/SoloFight_V1.9.9.0.jar" failOnError="false" />
+      <archive location="E:/WorkSpaces/Libgdx_WSpace/Projs/ReMake/SoloFight/outputs/SoloFight_V1.9.9.0.jar" failOnError="false" />
     </classPath>
   </java>
 </exe4j>

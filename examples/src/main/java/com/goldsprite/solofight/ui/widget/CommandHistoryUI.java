@@ -61,6 +61,8 @@ public class CommandHistoryUI extends WidgetGroup {
     private Table container;
     private Actor collapseButton;
     private boolean isExpanded = true;
+    
+    private boolean autoPosition = true;
 
     // 历史数据
     private List<HistoryItem> historyItems = new ArrayList<>();
@@ -254,7 +256,13 @@ public class CommandHistoryUI extends WidgetGroup {
     public void act(float delta) {
         super.act(delta);
         // 每帧更新位置，确保始终附着于检查器面板
-        updatePosition();
+        if (autoPosition) {
+            updatePosition();
+        }
+    }
+
+    public void setAutoPosition(boolean autoPosition) {
+        this.autoPosition = autoPosition;
     }
 
     private Actor createCollapseButton() {
