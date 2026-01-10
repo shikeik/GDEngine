@@ -59,6 +59,7 @@ import com.goldsprite.gdengine.ui.input.SmartBooleanInput;
 import com.goldsprite.gdengine.ui.input.SmartColorInput;
 import com.goldsprite.gdengine.ui.input.SmartNumInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
+import com.goldsprite.solofight.modules.SimpleCameraController;
 import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.MenuItem;
@@ -91,6 +92,8 @@ public class EditorController {
 	private EditorGizmoSystem gizmoSystem;
 	private ShortcutManager shortcutManager;
 	private DragAndDrop dragAndDrop; // [新增] 拖拽管理器
+	// [新增] 场景相机控制器
+	private SimpleCameraController sceneCamController;
 
 	// UI
 	private VisTree<GObjectNode, GObject> hierarchyTree;
@@ -147,6 +150,9 @@ public class EditorController {
 
 		sceneManager.onStructureChanged.add(o -> hierarchyDirty = true);
 		sceneManager.onSelectionChanged.add(this::refreshInspector);
+
+		// 在 create() 中初始化控制器
+		sceneCamController = new SimpleCameraController(sceneCamera);
 
 		NativeEditorInput editorInput = new NativeEditorInput();
 		InputMultiplexer multiplexer = new InputMultiplexer();
@@ -530,21 +536,31 @@ public class EditorController {
 		sceneManager.select(obj);
 	}
 
-	// ... [其他方法保持不变] ...
-	// (createGameWidget, createSceneWidget, addToolBtn, reloadGameViewport, refreshInspector, buildComponentUI, showAddComponentMenu, render, resize, dispose)
-	// 请确保这些方法依然存在
-
+	// [修改] 修复视口切换逻辑
 	private void createGameWidget() {
 		gameWidget = new ViewWidget(gameTarget);
-		gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
+		gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT); // 默认
+
 		VisSelectBox<String> box = new VisSelectBox<>();
 		box.setItems("FIT", "STRETCH", "EXTEND");
 		box.addListener(new ChangeListener() {
 			@Override public void changed(ChangeEvent event, Actor actor) {
 				String mode = box.getSelected();
-				if(mode.equals("FIT")) Gd.config.viewportType = Gd.ViewportType.FIT;
-				if(mode.equals("STRETCH")) Gd.config.viewportType = Gd.ViewportType.STRETCH;
-				if(mode.equals("EXTEND")) Gd.config.viewportType = Gd.ViewportType.EXTEND;
+
+				// [修复] 不仅要改 Config，还要改 Widget 的显示模式
+				if(mode.equals("FIT")) {
+					Gd.config.viewportType = Gd.ViewportType.FIT;
+					gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT);
+				}
+				else if(mode.equals("STRETCH")) {
+					Gd.config.viewportType = Gd.ViewportType.STRETCH;
+					gameWidget.setDisplayMode(ViewWidget.DisplayMode.STRETCH);
+				}
+				else if(mode.equals("EXTEND")) {
+					Gd.config.viewportType = Gd.ViewportType.EXTEND;
+					gameWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
+				}
+
 				reloadGameViewport();
 			}
 		});
@@ -555,28 +571,34 @@ public class EditorController {
 		gameWidgetStack.add(uiOverlay);
 	}
 
+	// [修改] 集成 SimpleCameraController
 	private void createSceneWidget() {
 		sceneWidget = new ViewWidget(sceneTarget);
 		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
+
+		// 使用 Listener 转发事件
 		sceneWidget.addListener(new InputListener() {
-			float lastX, lastY;
-			@Override public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-				if(button == Input.Buttons.RIGHT) { lastX = x; lastY = y; return true; }
-				return false;
+			@Override
+			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
+				// 转发滚轮缩放
+				return sceneCamController.scrolled(amountX, amountY);
 			}
-			@Override public void touchDragged(InputEvent event, float x, float y, int pointer) {
-				if(Gdx.input.isButtonPressed(Input.Buttons.RIGHT)) {
-					float z = sceneCamera.zoom;
-					sceneCamera.translate(-(x - lastX)*z, (y - lastY)*z);
-					sceneCamera.update();
-					lastX = x; lastY = y;
-				}
+
+			@Override
+			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+				// 转发按下 (SimpleCamController 内部只处理右键/中键，不会抢左键)
+				// 注意：传入 Gdx.input 的全局坐标，因为 SimpleCam 内部计算 delta 需要连续性
+				return sceneCamController.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
 			}
-			@Override public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-				sceneCamera.zoom += amountY * 0.1f * sceneCamera.zoom;
-				sceneCamera.zoom = MathUtils.clamp(sceneCamera.zoom, 0.1f, 10f);
-				sceneCamera.update();
-				return true;
+
+			@Override
+			public void touchDragged(InputEvent event, float x, float y, int pointer) {
+				sceneCamController.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
+			}
+
+			@Override
+			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+				sceneCamController.touchUp(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
 			}
 		});
 	}
@@ -700,11 +722,19 @@ public class EditorController {
 		menu.addItem(item);
 	}
 
+	// [修改] render 循环
 	public void render(float delta) {
 		GameWorld.inst().update(delta);
 		if (hierarchyDirty) { refreshHierarchy(); hierarchyDirty = false; }
+
+		// [新增] 更新相机平滑逻辑
+		if (sceneCamController != null) {
+			sceneCamController.update(delta);
+		}
+
 		gameCamera.update();
 		sceneCamera.update();
+
 		gameTarget.renderToFbo(() -> {
 			gameViewport.apply();
 			spriteSystem.setCamera(gameCamera);

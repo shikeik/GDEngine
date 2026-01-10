@@ -1,30 +1,82 @@
 [
 {
-	"name": "Player",
+	"name": "Back",
 	"components": [
 		{
 			"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
-			"gid": 14,
+			"gid": 12,
 			"name": "TransformComponent",
 			"isEnabled": true,
 			"isDestroyed": false,
 			"position": {
-				"x": 111.45525,
-				"y": -15.948263
+				"x": -72.40921,
+				"y": 1.2714539
+			},
+			"scale": 1.2091959,
+			"rotation": 0,
+			"worldTransform": {
+				"m00": 1.2091959,
+				"m01": 0,
+				"m02": -72.40921,
+				"m10": 0,
+				"m11": 1.2091959,
+				"m12": 1.2714539
+			},
+			"worldPosition": {
+				"x": -72.40921,
+				"y": 1.2714539
+			},
+			"worldRotation": 0,
+			"worldScale": 1.2091959
+		},
+		{
+			"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
+			"gid": 23,
+			"name": "SpriteComponent",
+			"isEnabled": true,
+			"isDestroyed": false,
+			"assetPath": "sprites/tempBack.png",
+			"color": {
+				"r": 1,
+				"g": 1,
+				"b": 1,
+				"a": 1
+			},
+			"flipX": false,
+			"flipY": false,
+			"offsetX": 0,
+			"offsetY": 0,
+			"width": 1024,
+			"height": 1024
+		}
+	]
+},
+{
+	"name": "Player",
+	"components": [
+		{
+			"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
+			"gid": 4,
+			"name": "TransformComponent",
+			"isEnabled": true,
+			"isDestroyed": false,
+			"position": {
+				"x": 66.18561,
+				"y": 30.830353
 			},
 			"scale": 2.46196,
 			"rotation": -37.508514,
 			"worldTransform": {
 				"m00": 1.9527252,
 				"m01": 1.4986215,
-				"m02": 111.45525,
+				"m02": 66.18561,
 				"m10": -1.4986215,
 				"m11": 1.9527252,
-				"m12": -15.948263
+				"m12": 30.830353
 			},
 			"worldPosition": {
-				"x": 111.45525,
-				"y": -15.948263
+				"x": 66.18561,
+				"y": 30.830353
 			},
 			"worldRotation": -37.508514,
 			"worldScale": 2.46196
@@ -56,7 +108,7 @@
 			"components": [
 				{
 					"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
-					"gid": 18,
+					"gid": 8,
 					"name": "TransformComponent",
 					"isEnabled": true,
 					"isDestroyed": false,
@@ -69,14 +121,14 @@
 					"worldTransform": {
 						"m00": 2.715324,
 						"m01": 1.5303006,
-						"m02": 551.5501,
+						"m02": 487.98474,
 						"m10": -1.5303006,
 						"m11": 2.715324,
-						"m12": -912.50574
+						"m12": -706.5393
 					},
 					"worldPosition": {
-						"x": 363.5887,
-						"y": -180.09482
+						"x": 318.31906,
+						"y": -133.31621
 					},
 					"worldRotation": 8.086956,
 					"worldScale": 1.266476
@@ -102,58 +154,6 @@
 					"height": 100
 				}
 			]
-		}
-	]
-},
-{
-	"name": "GameObject",
-	"components": [
-		{
-			"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
-			"gid": 22,
-			"name": "TransformComponent",
-			"isEnabled": true,
-			"isDestroyed": false,
-			"position": {
-				"x": -666.5596,
-				"y": -80.53543
-			},
-			"scale": 1,
-			"rotation": 0,
-			"worldTransform": {
-				"m00": 1,
-				"m01": 0,
-				"m02": -666.5596,
-				"m10": 0,
-				"m11": 1,
-				"m12": -80.53543
-			},
-			"worldPosition": {
-				"x": -666.5596,
-				"y": -80.53543
-			},
-			"worldRotation": 0,
-			"worldScale": 1
-		},
-		{
-			"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
-			"gid": 23,
-			"name": "SpriteComponent",
-			"isEnabled": true,
-			"isDestroyed": false,
-			"assetPath": "sprites/tempBack.png",
-			"color": {
-				"r": 1,
-				"g": 1,
-				"b": 1,
-				"a": 1
-			},
-			"flipX": false,
-			"flipY": false,
-			"offsetX": 0,
-			"offsetY": 0,
-			"width": 1024,
-			"height": 1024
 		}
 	]
 }
