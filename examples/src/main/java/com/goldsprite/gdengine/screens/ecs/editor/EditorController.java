@@ -20,6 +20,7 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -97,6 +98,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 	// Rendering Systems (Managed manually for Editor FBOs)
 	private SpriteBatch spriteBatch;
 	private NeonBatch neonBatch;
+	private ShapeRenderer shapeRenderer;
 	private SpriteSystem spriteSystem;
 	private SkeletonRenderSystem skeletonRenderSystem;
 
@@ -148,6 +150,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		// 6. 初始化渲染系统
 		spriteBatch = new SpriteBatch();
 		neonBatch = new NeonBatch();
+		shapeRenderer = new ShapeRenderer();
 		// 初始相机暂时设为 gameCamera，但在 render 时会切换
 		spriteSystem = new SpriteSystem(spriteBatch, gameCamera);
 		skeletonRenderSystem = new SkeletonRenderSystem(neonBatch, gameCamera);
@@ -288,6 +291,11 @@ public class EditorController implements EditorListener, EditorUIProvider {
         createGameWidget();
         createSceneWidget();
 
+        // Add tempBack at the bottom layer
+        Image tempBack = new Image(createSolidTexture(1, 1, new Color(0.15f, 0.15f, 0.15f, 1)));
+        tempBack.setFillParent(true);
+        stage.addActor(tempBack);
+
         // 3. Build Layout
         VisTable root = new VisTable();
         root.setFillParent(true);
@@ -300,9 +308,14 @@ public class EditorController implements EditorListener, EditorUIProvider {
         inspectorTable = new VisTable();
         inspectorTable.setBackground(VisUI.getSkin().getDrawable("window-bg"));
 
-        // Central Area (Scene View + Toolbar)
+        // Central Area (Scene View + Game View + Toolbar)
         Stack centralStack = new Stack();
-        centralStack.add(sceneWidget);
+        
+        // Split Game/Scene (Vertical Split)
+        VisSplitPane viewSplit = new VisSplitPane(sceneWidget, gameWidget, true);
+        viewSplit.setSplitAmount(0.5f);
+        
+        centralStack.add(viewSplit);
         centralStack.add(createToolbar());
 
         // Split Panes
@@ -523,6 +536,11 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		// 4. 渲染 Scene View (使用上帝相机)
 		sceneTarget.renderToFbo(() -> {
 			Gdx.gl.glViewport(0, 0, sceneTarget.getFboWidth(), sceneTarget.getFboHeight());
+			Gdx.gl.glClearColor(0, 0, 0, 0);
+			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+			// 绘制网格
+			drawGrid(sceneCamera);
 
 			// 渲染游戏世界
 			spriteSystem.setCamera(sceneCamera);
@@ -564,6 +582,53 @@ public class EditorController implements EditorListener, EditorUIProvider {
 		}
 	}
 
+    private void drawGrid(OrthographicCamera camera) {
+        if (shapeRenderer == null) return;
+
+        Gdx.gl.glEnable(GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+
+        float zoom = camera.zoom;
+        float step = 100f; // Grid size
+
+        // Viewport bounds
+        float w = camera.viewportWidth * zoom;
+        float h = camera.viewportHeight * zoom;
+        float x = camera.position.x;
+        float y = camera.position.y;
+
+        // Calculate visible range
+        float startX = (float)Math.floor((x - w / 2) / step) * step;
+        float endX = (float)Math.ceil((x + w / 2) / step) * step;
+        float startY = (float)Math.floor((y - h / 2) / step) * step;
+        float endY = (float)Math.ceil((y + h / 2) / step) * step;
+
+        shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 0.5f); // Grey
+
+        for (float i = startX; i <= endX; i += step) {
+            if (i == 0) continue;
+            shapeRenderer.line(i, y - h / 2, i, y + h / 2);
+        }
+
+        for (float i = startY; i <= endY; i += step) {
+            if (i == 0) continue;
+            shapeRenderer.line(x - w / 2, i, x + w / 2, i);
+        }
+
+        // Axes (Red X, Blue Y at 0,0)
+        shapeRenderer.setColor(Color.RED);
+        shapeRenderer.line(x - w / 2, 0, x + w / 2, 0);
+
+        shapeRenderer.setColor(Color.BLUE);
+        shapeRenderer.line(0, y - h / 2, 0, y + h / 2);
+
+        shapeRenderer.end();
+        Gdx.gl.glDisable(GL20.GL_BLEND);
+    }
+
 	public void resize(int width, int height) {
         stage.getViewport().update(width, height, true);
     }
@@ -573,6 +638,7 @@ public class EditorController implements EditorListener, EditorUIProvider {
         // GameWorld.dispose(); // GameWorld 目前没有 dispose 方法，也许需要添加
         if (spriteBatch != null) spriteBatch.dispose();
         if (neonBatch != null) neonBatch.dispose();
+        if (shapeRenderer != null) shapeRenderer.dispose();
         gameTarget.dispose();
         sceneTarget.dispose();
         gameWidget.dispose();
