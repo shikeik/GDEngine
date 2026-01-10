@@ -11,6 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.goldsprite.dockablewindow.core.DockableWindow;
 import com.goldsprite.dockablewindow.core.DockableWindowManager;
 import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.solofight.screens.editor.panels.*;
 
@@ -39,6 +40,15 @@ public class SoloEditorScreen extends GScreen {
     private ConsolePanel consolePanel;
 
     @Override
+    public ScreenManager.Orientation getOrientation() {
+        return ScreenManager.Orientation.Landscape;
+    }
+
+    public EditorContext getContext() {
+        return context;
+    }
+
+    @Override
     public void create() {
         uiStage = new Stage(getUIViewport());
         skin = VisUI.getSkin();
@@ -64,6 +74,38 @@ public class SoloEditorScreen extends GScreen {
         toolbar.add(new TextButton("Load", skin)).pad(5);
         toolbar.add(new TextButton("Play", skin)).pad(5);
         
+        // MRS Tools
+        toolbar.add().width(20);
+        
+        TextButton btnSelect = new TextButton("Select (Q)", skin, "toggle");
+        TextButton btnMove = new TextButton("Move (W)", skin, "toggle");
+        TextButton btnRotate = new TextButton("Rotate (E)", skin, "toggle");
+        TextButton btnScale = new TextButton("Scale (R)", skin, "toggle");
+        
+        // Group toggle buttons
+        com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup<TextButton> group = new com.badlogic.gdx.scenes.scene2d.ui.ButtonGroup<>(btnSelect, btnMove, btnRotate, btnScale);
+        group.setMaxCheckCount(1);
+        group.setMinCheckCount(1);
+        group.setChecked("Select (Q)");
+        
+        btnSelect.addListener(new ClickListener() { @Override public void clicked(InputEvent event, float x, float y) { 
+            context.gizmoSystem.mode = com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem.Mode.SELECT; 
+        }});
+        btnMove.addListener(new ClickListener() { @Override public void clicked(InputEvent event, float x, float y) { 
+            context.gizmoSystem.mode = com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem.Mode.MOVE; 
+        }});
+        btnRotate.addListener(new ClickListener() { @Override public void clicked(InputEvent event, float x, float y) { 
+            context.gizmoSystem.mode = com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem.Mode.ROTATE; 
+        }});
+        btnScale.addListener(new ClickListener() { @Override public void clicked(InputEvent event, float x, float y) { 
+            context.gizmoSystem.mode = com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem.Mode.SCALE; 
+        }});
+        
+        toolbar.add(btnSelect).pad(5);
+        toolbar.add(btnMove).pad(5);
+        toolbar.add(btnRotate).pad(5);
+        toolbar.add(btnScale).pad(5);
+
         // Toolbar is fixed at top, not a dockable window
         Table root = new Table();
         root.setFillParent(true);
@@ -78,55 +120,8 @@ public class SoloEditorScreen extends GScreen {
     }
 
     private void runSelfCheck() {
-        Timer.schedule(new Timer.Task() {
-            @Override
-            public void run() {
-                Debug.logT("TEST", "Starting Editor Self-Check...");
-                
-                // Load dummy texture
-                Texture tex = new Texture(Gdx.files.internal("libgdx.png"));
-                TextureRegion region = new TextureRegion(tex);
-                Debug.logT("TEST", "Loaded Texture: libgdx.png");
-                
-                // 1. Create a test entity (Hero)
-                GObject hero = new GObject("Hero");
-                hero.transform.position.set(0, 0);
-                SpriteComponent sprite = hero.addComponent(SpriteComponent.class);
-                sprite.region = region;
-                sprite.width = 100;
-                sprite.height = 100;
-                Debug.logT("TEST", "Created Entity: Hero at (0,0)");
-                
-                // 2. Create another entity (Enemy)
-                GObject enemy = new GObject("Enemy");
-                enemy.transform.position.set(200, 100);
-                SpriteComponent sprite2 = enemy.addComponent(SpriteComponent.class);
-                sprite2.region = region;
-                sprite2.color.set(1, 0, 0, 1); // Red
-                sprite2.width = 80;
-                sprite2.height = 80;
-                Debug.logT("TEST", "Created Entity: Enemy at (200,100) [Red]");
-                
-                // 3. Select Hero (Triggers Inspector and Gizmos)
-                context.setSelection(hero);
-                Debug.logT("TEST", "Selected Entity: " + context.getSelection().getName());
-                
-                // 4. Verify Panels
-                if (hierarchyPanel != null) Debug.logT("TEST", "HierarchyPanel initialized");
-                if (inspectorPanel != null) Debug.logT("TEST", "InspectorPanel initialized");
-                if (sceneViewPanel != null) Debug.logT("TEST", "SceneViewPanel initialized");
-                if (gameViewPanel != null) Debug.logT("TEST", "GameViewPanel initialized");
-                
-                // 5. Position Game Camera to see entities
-                if (context.gameWorld.worldCamera != null) {
-                    context.gameWorld.worldCamera.position.set(100, 50, 0);
-                    context.gameWorld.worldCamera.update();
-                    Debug.logT("TEST", "Adjusted World Camera Position");
-                }
-                
-                Debug.logT("TEST", "Self-Check Completed.");
-            }
-        }, 1.0f); // Delay 1s to ensure UI is ready
+        // Start the Automation Pipeline
+        EditorAutomation.start(this);
     }
 
     private void initPanels() {

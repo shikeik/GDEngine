@@ -100,6 +100,10 @@ public class SceneViewPanel extends BaseEditorPanel {
                     if (isDraggingCamera) {
                         float dx = x - lastX;
                         float dy = y - lastY;
+                        // Fix direction and scale by zoom to match world units
+                        // Moving mouse LEFT (negative dx) should move camera RIGHT (positive x) to drag the world.
+                        // Actually, to "drag the world", if I move mouse Left, I want to see the part of world that was on the Right.
+                        // So Camera moves Right.
                         camera.translate(-dx * camera.zoom, -dy * camera.zoom);
                         camera.update();
                         lastX = x;
@@ -283,6 +287,8 @@ public class SceneViewPanel extends BaseEditorPanel {
 
         @Override
         public void layout() {
+            // Fix Aspect Ratio
+            // Set viewport size to match widget size but keep 1:1 pixel mapping at zoom=1
             camera.viewportWidth = getWidth();
             camera.viewportHeight = getHeight();
             camera.update();

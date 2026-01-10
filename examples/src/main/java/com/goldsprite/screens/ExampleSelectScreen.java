@@ -14,6 +14,7 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		map.put("场景列表\n", null);
 		map.put(">>>引擎开发<<<", GDEngineSelectionScreen.class);
+		map.put("SoloEditor (Editor Screen)", com.goldsprite.solofight.screens.editor.SoloEditorScreen.class);
 		map.put("", null);
 		// [新增] 架构验证入口
 		map.put("Icon Editor Demo (Undo/Redo)", com.goldsprite.solofight.screens.tests.IconEditorDemo.class);

@@ -7,7 +7,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.solofight.screens.tests.iconeditor.model.EditorTarget;
 
 public class GizmoSystem {
-    public enum Mode { MOVE, ROTATE, SCALE }
+    public enum Mode { SELECT, MOVE, ROTATE, SCALE }
     public Mode mode = Mode.MOVE;
     private final SceneManager sceneManager;
 

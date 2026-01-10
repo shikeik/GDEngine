@@ -38,6 +38,16 @@ public class GameViewPanel extends BaseEditorPanel {
         }
         
         @Override
+        public void layout() {
+            // Ensure GameWorld camera matches the view panel size
+            if (com.goldsprite.gdengine.ecs.GameWorld.worldCamera != null) {
+                com.goldsprite.gdengine.ecs.GameWorld.worldCamera.viewportWidth = getWidth();
+                com.goldsprite.gdengine.ecs.GameWorld.worldCamera.viewportHeight = getHeight();
+                com.goldsprite.gdengine.ecs.GameWorld.worldCamera.update();
+            }
+        }
+
+        @Override
         public void draw(Batch batch, float parentAlpha) {
             validate();
 
