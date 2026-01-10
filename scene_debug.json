@@ -1,0 +1,114 @@
+[
+{
+	"name": "Player",
+	"components": [
+		{
+			"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
+			"gid": 4,
+			"name": "TransformComponent",
+			"isEnabled": true,
+			"isAwake": true,
+			"isStarted": true,
+			"isDestroyed": false,
+			"position": {
+				"x": -95.255005,
+				"y": -36.970184
+			},
+			"scale": 1,
+			"rotation": 0,
+			"worldTransform": {
+				"m00": 1,
+				"m01": 0,
+				"m02": -95.255005,
+				"m10": 0,
+				"m11": 1,
+				"m12": -36.970184
+			},
+			"worldPosition": {
+				"x": -95.255005,
+				"y": -36.970184
+			},
+			"worldRotation": 0
+		},
+		{
+			"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
+			"gid": 5,
+			"name": "SpriteComponent",
+			"isEnabled": true,
+			"isAwake": true,
+			"isStarted": true,
+			"isDestroyed": false,
+			"assetPath": "gd_icon.png",
+			"color": {
+				"r": 1,
+				"g": 1,
+				"b": 1,
+				"a": 1
+			},
+			"flipX": false,
+			"flipY": false,
+			"offsetX": 0,
+			"offsetY": 0,
+			"width": 100,
+			"height": 100
+		}
+	],
+	"children": [
+		{
+			"name": "Weapon",
+			"components": [
+				{
+					"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
+					"gid": 7,
+					"name": "TransformComponent",
+					"isEnabled": true,
+					"isAwake": true,
+					"isStarted": true,
+					"isDestroyed": false,
+					"position": {
+						"x": 280.4834,
+						"y": -15.844391
+					},
+					"scale": 0.5,
+					"rotation": 0,
+					"worldTransform": {
+						"m00": 0.5,
+						"m01": 0,
+						"m02": 185.2284,
+						"m10": 0,
+						"m11": 0.5,
+						"m12": -52.814575
+					},
+					"worldPosition": {
+						"x": 185.2284,
+						"y": -52.814575
+					},
+					"worldRotation": 0
+				},
+				{
+					"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
+					"gid": 8,
+					"name": "SpriteComponent",
+					"isEnabled": true,
+					"isAwake": true,
+					"isStarted": true,
+					"isDestroyed": false,
+					"assetPath": "gd_icon.png",
+					"color": {
+						"r": 1,
+						"g": 0,
+						"b": 0,
+						"a": 1
+					},
+					"flipX": false,
+					"flipY": false,
+					"offsetX": 0,
+					"offsetY": 0,
+					"width": 100,
+					"height": 100
+				}
+			]
+		}
+	]
+}
+]

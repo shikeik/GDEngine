@@ -10,8 +10,11 @@ public abstract class Component extends EcsObject {
 	// ==========================================
 	// 1. 核心引用区
 	// ==========================================
-	protected GObject gobject;
-	protected TransformComponent transform; // 极高频使用的快捷引用
+
+	// [修复] 加上 transient 关键字，防止 JSON 序列化死循环
+	// 这些引用会在反序列化后的 addComponent 阶段自动重新链接
+	protected transient GObject gobject;
+	protected transient TransformComponent transform;
 
 	// ==========================================
 	// 2. 状态标志位
@@ -47,16 +50,18 @@ public abstract class Component extends EcsObject {
 
 		onAwake();
 
-		// [新增] 主动向 SceneSystem 报名参加 Start 仪式
+		// 主动向 SceneSystem 报名参加 Start 仪式
 		// 只有没 Start 过且启用的组件才需要 Start
 		if (!isStarted) {
-			GameWorld.inst().sceneSystem.registerStart(this);
+			// 防御性判空：反序列化过程中 GameWorld 可能还没准备好，或者这是一个单纯的数据对象
+			if (GameWorld.inst() != null && GameWorld.inst().sceneSystem != null) {
+				GameWorld.inst().sceneSystem.registerStart(this);
+			}
 		}
 
 		if (isEnabled) onEnable();
 	}
 
-	/** 用户逻辑入口：获取自身组件 (GetComponent), 初始化变量 */
 	protected void onAwake() {}
 
 	// ==========================================
@@ -89,7 +94,9 @@ public abstract class Component extends EcsObject {
 	public final void destroy() {
 		if (isDestroyed) return;
 		isDestroyed = true;
-		GameWorld.inst().addDestroyComponent(this); // 扔进垃圾桶，稍后倒掉
+		if (GameWorld.inst() != null) {
+			GameWorld.inst().addDestroyComponent(this);
+		}
 	}
 
 	/** 硬销毁：立即切断所有联系 (系统内部使用) */
@@ -114,7 +121,9 @@ public abstract class Component extends EcsObject {
 	/** 仅供 GObject 添加组件时调用，自动绑定 Transform */
 	public void setGObject(GObject gObject) {
 		this.gobject = gObject;
-		this.transform = gObject.transform; // 模仿 Unity，自动缓存 transform 引用
+		if (gObject != null) {
+			this.transform = gObject.transform;
+		}
 	}
 
 	public GObject getGObject() { return gobject; }
