@@ -19,6 +19,10 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.solofight.screens.editor.EditorContext;
 import com.goldsprite.solofight.screens.editor.adapter.GObjectAdapter;
 import com.goldsprite.solofight.screens.tests.iconeditor.system.GizmoSystem;
+import com.goldsprite.gdengine.ecs.component.SpriteComponent;
+import com.goldsprite.gdengine.ecs.component.TransformComponent;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import java.util.List;
 
 public class SceneViewPanel extends BaseEditorPanel {
     private SceneViewActor viewActor;
@@ -171,8 +175,12 @@ public class SceneViewPanel extends BaseEditorPanel {
                 drawGrid();
 
                 // Draw Game World (Entities)
-                // TODO: Implement entity rendering
-                // For now, draw debug circles for entities
+                this.batch.setProjectionMatrix(camera.combined);
+                this.batch.begin();
+                drawEntities(context.gameWorld.getRootEntities());
+                this.batch.end();
+
+                // Draw Debug (Selection, etc)
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
                 drawEntitiesDebug(context.gameWorld.getRootEntities());
                 shapeRenderer.end();
@@ -221,15 +229,55 @@ public class SceneViewPanel extends BaseEditorPanel {
             shapeRenderer.end();
         }
         
-        private void drawEntitiesDebug(java.util.List<GObject> entities) {
+        private void drawEntities(List<GObject> entities) {
             for (GObject obj : entities) {
-                shapeRenderer.setColor(Color.WHITE);
-                shapeRenderer.circle(obj.transform.position.x, obj.transform.position.y, 20);
+                drawEntity(obj);
+                if (!obj.getChildren().isEmpty()) {
+                    drawEntities(obj.getChildren());
+                }
+            }
+        }
+
+        private void drawEntity(GObject entity) {
+            SpriteComponent sprite = entity.getComponent(SpriteComponent.class);
+            TransformComponent transform = entity.transform;
+
+            if (sprite != null && sprite.isEnable() && sprite.region != null) {
+                TextureRegion region = sprite.region;
+                float x = transform.position.x + sprite.offsetX;
+                float y = transform.position.y + sprite.offsetY;
+                float w = sprite.width;
+                float h = sprite.height;
+                float rotation = transform.rotation;
+                float scaleX = transform.scale * (sprite.flipX ? -1 : 1);
+                float scaleY = transform.scale * (sprite.flipY ? -1 : 1);
+                
+                // Center alignment logic (assuming center pivot for rotation simplicity in editor)
+                float drawX = x - w / 2f;
+                float drawY = y - h / 2f;
+                float originX = w / 2f;
+                float originY = h / 2f;
+                
+                Color oldColor = batch.getColor();
+                batch.setColor(sprite.color);
+                batch.draw(region, drawX, drawY, originX, originY, w, h, scaleX, scaleY, rotation);
+                batch.setColor(oldColor);
+            }
+        }
+
+        private void drawEntitiesDebug(List<GObject> entities) {
+            for (GObject obj : entities) {
+                // Draw selection highlight
                 if (context.getSelection() == obj) {
                     shapeRenderer.setColor(Color.YELLOW);
-                    shapeRenderer.circle(obj.transform.position.x, obj.transform.position.y, 25);
+                    TransformComponent t = obj.transform;
+                    // Draw a simple box around it (approximate)
+                    shapeRenderer.rect(t.position.x - 10, t.position.y - 10, 20, 20);
                 }
-                drawEntitiesDebug(obj.getChildren());
+                
+                if (!obj.getChildren().isEmpty()) {
+                    drawEntitiesDebug(obj.getChildren());
+                }
             }
         }
 

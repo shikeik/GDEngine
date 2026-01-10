@@ -14,6 +14,15 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.kotcrab.vis.ui.VisUI;
 import com.goldsprite.solofight.screens.editor.panels.*;
 
+import com.badlogic.gdx.utils.Timer;
+import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.ecs.component.SpriteComponent;
+
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.Gdx;
+
 public class SoloEditorScreen extends GScreen {
     private Stage uiStage;
     private DockableWindowManager windowManager;
@@ -64,6 +73,60 @@ public class SoloEditorScreen extends GScreen {
         
         uiStage.addActor(root);
         // Note: DockableWindows are added directly to stage, they float above root
+        
+        runSelfCheck();
+    }
+
+    private void runSelfCheck() {
+        Timer.schedule(new Timer.Task() {
+            @Override
+            public void run() {
+                Debug.logT("TEST", "Starting Editor Self-Check...");
+                
+                // Load dummy texture
+                Texture tex = new Texture(Gdx.files.internal("libgdx.png"));
+                TextureRegion region = new TextureRegion(tex);
+                Debug.logT("TEST", "Loaded Texture: libgdx.png");
+                
+                // 1. Create a test entity (Hero)
+                GObject hero = new GObject("Hero");
+                hero.transform.position.set(0, 0);
+                SpriteComponent sprite = hero.addComponent(SpriteComponent.class);
+                sprite.region = region;
+                sprite.width = 100;
+                sprite.height = 100;
+                Debug.logT("TEST", "Created Entity: Hero at (0,0)");
+                
+                // 2. Create another entity (Enemy)
+                GObject enemy = new GObject("Enemy");
+                enemy.transform.position.set(200, 100);
+                SpriteComponent sprite2 = enemy.addComponent(SpriteComponent.class);
+                sprite2.region = region;
+                sprite2.color.set(1, 0, 0, 1); // Red
+                sprite2.width = 80;
+                sprite2.height = 80;
+                Debug.logT("TEST", "Created Entity: Enemy at (200,100) [Red]");
+                
+                // 3. Select Hero (Triggers Inspector and Gizmos)
+                context.setSelection(hero);
+                Debug.logT("TEST", "Selected Entity: " + context.getSelection().getName());
+                
+                // 4. Verify Panels
+                if (hierarchyPanel != null) Debug.logT("TEST", "HierarchyPanel initialized");
+                if (inspectorPanel != null) Debug.logT("TEST", "InspectorPanel initialized");
+                if (sceneViewPanel != null) Debug.logT("TEST", "SceneViewPanel initialized");
+                if (gameViewPanel != null) Debug.logT("TEST", "GameViewPanel initialized");
+                
+                // 5. Position Game Camera to see entities
+                if (context.gameWorld.worldCamera != null) {
+                    context.gameWorld.worldCamera.position.set(100, 50, 0);
+                    context.gameWorld.worldCamera.update();
+                    Debug.logT("TEST", "Adjusted World Camera Position");
+                }
+                
+                Debug.logT("TEST", "Self-Check Completed.");
+            }
+        }, 1.0f); // Delay 1s to ensure UI is ready
     }
 
     private void initPanels() {
@@ -75,24 +138,33 @@ public class SoloEditorScreen extends GScreen {
         gameViewPanel = new GameViewPanel(skin, context);
         consolePanel = new ConsolePanel(skin, context);
 
-        // Initial positions (Simulating a layout)
+        // Layout Configuration
         float w = getUIViewport().getWorldWidth();
         float h = getUIViewport().getWorldHeight();
         
-        // Left
-        addWindow(hierarchyPanel, 0, h - 400, 300, 400);
-        addWindow(fileTreePanel, 0, 0, 300, h - 400);
+        float leftWidth = 300;
+        float rightWidth = 300;
+        float bottomHeight = 200;
+        float toolbarHeight = 40;
         
-        // Right
-        addWindow(inspectorPanel, w - 300, h - 600, 300, 600);
-        addWindow(historyPanel, w - 300, 0, 300, 200); // Adjusted height
+        float centerW = w - leftWidth - rightWidth;
+        float centerH = h - bottomHeight - toolbarHeight;
         
-        // Center
-        addWindow(sceneViewPanel, 300, 200, w - 600, h - 200 - 40); // Minus toolbar
-        addWindow(gameViewPanel, 350, 250, w - 700, h - 300); // Slightly offset
+        // Left Dock
+        addWindow(fileTreePanel, 0, 0, leftWidth, h / 2);
+        addWindow(hierarchyPanel, 0, h / 2, leftWidth, h / 2);
         
-        // Bottom
-        addWindow(consolePanel, 300, 0, w - 600, 200);
+        // Right Dock
+        addWindow(historyPanel, w - rightWidth, 0, rightWidth, 200);
+        addWindow(inspectorPanel, w - rightWidth, 200, rightWidth, h - 200);
+        
+        // Bottom Dock
+        addWindow(consolePanel, leftWidth, 0, centerW, bottomHeight);
+        
+        // Center Split (Scene & Game)
+        float splitW = centerW / 2;
+        addWindow(sceneViewPanel, leftWidth, bottomHeight, splitW, centerH);
+        addWindow(gameViewPanel, leftWidth + splitW, bottomHeight, splitW, centerH);
     }
 
     private void addWindow(DockableWindow window, float x, float y, float w, float h) {

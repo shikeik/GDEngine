@@ -20,9 +20,11 @@ import com.goldsprite.gdengine.screens.ecs.EcsVisualTestScreen;
 import com.goldsprite.solofight.screens.main.GameScreen;
 import com.goldsprite.solofight.screens.tests.CombatScreen;
 import com.goldsprite.solofight.screens.tests.TextTestScreen;
+import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.screens.ecs.SpriteVisualScreen;
 import com.goldsprite.gdengine.screens.ecs.JsonLiveEditScreen;
 import com.goldsprite.gdengine.screens.ecs.editor.EditorGameScreen;
+import com.goldsprite.solofight.screens.editor.SoloEditorScreen;
 import com.kotcrab.vis.ui.VisUI;
 
 public class GdxLauncher extends Game {
@@ -67,15 +69,17 @@ public class GdxLauncher extends Game {
 		debug = Debug.getInstance();
 		debug.initUI();
 
-		SynthAudio.init();int k;
+		SynthAudio.init();
 
 		// 【修改点】注入原生实现和编译器
-		Gd.init(Gd.Mode.RELEASE, Gdx.input, Gdx.graphics, scriptCompiler);int k3;
+		Gd.init(Gd.Mode.RELEASE, Gdx.input, Gdx.graphics, scriptCompiler);
 		Debug.logT("Engine", "[GREEN]Gd initialized. Compiler available: %b[WHITE]", (scriptCompiler != null));
+		
+		new GameWorld();
 
 		ScreenManager.getInstance()
-			.addScreen(new ExampleSelectScreen())
-			.setLaunchScreen(ExampleSelectScreen.class);
+			.addScreen(new SoloEditorScreen())
+			.setLaunchScreen(SoloEditorScreen.class);
 		//startVisualCheckSequence();
 
 		isInitialized = true;

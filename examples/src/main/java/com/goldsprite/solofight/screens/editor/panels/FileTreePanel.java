@@ -42,19 +42,14 @@ public class FileTreePanel extends BaseEditorPanel {
 
     private void reload() {
         tree.clearChildren();
-        FileHandle root = Gdx.files.internal("."); // Start from root to find assets
-        // Actually usually assets is the root of internal
-        // Let's try listing internal root
-        FileHandle assets = Gdx.files.internal(".");
         
-        // If we are in project root, assets might be a child
-        if (assets.child(ASSETS_DIR).exists()) {
-            assets = assets.child(ASSETS_DIR);
+        // Use local storage "GDEngine/" as requested
+        FileHandle root = Gdx.files.local("GDEngine/");
+        if (!root.exists()) {
+            root.mkdirs();
         }
         
-        if (assets.exists()) {
-            addNode(assets, null);
-        }
+        addNode(root, null);
     }
 
     private void addNode(FileHandle file, FileNode parent) {
