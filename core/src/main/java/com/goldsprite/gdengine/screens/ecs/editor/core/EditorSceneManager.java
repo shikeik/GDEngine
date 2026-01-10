@@ -77,4 +77,63 @@ public class EditorSceneManager {
 		// 通知 UI 刷新
 		notifyStructureChanged();
 	}
+
+	/**
+	 * 移动/重排物体
+	 * @param target 被移动的物体
+	 * @param newParent 新父级 (null 表示移动到顶层)
+	 * @param index 目标索引 (-1 表示追加到末尾)
+	 */
+	public void moveEntity(GObject target, GObject newParent, int index) {
+		if (target == null) return;
+
+		// 1. 防止把自己拖到自己或子物体下 (死循环保护)
+		if (isDescendant(target, newParent)) {
+			System.out.println("Cannot move parent to child!");
+			return;
+		}
+
+		// 2. 改变父级 (如果需要)
+		if (target.getParent() != newParent) {
+			target.setParent(newParent);
+		}
+
+		// 3. 调整顺序 (List Reorder)
+		// 获取目标容器列表
+		List<GObject> siblings;
+		if (newParent != null) {
+			siblings = newParent.getChildren();
+		} else {
+			siblings = GameWorld.inst().getRootEntities();
+		}
+
+		// 执行列表操作
+		if (siblings.contains(target)) {
+			siblings.remove(target);
+
+			// 修正索引 (因为移除后 size 变小了)
+			int finalIndex = index;
+			if (finalIndex < 0 || finalIndex > siblings.size()) {
+				finalIndex = siblings.size();
+			}
+
+			siblings.add(finalIndex, target);
+		}
+
+		notifyStructureChanged();
+	}
+
+	// 辅助：判断 check 是否是 root 的子孙 (包含自身)
+	private boolean isDescendant(GObject root, GObject check) {
+		if (root == check) return true;
+		if (check == null) return false; // check 是顶层，root 肯定不是它的子孙
+
+		// 向上追溯 check 的父级，看能不能碰到 root
+		GObject p = check.getParent();
+		while (p != null) {
+			if (p == root) return true;
+			p = p.getParent();
+		}
+		return false;
+	}
 }
