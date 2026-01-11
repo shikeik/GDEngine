@@ -21,6 +21,9 @@ public class GObject extends EcsObject {
 	// ==========================================
 	private boolean isActive = true;
 	private boolean isDestroyed = false;
+	// [新增] 切换场景时不销毁 (DontDestroyOnLoad)
+	private boolean dontDestroyOnLoad = false;
+	
 	private String tag = "Untagged";
 	private int layer = 0;
 
@@ -320,6 +323,15 @@ public class GObject extends EcsObject {
 		for (GObject child : children) {
 			if (child.isActive()) child.setActiveRecursivelyEffect(active);
 		}
+	}
+
+	// [新增] DDOL 接口
+	public void setDontDestroyOnLoad(boolean value) {
+		this.dontDestroyOnLoad = value;
+	}
+
+	public boolean isDontDestroyOnLoad() {
+		return dontDestroyOnLoad;
 	}
 
 	// Getters

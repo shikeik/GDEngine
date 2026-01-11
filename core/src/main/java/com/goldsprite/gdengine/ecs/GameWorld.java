@@ -307,7 +307,29 @@ public class GameWorld {
 	public static float getUnscaledDeltaTime() { return unscaledDelta; }
 	public static float getTotalTime() { return totalTime; }
 
+	/**
+	 * 清理场景
+	 * 销毁所有未标记为 DontDestroyOnLoad 的顶层物体。
+	 * 通常在加载新场景前调用。
+	 */
+	public void clear() {
+		Debug.log("GameWorld: Clearing scene...");
 
+		// 必须创建副本进行遍历，因为 destroyImmediate 会修改 rootEntities 列表
+		// 导致 ConcurrentModificationException 或索引错误
+		List<GObject> currentRoots = new ArrayList<>(rootEntities);
+
+		for (GObject obj : currentRoots) {
+			// [核心逻辑] 如果没有免死金牌，就销毁
+			if (!obj.isDontDestroyOnLoad()) {
+				obj.destroyImmediate();
+			}
+		}
+
+		// 强制刷新缓冲区，确保下一帧逻辑干净
+		flushEntities();
+	}
+	
 	public static void autoDispose() {
 		if(inst() == null) return;
 		inst().dispose();
