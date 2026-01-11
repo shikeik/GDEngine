@@ -59,15 +59,21 @@ public class SceneLoader {
 		if (file == null) return;
 		try {
 			Json json = GdxJsonSetup.create();
-			// 获取所有根物体
 			List<GObject> roots = GameWorld.inst().getRootEntities();
-			// 过滤掉不应该保存的 (比如一些临时的 Editor Gizmo 辅助物体，如果有的话)
-			// 目前假设 rootEntities 里的都要存
 
-			String text = json.prettyPrint(roots);
+			// [核心修复] 过滤掉 DDOL 物体，只保存纯场景数据
+			List<GObject> sceneObjects = new ArrayList<>();
+			for (GObject obj : roots) {
+				if (!obj.isDontDestroyOnLoad()) { // 只存没“免死金牌”的
+					sceneObjects.add(obj);
+				}
+			}
+
+			// 保存过滤后的列表
+			String text = json.prettyPrint(sceneObjects);
 			file.writeString(text, false);
 
-			Debug.logT("SceneLoader", "💾 场景已保存: " + file.name());
+			Debug.logT("SceneLoader", "💾 场景已保存: " + file.name() + " (ObjCount: " + sceneObjects.size() + ")");
 		} catch (Exception e) {
 			Debug.logT("SceneLoader", "❌ 保存异常: " + e.getMessage());
 			e.printStackTrace();

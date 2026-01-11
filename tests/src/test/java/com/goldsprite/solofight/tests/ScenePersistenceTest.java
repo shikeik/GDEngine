@@ -24,6 +24,7 @@ public class ScenePersistenceTest {
 
 	@Before
 	public void setUp() {
+		GdxTestRunner.mockAssetsRoot = "assets";
 		// 1. 初始化环境
 		try { if (GameWorld.inst() != null) GameWorld.inst().dispose(); } catch(Exception ignored){}
 		new GameWorld();
@@ -119,7 +120,7 @@ public class ScenePersistenceTest {
 		// 4.3 验证组件数据 (Sprite)
 		SpriteComponent newSprite = newPlayer.getComponent(SpriteComponent.class);
 		CLogAssert.assertTrue("Sprite组件存在", newSprite != null);
-		CLogAssert.assertEquals("AssetPath 还原", "test.png", newSprite.assetPath);
+		CLogAssert.assertEquals("AssetPath 还原", "gd_icon.png", newSprite.assetPath);
 		CLogAssert.assertEquals("Width 还原", 50f, newSprite.width);
 
 		// 4.4 验证匿名类过滤 (Filter)

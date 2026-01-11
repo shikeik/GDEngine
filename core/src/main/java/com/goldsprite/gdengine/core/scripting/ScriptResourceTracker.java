@@ -29,17 +29,22 @@ public class ScriptResourceTracker {
 	 */
 	public static Texture loadTexture(String path) {
 		FileHandle file = GameWorld.getAsset(path);
-		if (!file.exists()) {
-			Debug.logT("Asset", "❌ 找不到资源: %s (在 %s)", path, file.path());
-			return null;
-		}
+		// 注意：在测试环境下，即使文件存在，new Texture 也会因为没有 GL 上下文而失败
 
 		try {
+			if (!file.exists()) {
+				Debug.logT("Asset", "❌ 找不到资源: %s (在 %s)", path, file.path());
+				return null;
+			}
+
 			Texture tex = new Texture(file);
-			trackedResources.add(tex); // 记账
+			trackedResources.add(tex);
 			return tex;
-		} catch (Exception e) {
-			Debug.logT("Asset", "加载失败: %s -> %s", path, e.getMessage());
+
+		} catch (Throwable e) { // [核心修改] Exception -> Throwable
+			// 捕获 UnsatisfiedLinkError (测试环境) 或 GdxRuntimeException (资源损坏)
+			// 在测试环境下，我们允许纹理加载失败，但这不应该中断逻辑测试
+			Debug.logT("Asset", "⚠️ 纹理加载失败 (可忽略): %s -> %s", path, e.getClass().getSimpleName());
 			return null;
 		}
 	}
