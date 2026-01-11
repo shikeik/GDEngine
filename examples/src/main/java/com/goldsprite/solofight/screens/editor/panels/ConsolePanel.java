@@ -7,26 +7,26 @@ import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.solofight.screens.editor.EditorContext;
 
 public class ConsolePanel extends BaseEditorPanel {
-    private List<String> list;
+	private List<String> list;
 
-    public ConsolePanel(Skin skin, EditorContext context) {
-        super("Console", skin, context);
-    }
+	public ConsolePanel(Skin skin, EditorContext context) {
+		super("Console", skin, context);
+	}
 
-    @Override
-    protected void initContent() {
-        list = new List<>(getSkin());
-        getContent().add(new VisScrollPane(list)).grow();
-    }
-    
-    @Override
-    public void act(float delta) {
-        super.act(delta);
-        // Polling logs (inefficient but works for now)
-        // java.util.List<String> logs = Debug.getAllLogs();
-        // if (list.getItems().size != logs.size()) {
-        //    list.setItems(logs.toArray(new String[0]));
-            // Scroll to bottom logic if needed
-        // }
-    }
+	@Override
+	protected void initContent() {
+		list = new List<>(getSkin());
+		getContent().add(new VisScrollPane(list)).grow();
+	}
+	
+	@Override
+	public void act(float delta) {
+		super.act(delta);
+		// Polling logs (inefficient but works for now)
+		// java.util.List<String> logs = Debug.getAllLogs();
+		// if (list.getItems().size != logs.size()) {
+		//    list.setItems(logs.toArray(new String[0]));
+			// Scroll to bottom logic if needed
+		// }
+	}
 }

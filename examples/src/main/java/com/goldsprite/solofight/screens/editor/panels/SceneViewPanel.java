@@ -25,273 +25,273 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import java.util.List;
 
 public class SceneViewPanel extends BaseEditorPanel {
-    private SceneViewActor viewActor;
+	private SceneViewActor viewActor;
 
-    public SceneViewPanel(Skin skin, EditorContext context) {
-        super("Scene", skin, context);
-    }
+	public SceneViewPanel(Skin skin, EditorContext context) {
+		super("Scene", skin, context);
+	}
 
-    @Override
-    protected void initContent() {
-        viewActor = new SceneViewActor(context);
-        getContent().add(viewActor).grow();
-    }
+	@Override
+	protected void initContent() {
+		viewActor = new SceneViewActor(context);
+		getContent().add(viewActor).grow();
+	}
 
-    private class SceneViewActor extends Widget {
-        private final EditorContext context;
-        private final OrthographicCamera camera;
-        private final NeonBatch batch;
-        private final ShapeRenderer shapeRenderer;
+	private class SceneViewActor extends Widget {
+		private final EditorContext context;
+		private final OrthographicCamera camera;
+		private final NeonBatch batch;
+		private final ShapeRenderer shapeRenderer;
 
-        private boolean isDraggingCamera = false;
-        private float lastX, lastY;
-        
-        // Gizmo Dragging State
-        private boolean isDraggingGizmo = false;
-        private int dragPointer = -1;
+		private boolean isDraggingCamera = false;
+		private float lastX, lastY;
+		
+		// Gizmo Dragging State
+		private boolean isDraggingGizmo = false;
+		private int dragPointer = -1;
 
-        public SceneViewActor(EditorContext context) {
-            this.context = context;
-            this.camera = new OrthographicCamera();
-            this.batch = new NeonBatch();
-            this.shapeRenderer = new ShapeRenderer();
+		public SceneViewActor(EditorContext context) {
+			this.context = context;
+			this.camera = new OrthographicCamera();
+			this.batch = new NeonBatch();
+			this.shapeRenderer = new ShapeRenderer();
 
-            addListener(new InputListener() {
-                @Override
-                public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-                    camera.zoom += amountY * 0.1f * camera.zoom;
-                    camera.zoom = MathUtils.clamp(camera.zoom, 0.01f, 100f);
-                    camera.update();
-                    return true;
-                }
+			addListener(new InputListener() {
+				@Override
+				public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
+					camera.zoom += amountY * 0.1f * camera.zoom;
+					camera.zoom = MathUtils.clamp(camera.zoom, 0.01f, 100f);
+					camera.update();
+					return true;
+				}
 
-                @Override
-                public boolean keyDown(InputEvent event, int keycode) {
-                    if (keycode == Input.Keys.W) context.gizmoSystem.mode = GizmoSystem.Mode.MOVE;
-                    if (keycode == Input.Keys.E) context.gizmoSystem.mode = GizmoSystem.Mode.ROTATE;
-                    if (keycode == Input.Keys.R) context.gizmoSystem.mode = GizmoSystem.Mode.SCALE;
-                    return true;
-                }
+				@Override
+				public boolean keyDown(InputEvent event, int keycode) {
+					if (keycode == Input.Keys.W) context.gizmoSystem.mode = GizmoSystem.Mode.MOVE;
+					if (keycode == Input.Keys.E) context.gizmoSystem.mode = GizmoSystem.Mode.ROTATE;
+					if (keycode == Input.Keys.R) context.gizmoSystem.mode = GizmoSystem.Mode.SCALE;
+					return true;
+				}
 
-                @Override
-                public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                    getStage().setKeyboardFocus(SceneViewActor.this);
-                    
-                    Vector2 worldPos = screenToWorld(x, y);
+				@Override
+				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+					getStage().setKeyboardFocus(SceneViewActor.this);
+					
+					Vector2 worldPos = screenToWorld(x, y);
 
-                    if (button == Input.Buttons.RIGHT || (button == Input.Buttons.MIDDLE)) {
-                        isDraggingCamera = true;
-                        lastX = x;
-                        lastY = y;
-                        return true;
-                    }
+					if (button == Input.Buttons.RIGHT || (button == Input.Buttons.MIDDLE)) {
+						isDraggingCamera = true;
+						lastX = x;
+						lastY = y;
+						return true;
+					}
 
-                    if (button == Input.Buttons.LEFT) {
-                        // TODO: Integrate full GizmoSystem input logic here
-                        // For now, just simple selection
-                        handleSelection(worldPos.x, worldPos.y);
-                        return true;
-                    }
-                    return false;
-                }
+					if (button == Input.Buttons.LEFT) {
+						// TODO: Integrate full GizmoSystem input logic here
+						// For now, just simple selection
+						handleSelection(worldPos.x, worldPos.y);
+						return true;
+					}
+					return false;
+				}
 
-                @Override
-                public void touchDragged(InputEvent event, float x, float y, int pointer) {
-                    if (isDraggingCamera) {
-                        float dx = x - lastX;
-                        float dy = y - lastY;
-                        // Fix direction and scale by zoom to match world units
-                        // Moving mouse LEFT (negative dx) should move camera RIGHT (positive x) to drag the world.
-                        // Actually, to "drag the world", if I move mouse Left, I want to see the part of world that was on the Right.
-                        // So Camera moves Right.
-                        camera.translate(-dx * camera.zoom, -dy * camera.zoom);
-                        camera.update();
-                        lastX = x;
-                        lastY = y;
-                    }
-                }
+				@Override
+				public void touchDragged(InputEvent event, float x, float y, int pointer) {
+					if (isDraggingCamera) {
+						float dx = x - lastX;
+						float dy = y - lastY;
+						// Fix direction and scale by zoom to match world units
+						// Moving mouse LEFT (negative dx) should move camera RIGHT (positive x) to drag the world.
+						// Actually, to "drag the world", if I move mouse Left, I want to see the part of world that was on the Right.
+						// So Camera moves Right.
+						camera.translate(-dx * camera.zoom, -dy * camera.zoom);
+						camera.update();
+						lastX = x;
+						lastY = y;
+					}
+				}
 
-                @Override
-                public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-                    isDraggingCamera = false;
-                }
-            });
-        }
+				@Override
+				public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+					isDraggingCamera = false;
+				}
+			});
+		}
 
-        private Vector2 screenToWorld(float x, float y) {
-            float wx = (x - getWidth() / 2) * camera.zoom + camera.position.x;
-            float wy = (y - getHeight() / 2) * camera.zoom + camera.position.y;
-            return new Vector2(wx, wy);
-        }
+		private Vector2 screenToWorld(float x, float y) {
+			float wx = (x - getWidth() / 2) * camera.zoom + camera.position.x;
+			float wy = (y - getHeight() / 2) * camera.zoom + camera.position.y;
+			return new Vector2(wx, wy);
+		}
 
-        private void handleSelection(float wx, float wy) {
-            for (GObject obj : context.gameWorld.getRootEntities()) {
-                if (checkHitRecursive(obj, wx, wy)) {
-                    return;
-                }
-            }
-            context.setSelection(null);
-        }
+		private void handleSelection(float wx, float wy) {
+			for (GObject obj : context.gameWorld.getRootEntities()) {
+				if (checkHitRecursive(obj, wx, wy)) {
+					return;
+				}
+			}
+			context.setSelection(null);
+		}
 
-        private boolean checkHitRecursive(GObject obj, float wx, float wy) {
-            for (int i = obj.getChildren().size() - 1; i >= 0; i--) {
-                if (checkHitRecursive(obj.getChildren().get(i), wx, wy)) return true;
-            }
+		private boolean checkHitRecursive(GObject obj, float wx, float wy) {
+			for (int i = obj.getChildren().size() - 1; i >= 0; i--) {
+				if (checkHitRecursive(obj.getChildren().get(i), wx, wy)) return true;
+			}
 
-            GObjectAdapter adapter = new GObjectAdapter(obj);
-            if (adapter.hitTest(wx, wy)) {
-                context.setSelection(obj);
-                return true;
-            }
-            return false;
-        }
+			GObjectAdapter adapter = new GObjectAdapter(obj);
+			if (adapter.hitTest(wx, wy)) {
+				context.setSelection(obj);
+				return true;
+			}
+			return false;
+		}
 
-        @Override
-        public void draw(com.badlogic.gdx.graphics.g2d.Batch batch, float parentAlpha) {
-            validate();
+		@Override
+		public void draw(com.badlogic.gdx.graphics.g2d.Batch batch, float parentAlpha) {
+			validate();
 
-            Rectangle scissors = new Rectangle();
-            Rectangle clipBounds = new Rectangle(getX(), getY(), getWidth(), getHeight());
-            
-            // Transform local clip bounds to screen coordinates
-            // Note: This simplified calculation assumes no rotation in UI hierarchy
-            Vector2 screenPos = localToStageCoordinates(new Vector2(0, 0));
-            clipBounds.x = screenPos.x;
-            clipBounds.y = screenPos.y;
+			Rectangle scissors = new Rectangle();
+			Rectangle clipBounds = new Rectangle(getX(), getY(), getWidth(), getHeight());
+			
+			// Transform local clip bounds to screen coordinates
+			// Note: This simplified calculation assumes no rotation in UI hierarchy
+			Vector2 screenPos = localToStageCoordinates(new Vector2(0, 0));
+			clipBounds.x = screenPos.x;
+			clipBounds.y = screenPos.y;
 
-            ScissorStack.calculateScissors(getStage().getCamera(), batch.getTransformMatrix(), clipBounds, scissors);
-            
-            if (ScissorStack.pushScissors(scissors)) {
-                batch.end();
+			ScissorStack.calculateScissors(getStage().getCamera(), batch.getTransformMatrix(), clipBounds, scissors);
+			
+			if (ScissorStack.pushScissors(scissors)) {
+				batch.end();
 
-                // Draw Background
-                Gdx.gl.glEnable(GL20.GL_BLEND);
-                shapeRenderer.setProjectionMatrix(camera.combined);
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-                shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1);
-                shapeRenderer.rect(camera.position.x - camera.viewportWidth/2 * camera.zoom, 
-                                 camera.position.y - camera.viewportHeight/2 * camera.zoom, 
-                                 camera.viewportWidth * camera.zoom, 
-                                 camera.viewportHeight * camera.zoom);
-                shapeRenderer.end();
+				// Draw Background
+				Gdx.gl.glEnable(GL20.GL_BLEND);
+				shapeRenderer.setProjectionMatrix(camera.combined);
+				shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+				shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1);
+				shapeRenderer.rect(camera.position.x - camera.viewportWidth/2 * camera.zoom, 
+								 camera.position.y - camera.viewportHeight/2 * camera.zoom, 
+								 camera.viewportWidth * camera.zoom, 
+								 camera.viewportHeight * camera.zoom);
+				shapeRenderer.end();
 
-                // Draw Grid
-                drawGrid();
+				// Draw Grid
+				drawGrid();
 
-                // Draw Game World (Entities)
-                this.batch.setProjectionMatrix(camera.combined);
-                this.batch.begin();
-                drawEntities(context.gameWorld.getRootEntities());
-                this.batch.end();
+				// Draw Game World (Entities)
+				this.batch.setProjectionMatrix(camera.combined);
+				this.batch.begin();
+				drawEntities(context.gameWorld.getRootEntities());
+				this.batch.end();
 
-                // Draw Debug (Selection, etc)
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-                drawEntitiesDebug(context.gameWorld.getRootEntities());
-                shapeRenderer.end();
+				// Draw Debug (Selection, etc)
+				shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+				drawEntitiesDebug(context.gameWorld.getRootEntities());
+				shapeRenderer.end();
 
-                // Draw Gizmos
-                this.batch.setProjectionMatrix(camera.combined);
-                this.batch.begin();
-                context.gizmoSystem.render(this.batch, camera.zoom);
-                this.batch.end();
+				// Draw Gizmos
+				this.batch.setProjectionMatrix(camera.combined);
+				this.batch.begin();
+				context.gizmoSystem.render(this.batch, camera.zoom);
+				this.batch.end();
 
-                batch.begin();
-                ScissorStack.popScissors();
-            }
-        }
+				batch.begin();
+				ScissorStack.popScissors();
+			}
+		}
 
-        private void drawGrid() {
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
-            shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1);
-            
-            float zoom = camera.zoom;
-            float w = camera.viewportWidth * zoom;
-            float h = camera.viewportHeight * zoom;
-            float x = camera.position.x;
-            float y = camera.position.y;
-            
-            float step = 100;
-            if (zoom < 0.5f) step = 50;
-            if (zoom > 2f) step = 200;
-            
-            float startX = (float)Math.floor((x - w/2) / step) * step;
-            float startY = (float)Math.floor((y - h/2) / step) * step;
-            
-            for (float i = startX; i < x + w/2; i += step) {
-                shapeRenderer.line(i, y - h/2, i, y + h/2);
-            }
-            for (float i = startY; i < y + h/2; i += step) {
-                shapeRenderer.line(x - w/2, i, x + w/2, i);
-            }
-            
-            // Axis
-            shapeRenderer.setColor(0.5f, 0.2f, 0.2f, 1);
-            shapeRenderer.line(x - w/2, 0, x + w/2, 0); // X Axis
-            shapeRenderer.setColor(0.2f, 0.5f, 0.2f, 1);
-            shapeRenderer.line(0, y - h/2, 0, y + h/2); // Y Axis
-            
-            shapeRenderer.end();
-        }
-        
-        private void drawEntities(List<GObject> entities) {
-            for (GObject obj : entities) {
-                drawEntity(obj);
-                if (!obj.getChildren().isEmpty()) {
-                    drawEntities(obj.getChildren());
-                }
-            }
-        }
+		private void drawGrid() {
+			shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+			shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1);
+			
+			float zoom = camera.zoom;
+			float w = camera.viewportWidth * zoom;
+			float h = camera.viewportHeight * zoom;
+			float x = camera.position.x;
+			float y = camera.position.y;
+			
+			float step = 100;
+			if (zoom < 0.5f) step = 50;
+			if (zoom > 2f) step = 200;
+			
+			float startX = (float)Math.floor((x - w/2) / step) * step;
+			float startY = (float)Math.floor((y - h/2) / step) * step;
+			
+			for (float i = startX; i < x + w/2; i += step) {
+				shapeRenderer.line(i, y - h/2, i, y + h/2);
+			}
+			for (float i = startY; i < y + h/2; i += step) {
+				shapeRenderer.line(x - w/2, i, x + w/2, i);
+			}
+			
+			// Axis
+			shapeRenderer.setColor(0.5f, 0.2f, 0.2f, 1);
+			shapeRenderer.line(x - w/2, 0, x + w/2, 0); // X Axis
+			shapeRenderer.setColor(0.2f, 0.5f, 0.2f, 1);
+			shapeRenderer.line(0, y - h/2, 0, y + h/2); // Y Axis
+			
+			shapeRenderer.end();
+		}
+		
+		private void drawEntities(List<GObject> entities) {
+			for (GObject obj : entities) {
+				drawEntity(obj);
+				if (!obj.getChildren().isEmpty()) {
+					drawEntities(obj.getChildren());
+				}
+			}
+		}
 
-        private void drawEntity(GObject entity) {
-            SpriteComponent sprite = entity.getComponent(SpriteComponent.class);
-            TransformComponent transform = entity.transform;
+		private void drawEntity(GObject entity) {
+			SpriteComponent sprite = entity.getComponent(SpriteComponent.class);
+			TransformComponent transform = entity.transform;
 
-            if (sprite != null && sprite.isEnable() && sprite.region != null) {
-                TextureRegion region = sprite.region;
-                float x = transform.position.x + sprite.offsetX;
-                float y = transform.position.y + sprite.offsetY;
-                float w = sprite.width;
-                float h = sprite.height;
-                float rotation = transform.rotation;
-                float scaleX = transform.scale * (sprite.flipX ? -1 : 1);
-                float scaleY = transform.scale * (sprite.flipY ? -1 : 1);
-                
-                // Center alignment logic (assuming center pivot for rotation simplicity in editor)
-                float drawX = x - w / 2f;
-                float drawY = y - h / 2f;
-                float originX = w / 2f;
-                float originY = h / 2f;
-                
-                Color oldColor = batch.getColor();
-                batch.setColor(sprite.color);
-                batch.draw(region, drawX, drawY, originX, originY, w, h, scaleX, scaleY, rotation);
-                batch.setColor(oldColor);
-            }
-        }
+			if (sprite != null && sprite.isEnable() && sprite.region != null) {
+				TextureRegion region = sprite.region;
+				float x = transform.position.x + sprite.offsetX;
+				float y = transform.position.y + sprite.offsetY;
+				float w = sprite.width;
+				float h = sprite.height;
+				float rotation = transform.rotation;
+				float scaleX = transform.scale * (sprite.flipX ? -1 : 1);
+				float scaleY = transform.scale * (sprite.flipY ? -1 : 1);
+				
+				// Center alignment logic (assuming center pivot for rotation simplicity in editor)
+				float drawX = x - w / 2f;
+				float drawY = y - h / 2f;
+				float originX = w / 2f;
+				float originY = h / 2f;
+				
+				Color oldColor = batch.getColor();
+				batch.setColor(sprite.color);
+				batch.draw(region, drawX, drawY, originX, originY, w, h, scaleX, scaleY, rotation);
+				batch.setColor(oldColor);
+			}
+		}
 
-        private void drawEntitiesDebug(List<GObject> entities) {
-            for (GObject obj : entities) {
-                // Draw selection highlight
-                if (context.getSelection() == obj) {
-                    shapeRenderer.setColor(Color.YELLOW);
-                    TransformComponent t = obj.transform;
-                    // Draw a simple box around it (approximate)
-                    shapeRenderer.rect(t.position.x - 10, t.position.y - 10, 20, 20);
-                }
-                
-                if (!obj.getChildren().isEmpty()) {
-                    drawEntitiesDebug(obj.getChildren());
-                }
-            }
-        }
+		private void drawEntitiesDebug(List<GObject> entities) {
+			for (GObject obj : entities) {
+				// Draw selection highlight
+				if (context.getSelection() == obj) {
+					shapeRenderer.setColor(Color.YELLOW);
+					TransformComponent t = obj.transform;
+					// Draw a simple box around it (approximate)
+					shapeRenderer.rect(t.position.x - 10, t.position.y - 10, 20, 20);
+				}
+				
+				if (!obj.getChildren().isEmpty()) {
+					drawEntitiesDebug(obj.getChildren());
+				}
+			}
+		}
 
-        @Override
-        public void layout() {
-            // Fix Aspect Ratio
-            // Set viewport size to match widget size but keep 1:1 pixel mapping at zoom=1
-            camera.viewportWidth = getWidth();
-            camera.viewportHeight = getHeight();
-            camera.update();
-        }
-    }
+		@Override
+		public void layout() {
+			// Fix Aspect Ratio
+			// Set viewport size to match widget size but keep 1:1 pixel mapping at zoom=1
+			camera.viewportWidth = getWidth();
+			camera.viewportHeight = getHeight();
+			camera.update();
+		}
+	}
 }

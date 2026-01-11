@@ -140,14 +140,14 @@ public class GDEngineEditorScreen extends GScreen {
 		btnSave.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { saveCurrentFile(); }});
 
 		// [修改] 原来的 Run 是编译运行游戏，我们保留它
-        VisTextButton btnRun = new VisTextButton("▶ Run Game");
-        btnRun.setColor(Color.CYAN);
-        btnRun.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { buildAndRun(); }});
+		VisTextButton btnRun = new VisTextButton("▶ Run Game");
+		btnRun.setColor(Color.CYAN);
+		btnRun.addListener(new ChangeListener() { @Override public void changed(ChangeEvent event, Actor actor) { buildAndRun(); }});
 
-        // [新增] 编辑场景按钮
-        VisTextButton btnEditScene = new VisTextButton("🎨 Scene Editor");
-        btnEditScene.setColor(Color.ORANGE);
-        btnEditScene.addListener(new ChangeListener() { 
+		// [新增] 编辑场景按钮
+		VisTextButton btnEditScene = new VisTextButton("🎨 Scene Editor");
+		btnEditScene.setColor(Color.ORANGE);
+		btnEditScene.addListener(new ChangeListener() { 
 				@Override public void changed(ChangeEvent event, Actor actor) { 
 					// 跳转到可视化编辑器
 					// 注意：ProjectManager.currentProject 此时已经是设置好的，EditorController 会自动读取
@@ -160,7 +160,7 @@ public class GDEngineEditorScreen extends GScreen {
 
 		toolbar.add(btnBack).padRight(10);
 		toolbar.add(btnSave).padRight(10);
-        toolbar.add(btnEditScene).padRight(10); // 放在 Run 之前
+		toolbar.add(btnEditScene).padRight(10); // 放在 Run 之前
 		toolbar.add(btnRun).padRight(20);
 
 		// [修改] 仅在开发者模式下显示 Export 按钮

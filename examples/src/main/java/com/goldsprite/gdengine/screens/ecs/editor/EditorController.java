@@ -115,44 +115,44 @@ public class EditorController {
 		this.screen = screen;
 	}
 
-    public void create() {
-        if (!VisUI.isLoaded()) VisUI.load();
+	public void create() {
+		if (!VisUI.isLoaded()) VisUI.load();
 
-        // 1. 初始化 FBO, Camera, Stage, CommandManager, SceneManager, Gizmo ...
-        // (这部分代码保持不变，省略以节省篇幅)
-        int fboW = 1280; int fboH = 720;
-        gameTarget = new ViewTarget(fboW, fboH);
-        sceneTarget = new ViewTarget(fboW, fboH);
-        sceneCamera = new OrthographicCamera(fboW, fboH);
-        gameCamera = new OrthographicCamera();
+		// 1. 初始化 FBO, Camera, Stage, CommandManager, SceneManager, Gizmo ...
+		// (这部分代码保持不变，省略以节省篇幅)
+		int fboW = 1280; int fboH = 720;
+		gameTarget = new ViewTarget(fboW, fboH);
+		sceneTarget = new ViewTarget(fboW, fboH);
+		sceneCamera = new OrthographicCamera(fboW, fboH);
+		gameCamera = new OrthographicCamera();
 
-        float scl = PlatformImpl.isAndroidUser() ? 1.3f : 2.0f;
-        stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
+		float scl = PlatformImpl.isAndroidUser() ? 1.3f : 2.0f;
+		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
-        commandManager = new CommandManager();
-        sceneManager = new EditorSceneManager(commandManager);
-        gizmoSystem = new EditorGizmoSystem(sceneManager);
-        dragAndDrop = new DragAndDrop();
+		commandManager = new CommandManager();
+		sceneManager = new EditorSceneManager(commandManager);
+		gizmoSystem = new EditorGizmoSystem(sceneManager);
+		dragAndDrop = new DragAndDrop();
 
-        Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(gameTarget), Gd.compiler);
+		Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(gameTarget), Gd.compiler);
 
-        // 2. [核心修改] 注入项目上下文
-        FileHandle currentProj = GDEngineHubScreen.ProjectManager.currentProject;
-        if (currentProj != null) {
-            Debug.logT("Editor", "🔗 链接到项目: " + currentProj.name());
+		// 2. [核心修改] 注入项目上下文
+		FileHandle currentProj = GDEngineHubScreen.ProjectManager.currentProject;
+		if (currentProj != null) {
+			Debug.logT("Editor", "🔗 链接到项目: " + currentProj.name());
 
-            // 设置资源根目录，让 SpriteComponent 能找到图
-            GameWorld.projectAssetsRoot = currentProj.child("assets");
-            if (!GameWorld.projectAssetsRoot.exists()) GameWorld.projectAssetsRoot.mkdirs();
-        } else {
-            Debug.logT("Editor", "⚠️ 无项目上下文，运行在沙盒模式");
-            GameWorld.projectAssetsRoot = null;
-        }
+			// 设置资源根目录，让 SpriteComponent 能找到图
+			GameWorld.projectAssetsRoot = currentProj.child("assets");
+			if (!GameWorld.projectAssetsRoot.exists()) GameWorld.projectAssetsRoot.mkdirs();
+		} else {
+			Debug.logT("Editor", "⚠️ 无项目上下文，运行在沙盒模式");
+			GameWorld.projectAssetsRoot = null;
+		}
 
-        // 3. 初始化 ECS (保持不变)
-        if (GameWorld.inst() == null) new GameWorld();
-        GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
-        reloadGameViewport();
+		// 3. 初始化 ECS (保持不变)
+		if (GameWorld.inst() == null) new GameWorld();
+		GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
+		reloadGameViewport();
 
 		spriteBatch = new SpriteBatch();
 		neonBatch = new NeonBatch();
@@ -184,71 +184,71 @@ public class EditorController {
 		}
 
 
-        // 4. [核心修改] 智能加载场景
-        // 优先加载项目内的 main.scene，其次加载沙盒 scene_debug.json，最后新建
-        FileHandle projectScene = getSceneFile();
+		// 4. [核心修改] 智能加载场景
+		// 优先加载项目内的 main.scene，其次加载沙盒 scene_debug.json，最后新建
+		FileHandle projectScene = getSceneFile();
 
-        if (projectScene != null && projectScene.exists()) {
-            loadScene(); // loadScene 内部会调用 getSceneFile
-        } else if (Gdx.files.local("scene_debug.json").exists() && currentProj == null) {
-            // 只有在没项目时才加载沙盒缓存
-            loadSceneFromHandle(Gdx.files.local("scene_debug.json"));
-        } else {
-            initTestScene();
-        }
+		if (projectScene != null && projectScene.exists()) {
+			loadScene(); // loadScene 内部会调用 getSceneFile
+		} else if (Gdx.files.local("scene_debug.json").exists() && currentProj == null) {
+			// 只有在没项目时才加载沙盒缓存
+			loadSceneFromHandle(Gdx.files.local("scene_debug.json"));
+		} else {
+			initTestScene();
+		}
 	}
 	// [新增] 获取当前应该读写的场景文件
-    private FileHandle getSceneFile() {
-        if (GDEngineHubScreen.ProjectManager.currentProject != null) {
-            return GDEngineHubScreen.ProjectManager.currentProject.child("assets/main.scene");
-        }
-        return Gdx.files.local("scene_debug.json"); // 沙盒回退
-    }
+	private FileHandle getSceneFile() {
+		if (GDEngineHubScreen.ProjectManager.currentProject != null) {
+			return GDEngineHubScreen.ProjectManager.currentProject.child("assets/main.scene");
+		}
+		return Gdx.files.local("scene_debug.json"); // 沙盒回退
+	}
 
-    private void saveScene() {
-        try {
-            Json json = GdxJsonSetup.create();
-            List<GObject> roots = GameWorld.inst().getRootEntities();
-            String text = json.prettyPrint(roots);
+	private void saveScene() {
+		try {
+			Json json = GdxJsonSetup.create();
+			List<GObject> roots = GameWorld.inst().getRootEntities();
+			String text = json.prettyPrint(roots);
 
-            // [修改] 使用动态获取的文件句柄
-            FileHandle file = getSceneFile();
-            file.writeString(text, false);
+			// [修改] 使用动态获取的文件句柄
+			FileHandle file = getSceneFile();
+			file.writeString(text, false);
 
-            Debug.logT("Editor", "Scene saved: " + file.path());
-            ToastUI.inst().show("Saved: " + file.name());
-        } catch (Exception e) {
-            Debug.logT("Editor", "Save Failed: " + e.getMessage());
-            e.printStackTrace();
-            ToastUI.inst().show("Save Failed!");
-        }
-    }
+			Debug.logT("Editor", "Scene saved: " + file.path());
+			ToastUI.inst().show("Saved: " + file.name());
+		} catch (Exception e) {
+			Debug.logT("Editor", "Save Failed: " + e.getMessage());
+			e.printStackTrace();
+			ToastUI.inst().show("Save Failed!");
+		}
+	}
 
-    private void loadScene() {
-        loadSceneFromHandle(getSceneFile());
-    }
+	private void loadScene() {
+		loadSceneFromHandle(getSceneFile());
+	}
 	
-    // 提取出来的底层加载逻辑
-    private void loadSceneFromHandle(FileHandle file) {
-        if (file == null || !file.exists()) return;
-        try {
-            List<GObject> currentRoots = new ArrayList<>(GameWorld.inst().getRootEntities());
-            for(GObject obj : currentRoots) obj.destroyImmediate();
-            sceneManager.select(null);
+	// 提取出来的底层加载逻辑
+	private void loadSceneFromHandle(FileHandle file) {
+		if (file == null || !file.exists()) return;
+		try {
+			List<GObject> currentRoots = new ArrayList<>(GameWorld.inst().getRootEntities());
+			for(GObject obj : currentRoots) obj.destroyImmediate();
+			sceneManager.select(null);
 
-            Json json = GdxJsonSetup.create();
-            @SuppressWarnings("unchecked")
+			Json json = GdxJsonSetup.create();
+			@SuppressWarnings("unchecked")
 				ArrayList<GObject> newRoots = json.fromJson(ArrayList.class, GObject.class, file);
 
-            Debug.logT("Editor", "Scene loaded: " + file.name());
-            hierarchyDirty = true;
-            ToastUI.inst().show("Loaded: " + file.name());
-        } catch (Exception e) {
-            Debug.logT("Editor", "Load Failed: " + e.getMessage());
-            e.printStackTrace();
-            ToastUI.inst().show("Load Failed!");
-        }
-    }
+			Debug.logT("Editor", "Scene loaded: " + file.name());
+			hierarchyDirty = true;
+			ToastUI.inst().show("Loaded: " + file.name());
+		} catch (Exception e) {
+			Debug.logT("Editor", "Load Failed: " + e.getMessage());
+			e.printStackTrace();
+			ToastUI.inst().show("Load Failed!");
+		}
+	}
 
 	// ... [中间的方法保持不变：registerShortcuts, initTestScene, saveScene, loadScene] ...
 	// 为了节省篇幅，这里略过未修改的方法，请保持原样

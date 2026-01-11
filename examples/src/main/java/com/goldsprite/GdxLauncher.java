@@ -94,35 +94,35 @@ public class GdxLauncher extends Game {int k10;
 		isInitialized = true;
 	}
 
-    private void startVisualCheckSequence() {
-        Debug.logT("VisualCheck", "Starting visual check sequence...");
+	private void startVisualCheckSequence() {
+		Debug.logT("VisualCheck", "Starting visual check sequence...");
 
-        ScreenManager sm = ScreenManager.getInstance();
+		ScreenManager sm = ScreenManager.getInstance();
 
-        // Add all screens first
-        sm.addScreen(new TransformTestScreen());
-        sm.addScreen(new EcsVisualTestScreen());
-        sm.addScreen(new GameScreen());
-        sm.addScreen(new CombatScreen());
-        sm.addScreen(new TextTestScreen());
-        sm.addScreen(new SpriteVisualScreen());
-        sm.addScreen(new JsonLiveEditScreen());
-        // ExampleSelectScreen is already added in initGameContent if I keep it there, or I add it here.
-        // I kept addScreen(new ExampleSelectScreen()) above, so it's fine.
+		// Add all screens first
+		sm.addScreen(new TransformTestScreen());
+		sm.addScreen(new EcsVisualTestScreen());
+		sm.addScreen(new GameScreen());
+		sm.addScreen(new CombatScreen());
+		sm.addScreen(new TextTestScreen());
+		sm.addScreen(new SpriteVisualScreen());
+		sm.addScreen(new JsonLiveEditScreen());
+		// ExampleSelectScreen is already added in initGameContent if I keep it there, or I add it here.
+		// I kept addScreen(new ExampleSelectScreen()) above, so it's fine.
 
-        // Schedule switches
-        sm.setCurScreen(TransformTestScreen.class);
-        Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(EcsVisualTestScreen.class); } }, 3f);
-        Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(GameScreen.class); } }, 6f);
-        Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(CombatScreen.class); } }, 9f);
-        Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(TextTestScreen.class); } }, 12f);
-        Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(SpriteVisualScreen.class); } }, 15f);
-        Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(JsonLiveEditScreen.class); } }, 18f);
-        Timer.schedule(new Timer.Task() { @Override public void run() {
-            Debug.logT("VisualCheck", "Sequence completed.");
-            sm.setCurScreen(ExampleSelectScreen.class);
-        } }, 21f);
-    }
+		// Schedule switches
+		sm.setCurScreen(TransformTestScreen.class);
+		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(EcsVisualTestScreen.class); } }, 3f);
+		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(GameScreen.class); } }, 6f);
+		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(CombatScreen.class); } }, 9f);
+		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(TextTestScreen.class); } }, 12f);
+		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(SpriteVisualScreen.class); } }, 15f);
+		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(JsonLiveEditScreen.class); } }, 18f);
+		Timer.schedule(new Timer.Task() { @Override public void run() {
+			Debug.logT("VisualCheck", "Sequence completed.");
+			sm.setCurScreen(ExampleSelectScreen.class);
+		} }, 21f);
+	}
 
 	// [新增] Android 端拿到权限后调用此方法注入编译器并启动
 	public void onAndroidReady(IScriptCompiler compiler) {

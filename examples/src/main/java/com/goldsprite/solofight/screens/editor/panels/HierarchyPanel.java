@@ -8,53 +8,53 @@ import com.goldsprite.solofight.screens.editor.EditorContext;
 import com.goldsprite.solofight.screens.editor.ui.GObjectNode;
 
 public class HierarchyPanel extends BaseEditorPanel {
-    private VisTree<GObjectNode, GObject> tree;
+	private VisTree<GObjectNode, GObject> tree;
 
-    public HierarchyPanel(Skin skin, EditorContext context) {
-        super("Hierarchy", skin, context);
-    }
+	public HierarchyPanel(Skin skin, EditorContext context) {
+		super("Hierarchy", skin, context);
+	}
 
-    @Override
-    protected void initContent() {
-        tree = new VisTree<>();
-        getContent().add(new VisScrollPane(tree)).grow();
+	@Override
+	protected void initContent() {
+		tree = new VisTree<>();
+		getContent().add(new VisScrollPane(tree)).grow();
 
-        // Listeners
-        context.gameWorld.onGObjectRegistered.add(this::onGObjectAdded);
-        context.gameWorld.onGObjectUnregistered.add(this::onGObjectRemoved);
-        
-        rebuildTree();
-    }
+		// Listeners
+		context.gameWorld.onGObjectRegistered.add(this::onGObjectAdded);
+		context.gameWorld.onGObjectUnregistered.add(this::onGObjectRemoved);
+		
+		rebuildTree();
+	}
 
-    private void rebuildTree() {
-        tree.clearChildren();
-        for (GObject root : context.gameWorld.getRootEntities()) {
-            addNode(root, null);
-        }
-    }
+	private void rebuildTree() {
+		tree.clearChildren();
+		for (GObject root : context.gameWorld.getRootEntities()) {
+			addNode(root, null);
+		}
+	}
 
-    private void addNode(GObject gobject, GObjectNode parentNode) {
-        GObjectNode node = new GObjectNode(gobject, context);
-        if (parentNode == null) tree.add(node);
-        else parentNode.add(node);
+	private void addNode(GObject gobject, GObjectNode parentNode) {
+		GObjectNode node = new GObjectNode(gobject, context);
+		if (parentNode == null) tree.add(node);
+		else parentNode.add(node);
 
-        for (GObject child : gobject.getChildren()) {
-            addNode(child, node);
-        }
-        node.setExpanded(true);
-    }
+		for (GObject child : gobject.getChildren()) {
+			addNode(child, node);
+		}
+		node.setExpanded(true);
+	}
 
-    private void onGObjectAdded(GObject gobject) {
-        // Only if it's a root entity (no parent)
-        if (gobject.getParent() == null) {
-             addNode(gobject, null);
-        }
-    }
+	private void onGObjectAdded(GObject gobject) {
+		// Only if it's a root entity (no parent)
+		if (gobject.getParent() == null) {
+			 addNode(gobject, null);
+		}
+	}
 
-    private void onGObjectRemoved(GObject gobject) {
-        GObjectNode node = tree.findNode(gobject);
-        if (node != null) {
-            node.remove();
-        }
-    }
+	private void onGObjectRemoved(GObject gobject) {
+		GObjectNode node = tree.findNode(gobject);
+		if (node != null) {
+			node.remove();
+		}
+	}
 }

@@ -8,9 +8,9 @@ import com.goldsprite.solofight.screens.tests.iconeditor.ui.UiNode;
 import com.kotcrab.vis.ui.widget.VisTree;
 
 public interface EditorUIProvider {
-    VisTree<UiNode, EditorTarget> getHierarchyTree();
-    SceneManager getSceneManager();
-    CommandManager getCommandManager();
-    Stage getUiStage();
-    DragAndDrop getDragAndDrop();
+	VisTree<UiNode, EditorTarget> getHierarchyTree();
+	SceneManager getSceneManager();
+	CommandManager getCommandManager();
+	Stage getUiStage();
+	DragAndDrop getDragAndDrop();
 }

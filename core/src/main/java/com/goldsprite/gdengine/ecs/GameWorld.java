@@ -58,8 +58,8 @@ public class GameWorld {
 	// 2. 实体容器 (顶层物体管理)
 	// ==========================================
 
-    public final Event<GObject> onGObjectRegistered = new Event<>();
-    public final Event<GObject> onGObjectUnregistered = new Event<>();
+	public final Event<GObject> onGObjectRegistered = new Event<>();
+	public final Event<GObject> onGObjectUnregistered = new Event<>();
 
 	/**
 	 * 活跃的顶层实体列表 (无父级的 GObject)
@@ -241,7 +241,7 @@ public class GameWorld {
 		if (!instance.pendingAdds.contains(gobject) && !instance.rootEntities.contains(gobject)) {
 			instance.pendingAdds.add(gobject);
 			instance.pendingRemoves.remove(gobject);
-            instance.onGObjectRegistered.invoke(gobject);
+			instance.onGObjectRegistered.invoke(gobject);
 		}
 	}
 
@@ -253,7 +253,7 @@ public class GameWorld {
 		if (instance == null) return;
 		instance.pendingRemoves.add(gobject);
 		instance.pendingAdds.remove(gobject);
-        instance.onGObjectUnregistered.invoke(gobject);
+		instance.onGObjectUnregistered.invoke(gobject);
 	}
 
 	// --- 销毁请求转发 (代理给 SceneSystem) ---

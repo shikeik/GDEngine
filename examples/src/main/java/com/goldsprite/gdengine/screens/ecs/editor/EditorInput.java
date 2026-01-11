@@ -169,8 +169,8 @@ public class EditorInput extends InputAdapter {
 			EditorTarget sel = sceneManager.getSelection();
 			if (sel != null) {
 				boolean changed = sel.getX() != undoStartX || sel.getY() != undoStartY ||
-								  sel.getRotation() != undoStartRot ||
-								  sel.getScaleX() != undoStartSX || sel.getScaleY() != undoStartSY;
+									sel.getRotation() != undoStartRot ||
+									sel.getScaleX() != undoStartSX || sel.getScaleY() != undoStartSY;
 
 				if (changed) {
 					commandManager.execute(new TransformCommand(sel,

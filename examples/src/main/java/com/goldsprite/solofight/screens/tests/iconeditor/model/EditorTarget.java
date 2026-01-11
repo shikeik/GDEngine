@@ -11,23 +11,23 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
  * </p>
  */
 public interface EditorTarget {
-    String getName();
-    void setName(String name);
-    String getTypeName();
-    
-    float getX(); void setX(float v);
-    float getY(); void setY(float v);
-    float getRotation(); void setRotation(float v);
-    float getScaleX(); void setScaleX(float v);
-    float getScaleY(); void setScaleY(float v);
-    
-    // 亲缘关系
-    EditorTarget getParent();
-    void setParent(EditorTarget parent);
-    void removeFromParent(); // 从父级移除自己
-    Array<EditorTarget> getChildren();
-    void addChild(EditorTarget child); // 仅添加数据，不处理逻辑
-    
-    boolean hitTest(float x, float y);
-    void render(NeonBatch batch);
+	String getName();
+	void setName(String name);
+	String getTypeName();
+	
+	float getX(); void setX(float v);
+	float getY(); void setY(float v);
+	float getRotation(); void setRotation(float v);
+	float getScaleX(); void setScaleX(float v);
+	float getScaleY(); void setScaleY(float v);
+	
+	// 亲缘关系
+	EditorTarget getParent();
+	void setParent(EditorTarget parent);
+	void removeFromParent(); // 从父级移除自己
+	Array<EditorTarget> getChildren();
+	void addChild(EditorTarget child); // 仅添加数据，不处理逻辑
+	
+	boolean hitTest(float x, float y);
+	void render(NeonBatch batch);
 }
