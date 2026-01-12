@@ -1,5 +1,6 @@
 package com.goldsprite.gdengine.core.utils;
 
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonWriter;
@@ -21,6 +22,51 @@ public class GdxJsonSetup {
 		json.setOutputType(JsonWriter.OutputType.json);
 		json.setUsePrototypes(false); // 禁止引用复用，保证每个物体数据独立
 		json.setIgnoreUnknownFields(true);
+
+		// [新增] TransformComponent 专用兼容性序列化器
+		json.setSerializer(TransformComponent.class, new Json.Serializer<>() {
+			@Override
+			public void write(Json json, TransformComponent object, Class knownType) {
+				json.writeObjectStart();
+				// 写入基本属性
+				json.writeValue("position", object.position);
+				json.writeValue("rotation", object.rotation);
+				json.writeValue("scale", object.scale); // 写入 Vector2
+				// 注意：world系列属性是缓存，不需要保存
+				json.writeObjectEnd();
+			}
+
+			@Override
+			public TransformComponent read(Json json, JsonValue jsonData, Class type) {
+				TransformComponent t = new TransformComponent();
+
+				// 1. 读取 Position
+				if (jsonData.has("position")) {
+					t.position.set(json.readValue(Vector2.class, jsonData.get("position")));
+				}
+
+				// 2. 读取 Rotation
+				t.rotation = jsonData.getFloat("rotation", 0f);
+
+				// 3. [核心兼容] 读取 Scale
+				if (jsonData.has("scale")) {
+					JsonValue scaleVal = jsonData.get("scale");
+					if (scaleVal.isNumber()) {
+						// 兼容旧档：如果是数字 (e.g. 1.0)，应用到 X 和 Y
+						float s = scaleVal.asFloat();
+						t.scale.set(s, s);
+					} else {
+						// 新档：如果是对象 (e.g. {x:1, y:1})，正常读取
+						t.scale.set(json.readValue(Vector2.class, scaleVal));
+					}
+				}
+
+				// 强制更新一次矩阵，防止初始数据不同步
+				t.updateWorldTransform(null);
+
+				return t;
+			}
+		});
 
 		// 1. GObject 序列化器
 		json.setSerializer(GObject.class, new Json.Serializer<>() {
@@ -78,15 +124,24 @@ public class GdxJsonSetup {
 				if (jsonData.has("components")) {
 					for (JsonValue compVal : jsonData.get("components")) {
 						try {
+							// 1. 这里调用专用序列化器，处理兼容性，得到一个临时的 t
 							Component c = json.readValue(Component.class, compVal);
+
 							if (c != null) {
-								// 特殊处理 Transform (GObject 自带一个，不要重复添加，而是覆盖数据)
-								if (c instanceof TransformComponent t) {
+								// 2. 特殊处理 Transform：做属性拷贝
+								if (c instanceof TransformComponent) {
+									TransformComponent t = (TransformComponent) c;
+									// 拷贝 Local 属性
 									obj.transform.position.set(t.position);
 									obj.transform.rotation = t.rotation;
-									// [修改] 适配 Vector2 worldScale
-									obj.transform.worldScale.set(t.worldScale);
+									// [修正] 必须拷贝 scale (Local)，而不是 worldScale
+									// 因为专用序列化器是把数据读进 scale 里的
+									obj.transform.scale.set(t.scale);
+
+									// 顺手更新一下矩阵，让 world 属性生效
+									obj.transform.updateWorldTransform(null);
 								} else {
+									// 3. 普通组件：直接挂载
 									obj.addComponent(c);
 								}
 							}

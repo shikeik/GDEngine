@@ -23,7 +23,7 @@ public class GObject extends EcsObject {
 	private boolean isDestroyed = false;
 	// [新增] 切换场景时不销毁 (DontDestroyOnLoad)
 	private boolean dontDestroyOnLoad = false;
-	
+
 	private String tag = "Untagged";
 	private int layer = 0;
 
@@ -60,7 +60,11 @@ public class GObject extends EcsObject {
 
 	public <T extends Component> T addComponent(Class<T> clazz) {
 		try {
-			T comp = clazz.getDeclaredConstructor().newInstance();
+			// [修改后] 获取构造器 -> 强行赋予权限 -> 实例化
+			java.lang.reflect.Constructor<T> constructor = clazz.getDeclaredConstructor();
+			constructor.setAccessible(true); // <--- 关键！告诉 JVM "别管权限，让我用"
+			T comp = constructor.newInstance();
+
 			return addComponent(comp);
 		} catch (Exception e) {
 			throw new RuntimeException("AddComponent Failed: " + clazz.getSimpleName(), e);
