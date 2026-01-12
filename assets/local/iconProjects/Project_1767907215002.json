@@ -13,7 +13,7 @@
 },
 "children": [
 	{
-		"class": "com.goldsprite.solofight.screens.tests.IconEditorDemo$CircleShape",
+		"class": "com.goldsprite.gdengine.screens.tests.IconEditorDemo$CircleShape",
 		"name": "Circle",
 		"x": -50,
 		"y": 0,
@@ -30,7 +30,7 @@
 		"radius": 60
 	},
 	{
-		"class": "com.goldsprite.solofight.screens.tests.IconEditorDemo$RectShape",
+		"class": "com.goldsprite.gdengine.screens.tests.IconEditorDemo$RectShape",
 		"name": "Rect",
 		"x": 50,
 		"y": 0,
@@ -48,7 +48,7 @@
 		"height": 100
 	},
 	{
-		"class": "com.goldsprite.solofight.screens.tests.IconEditorDemo$GroupNode",
+		"class": "com.goldsprite.gdengine.screens.tests.IconEditorDemo$GroupNode",
 		"name": "Group",
 		"x": 0,
 		"y": 100,
@@ -63,7 +63,7 @@
 		},
 		"children": [
 			{
-				"class": "com.goldsprite.solofight.screens.tests.IconEditorDemo$CircleShape",
+				"class": "com.goldsprite.gdengine.screens.tests.IconEditorDemo$CircleShape",
 				"name": "SubCircle",
 				"x": 0,
 				"y": 0,

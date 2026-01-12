@@ -27,7 +27,7 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
-import com.goldsprite.solofight.BuildConfig;
+import com.goldsprite.gdengine.BuildConfig;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 

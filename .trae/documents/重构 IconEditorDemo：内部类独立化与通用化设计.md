@@ -1,27 +1,27 @@
 我将对 `IconEditorDemo.java` 进行重构，将所有内部类提取到独立的包结构中，并进行通用化设计以支持未来的扩展。
 
 ### 1. 包结构设计
-我将在 `com.goldsprite.solofight.screens.tests` 下创建一个新的子包 `iconeditor`，并按功能模块划分：
+我将在 `com.goldsprite.gdengine.screens.tests` 下创建一个新的子包 `iconeditor`，并按功能模块划分：
 
-*   **`com.goldsprite.solofight.screens.tests.iconeditor`**
+*   **`com.goldsprite.gdengine.screens.tests.iconeditor`**
     *   `IconEditorDemo.java` (主类保留或更新引用，作为上下文中心)
-*   **`com.goldsprite.solofight.screens.tests.iconeditor.model`** (数据模型)
+*   **`com.goldsprite.gdengine.screens.tests.iconeditor.model`** (数据模型)
     *   `EditorTarget.java` (接口：抽象编辑器对象，为 ECS/GObject 预留适配接口)
     *   `BaseNode.java` (基础实现)
     *   `GroupNode.java`
     *   `RectShape.java`
     *   `CircleShape.java`
-*   **`com.goldsprite.solofight.screens.tests.iconeditor.system`** (核心逻辑)
+*   **`com.goldsprite.gdengine.screens.tests.iconeditor.system`** (核心逻辑)
     *   `SceneManager.java` (场景图管理)
     *   `GizmoSystem.java` (变换手柄系统)
     *   `EditorInput.java` (输入处理器)
     *   `EditorListener.java` (事件接口)
-*   **`com.goldsprite.solofight.screens.tests.iconeditor.ui`** (界面组件)
+*   **`com.goldsprite.gdengine.screens.tests.iconeditor.ui`** (界面组件)
     *   `UiNode.java` (层级树节点，包含拖拽逻辑)
     *   `FileNode.java` (文件树节点)
     *   `Inspector.java` (属性面板)
     *   `InspectorStrategy.java` (属性面板策略接口)
-*   **`com.goldsprite.solofight.screens.tests.iconeditor.commands`** (命令模式)
+*   **`com.goldsprite.gdengine.screens.tests.iconeditor.commands`** (命令模式)
     *   `TransformCommand.java`
     *   `PropertyChangeCommand.java`
     *   `GenericPropertyChangeCommand.java`
@@ -29,7 +29,7 @@
     *   `AddNodeCommand.java`
     *   `DeleteNodeCommand.java`
     *   `ReparentCommand.java`
-*   **`com.goldsprite.solofight.screens.tests.iconeditor.utils`**
+*   **`com.goldsprite.gdengine.screens.tests.iconeditor.utils`**
     *   `CameraController.java`
 
 ### 2. 通用化处理方案

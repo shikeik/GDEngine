@@ -40,7 +40,7 @@ allprojects {
 
 subprojects {
 	version = '$projectVersion'
-	ext.appName = 'SoloFight'
+	ext.appName = 'GDEngine'
 	repositories {
 		google()
 		jcenter()
@@ -69,7 +69,7 @@ subprojects {
 	}
 }
 
-eclipse.project.name = 'SoloFight' + '-parent'
+eclipse.project.name = 'GDEngine' + '-parent'
 
 // ============================================================
 // 统一构建调度中心 (Build Orchestration)

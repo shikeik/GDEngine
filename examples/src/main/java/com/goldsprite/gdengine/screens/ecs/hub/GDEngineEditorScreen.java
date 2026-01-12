@@ -198,7 +198,7 @@ public class GDEngineEditorScreen extends GScreen {
 				GDEngineHubScreen.ProjectManager.ProjectConfig cfg = new Json().fromJson(
 					GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
 
-				String currentEngineVer = com.goldsprite.solofight.BuildConfig.DEV_VERSION;
+				String currentEngineVer = com.goldsprite.gdengine.BuildConfig.DEV_VERSION;
 				String projectEngineVer = cfg.engineVersion;
 
 				if (projectEngineVer == null || !projectEngineVer.equals(currentEngineVer)) {
@@ -234,7 +234,7 @@ public class GDEngineEditorScreen extends GScreen {
 		}
 		GDEngineHubScreen.ProjectManager.ProjectConfig cfg = new Json().fromJson(
 			GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
-		String currentEngineVer = com.goldsprite.solofight.BuildConfig.DEV_VERSION;
+		String currentEngineVer = com.goldsprite.gdengine.BuildConfig.DEV_VERSION;
 		String projectEngineVer = cfg.engineVersion;
 
 		if (projectEngineVer == null || !projectEngineVer.equals(currentEngineVer)) {

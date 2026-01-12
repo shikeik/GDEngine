@@ -14,12 +14,7 @@ import com.goldsprite.gdengine.log.DebugConsole;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.screens.ExampleSelectScreen;
-import com.badlogic.gdx.utils.Timer;
-import com.goldsprite.solofight.screens.tests.TransformTestScreen;
-import com.goldsprite.gdengine.screens.ecs.EcsVisualTestScreen;
 import com.goldsprite.gdengine.ecs.GameWorld;
-import com.goldsprite.gdengine.screens.ecs.SpriteVisualScreen;
-import com.goldsprite.gdengine.screens.ecs.JsonLiveEditScreen;
 import com.kotcrab.vis.ui.VisUI;
 
 public class GdxLauncher extends Game {

@@ -1,4 +1,4 @@
-// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/NeonGeometrySkin.java
+// 文件: ./core/src/main/java/com/goldsprite/gdengine/ecs/skeleton/NeonGeometrySkin.java
 package com.goldsprite.gdengine.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.Color;

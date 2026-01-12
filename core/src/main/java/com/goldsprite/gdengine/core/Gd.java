@@ -20,7 +20,7 @@ import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
  *
  * <h3>快速索引：</h3>
  * <ul>
- *   <li>详细指南与架构说明: <a href="file:E:\WorkSpaces\Libgdx_WSpace\Projs\SoloFight\docs\manual\core\engine_context.md">docs/manual/core/engine_context.md</a></li>
+ *   <li>详细指南与架构说明: <a href="file:E:\WorkSpaces\Libgdx_WSpace\Projs\GDEngine\docs\manual\core\engine_context.md">docs/manual/core/engine_context.md</a></li>
  *   <li>获取当前运行模式: {@link #mode}</li>
  * </ul>
  *

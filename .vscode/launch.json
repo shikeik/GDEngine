@@ -1,5 +1,5 @@
 {
-    // 使用 IntelliSense 了解相关属性。 
+    // 使用 IntelliSense 了解相关属性。
     // 悬停以查看现有属性的描述。
     // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
@@ -8,8 +8,8 @@
             "type": "java",
             "name": "Lwjgl3Launcher",
             "request": "launch",
-            "mainClass": "com.goldsprite.solofight.lwjgl3.Lwjgl3Launcher",
-            "projectName": "SoloFight-lwjgl3"
+            "mainClass": "com.goldsprite.gdengine.lwjgl3.Lwjgl3Launcher",
+            "projectName": "GDEngine-lwjgl3"
         },
         {
             "type": "java",
@@ -21,7 +21,7 @@
             "type": "java",
             "name": "Main",
             "request": "launch",
-            "mainClass": "com.goldsprite.solofight.Main",
+            "mainClass": "com.goldsprite.gdengine.Main",
             "projectName": "tests"
         }
     ]

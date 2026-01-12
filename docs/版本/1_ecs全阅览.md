@@ -1,4 +1,4 @@
-好的，已核对 `com.goldsprite.solofight.refactor.ecs` 包及其子包下的所有文件，共计 **16** 个。
+好的，已核对 `com.goldsprite.gdengine.refactor.ecs` 包及其子包下的所有文件，共计 **16** 个。
 
 这是完整的待检阅清单：
 

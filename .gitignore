@@ -158,9 +158,9 @@ Thumbs.db
 ## You could also add that configuration to the text in nativeimage.gradle .
 ## You should delete or comment out the next line if you have configuration in a different resource-config.json .
 **/resource-config.json
-/outputs/SoloFight*.exe
-/outputs/SoloFight*.apk
-/outputs/SoloFight*.jar
+/outputs/GDEngine*.exe
+/outputs/GDEngine*.apk
+/outputs/GDEngine*.jar
 /outputs/error.log
 
 changes.diff

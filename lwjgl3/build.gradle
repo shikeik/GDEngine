@@ -18,7 +18,7 @@ plugins {
 // 1. 资源映射
 sourceSets.main.resources.srcDirs += [rootProject.file('/assets').path]
 
-mainClassName = 'com.goldsprite.solofight.lwjgl3.Lwjgl3Launcher'
+mainClassName = 'com.goldsprite.gdengine.lwjgl3.Lwjgl3Launcher'
 application.setMainClass(mainClassName)
 eclipse.project.name = appName + '-lwjgl3'
 
@@ -113,7 +113,7 @@ if (enableGraalNative == 'true') {
 // exe4j 配置更新任务 (保持不变)
 tasks.register('updateExe4jOptions') {
 	doFirst {
-		def exe4jConfigFile = file("$rootProject.projectDir/outputs/SoloFight.exe4j")
+		def exe4jConfigFile = file("$rootProject.projectDir/outputs/GDEngine.exe4j")
 		if (!exe4jConfigFile.exists() || !project.hasProperty("projectVersion")) {
 			println "Exe4j 配置不存在, 跳过exe4j配置更新任务"
 			return

@@ -1,4 +1,4 @@
-// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/animation/NeonProperty.java
+// 文件: ./core/src/main/java/com/goldsprite/gdengine/ecs/skeleton/animation/NeonProperty.java
 package com.goldsprite.gdengine.ecs.skeleton.animation;
 
 /**

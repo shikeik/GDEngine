@@ -1,4 +1,4 @@
-// 文件: ./core/src/main/java/com/goldsprite/solofight/ecs/skeleton/animation/NeonCurve.java
+// 文件: ./core/src/main/java/com/goldsprite/gdengine/ecs/skeleton/animation/NeonCurve.java
 package com.goldsprite.gdengine.ecs.skeleton.animation;
 
 import com.badlogic.gdx.math.Interpolation;

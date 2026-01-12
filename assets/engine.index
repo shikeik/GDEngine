@@ -1,3 +1,4 @@
+com.goldsprite.gdengine.BuildConfig
 com.goldsprite.gdengine.PlatformImpl
 com.goldsprite.gdengine.assets.ColorTextureUtils
 com.goldsprite.gdengine.assets.CustomAtlasLoader
@@ -98,4 +99,3 @@ com.goldsprite.gdengine.ui.widget.richtext.RichText
 com.goldsprite.gdengine.ui.widget.richtext.RichTextEvent
 com.goldsprite.gdengine.ui.widget.richtext.RichTextParser
 com.goldsprite.gdengine.utils.SimpleCameraController
-com.goldsprite.solofight.BuildConfig

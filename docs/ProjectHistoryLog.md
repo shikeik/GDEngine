@@ -3,7 +3,7 @@
 ## `1.10.x` 对标UnityEditor整合GDEngineEditor
 ### `1.10.4.x` 
 - 正式转为引擎开发
-- 清理所有旧代码, 包括SoloEditor, IconEditor, SoloFight业务代码
+- 清理所有旧代码, 包括SoloEditor, IconEditor, GDEngine业务代码
 ### `1.10.3.x` 真正的TransformComponent-使用全套Affine2矩阵变换
 - [x] 完成功能开发, 对接所有旧代码适配
 ### `1.10.2.x` 解决AddCompDialog只显示用户组件，内置没了的问题

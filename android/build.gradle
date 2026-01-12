@@ -9,7 +9,7 @@ apply plugin: 'com.android.application'
 eclipse.project.name = appName + "-android"
 
 android {
-	namespace "com.goldsprite.solofight.android"
+	namespace "com.goldsprite.gdengine.android"
 	compileSdkVersion 34 // 更新到34以兼容androidx.core:core:1.12.0
 	sourceSets {
 		main {
@@ -31,7 +31,7 @@ android {
 		}
 	}
 	defaultConfig {
-		applicationId 'com.goldsprite.solofight.android'
+		applicationId 'com.goldsprite.gdengine.android'
 		minSdkVersion 26
 		targetSdkVersion 34
 		versionCode 1

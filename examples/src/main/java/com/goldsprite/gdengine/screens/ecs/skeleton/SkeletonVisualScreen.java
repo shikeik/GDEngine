@@ -1,4 +1,4 @@
-// 文件: ./examples/src/main/java/com/goldsprite/solofight/screens/ecs/tests/skeleton/SkeletonVisualScreen.java
+// 文件: ./examples/src/main/java/com/goldsprite/gdengine/screens/ecs/tests/skeleton/SkeletonVisualScreen.java
 package com.goldsprite.gdengine.screens.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.Color;

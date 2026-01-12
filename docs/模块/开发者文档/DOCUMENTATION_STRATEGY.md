@@ -38,7 +38,7 @@
 ## 3. 目录结构 (Directory Structure)
 
 ```text
-SoloFight/
+GDEngine/
 ├── core/src/.../gdengine/  (源码 + Javadoc)
 └── docs/
     └── manual/
