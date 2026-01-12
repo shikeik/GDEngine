@@ -25,7 +25,7 @@ public class SetupDialog extends BaseDialog {
 		pathField = new VisTextField(GDEngineConfig.getRecommendedRoot());
 		add(pathField).width(400).padBottom(20).row();
 
-		VisTextButton btnConfirm = new VisTextButton("Initialize & Enter");
+		VisTextButton btnConfirm = new VisTextButton("Initialize 和 Enter");
 		btnConfirm.setColor(Color.CYAN);
 		btnConfirm.addListener(new ChangeListener() {
 			@Override

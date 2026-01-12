@@ -31,7 +31,7 @@ public class ComponentRegistry {
     public static void reloadEngineIndex() {
         try {
             // 尝试从 Classpath 读取 (打进 JAR 包里的资源)
-            FileHandle indexFile = Gd.files.internal("engine.index");int k2;
+            FileHandle indexFile = Gd.files.internal("engine.index");
             if (indexFile.exists()) {
                 parseAndRegister(indexFile);
             } else {
@@ -90,7 +90,7 @@ public class ComponentRegistry {
 
                 // [过滤 2] 鉴权：必须是 Component 子类
                 if(!register(clazz)) continue;
-				
+
 				count++;
             } catch (ClassNotFoundException e) {
                 // 仅在调试模式下打印，避免日志刷屏
@@ -105,7 +105,7 @@ public class ComponentRegistry {
     @SuppressWarnings("unchecked")
     public static boolean register(Class<?> clazz) {
         // 严格过滤：必须是 Component 子类，非抽象，非接口
-        if (Component.class.isAssignableFrom(clazz) 
+        if (Component.class.isAssignableFrom(clazz)
             && !java.lang.reflect.Modifier.isAbstract(clazz.getModifiers())
             && !clazz.isInterface()) {
 

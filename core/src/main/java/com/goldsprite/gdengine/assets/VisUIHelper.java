@@ -57,7 +57,7 @@ public class VisUIHelper {
 
 			// Label (VisLabel也是它)
 			skin.get(Label.LabelStyle.class).font = cnFont;
-			
+
 			// [新增] 兼容 GlobalAssets 的 "small" 样式
 			if (skin.has("small", Label.LabelStyle.class)) {
 				skin.get("small", Label.LabelStyle.class).font = smFont;
@@ -80,7 +80,7 @@ public class VisUIHelper {
 
 			// TextField (输入框)
 			skin.get(VisTextField.VisTextFieldStyle.class).font = cnFont;
-			
+
 			// [新增] 移植 GlobalAssets 的其他样式定义
 			addGlobalAssetsStyles(skin, cnFont, smFont);
 
@@ -133,21 +133,21 @@ public class VisUIHelper {
 	private static void fixSplitPaneHandle() {
 		float size = 20f;
 		Skin skin = VisUI.getSkin();
-		
+
 		// [新增] 移植 GlobalAssets 的 SplitPane handle 逻辑
-		float splitBarThickness = 15;int k3;
+		float splitBarThickness = 15;
 		Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
 		float g = 0.4f;
 		pm.setColor(new Color(g, g, g, 0.4f));
 		pm.fill();
 		TextureRegionDrawable cDrawable = new TextureRegionDrawable(new TextureRegion(new Texture(pm)));
-		
+
 		SplitPane.SplitPaneStyle splitPaneStyle = skin.get("default-vertical", SplitPane.SplitPaneStyle.class);
 		// 优先使用 shade 的 handle，如果不想用 shade 的可以覆盖
 		// GlobalAssets 是覆盖了 handle 的
 		splitPaneStyle.handle = cDrawable;
 		splitPaneStyle.handle.setMinHeight(splitBarThickness);
-		
+
 		SplitPane.SplitPaneStyle splitPaneStyleHori = skin.get("default-horizontal", SplitPane.SplitPaneStyle.class);
 		splitPaneStyleHori.handle = cDrawable;
 		splitPaneStyleHori.handle.setMinWidth(splitBarThickness);
@@ -159,7 +159,7 @@ public class VisUIHelper {
 		VisSplitPane.VisSplitPaneStyle visSplitPaneStyleHori = skin.get("default-horizontal", VisSplitPane.VisSplitPaneStyle.class);
 		visSplitPaneStyleHori.handle = cDrawable;
 		visSplitPaneStyleHori.handle.setMinHeight(splitBarThickness);
-		
+
 		// VisTree fixes
 		skin.get("default", VisTree.TreeStyle.class).plus.setMinWidth(size);
 		skin.get("default", VisTree.TreeStyle.class).plus.setMinHeight(size);

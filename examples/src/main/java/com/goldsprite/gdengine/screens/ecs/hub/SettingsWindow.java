@@ -67,7 +67,7 @@ public class SettingsWindow extends BaseDialog {
 			}
 		});
 
-		VisTextButton btnSave = new VisTextButton("Save & Apply");
+		VisTextButton btnSave = new VisTextButton("Save 和 Apply");
 		btnSave.setColor(Color.GREEN);
 		btnSave.addListener(new ChangeListener() {
 			@Override

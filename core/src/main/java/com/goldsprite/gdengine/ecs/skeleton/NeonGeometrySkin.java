@@ -27,7 +27,7 @@ public class NeonGeometrySkin implements BoneSkin {
 		float sx = (float) Math.sqrt(t.m00 * t.m00 + t.m10 * t.m10);
 		float sy = (float) Math.sqrt(t.m01 * t.m01 + t.m11 * t.m11);
 
-		// 2. 计算视觉尺寸 & 中心偏移
+		// 2. 计算视觉尺寸 和 中心偏移
 		if (shape == Shape.BOX) {
 			// [整形关键]
 			// 逻辑长度: 0 -> length

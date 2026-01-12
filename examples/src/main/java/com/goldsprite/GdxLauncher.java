@@ -17,15 +17,12 @@ import com.goldsprite.screens.ExampleSelectScreen;
 import com.badlogic.gdx.utils.Timer;
 import com.goldsprite.solofight.screens.tests.TransformTestScreen;
 import com.goldsprite.gdengine.screens.ecs.EcsVisualTestScreen;
-import com.goldsprite.solofight.screens.main.GameScreen;
-import com.goldsprite.solofight.screens.tests.CombatScreen;
-import com.goldsprite.solofight.screens.tests.TextTestScreen;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.screens.ecs.SpriteVisualScreen;
 import com.goldsprite.gdengine.screens.ecs.JsonLiveEditScreen;
 import com.kotcrab.vis.ui.VisUI;
 
-public class GdxLauncher extends Game {int k10;
+public class GdxLauncher extends Game {
 	private IScriptCompiler scriptCompiler; // 去掉 final，允许后期注入
 	public SpriteBatch batch;
 	public Debug debug;
@@ -79,47 +76,7 @@ public class GdxLauncher extends Game {int k10;
 			.addScreen(new ExampleSelectScreen())
 			.setLaunchScreen(ExampleSelectScreen.class);
 
-		// Auto-launch SoloEditor as requested
-//		Timer.schedule(new Timer.Task() {
-//			@Override
-//			public void run() {
-//				ScreenManager.getInstance().setCurScreen(SoloEditorScreen.class);
-//			}
-//		}, 0.1f);
-
-		//startVisualCheckSequence();
-
 		isInitialized = true;
-	}
-
-	private void startVisualCheckSequence() {
-		Debug.logT("VisualCheck", "Starting visual check sequence...");
-
-		ScreenManager sm = ScreenManager.getInstance();
-
-		// Add all screens first
-		sm.addScreen(new TransformTestScreen());
-		sm.addScreen(new EcsVisualTestScreen());
-		sm.addScreen(new GameScreen());
-		sm.addScreen(new CombatScreen());
-		sm.addScreen(new TextTestScreen());
-		sm.addScreen(new SpriteVisualScreen());
-		sm.addScreen(new JsonLiveEditScreen());
-		// ExampleSelectScreen is already added in initGameContent if I keep it there, or I add it here.
-		// I kept addScreen(new ExampleSelectScreen()) above, so it's fine.
-
-		// Schedule switches
-		sm.setCurScreen(TransformTestScreen.class);
-		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(EcsVisualTestScreen.class); } }, 3f);
-		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(GameScreen.class); } }, 6f);
-		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(CombatScreen.class); } }, 9f);
-		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(TextTestScreen.class); } }, 12f);
-		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(SpriteVisualScreen.class); } }, 15f);
-		Timer.schedule(new Timer.Task() { @Override public void run() { sm.setCurScreen(JsonLiveEditScreen.class); } }, 18f);
-		Timer.schedule(new Timer.Task() { @Override public void run() {
-			Debug.logT("VisualCheck", "Sequence completed.");
-			sm.setCurScreen(ExampleSelectScreen.class);
-		} }, 21f);
 	}
 
 	// [新增] Android 端拿到权限后调用此方法注入编译器并启动

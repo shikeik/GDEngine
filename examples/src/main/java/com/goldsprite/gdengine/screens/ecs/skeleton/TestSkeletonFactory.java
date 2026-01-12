@@ -31,7 +31,7 @@ public class TestSkeletonFactory {
 	private static final Color C_SWORD_METAL = Color.valueOf("808080"); // 灰铁
 
 	public static void buildStickman(NeonSkeleton skel) {
-		// 1. Root & Body
+		// 1. Root 和 Body
 		NeonBone body = create(skel, "Body", "root", 90, W_BODY, C_BODY);
 		body.rotation = 90f;
 

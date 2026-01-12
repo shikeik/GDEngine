@@ -152,7 +152,7 @@ public class ComponentManager {
 			List<GObject> resultList = entry.getValue();
 
 			// 判断：实体的当前配置(entityMask) 是否满足 查询条件(queryMask)
-			// 逻辑: (Entity & Query) == Query
+			// 逻辑: (Entity 和 Query) == Query
 			boolean isMatch = containsAllBits(entityMask, queryMask);
 
 			if (isMatch) {

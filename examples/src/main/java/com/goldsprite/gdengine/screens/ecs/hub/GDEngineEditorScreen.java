@@ -23,7 +23,7 @@ import com.goldsprite.gdengine.screens.ecs.GameRunnerScreen;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
-import com.goldsprite.solofight.ui.widget.BioCodeEditor;
+import com.goldsprite.gdengine.ui.widget.BioCodeEditor;
 import com.kotcrab.vis.ui.widget.MenuItem;
 import com.kotcrab.vis.ui.widget.PopupMenu;
 import com.kotcrab.vis.ui.widget.VisLabel;
@@ -147,14 +147,14 @@ public class GDEngineEditorScreen extends GScreen {
 		// [新增] 编辑场景按钮
 		VisTextButton btnEditScene = new VisTextButton("🎨 Scene Editor");
 		btnEditScene.setColor(Color.ORANGE);
-		btnEditScene.addListener(new ChangeListener() { 
-				@Override public void changed(ChangeEvent event, Actor actor) { 
+		btnEditScene.addListener(new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
 					// 跳转到可视化编辑器
 					// 注意：ProjectManager.currentProject 此时已经是设置好的，EditorController 会自动读取
 					getScreenManager().setCurScreen(EditorGameScreen.class, true);
 				}
 			});
-			
+
 		statusLabel = new VisLabel("Ready");
 		statusLabel.setColor(Color.LIGHT_GRAY);
 
@@ -293,7 +293,7 @@ public class GDEngineEditorScreen extends GScreen {
 	}
 
 	// =========================================================================================
-	// Core Logic: Build & Run
+	// Core Logic: Build 和 Run
 	// =========================================================================================
 	private void buildAndRun() {
 		if (currentEditingFile != null) saveCurrentFile();
@@ -368,7 +368,7 @@ public class GDEngineEditorScreen extends GScreen {
 	}
 
 	// =========================================================================================
-	// Core Logic: File Tree & Interaction
+	// Core Logic: File Tree 和 Interaction
 	// =========================================================================================
 
 	private void reloadProjectTree() {
@@ -559,7 +559,7 @@ public class GDEngineEditorScreen extends GScreen {
 	}
 
 	// =========================================================================================
-	// Dialogs & Helpers
+	// Dialogs 和 Helpers
 	// =========================================================================================
 
 	// [修改] 使用 BaseDialog
@@ -617,12 +617,12 @@ public class GDEngineEditorScreen extends GScreen {
 					// [修改] 使用模板文件创建脚本
 					FileHandle templateFile = Gdx.files.internal("script_project_templates/NewScript.java");
 					String content;
-					
+
 					if (templateFile.exists()) {
 						content = templateFile.readString("UTF-8");
 						content = content.replace("${PACKAGE_NAME}", pkg);
 						content = content.replace("${CLASS_NAME}", name);
-						
+
 						// 处理无包名的情况
 						if (pkg.isEmpty()) {
 							content = content.replace("package ;", "").trim();
@@ -711,7 +711,7 @@ public class GDEngineEditorScreen extends GScreen {
 	public static class FileNode extends Tree.Node<FileNode, FileHandle, VisLabel> {
 		public FileNode(FileHandle file) {
 			super(new VisLabel(file.name()));
-			setValue(file);int k;
+			setValue(file);
 			VisLabel label = getActor();
 			if (file.isDirectory()) label.setColor(Color.GOLD);
 			//label.setFontScale(1.1f);

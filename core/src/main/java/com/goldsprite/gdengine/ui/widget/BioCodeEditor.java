@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.ui.widget;
+package com.goldsprite.gdengine.ui.widget;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
@@ -257,7 +257,7 @@ public class BioCodeEditor extends VisTable {
 		return textArea.getText();
 	}
 
-	// --- Menu & AutoScroll Helpers (Same as before) ---
+	// --- Menu 和 AutoScroll Helpers (Same as before) ---
 
 	private void createPopupMenu() {
 		popupMenu = new VisTable();

@@ -17,7 +17,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.neonbatch.NeonStage;
 import com.goldsprite.gdengine.ecs.skeleton.animation.NeonAnimation;
 import com.goldsprite.gdengine.ecs.skeleton.data.NeonJsonUtils;
-import com.goldsprite.solofight.ui.widget.BioCodeEditor;
+import com.goldsprite.gdengine.ui.widget.BioCodeEditor;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTextButton;

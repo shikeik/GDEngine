@@ -86,6 +86,7 @@ com.goldsprite.gdengine.ui.input.SmartSelectInput
 com.goldsprite.gdengine.ui.input.SmartTextInput
 com.goldsprite.gdengine.ui.widget.AddComponentDialog
 com.goldsprite.gdengine.ui.widget.BaseDialog
+com.goldsprite.gdengine.ui.widget.BioCodeEditor
 com.goldsprite.gdengine.ui.widget.GSplitPane
 com.goldsprite.gdengine.ui.widget.IDEConsole
 com.goldsprite.gdengine.ui.widget.SimpleNumPad
@@ -96,4 +97,5 @@ com.goldsprite.gdengine.ui.widget.richtext.RichStyle
 com.goldsprite.gdengine.ui.widget.richtext.RichText
 com.goldsprite.gdengine.ui.widget.richtext.RichTextEvent
 com.goldsprite.gdengine.ui.widget.richtext.RichTextParser
+com.goldsprite.gdengine.utils.SimpleCameraController
 com.goldsprite.solofight.BuildConfig

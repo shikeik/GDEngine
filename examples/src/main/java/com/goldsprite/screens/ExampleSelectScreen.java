@@ -4,7 +4,6 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
 import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
 import com.goldsprite.gdengine.screens.ecs.editor.EditorGameScreen;
-import com.goldsprite.solofight.screens.GameContentSelectionScreen;
 import com.goldsprite.gdengine.screens.GDEngineSelectionScreen;
 
 import java.util.Map;
@@ -24,13 +23,6 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 		map.put("", null); // 分隔线
 
 		// --- 引擎功能测试 ---
-		map.put("引擎内部组件测试", GDEngineSelectionScreen.class);
-
-		// --- 历史遗产归档 (SoloFight) ---
-		// 所有的 Fighter, Combo, InputTest 等等都在这里面
-		map.put("SoloFight 历史归档 (Archive)", GameContentSelectionScreen.class);
-
-		// 这里的 SoloEditorScreen 我们就不放出来了，眼不见心不烦
-		// map.put("SoloEditor (Deprecated UI Shell)", com.goldsprite.solofight.screens.editor.SoloEditorScreen.class);
+		map.put("测试", GDEngineSelectionScreen.class);
 	}
 }

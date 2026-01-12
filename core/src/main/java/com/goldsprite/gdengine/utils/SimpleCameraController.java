@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.modules;
+package com.goldsprite.gdengine.utils;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;

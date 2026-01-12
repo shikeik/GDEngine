@@ -6,7 +6,7 @@
       <env name="GD_DEV" value="true" />
     </envs>
     <option name="MAIN_CLASS_NAME" value="com.goldsprite.solofight.lwjgl3.Lwjgl3Launcher" />
-    <module name="SoloFight.lwjgl3.main" />
+    <module name="GDEngine.lwjgl3.main" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

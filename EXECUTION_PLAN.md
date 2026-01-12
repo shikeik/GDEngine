@@ -1,10 +1,10 @@
 # 自动化执行策划案 (Execution Plan)
 
-## 1. 启动与流程 (Startup & Flow)
+## 1. 启动与流程 (Startup 和 Flow)
 - [x] **启动屏逻辑**: 修改 `GdxLauncher`，将默认启动屏设为 `ExampleSelectScreen`，但在初始化完成后立即跳转至 `SoloEditorScreen`。
 - [x] **返回功能**: 在 `SoloEditorScreen` 中确保有路径返回 `ExampleSelectScreen` (或通过重启/Back键)。
 
-## 2. 屏幕与布局 (Screen & Layout)
+## 2. 屏幕与布局 (Screen 和 Layout)
 - [x] **横屏强制**: 在 `SoloEditorScreen` 中覆盖 `getOrientation` 返回 `Landscape`。
 - [x] **布局修复**: 确保 `SceneViewPanel` 和 `GameViewPanel` 在横屏下正确填充，修复被拉伸的问题。
 

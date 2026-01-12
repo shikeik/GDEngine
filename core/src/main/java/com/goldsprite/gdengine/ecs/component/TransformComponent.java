@@ -34,7 +34,7 @@ public class TransformComponent extends Component {
 	}
 
 	/**
-	 * 核心矩阵计算 & 数据分解
+	 * 核心矩阵计算 和 数据分解
 	 * World = ParentWorld * Local
 	 */
 	public void updateWorldTransform(TransformComponent parentTransform) {

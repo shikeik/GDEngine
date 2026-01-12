@@ -35,7 +35,7 @@ public class NeonBatch extends BaseShapeBatch {
 		ldy = ldy + (filled ? 0 : lineWidth/2f);
 		width = filled ? width : width - lineWidth;
 		height = filled ? height : height - lineWidth;
-		
+
 		float halfW = width / 2;
 		float halfH = height / 2;
 
@@ -54,7 +54,7 @@ public class NeonBatch extends BaseShapeBatch {
 
 		float[] verts = getBuffer(4);
 		for (int i = 0; i < 4; i++) {
-			// Rotate & Translate
+			// Rotate 和 Translate
 			verts[i * 2] = cx + (lx[i] * cos - ly[i] * sin);
 			verts[i * 2 + 1] = cy + (lx[i] * sin + ly[i] * cos);
 		}
@@ -64,7 +64,7 @@ public class NeonBatch extends BaseShapeBatch {
 	}
 
 	// ==========================================================
-	// 2. 多边形 & 星形 (Polygons & Stars)
+	// 2. 多边形 和 星形 (Polygons 和 Stars)
 	// ==========================================================
 
 	/**
@@ -143,7 +143,7 @@ public class NeonBatch extends BaseShapeBatch {
 	}
 
 	// ==========================================================
-	// 3. 圆形 & 圆弧 (Circle & Arcs)
+	// 3. 圆形 和 圆弧 (Circle 和 Arcs)
 	// ==========================================================
 
 	/**

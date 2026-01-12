@@ -170,7 +170,7 @@ public class GDEngineHubScreen extends GScreen {
 
 			VisLabel nameLbl = new VisLabel(projDir.name());
 			//nameLbl.setFontScale(1.3f);
-			item.add(new VisLabel("📁 ")).padRight(10);int k2;
+			item.add(new VisLabel("📁 ")).padRight(10);
 			item.add(nameLbl).expandX().left();
 
 			// 读取项目配置获取版本
@@ -661,7 +661,7 @@ public class GDEngineHubScreen extends GScreen {
 			// [核心修复1] 使用 center() 让图片在左侧区域垂直居中
 			infoTable.add(previewImage).size(100).center().left().padRight(20);
 
-			// Right: Description & Version
+			// Right: Description 和 Version
 			VisTable detailsTable = new VisTable();
 			detailsTable.top().left();
 
@@ -972,7 +972,7 @@ public class GDEngineHubScreen extends GScreen {
 			errorLabel.setWrap(true);
 			add(errorLabel).width(400).padBottom(10).row();
 
-			VisTextButton btnExport = new VisTextButton("Review & Export");
+			VisTextButton btnExport = new VisTextButton("Review 和 Export");
 			btnExport.setColor(Color.ORANGE);
 			btnExport.addListener(new ClickListener() {
 				@Override public void clicked(InputEvent event, float x, float y) {

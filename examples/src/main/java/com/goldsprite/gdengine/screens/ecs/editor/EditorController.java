@@ -53,7 +53,7 @@ import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
 import com.goldsprite.gdengine.ui.input.SmartInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
 import com.goldsprite.gdengine.ui.widget.AddComponentDialog;
-import com.goldsprite.solofight.modules.SimpleCameraController;
+import com.goldsprite.gdengine.utils.SimpleCameraController;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.MenuItem;
@@ -149,7 +149,7 @@ public class EditorController {
 		commandManager = new CommandManager();
 		sceneManager = new EditorSceneManager(commandManager);
 		gizmoSystem = new EditorGizmoSystem(sceneManager);
-		dragAndDrop = new DragAndDrop();int k;
+		dragAndDrop = new DragAndDrop();
 
 		Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(gameTarget), Gd.compiler);
 

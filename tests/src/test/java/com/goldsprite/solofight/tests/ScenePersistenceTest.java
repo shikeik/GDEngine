@@ -41,7 +41,7 @@ public class ScenePersistenceTest {
 
 	@Test
 	public void testScenePipeline() {
-		System.out.println(">>> 验证: 场景保存、加载与生命周期 (DDOL & Filter)");
+		System.out.println(">>> 验证: 场景保存、加载与生命周期 (DDOL 和 Filter)");
 
 		// ==========================================
 		// 1. 搭建场景 (Setup)
@@ -87,7 +87,7 @@ public class ScenePersistenceTest {
 		// System.out.println(testFile.readString());
 
 		// ==========================================
-		// 3. 执行加载 (Load & Clear)
+		// 3. 执行加载 (Load 和 Clear)
 		// ==========================================
 		System.out.println("  -> 加载场景 (含 Clear)...");
 
