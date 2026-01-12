@@ -23,7 +23,6 @@ public class GameContentSelectionScreen extends BaseSelectionScreen {
 		map.put("新测试", null);
 		map.put("RichText (富文本) 测试", RichTextTestScreen.class);
 		map.put("RichText Layout (布局) 测试", RichTextLayoutTestScreen.class);
-		map.put("flatIcon设计器开发", IconEditorDemo.class);
 
 		map.put("游戏内容场景", null);
 		map.put("主游戏", GameScreen.class);
