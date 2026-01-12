@@ -16,8 +16,8 @@ import java.util.List;
  */
 public class GdxJsonSetup {
 
-	public static Json create() {
-		Json json = new Json();
+	public static ScriptJson create() {
+		ScriptJson json = new ScriptJson();
 		json.setOutputType(JsonWriter.OutputType.json);
 		json.setUsePrototypes(false); // 禁止引用复用，保证每个物体数据独立
 		json.setIgnoreUnknownFields(true);
@@ -112,5 +112,31 @@ public class GdxJsonSetup {
 		});
 
 		return json;
+	}
+
+	public static class ScriptJson extends Json {
+		private ClassLoader customClassLoader;
+
+		/**
+		 * 这就是你想要的 setClassLoader 方法
+		 */
+		public void setClassLoader(ClassLoader classLoader) {
+			this.customClassLoader = classLoader;
+		}
+
+		@Override
+		public Class<?> getClass(String className) {
+			// 1. 如果设置了自定义 ClassLoader，优先尝试使用它加载
+			if (customClassLoader != null) {
+				try {
+					return Class.forName(className, true, customClassLoader);
+				} catch (ClassNotFoundException e) {
+					// 忽略异常，继续尝试默认加载器
+				}
+			}
+
+			// 2. 如果自定义加载器没找到，或者没设置，使用 LibGDX 默认逻辑
+			return super.getClass(className);
+		}
 	}
 }

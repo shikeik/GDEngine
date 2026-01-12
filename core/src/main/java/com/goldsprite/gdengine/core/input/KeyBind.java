@@ -36,20 +36,20 @@ public class KeyBind implements Json.Serializable {
 		// 重置状态
 		ctrl = false; shift = false; alt = false; keyCode = -1;
 
-		// 支持空格或加号分割，不区分大小写
+		// 支持加号分割，不区分大小写
 		// 例如: "Ctrl+S", "ctrl shift z", "Alt+F4"
-		String[] parts = trigger.toUpperCase().split("[\\+\\s]+");
+		String[] parts = trigger.split("\\+");
 
 		for (String part : parts) {
 			switch (part) {
-				case "CTRL":
-				case "CONTROL":
+				case "Ctrl":
+				case "Control":
 					ctrl = true;
 					break;
-				case "SHIFT":
+				case "Shift":
 					shift = true;
 					break;
-				case "ALT":
+				case "Alt":
 					alt = true;
 					break;
 				default:

@@ -76,7 +76,7 @@ public class ShortcutManager extends InputAdapter {
 		addDefault("ACTION_REDO", "Ctrl+Shift+Z"); // 或者 "Ctrl+Y"
 
 		addDefault("ACTION_SAVE", "Ctrl+S");
-		addDefault("ACTION_DELETE", "FORWARD_DEL"); // LibGDX 里 Delete 键叫 FORWARD_DEL
+		addDefault("ACTION_DELETE", Input.Keys.toString(Input.Keys.FORWARD_DEL));
 		addDefault("ACTION_FOCUS",  "F");
 	}
 

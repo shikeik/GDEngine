@@ -1,5 +1,11 @@
 ## 版本
 
+## `1.10.x` 对标UnityEditor整合GDEngineEditor
+### `1.10.0.x`
+- [x] 增加类加载器的自动更新
+- [x] 修复快捷键映射报错
+- [ ] 实现扫描式Add Component按钮与搜索式DialogMenu
+
 ## `1.9.x` 图标编辑器
 ### `1.9.9.x` EcsEditor
 - [x] 完成通用编辑器对Ecs系统的适配

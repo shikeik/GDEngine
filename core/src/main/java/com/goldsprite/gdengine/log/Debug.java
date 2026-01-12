@@ -37,6 +37,7 @@ public class Debug {
 		"AssetUtils Y",
 		"Exporter Y",
 		"AUTOMATION Y",
+		"Runner Y",
 
 		// Test
 		"TEST Y",

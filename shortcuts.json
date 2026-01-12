@@ -32,7 +32,7 @@
 {
 	"class": "com.goldsprite.gdengine.core.input.KeyBind",
 	"actionId": "ACTION_DELETE",
-	"trigger": "FORWARD_DEL"
+	"trigger": "Forward Delete"
 },
 {
 	"class": "com.goldsprite.gdengine.core.input.KeyBind",

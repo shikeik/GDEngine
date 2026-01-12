@@ -5,6 +5,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
 import com.goldsprite.gdengine.core.scripting.ScriptResourceTracker;
 import com.goldsprite.gdengine.ecs.GameWorld;
@@ -27,6 +28,13 @@ public class GameRunnerScreen extends GScreen {
 
 	public GameRunnerScreen(IGameScriptEntry gameEntry) {
 		this.gameEntry = gameEntry;
+
+		// [核心修复] 捕获脚本的 ClassLoader
+		if (gameEntry != null) {
+			// gameEntry 是由编译器加载的，它的 ClassLoader 就是那个能找到用户代码的 URLClassLoader
+			Gd.scriptClassLoader = gameEntry.getClass().getClassLoader();
+			Debug.logT("Runner", "注入脚本 ClassLoader: " + Gd.scriptClassLoader);
+		}
 	}
 
 	@Override
@@ -130,5 +138,8 @@ public class GameRunnerScreen extends GScreen {
 
 		// [新增] 核心清理：释放所有脚本加载的图片
 		ScriptResourceTracker.disposeAll();
+
+		// 退出运行时，还原为默认加载器，防止内存泄漏或污染
+		Gd.scriptClassLoader = ClassLoader.getSystemClassLoader();
 	}
 }

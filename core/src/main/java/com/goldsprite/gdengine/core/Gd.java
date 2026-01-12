@@ -69,6 +69,13 @@ public class Gd {
 	public static Mode mode = Mode.RELEASE;
 
 	/**
+	 * 动态脚本类加载器</br>
+	 * 默认是系统加载器。</br>
+	 * 当 GameRunner 启动或编辑器加载项目时，这会被替换为包含用户代码的加载器。
+	 */
+	public static ClassLoader scriptClassLoader = ClassLoader.getSystemClassLoader();
+
+	/**
 	 * 初始化引擎环境 (依赖注入)
 	 * <p>
 	 * 调用此方法时，具体的 Input/Graphics 实现类应已由启动器或编辑器创建完毕。

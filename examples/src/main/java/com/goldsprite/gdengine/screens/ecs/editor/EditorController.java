@@ -59,6 +59,7 @@ import com.goldsprite.gdengine.ui.input.SmartBooleanInput;
 import com.goldsprite.gdengine.ui.input.SmartColorInput;
 import com.goldsprite.gdengine.ui.input.SmartNumInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
+import com.goldsprite.gdengine.ui.widget.AddComponentDialog;
 import com.goldsprite.solofight.modules.SimpleCameraController;
 import com.goldsprite.solofight.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.VisUI;
@@ -227,7 +228,7 @@ public class EditorController {
 	private void loadScene() {
 		loadSceneFromHandle(getSceneFile());
 	}
-	
+
 	// 提取出来的底层加载逻辑
 	private void loadSceneFromHandle(FileHandle file) {
 		if (file == null || !file.exists()) return;
@@ -746,13 +747,11 @@ public class EditorController {
 		inspectorContainer.add(body).growX().colspan(2).row();
 	}
 
+	// [修改] 替换原来的 showAddComponentMenu 方法
 	private void showAddComponentMenu(GObject selection, float x, float y) {
-		PopupMenu menu = new PopupMenu();
-		registerCompMenuItem(menu, selection, SpriteComponent.class);
-		registerCompMenuItem(menu, selection, SkeletonComponent.class);
-		registerCompMenuItem(menu, selection, NeonAnimatorComponent.class);
-		registerCompMenuItem(menu, selection, FsmComponent.class);
-		menu.showMenu(stage, x, y);
+		// 使用新的对话框
+		// 传入回调：当组件添加成功后，刷新 Inspector
+		new AddComponentDialog(selection, () -> refreshInspector(selection)).show(stage);
 	}
 
 	private void registerCompMenuItem(PopupMenu menu, GObject obj, Class<? extends Component> clazz) {

@@ -2,6 +2,7 @@ package com.goldsprite.gdengine.core.utils;
 
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Json;
+import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.log.Debug;
@@ -37,7 +38,12 @@ public class SceneLoader {
 			}
 
 			// 2. 反序列化
-			Json json = GdxJsonSetup.create();
+			GdxJsonSetup.ScriptJson json = GdxJsonSetup.create();
+
+			// [核心修改] 注入 ClassLoader
+			// 这样 json.fromJson 遇到用户自定义类时，就能找到了！
+			json.setClassLoader(Gd.scriptClassLoader);
+
 
 			// 读取列表。Json 内部会调用 GObject 的反序列化逻辑
 			// GObject 构造时会自动注册到 GameWorld，所以这里不需要我们手动 add。
