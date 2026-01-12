@@ -12,6 +12,11 @@ com.goldsprite.gdengine.assets.VisUIHelper
 com.goldsprite.gdengine.audio.SynthAudio
 com.goldsprite.gdengine.core.ComponentRegistry
 com.goldsprite.gdengine.core.Gd
+com.goldsprite.gdengine.core.annotations.Header
+com.goldsprite.gdengine.core.annotations.Hide
+com.goldsprite.gdengine.core.annotations.ReadOnly
+com.goldsprite.gdengine.core.annotations.Show
+com.goldsprite.gdengine.core.annotations.Tooltip
 com.goldsprite.gdengine.core.command.CommandManager
 com.goldsprite.gdengine.core.command.ICommand
 com.goldsprite.gdengine.core.config.GDEngineConfig
@@ -70,6 +75,15 @@ com.goldsprite.gdengine.screens.basics.BaseSelectionScreen
 com.goldsprite.gdengine.screens.basics.ExampleGScreen
 com.goldsprite.gdengine.screens.ecs.editor.core.EditorGizmoSystem
 com.goldsprite.gdengine.screens.ecs.editor.core.EditorSceneManager
+com.goldsprite.gdengine.screens.ecs.editor.inspector.DrawerRegistry
+com.goldsprite.gdengine.screens.ecs.editor.inspector.IPropertyDrawer
+com.goldsprite.gdengine.screens.ecs.editor.inspector.InspectorBuilder
+com.goldsprite.gdengine.screens.ecs.editor.inspector.drawers.ColorDrawer
+com.goldsprite.gdengine.screens.ecs.editor.inspector.drawers.DefaultObjectDrawer
+com.goldsprite.gdengine.screens.ecs.editor.inspector.drawers.EnumDrawer
+com.goldsprite.gdengine.screens.ecs.editor.inspector.drawers.PrimitiveDrawer
+com.goldsprite.gdengine.screens.ecs.editor.inspector.drawers.StringDrawer
+com.goldsprite.gdengine.screens.ecs.editor.inspector.drawers.Vector2Drawer
 com.goldsprite.gdengine.ui.input.SmartBooleanInput
 com.goldsprite.gdengine.ui.input.SmartColorInput
 com.goldsprite.gdengine.ui.input.SmartInput
@@ -82,6 +96,7 @@ com.goldsprite.gdengine.ui.widget.GSplitPane
 com.goldsprite.gdengine.ui.widget.IDEConsole
 com.goldsprite.gdengine.ui.widget.SimpleNumPad
 com.goldsprite.gdengine.ui.widget.SkewBar
+com.goldsprite.gdengine.ui.widget.ToastUI
 com.goldsprite.gdengine.ui.widget.richtext.RichElement
 com.goldsprite.gdengine.ui.widget.richtext.RichStyle
 com.goldsprite.gdengine.ui.widget.richtext.RichText

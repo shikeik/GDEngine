@@ -5,7 +5,7 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.richtext.RichText;
 import com.goldsprite.gdengine.ui.widget.richtext.RichTextEvent;
-import com.goldsprite.solofight.ui.widget.ToastUI;
+import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;

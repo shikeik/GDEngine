@@ -12,7 +12,7 @@ import com.goldsprite.solofight.input.InputDef;
 import com.goldsprite.solofight.input.KeyboardProcessor;
 import com.goldsprite.solofight.ui.widget.CommandHistoryUI;
 import com.goldsprite.solofight.ui.widget.GestureTrail;
-import com.goldsprite.solofight.ui.widget.ToastUI;
+import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.goldsprite.solofight.ui.widget.VirtualJoystick;
 
 public class InputTestScreen extends ExampleGScreen {

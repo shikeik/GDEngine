@@ -42,7 +42,7 @@ import com.goldsprite.solofight.screens.tests.iconeditor.ui.UiNode;
 import com.goldsprite.solofight.screens.tests.iconeditor.utils.CameraController;
 import com.goldsprite.solofight.ui.widget.BioCodeEditor;
 import com.goldsprite.solofight.ui.widget.CommandHistoryUI;
-import com.goldsprite.solofight.ui.widget.ToastUI;
+import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.MenuItem;
 import com.kotcrab.vis.ui.widget.PopupMenu;
 import com.kotcrab.vis.ui.widget.VisDialog;

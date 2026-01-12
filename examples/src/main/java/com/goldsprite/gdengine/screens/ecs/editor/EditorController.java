@@ -30,7 +30,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
-import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
@@ -43,9 +42,6 @@ import com.goldsprite.gdengine.core.input.ShortcutManager;
 import com.goldsprite.gdengine.core.utils.GdxJsonSetup;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.component.Component;
-import com.goldsprite.gdengine.ecs.component.FsmComponent;
-import com.goldsprite.gdengine.ecs.component.NeonAnimatorComponent;
-import com.goldsprite.gdengine.ecs.component.SkeletonComponent;
 import com.goldsprite.gdengine.ecs.component.SpriteComponent;
 import com.goldsprite.gdengine.ecs.component.TransformComponent;
 import com.goldsprite.gdengine.ecs.entity.GObject;
@@ -55,13 +51,12 @@ import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorGizmoSystem;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorSceneManager;
-import com.goldsprite.gdengine.ui.input.SmartBooleanInput;
-import com.goldsprite.gdengine.ui.input.SmartColorInput;
-import com.goldsprite.gdengine.ui.input.SmartNumInput;
+import com.goldsprite.gdengine.screens.ecs.editor.inspector.InspectorBuilder;
+import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
 import com.goldsprite.gdengine.ui.widget.AddComponentDialog;
 import com.goldsprite.solofight.modules.SimpleCameraController;
-import com.goldsprite.solofight.ui.widget.ToastUI;
+import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.MenuItem;
 import com.kotcrab.vis.ui.widget.PopupMenu;
@@ -72,12 +67,8 @@ import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTree;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
 
 public class EditorController {
 	private EditorGameScreen screen;
@@ -708,44 +699,12 @@ public class EditorController {
 		inspectorContainer.add(header).growX().colspan(2).padTop(5).row();
 		VisTable body = new VisTable();
 		body.padLeft(10);
-		Field[] fields = c.getClass().getFields();
-		for (Field f : fields) {
-			if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers())) continue;
-			if (Modifier.isTransient(f.getModifiers())) continue;
-			try {
-				String name = f.getName();
-				Object val = f.get(c);
-				Class<?> type = f.getType();
-				body.add(new VisLabel(name)).left().width(80).padRight(5);
-				if (type == float.class || type == Float.class) {
-					body.add(new SmartNumInput(null, (float)val, 0.1f, v -> { try{f.setFloat(c,v);}catch(Exception e){} })).growX();
-				} else if (type == int.class || type == Integer.class) {
-					body.add(new SmartNumInput(null, (float)(int)val, 1f, v -> { try{f.setInt(c, v.intValue());}catch(Exception e){} })).growX();
-				} else if (type == boolean.class || type == Boolean.class) {
-					body.add(new SmartBooleanInput(null, (boolean)val, v -> { try{f.setBoolean(c,v);}catch(Exception e){} })).growX();
-				} else if (type == String.class) {
-					body.add(new SmartTextInput(null, (String)val, v -> {
-						try{
-							f.set(c,v);
-							if (c instanceof SpriteComponent && name.equals("assetPath")) ((SpriteComponent)c).reloadRegion();
-						}catch(Exception e){}
-					})).growX();
-				} else if (type == Color.class) {
-					body.add(new SmartColorInput(null, (Color)val, v -> { try{((Color)f.get(c)).set(v);}catch(Exception e){} })).growX();
-				} else if (type == Vector2.class) {
-					Vector2 v = (Vector2)val;
-					Table vecTable = new Table();
-					vecTable.add(new SmartNumInput("X", v.x, 0.1f, newVal -> v.x = newVal)).growX().padRight(5);
-					vecTable.add(new SmartNumInput("Y", v.y, 0.1f, newVal -> v.y = newVal)).growX();
-					body.add(vecTable).growX();
-				} else {
-					body.add(new VisLabel(val != null ? val.toString() : "null")).growX();
-				}
-				body.row();
-			} catch (Exception e) {}
-		}
-		inspectorContainer.add(body).growX().colspan(2).row();
-	}
+        
+        // [核心替换] 一行代码搞定所有反射逻辑！
+        InspectorBuilder.build(body, c);
+        
+        inspectorContainer.add(body).growX().colspan(2).row();
+    }
 
 	// [修改] 替换原来的 showAddComponentMenu 方法
 	private void showAddComponentMenu(GObject selection, float x, float y) {

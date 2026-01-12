@@ -1,4 +1,4 @@
-package com.goldsprite.solofight.ui.widget;
+package com.goldsprite.gdengine.ui.widget;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
