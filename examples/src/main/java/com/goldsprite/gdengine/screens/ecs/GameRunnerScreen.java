@@ -138,8 +138,10 @@ public class GameRunnerScreen extends GScreen {
 
 		// [新增] 核心清理：释放所有脚本加载的图片
 		ScriptResourceTracker.disposeAll();
-
-		// 退出运行时，还原为默认加载器，防止内存泄漏或污染
-		Gd.scriptClassLoader = ClassLoader.getSystemClassLoader();
+		
+		// [核心修复] 注释掉这一行！
+        // 在编辑器模式下，我们需要保留这个 ClassLoader，
+        // 否则回到编辑器后，Inspector 就无法反射用户组件了。
+        // Gd.scriptClassLoader = ClassLoader.getSystemClassLoader();
 	}
 }

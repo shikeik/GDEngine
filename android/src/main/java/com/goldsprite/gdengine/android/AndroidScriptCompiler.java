@@ -197,6 +197,7 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 
 	private Class<?> loadScriptJar(File dexJarFile, String mainClassName) throws Exception {
 		ClassLoader classLoader;
+		
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			Debug.logT("Compiler", "4. 内存加载...");
 			byte[] dexBytes = extractDexFromJar(dexJarFile);
@@ -214,6 +215,9 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 			);
 		}
 
+		// [核心修复] 将这个 Loader 设为全局脚本加载器
+		// 这样 ComponentRegistry 才能用它找到 com.mygame.xxx
+		com.goldsprite.gdengine.core.Gd.scriptClassLoader = classLoader;
 		// [核心设置] 供 ComponentRegistry 使用
 		Thread.currentThread().setContextClassLoader(classLoader);
 

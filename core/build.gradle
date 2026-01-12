@@ -148,8 +148,8 @@ tasks.register('packageEngineCore', Jar) {
 // [新增] 自动生成引擎类索引任务
 // 这是一个编译期黑科技：在打 JAR 包之前，把所有源码类名写进一个小本本里
 tasks.register('generateEngineIndex') {
-	// 定义输出路径：放在 resources 目录下，这样会被自动打包进 JAR
-	def outputDir = file("src/main/resources")
+	// 定义输出路径：放在 assets 目录下，这样会被自动打包进 JAR
+	def outputDir = file("${project.rootDir}/assets/")
 	def indexFile = file("${outputDir}/engine.index")
 
 	// 声明输入输出，支持 Gradle 增量构建 (虽然对于这个任务快得没必要)

@@ -69,6 +69,7 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTree;
 import java.util.ArrayList;
 import java.util.List;
+import com.goldsprite.gdengine.core.ComponentRegistry;
 
 public class EditorController {
 	private EditorGameScreen screen;
@@ -103,9 +104,35 @@ public class EditorController {
 
 	private boolean hierarchyDirty = false;
 
+	private FileHandle currentProj;
+
 	public EditorController(EditorGameScreen screen) {
 		this.screen = screen;
 	}
+	
+	// [新增] 提供给 Screen 调用的刷新接口
+    public void onShow() {
+        // 每次回到编辑器，检查是否有新的类索引（比如刚从 Runner 编译回来）
+        reloadProjectContext();
+    }
+	
+	// [修改] 提取加载逻辑
+    private void reloadProjectContext() {
+        currentProj = GDEngineHubScreen.ProjectManager.currentProject;
+        if (currentProj != null) {
+            GameWorld.projectAssetsRoot = currentProj.child("assets");
+			Debug.logT("Editor", "🔗 链接到项目: " + currentProj.name());
+
+            FileHandle indexFile = currentProj.child("project.index");
+            if (indexFile.exists()) {
+                Debug.logT("Editor", "🔄 Reloading User Index from: " + indexFile.path());
+                // 强制刷新注册表
+                ComponentRegistry.reloadUserIndex(indexFile);
+            } else {
+				Debug.logT("Editor", "⚠ ⚠️ project.index not found. (Compile to generate)");
+            }
+        }
+    }
 
 	public void create() {
 		if (!VisUI.isLoaded()) VisUI.load();
@@ -124,22 +151,12 @@ public class EditorController {
 		commandManager = new CommandManager();
 		sceneManager = new EditorSceneManager(commandManager);
 		gizmoSystem = new EditorGizmoSystem(sceneManager);
-		dragAndDrop = new DragAndDrop();
+		dragAndDrop = new DragAndDrop();int k;
 
 		Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(gameTarget), Gd.compiler);
 
 		// 2. [核心修改] 注入项目上下文
-		FileHandle currentProj = GDEngineHubScreen.ProjectManager.currentProject;
-		if (currentProj != null) {
-			Debug.logT("Editor", "🔗 链接到项目: " + currentProj.name());
-
-			// 设置资源根目录，让 SpriteComponent 能找到图
-			GameWorld.projectAssetsRoot = currentProj.child("assets");
-			if (!GameWorld.projectAssetsRoot.exists()) GameWorld.projectAssetsRoot.mkdirs();
-		} else {
-			Debug.logT("Editor", "⚠️ 无项目上下文，运行在沙盒模式");
-			GameWorld.projectAssetsRoot = null;
-		}
+		reloadProjectContext();
 
 		// 3. 初始化 ECS (保持不变)
 		if (GameWorld.inst() == null) new GameWorld();
