@@ -10,6 +10,8 @@ import com.goldsprite.gdengine.screens.ecs.editor.EditorGameScreen;
 import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
 import com.goldsprite.gdengine.screens.ecs.hub.SetupDialog;
 import com.goldsprite.gdengine.screens.ecs.skeleton.SkeletonVisualScreen;
+import com.goldsprite.screens.tests.RichTextLayoutTestScreen;
+
 import java.util.Map;
 
 public class GDEngineSelectionScreen extends BaseSelectionScreen {
@@ -20,10 +22,13 @@ public class GDEngineSelectionScreen extends BaseSelectionScreen {
 		map.put("编辑器开发", null);
 		map.put("引擎 编辑器", EditorGameScreen.class);
 
-		map.put("功能验证", null);
+		map.put("功能验证 ECS", null);
 		map.put("Ecs 可视化测试 (太阳系)", EcsVisualTestScreen.class);
 		map.put("Ecs 骨骼动画集成测试 (NeonSkeleton)", SkeletonVisualScreen.class);
 		map.put("Ecs 帧动画测试 (Enma01)", SpriteVisualScreen.class);
 		map.put("Ecs 骨骼动画 JSON 实时编辑 (Live Editor)", JsonLiveEditScreen.class);
+
+		map.put("功能验证 其他", null);
+		map.put("富文本布局测试", RichTextLayoutTestScreen.class);
 	}
 }

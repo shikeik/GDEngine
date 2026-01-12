@@ -121,7 +121,7 @@ public class DesktopScriptCompiler implements IScriptCompiler {
 		Path start = classesDir.toPath();
 
 		try {
-			Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
+			Files.walkFileTree(start, new SimpleFileVisitor<>() {
 				@Override
 				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
 					String fileName = file.getFileName().toString();
