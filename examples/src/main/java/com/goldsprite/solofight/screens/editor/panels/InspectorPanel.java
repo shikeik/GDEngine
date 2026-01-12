@@ -42,7 +42,7 @@ public class InspectorPanel extends BaseEditorPanel {
 		// Header (Name, Tag, Layer)
 		contentTable.add(new VisLabel("GObject")).colspan(2).left().pad(5).row();
 		contentTable.add(new SmartTextInput("Name", selection.getName(), selection::setName)).growX().colspan(2).row();
-		
+
 		// Components
 		for (List<Component> comps : selection.getComponentsMap().values()) {
 			for (Component c : comps) {
@@ -53,17 +53,17 @@ public class InspectorPanel extends BaseEditorPanel {
 
 	private void buildComponentInspector(Component c) {
 		contentTable.add(new VisLabel(c.getClass().getSimpleName())).colspan(2).left().padTop(10).padBottom(5).row();
-		
+
 		// Reflection
 		Field[] fields = c.getClass().getFields(); // Public fields
 		for (Field f : fields) {
 			if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers())) continue;
-			
+
 			try {
 				Class<?> type = f.getType();
 				String name = f.getName();
 				Object value = f.get(c);
-				
+
 				if (type == float.class || type == Float.class) {
 					contentTable.add(new SmartNumInput(name, (float)value, 0.1f, v -> {
 						try { f.setFloat(c, v); } catch(Exception e) {}

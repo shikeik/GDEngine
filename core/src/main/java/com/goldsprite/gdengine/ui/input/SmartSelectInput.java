@@ -8,16 +8,16 @@ import com.kotcrab.vis.ui.widget.VisSelectBox;
 import java.util.function.Consumer;
 
 public class SmartSelectInput<T> extends SmartInput<T> {
-    
+
     private final VisSelectBox<T> selectBox;
-    
+
     public SmartSelectInput(String label, T initValue, Array<T> items, Consumer<T> onChange) {
         super(label, initValue, onChange);
-        
+
         selectBox = new VisSelectBox<>();
         selectBox.setItems(items);
         selectBox.setSelected(initValue);
-        
+
         selectBox.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
@@ -28,7 +28,7 @@ public class SmartSelectInput<T> extends SmartInput<T> {
                 notifyCommand(oldVal, newVal);
             }
         });
-        
+
         addContent(selectBox);
     }
 
@@ -38,8 +38,7 @@ public class SmartSelectInput<T> extends SmartInput<T> {
         selectBox.setTouchable(readOnly ? Touchable.disabled : Touchable.enabled);
     }
 
-    @Override
-    protected void updateUI() {
+    @Override public void updateUI() {
         if (selectBox.getSelected() != value) {
             selectBox.setSelected(value);
         }

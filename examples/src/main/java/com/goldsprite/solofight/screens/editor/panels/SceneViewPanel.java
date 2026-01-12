@@ -45,7 +45,7 @@ public class SceneViewPanel extends BaseEditorPanel {
 
 		private boolean isDraggingCamera = false;
 		private float lastX, lastY;
-		
+
 		// Gizmo Dragging State
 		private boolean isDraggingGizmo = false;
 		private int dragPointer = -1;
@@ -76,7 +76,7 @@ public class SceneViewPanel extends BaseEditorPanel {
 				@Override
 				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
 					getStage().setKeyboardFocus(SceneViewActor.this);
-					
+
 					Vector2 worldPos = screenToWorld(x, y);
 
 					if (button == Input.Buttons.RIGHT || (button == Input.Buttons.MIDDLE)) {
@@ -152,7 +152,7 @@ public class SceneViewPanel extends BaseEditorPanel {
 
 			Rectangle scissors = new Rectangle();
 			Rectangle clipBounds = new Rectangle(getX(), getY(), getWidth(), getHeight());
-			
+
 			// Transform local clip bounds to screen coordinates
 			// Note: This simplified calculation assumes no rotation in UI hierarchy
 			Vector2 screenPos = localToStageCoordinates(new Vector2(0, 0));
@@ -160,7 +160,7 @@ public class SceneViewPanel extends BaseEditorPanel {
 			clipBounds.y = screenPos.y;
 
 			ScissorStack.calculateScissors(getStage().getCamera(), batch.getTransformMatrix(), clipBounds, scissors);
-			
+
 			if (ScissorStack.pushScissors(scissors)) {
 				batch.end();
 
@@ -169,9 +169,9 @@ public class SceneViewPanel extends BaseEditorPanel {
 				shapeRenderer.setProjectionMatrix(camera.combined);
 				shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 				shapeRenderer.setColor(0.15f, 0.15f, 0.15f, 1);
-				shapeRenderer.rect(camera.position.x - camera.viewportWidth/2 * camera.zoom, 
-								 camera.position.y - camera.viewportHeight/2 * camera.zoom, 
-								 camera.viewportWidth * camera.zoom, 
+				shapeRenderer.rect(camera.position.x - camera.viewportWidth/2 * camera.zoom,
+								 camera.position.y - camera.viewportHeight/2 * camera.zoom,
+								 camera.viewportWidth * camera.zoom,
 								 camera.viewportHeight * camera.zoom);
 				shapeRenderer.end();
 
@@ -203,36 +203,36 @@ public class SceneViewPanel extends BaseEditorPanel {
 		private void drawGrid() {
 			shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
 			shapeRenderer.setColor(0.3f, 0.3f, 0.3f, 1);
-			
+
 			float zoom = camera.zoom;
 			float w = camera.viewportWidth * zoom;
 			float h = camera.viewportHeight * zoom;
 			float x = camera.position.x;
 			float y = camera.position.y;
-			
+
 			float step = 100;
 			if (zoom < 0.5f) step = 50;
 			if (zoom > 2f) step = 200;
-			
+
 			float startX = (float)Math.floor((x - w/2) / step) * step;
 			float startY = (float)Math.floor((y - h/2) / step) * step;
-			
+
 			for (float i = startX; i < x + w/2; i += step) {
 				shapeRenderer.line(i, y - h/2, i, y + h/2);
 			}
 			for (float i = startY; i < y + h/2; i += step) {
 				shapeRenderer.line(x - w/2, i, x + w/2, i);
 			}
-			
+
 			// Axis
 			shapeRenderer.setColor(0.5f, 0.2f, 0.2f, 1);
 			shapeRenderer.line(x - w/2, 0, x + w/2, 0); // X Axis
 			shapeRenderer.setColor(0.2f, 0.5f, 0.2f, 1);
 			shapeRenderer.line(0, y - h/2, 0, y + h/2); // Y Axis
-			
+
 			shapeRenderer.end();
 		}
-		
+
 		private void drawEntities(List<GObject> entities) {
 			for (GObject obj : entities) {
 				drawEntity(obj);
@@ -253,15 +253,15 @@ public class SceneViewPanel extends BaseEditorPanel {
 				float w = sprite.width;
 				float h = sprite.height;
 				float rotation = transform.rotation;
-				float scaleX = transform.scale * (sprite.flipX ? -1 : 1);
-				float scaleY = transform.scale * (sprite.flipY ? -1 : 1);
-				
+				float scaleX = transform.worldScale.x * (sprite.flipX ? -1 : 1);
+				float scaleY = transform.worldScale.y * (sprite.flipY ? -1 : 1);
+
 				// Center alignment logic (assuming center pivot for rotation simplicity in editor)
 				float drawX = x - w / 2f;
 				float drawY = y - h / 2f;
 				float originX = w / 2f;
 				float originY = h / 2f;
-				
+
 				Color oldColor = batch.getColor();
 				batch.setColor(sprite.color);
 				batch.draw(region, drawX, drawY, originX, originY, w, h, scaleX, scaleY, rotation);
@@ -278,7 +278,7 @@ public class SceneViewPanel extends BaseEditorPanel {
 					// Draw a simple box around it (approximate)
 					shapeRenderer.rect(t.position.x - 10, t.position.y - 10, 20, 20);
 				}
-				
+
 				if (!obj.getChildren().isEmpty()) {
 					drawEntitiesDebug(obj.getChildren());
 				}

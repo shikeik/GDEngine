@@ -15,6 +15,7 @@ import com.goldsprite.gdengine.ecs.component.TransformComponent;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.screens.ecs.editor.adapter.GObjectAdapter;
 import com.goldsprite.gdengine.ui.input.SmartBooleanInput;
+import com.goldsprite.gdengine.ui.input.SmartInput;
 import com.goldsprite.gdengine.ui.input.SmartNumInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
 import com.goldsprite.solofight.screens.tests.iconeditor.model.EditorTarget;
@@ -40,6 +41,33 @@ public class Inspector {
 		this.screen = screen;
 		this.sceneManager = sm;
 		this.commandManager = cm;
+	}
+
+	// [新增] 实时刷新逻辑
+	public void update() {
+		if (container == null) return;
+
+		recursiveUpdate(container);
+	}
+
+	private void recursiveUpdate(Table table) {
+		// 遍历所有子控件，如果是 SmartInput，则尝试刷新
+		// 这样 WorldInfo 字符串变了，界面也会跟着变
+		for (Actor child : table.getChildren()) {
+			if (child instanceof SmartInput<?> smartInput) {
+				// SmartInput.updateUI 是 protected，需要通过反射或者改访问权限
+				// 建议：直接在 SmartInput 里加一个 public void refresh() 方法调用 updateUI()
+				// 或者在这里强转调用 (如果我们把 updateUI 改成 public)
+
+				// 为了不改动 SmartInput 太多，我们可以简单地这样：
+				// 暂时假设 SmartInput 能够自我刷新，或者我们去改 SmartInput
+				// [方案] 我们去把 SmartInput.updateUI 改成 public
+				smartInput.updateUI();
+			} else if (child instanceof Table table1) {
+				// 递归查找 (针对 Vector2Drawer 那种嵌套 Table)
+				recursiveUpdate(table1);
+			}
+		}
 	}
 
 	public void build(VisTable table, EditorTarget target) {

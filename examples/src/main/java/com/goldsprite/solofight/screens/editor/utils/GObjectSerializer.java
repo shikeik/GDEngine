@@ -10,7 +10,7 @@ public class GObjectSerializer {
 	public static String serialize(GObject gobject) {
 		Json json = new Json();
 		json.setOutputType(JsonWriter.OutputType.json);
-		
+
 		json.setSerializer(GObject.class, new Json.Serializer<GObject>() {
 			@Override
 			public void write(Json json, GObject object, Class knownType) {
@@ -18,7 +18,7 @@ public class GObjectSerializer {
 				json.writeValue("name", object.getName());
 				json.writeValue("tag", object.getTag());
 				json.writeValue("layer", object.getLayer());
-				
+
 				// Components
 				json.writeArrayStart("components");
 				for (java.util.List<Component> list : object.getComponentsMap().values()) {
@@ -27,14 +27,14 @@ public class GObjectSerializer {
 					}
 				}
 				json.writeArrayEnd();
-				
+
 				// Children
 				json.writeArrayStart("children");
 				for (GObject child : object.getChildren()) {
 					json.writeValue(child, GObject.class);
 				}
 				json.writeArrayEnd();
-				
+
 				json.writeObjectEnd();
 			}
 
@@ -44,26 +44,26 @@ public class GObjectSerializer {
 				GObject gobject = new GObject(name);
 				gobject.setTag(jsonData.getString("tag", "Untagged"));
 				gobject.setLayer(jsonData.getInt("layer", 0));
-				
+
 				// Components
 				if (jsonData.has("components")) {
 					for (com.badlogic.gdx.utils.JsonValue compValue : jsonData.get("components")) {
 						Component c = json.readValue(Component.class, compValue);
 						if (c != null) {
-							if (c instanceof TransformComponent) {
+							if (c instanceof TransformComponent newTrans) {
 								TransformComponent existing = gobject.transform;
-								TransformComponent newTrans = (TransformComponent) c;
 								existing.position.x = newTrans.position.x;
 								existing.position.y = newTrans.position.y;
 								existing.rotation = newTrans.rotation;
-								existing.scale = newTrans.scale;
+								existing.worldScale.x = newTrans.worldScale.x;
+								existing.worldScale.y = newTrans.worldScale.y;
 							} else {
 								gobject.addComponent(c);
 							}
 						}
 					}
 				}
-				
+
 				// Children
 				if (jsonData.has("children")) {
 					for (com.badlogic.gdx.utils.JsonValue childValue : jsonData.get("children")) {
@@ -73,11 +73,11 @@ public class GObjectSerializer {
 						}
 					}
 				}
-				
+
 				return gobject;
 			}
 		});
-		
+
 		return json.prettyPrint(gobject);
 	}
 }

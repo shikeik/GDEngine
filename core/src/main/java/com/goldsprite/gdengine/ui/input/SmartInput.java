@@ -82,5 +82,5 @@ public abstract class SmartInput<T> extends VisTable {
         }
     }
 
-    protected abstract void updateUI();
+    public abstract void updateUI();
 }

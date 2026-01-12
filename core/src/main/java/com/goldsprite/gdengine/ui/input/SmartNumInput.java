@@ -30,8 +30,8 @@ public class SmartNumInput extends SmartInput<Float> {
         this.textField.setDisabled(true); // 默认只能通过点击弹出键盘修改
 
         this.textField.addListener(new ClickListener() {
-				@Override public void clicked(InputEvent event, float x, float y) { 
-					if (!textField.isDisabled()) showNumPad(); 
+				@Override public void clicked(InputEvent event, float x, float y) {
+					if (!textField.isDisabled()) showNumPad();
 				}
 			});
 
@@ -49,14 +49,14 @@ public class SmartNumInput extends SmartInput<Float> {
     private void setupDragListener() {
         dragBtn.addListener(new InputListener() {
 				float lastStageX;
-				float startDragValue; 
+				float startDragValue;
 				ScrollPane parentScroll;
 
 				@Override
 				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
 					if (dragBtn.isDisabled()) return false;
 					lastStageX = event.getStageX();
-					startDragValue = value; 
+					startDragValue = value;
 					parentScroll = findParentScrollPane(SmartNumInput.this);
 					if (parentScroll != null) parentScroll.setCancelTouchFocus(false);
 					return true;
@@ -99,8 +99,7 @@ public class SmartNumInput extends SmartInput<Float> {
         return null;
     }
 
-    @Override
-    protected void updateUI() {
+    @Override public void updateUI() {
         textField.setText(fmt(value));
     }
 

@@ -2,6 +2,7 @@
 
 ## `1.10.x` 对标UnityEditor整合GDEngineEditor
 ### `1.10.3.x` 真正的TransformComponent-使用全套Affine2矩阵变换
+- [ ] 完成功能开发, 对接所有旧代码适配
 ### `1.10.2.x` 解决AddCompDialog只显示用户组件，内置没了的问题
 ### `1.10.1.x` 升级Inspector面板, 实现扫描式Add Component按钮与搜索式DialogMenu
 ### `1.10.0.x`

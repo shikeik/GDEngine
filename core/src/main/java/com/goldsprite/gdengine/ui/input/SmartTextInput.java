@@ -42,8 +42,7 @@ public class SmartTextInput extends SmartInput<String> {
         textField.setColor(1, 1, 1, readOnly ? 0.5f : 1f);
     }
 
-    @Override
-    protected void updateUI() {
+    @Override public void updateUI() {
         if (!textField.getText().equals(value)) {
             int cursorPosition = textField.getCursorPosition();
             textField.setText(value);

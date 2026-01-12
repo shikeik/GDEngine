@@ -27,16 +27,16 @@ public class GameViewPanel extends BaseEditorPanel {
 		viewActor = new GameViewActor(context);
 		getContent().add(viewActor).grow();
 	}
-	
+
 	private class GameViewActor extends Widget {
 		private final EditorContext context;
 		private final NeonBatch batch;
-		
+
 		public GameViewActor(EditorContext context) {
 			this.context = context;
 			this.batch = new NeonBatch();
 		}
-		
+
 		@Override
 		public void layout() {
 			// Ensure GameWorld camera matches the view panel size
@@ -58,15 +58,15 @@ public class GameViewPanel extends BaseEditorPanel {
 			clipBounds.y = screenPos.y;
 
 			ScissorStack.calculateScissors(getStage().getCamera(), batch.getTransformMatrix(), clipBounds, scissors);
-			
+
 			if (ScissorStack.pushScissors(scissors)) {
 				batch.end();
-				
+
 				// Draw Game World (Entities) using global camera or separate game camera
 				// For simplicity, we use the same camera as GameWorld usually does, but we need to manage it.
 				// Here we just use a default projection or the one from context if available.
 				// Assuming GameWorld.worldCamera is available and correct.
-				
+
 				if (com.goldsprite.gdengine.ecs.GameWorld.worldCamera != null) {
 					this.batch.setProjectionMatrix(com.goldsprite.gdengine.ecs.GameWorld.worldCamera.combined);
 					this.batch.begin();
@@ -78,7 +78,7 @@ public class GameViewPanel extends BaseEditorPanel {
 				ScissorStack.popScissors();
 			}
 		}
-		
+
 		private void drawEntities(List<GObject> entities) {
 			for (GObject obj : entities) {
 				drawEntity(obj);
@@ -99,14 +99,14 @@ public class GameViewPanel extends BaseEditorPanel {
 				float w = sprite.width;
 				float h = sprite.height;
 				float rotation = transform.rotation;
-				float scaleX = transform.scale * (sprite.flipX ? -1 : 1);
-				float scaleY = transform.scale * (sprite.flipY ? -1 : 1);
-				
+				float scaleX = transform.worldScale.x * (sprite.flipX ? -1 : 1);
+				float scaleY = transform.worldScale.y * (sprite.flipY ? -1 : 1);
+
 				float drawX = x - w / 2f;
 				float drawY = y - h / 2f;
 				float originX = w / 2f;
 				float originY = h / 2f;
-				
+
 				Color oldColor = batch.getColor();
 				batch.setColor(sprite.color);
 				batch.draw(region, drawX, drawY, originX, originY, w, h, scaleX, scaleY, rotation);

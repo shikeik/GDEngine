@@ -44,10 +44,10 @@ public class GObjectAdapter implements EditorTarget {
 	@Override public void setY(float v) { gobj.transform.position.y = v; }
 	@Override public float getRotation() { return gobj.transform.rotation; }
 	@Override public void setRotation(float v) { gobj.transform.rotation = v; }
-	@Override public float getScaleX() { return gobj.transform.scale; }
-	@Override public void setScaleX(float v) { gobj.transform.scale = v; }
-	@Override public float getScaleY() { return gobj.transform.scale; }
-	@Override public void setScaleY(float v) { gobj.transform.scale = v; }
+	@Override public float getScaleX() { return gobj.transform.worldScale.x; }
+	@Override public void setScaleX(float v) { gobj.transform.setScale(v, gobj.transform.worldScale.y); }
+	@Override public float getScaleY() { return gobj.transform.worldScale.y; }
+	@Override public void setScaleY(float v) { gobj.transform.setScale(gobj.transform.worldScale.x, v); }
 
 	// ==========================================
 	// 💀 核心复刻区：亲缘关系 (Hierarchy)
@@ -134,8 +134,8 @@ public class GObjectAdapter implements EditorTarget {
 
 		SpriteComponent sprite = gobj.getComponent(SpriteComponent.class);
 		if (sprite != null && sprite.region != null) {
-			width = sprite.width * Math.abs(gobj.transform.scale);
-			height = sprite.height * Math.abs(gobj.transform.scale);
+			width = sprite.width * Math.abs(gobj.transform.worldScale.x);
+			height = sprite.height * Math.abs(gobj.transform.worldScale.y);
 		}
 
 		return wx >= tx - width/2 && wx <= tx + width/2 &&

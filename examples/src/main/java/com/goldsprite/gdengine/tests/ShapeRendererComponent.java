@@ -44,30 +44,32 @@ public class ShapeRendererComponent extends Component {
 		float rot = transform.worldRotation;
 
 		// 简单取 X 轴缩放作为整体大小 (暂不支持非等比缩放的可视化)
-		float s = transform.scale;
+		float sx = transform.worldScale.x;
+		float sy = transform.worldScale.y;
 
 		// 如果我们没存 worldScale，且有父级，这里其实拿不到父级的缩放叠加。
 		// 但对于验证"位移跟随"和"旋转跟随"已经足够了。
 		// 若要完美验证缩放传递，NeonBatch 需要支持直接传入 Affine2 矩阵。
 		// 这里我们暂时只画位置和旋转。
 
-		float finalSize = size * s;
+		float finalSizeX = size * sx;
+		float finalSizeY = size * sy;
 
 		switch (type) {
 			case BOX:
 				// 绘制以(x,y)为中心的矩形
-				batch.drawRect(x - finalSize/2, y - finalSize/2, finalSize, finalSize, rot, 2f, color, false);
+				batch.drawRect(x - finalSizeX/2, y - finalSizeY/2, finalSizeX, finalSizeY, rot, 2f, color, false);
 				break;
 			case CIRCLE:
-				batch.drawCircle(x, y, finalSize/2, 2f, color, 16, false);
+				batch.drawCircle(x, y, finalSizeX/2, 2f, color, 16, false);
 				break;
 			case TRIANGLE:
-				batch.drawRegularPolygon(x, y, finalSize/2, 3, rot, 2f, color, false);
+				batch.drawRegularPolygon(x, y, finalSizeX/2, 3, rot, 2f, color, false);
 				break;
 		}
 
 		// 画一根黄色指示线，方便看清楚旋转角度
-		float len = finalSize * 0.6f;
+		float len = finalSizeX * 0.6f;
 		float cos = MathUtils.cosDeg(rot);
 		float sin = MathUtils.sinDeg(rot);
 		batch.drawLine(x, y, x + cos * len, y + sin * len, 2f, Color.YELLOW);

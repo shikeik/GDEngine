@@ -1,67 +1,116 @@
 package com.goldsprite.gdengine.ecs.component;
 
 import com.badlogic.gdx.math.Affine2;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.goldsprite.gdengine.core.annotations.ReadOnly;
 
 /**
- * 变换组件 (升级版 - API 修正)
+ * 变换组件 (Matrix v3.0)
+ * 基于 Affine2 矩阵的层级变换系统。
  */
 public class TransformComponent extends Component {
 
+	// --- 核心数据 (Local - 序列化) ---
 	public final Vector2 position = new Vector2();
-	public float scale = 1f;
 	public float rotation = 0f;
+	public final Vector2 scale = new Vector2(1, 1);
 
-	// 世界数据 (由 updateWorldTransform 计算)
+	// --- 矩阵缓存 (World - 运行时计算) ---
+	public final Affine2 localTransform = new Affine2();
 	public final Affine2 worldTransform = new Affine2();
+
+	// --- 派生数据缓存 (World Cache - 只读) ---
 	public final Vector2 worldPosition = new Vector2();
 	public float worldRotation = 0f;
-	// 世界缩放 (假设只支持等比缩放)
-	public float worldScale = 1f;
+	public final Vector2 worldScale = new Vector2(1, 1);
+
+	// --- 编辑器调试信息 ---
+	@ReadOnly
+	public String worldInfo = "";
 
 	public TransformComponent() {
 		super();
 	}
 
-	/** 核心矩阵计算：World = Parent * Local */
+	/**
+	 * 核心矩阵计算 & 数据分解
+	 * World = ParentWorld * Local
+	 */
 	public void updateWorldTransform(TransformComponent parentTransform) {
-		// 1. 设置自己的局部矩阵
-		worldTransform.setToTrnRotScl(position.x, position.y, rotation, scale, scale);
+		// 1. 构建局部矩阵 (T * R * S)
+		localTransform.setToTrnRotScl(position.x, position.y, rotation, scale.x, scale.y);
 
-		// 2. 乘以父级矩阵
+		// 2. 计算世界矩阵
 		if (parentTransform != null) {
-			worldTransform.preMul(parentTransform.worldTransform);
+			worldTransform.set(parentTransform.worldTransform).mul(localTransform);
+		} else {
+			worldTransform.set(localTransform);
 		}
 
-		// 3. 提取世界坐标 (m02=x, m12=y)
+		// 3. 立即分解 (Decompose) 更新缓存
+		// 位移
 		worldPosition.set(worldTransform.m02, worldTransform.m12);
 
-		// 4. 提取近似世界旋转 (非倾斜情况下)
-		if (parentTransform != null) {
-			worldTransform.preMul(parentTransform.worldTransform);
+		// 旋转 (atan2)
+		worldRotation = MathUtils.radiansToDegrees * (float)Math.atan2(worldTransform.m10, worldTransform.m00);
 
-			// 计算世界旋转和缩放
-			// 简单的加法/乘法传递 (仅适用于无剪切变换的情况)
-			worldRotation = parentTransform.worldRotation + rotation;
-			worldScale = parentTransform.worldScale * scale;
-		} else {
-			worldRotation = rotation;
-			worldScale = scale;
+		// 缩放 (基向量长度)
+		// sx = len(m00, m10), sy = len(m01, m11)
+		worldScale.x = (float)Math.sqrt(worldTransform.m00 * worldTransform.m00 + worldTransform.m10 * worldTransform.m10);
+		worldScale.y = (float)Math.sqrt(worldTransform.m01 * worldTransform.m01 + worldTransform.m11 * worldTransform.m11);
+
+		// 4. 更新调试字符串
+		worldInfo = String.format("WPos:(%.1f, %.1f)\nWRot:%.1f\nWScl:(%.2f, %.2f)",
+			worldPosition.x, worldPosition.y, worldRotation, worldScale.x, worldScale.y);
+	}
+
+	// --- API (Local) ---
+	public void setPosition(float x, float y) { position.set(x, y); }
+	public void setRotation(float deg) { rotation = deg; }
+	public void setScale(float s) { scale.set(s, s); }
+	public void setScale(float x, float y) { scale.set(x, y); }
+
+	// --- API (World - 逆向计算) ---
+
+	/**
+	 * 设置世界坐标
+	 * 自动计算逆矩阵，反推 LocalPosition
+	 */
+	public void setWorldPosition(float wx, float wy) {
+		if (transform == null && gobject != null && gobject.getParent() != null) {
+			// 获取父级组件引用
+			TransformComponent parent = gobject.getParent().transform;
+			if (parent != null) {
+				// Local = ParentInv * World
+				Affine2 inv = new Affine2(parent.worldTransform).inv();
+				Vector2 local = new Vector2(wx, wy);
+				inv.applyTo(local);
+				this.position.set(local);
+				return;
+			}
 		}
+		// 无父级，Local = World
+		this.position.set(wx, wy);
 	}
 
-	public void setPosition(float x, float y) { this.position.set(x, y); }
-	public void setRotation(float degrees) { this.rotation = degrees; }
-	public void setScale(float s) { this.scale = s; }
-
-	/** [修正] 局部 -> 世界 */
-	public Vector2 localToWorld(Vector2 localPoint, Vector2 result) {
-		result.set(localPoint); // 先拷贝
-		worldTransform.applyTo(result); // 再变换
-		return result;
+	public void setWorldPosition(Vector2 wPos) {
+		setWorldPosition(wPos.x, wPos.y);
 	}
 
-	/** [修正] 世界 -> 局部 */
+	/**
+	 * 设置世界旋转
+	 * Local = Target - ParentWorld
+	 */
+	public void setWorldRotation(float wRot) {
+		float parentRot = 0;
+		if (gobject != null && gobject.getParent() != null) {
+			parentRot = gobject.getParent().transform.worldRotation;
+		}
+		this.rotation = wRot - parentRot;
+	}
+
+	// --- 坐标转换工具 ---
 	public Vector2 worldToLocal(Vector2 worldPoint, Vector2 result) {
 		Affine2 inv = new Affine2(worldTransform).inv();
 		result.set(worldPoint);
@@ -69,9 +118,14 @@ public class TransformComponent extends Component {
 		return result;
 	}
 
+	public Vector2 localToWorld(Vector2 localPoint, Vector2 result) {
+		result.set(localPoint);
+		worldTransform.applyTo(result);
+		return result;
+	}
+
 	@Override
 	public String toString() {
-		return String.format("%s [L:(%.1f, %.1f) W:(%.1f, %.1f)]",
-							 super.toString(), position.x, position.y, worldPosition.x, worldPosition.y);
+		return "Transform";
 	}
 }

@@ -34,8 +34,7 @@ public class SmartBooleanInput extends SmartInput<Boolean> {
         checkBox.setTouchable(readOnly ? Touchable.disabled : Touchable.enabled);
     }
 
-    @Override
-    protected void updateUI() {
+    @Override public void updateUI() {
         if (checkBox.isChecked() != value) {
             checkBox.setChecked(value);
         }

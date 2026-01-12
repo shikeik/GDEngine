@@ -37,7 +37,7 @@ tasks.javadoc {
 	// 配置 Javadoc 的额外选项
 	options {
 		// 设置语言版本
-		source = '8'
+		source = '17'
 		// 配置字符编码
 		encoding = 'UTF-8'
 		// 取消严格注释

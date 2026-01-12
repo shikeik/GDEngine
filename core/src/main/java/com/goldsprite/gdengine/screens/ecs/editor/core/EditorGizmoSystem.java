@@ -1,6 +1,7 @@
 package com.goldsprite.gdengine.screens.ecs.editor.core;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.Affine2;
 import com.badlogic.gdx.math.MathUtils;
 import com.goldsprite.gdengine.ecs.component.TransformComponent;
 import com.goldsprite.gdengine.ecs.entity.GObject;
@@ -28,10 +29,10 @@ public class EditorGizmoSystem {
 		GObject t = sceneManager.getSelection();
 		if (t == null) return;
 
-		TransformComponent trans = t.transform;
-		float x = trans.worldPosition.x;
-		float y = trans.worldPosition.y;
-		float rot = trans.worldRotation;
+		// [修改] 直接读缓存
+		float x = t.transform.worldPosition.x;
+		float y = t.transform.worldPosition.y;
+		float rot = t.transform.worldRotation;
 
 		// Gizmo 大小随相机缩放，保持屏幕像素大小一致
 		float s = zoom * 1.4f;

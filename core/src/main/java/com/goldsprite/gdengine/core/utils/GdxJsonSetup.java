@@ -23,7 +23,7 @@ public class GdxJsonSetup {
 		json.setIgnoreUnknownFields(true);
 
 		// 1. GObject 序列化器
-		json.setSerializer(GObject.class, new Json.Serializer<GObject>() {
+		json.setSerializer(GObject.class, new Json.Serializer<>() {
 			@Override
 			public void write(Json json, GObject object, Class knownType) {
 				json.writeObjectStart();
@@ -77,16 +77,15 @@ public class GdxJsonSetup {
 				// components
 				if (jsonData.has("components")) {
 					for (JsonValue compVal : jsonData.get("components")) {
-						// 自动根据 class 字段实例化组件
 						try {
 							Component c = json.readValue(Component.class, compVal);
 							if (c != null) {
 								// 特殊处理 Transform (GObject 自带一个，不要重复添加，而是覆盖数据)
-								if (c instanceof TransformComponent) {
-									TransformComponent t = (TransformComponent) c;
+								if (c instanceof TransformComponent t) {
 									obj.transform.position.set(t.position);
-									obj.transform.scale = t.scale;
 									obj.transform.rotation = t.rotation;
+									// [修改] 适配 Vector2 worldScale
+									obj.transform.worldScale.set(t.worldScale);
 								} else {
 									obj.addComponent(c);
 								}
@@ -96,8 +95,7 @@ public class GdxJsonSetup {
 						}
 					}
 				}
-
-				// children
+				// ... (children 处理保持不变) ...
 				if (jsonData.has("children")) {
 					for (JsonValue childVal : jsonData.get("children")) {
 						GObject child = json.readValue(GObject.class, childVal);

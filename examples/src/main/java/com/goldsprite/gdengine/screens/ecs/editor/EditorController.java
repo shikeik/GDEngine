@@ -14,10 +14,7 @@ import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.InputListener;
-import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.*;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -53,6 +50,7 @@ import com.goldsprite.gdengine.screens.ecs.editor.core.EditorGizmoSystem;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorSceneManager;
 import com.goldsprite.gdengine.screens.ecs.editor.inspector.InspectorBuilder;
 import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
+import com.goldsprite.gdengine.ui.input.SmartInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
 import com.goldsprite.gdengine.ui.widget.AddComponentDialog;
 import com.goldsprite.solofight.modules.SimpleCameraController;
@@ -109,13 +107,13 @@ public class EditorController {
 	public EditorController(EditorGameScreen screen) {
 		this.screen = screen;
 	}
-	
+
 	// [新增] 提供给 Screen 调用的刷新接口
     public void onShow() {
         // 每次回到编辑器，检查是否有新的类索引（比如刚从 Runner 编译回来）
         reloadProjectContext();
     }
-	
+
 	// [修改] 提取加载逻辑
     private void reloadProjectContext() {
         currentProj = GDEngineHubScreen.ProjectManager.currentProject;
@@ -281,7 +279,7 @@ public class EditorController {
 		GObject child = new GObject("Weapon");
 		child.setParent(player);
 		child.transform.setPosition(80, 0);
-		child.transform.scale = 0.5f;
+		child.transform.setScale(0.5f);
 		SpriteComponent sp2 = child.addComponent(SpriteComponent.class);
 		sp2.setPath("gd_icon.png");
 		sp2.width = 100; sp2.height = 100;
@@ -716,10 +714,10 @@ public class EditorController {
 		inspectorContainer.add(header).growX().colspan(2).padTop(5).row();
 		VisTable body = new VisTable();
 		body.padLeft(10);
-        
+
         // [核心替换] 一行代码搞定所有反射逻辑！
         InspectorBuilder.build(body, c);
-        
+
         inspectorContainer.add(body).growX().colspan(2).row();
     }
 
@@ -784,8 +782,21 @@ public class EditorController {
 		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+		updateSmartInputs(inspectorContainer);
+
 		stage.act(delta);
 		stage.draw();
+	}
+
+	private void updateSmartInputs(Actor actor) {
+		if (actor instanceof SmartInput<?> smartInput) {
+			smartInput.updateUI();
+		} else if (actor instanceof Group group) {
+			for (Actor child : group.getChildren()) {
+				updateSmartInputs(child);
+			}
+		}
 	}
 
 	private void drawGrid(OrthographicCamera cam) {
@@ -811,7 +822,7 @@ public class EditorController {
 
 	private class NativeEditorInput extends InputAdapter {
 		private boolean isDragging = false;
-		private enum DragMode { NONE, BODY, MOVE_X, MOVE_Y, ROTATE, SCALE_X, SCALE_Y }
+		private enum DragMode { NONE, BODY, MOVE_X, MOVE_Y, ROTATE, SCALE_X, SCALE_Y, SCALE }
 		private DragMode currentDragMode = DragMode.NONE;
 		private float lastX, lastY;
 
@@ -863,37 +874,73 @@ public class EditorController {
 			return false;
 		}
 		private void applyTransform(GObject t, float dx, float dy, Vector2 currPos) {
+			// [修正] 直接读取 Transform 缓存的世界旋转，不再手动反解矩阵
 			float rot = t.transform.worldRotation;
+
 			float rad = rot * MathUtils.degreesToRadians;
 			float c = MathUtils.cos(rad);
 			float s = MathUtils.sin(rad);
+
+			// 复制当前物体世界坐标作为计算基准
 			Vector2 targetWorldPos = t.transform.worldPosition.cpy();
+
 			switch (currentDragMode) {
 				case BODY:
+					// 自由移动：直接叠加世界位移 -> 逆解 Local
 					targetWorldPos.add(dx, dy);
-					applyWorldPosToLocal(t, targetWorldPos);
+					t.transform.setWorldPosition(targetWorldPos);
 					break;
+
 				case MOVE_X:
+					// X轴投影移动
+					// 轴向向量: (c, s)
 					float projX = dx * c + dy * s;
 					targetWorldPos.add(projX * c, projX * s);
-					applyWorldPosToLocal(t, targetWorldPos);
+					t.transform.setWorldPosition(targetWorldPos);
 					break;
+
 				case MOVE_Y:
+					// Y轴投影移动
+					// 轴向向量: (-s, c)
 					float projY = dx * (-s) + dy * c;
 					targetWorldPos.add(-projY * s, projY * c);
-					applyWorldPosToLocal(t, targetWorldPos);
+					t.transform.setWorldPosition(targetWorldPos);
 					break;
+
 				case ROTATE:
+					// 旋转计算：计算鼠标相对于物体中心的角度差
 					float cx = t.transform.worldPosition.x;
 					float cy = t.transform.worldPosition.y;
+
+					// lastX, lastY 是上一帧鼠标的世界坐标
 					Vector2 prevDir = new Vector2(lastX - cx, lastY - cy);
 					Vector2 currDir = new Vector2(currPos.x - cx, currPos.y - cy);
-					t.transform.rotation += currDir.angleDeg() - prevDir.angleDeg();
+					float angleDelta = currDir.angleDeg() - prevDir.angleDeg();
+
+					// 旋转直接累加到 Local Rotation 即可 (相对增量)
+					t.transform.rotation += angleDelta;
 					break;
-				case SCALE_X: case SCALE_Y:
+
+				case SCALE_X:
+				case SCALE_Y:
+				case SCALE:
+					// 距离比率缩放
 					float distOld = Vector2.dst(lastX, lastY, t.transform.worldPosition.x, t.transform.worldPosition.y);
 					float distNew = Vector2.dst(currPos.x, currPos.y, t.transform.worldPosition.x, t.transform.worldPosition.y);
-					if (distOld > 0.1f) t.transform.scale *= distNew / distOld;
+
+					if (distOld > 0.1f) {
+						float ratio = distNew / distOld;
+
+						// [修正] 适配 Vector2 scale
+						if (currentDragMode == DragMode.SCALE_X) {
+							t.transform.scale.x *= ratio;
+						} else if (currentDragMode == DragMode.SCALE_Y) {
+							t.transform.scale.y *= ratio;
+						} else {
+							// 整体缩放
+							t.transform.scale.scl(ratio);
+						}
+					}
 					break;
 			}
 		}

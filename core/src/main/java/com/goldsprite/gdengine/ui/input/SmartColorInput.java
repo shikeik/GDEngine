@@ -31,7 +31,7 @@ public class SmartColorInput extends SmartInput<Color> {
 		previewBtn = new VisTextButton(value.toString());
 		TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(previewBtn.getStyle());
 		style.up = drawable;
-		style.down = drawable; 
+		style.down = drawable;
 		previewBtn.setStyle(style);
 
 		previewBtn.addListener(new ClickListener() {
@@ -58,7 +58,7 @@ public class SmartColorInput extends SmartInput<Color> {
 		sharedPicker.setListener(new ColorPickerAdapter() {
 				@Override public void changed(Color newColor) { notifyValueChanged(new Color(newColor)); }
 				@Override public void canceled(Color oldColor) { notifyValueChanged(restoreColor); }
-				@Override public void finished(Color newColor) { 
+				@Override public void finished(Color newColor) {
                     Color finalColor = new Color(newColor);
                     notifyValueChanged(finalColor);
 					notifyCommand(restoreColor, finalColor);
@@ -68,8 +68,7 @@ public class SmartColorInput extends SmartInput<Color> {
 		if (getStage() != null) getStage().addActor(sharedPicker.fadeIn());
 	}
 
-	@Override
-	protected void updateUI() {
+	@Override public void updateUI() {
 		previewBtn.setColor(value);
 		previewBtn.setText(value.toString().toUpperCase());
 	}
