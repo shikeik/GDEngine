@@ -88,6 +88,7 @@ jar {
 tasks.register('dist') {
 	dependsOn 'jar'
 }
+compileJava.finalizedBy('dist')
 
 distributions {
 	main {
