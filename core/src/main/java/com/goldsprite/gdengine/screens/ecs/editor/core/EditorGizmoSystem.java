@@ -76,6 +76,10 @@ public class EditorGizmoSystem {
 		else if (mode == Mode.SCALE) {
 			float boxSize = 10f * s;
 
+			// [新增] 0. 中心等比缩放手柄 (青色方块)
+			// 画在最下层或者最上层看喜好，这里画在轴线之后
+			drawDualRect(batch, s, x, y, boxSize * 1.2f, boxSize * 1.2f, rot, Color.CYAN);
+
 			// X轴
 			float endXx = x + cos * centerDist;
 			float endXy = y + sin * centerDist;

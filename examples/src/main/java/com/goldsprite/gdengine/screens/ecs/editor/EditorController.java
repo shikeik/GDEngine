@@ -928,16 +928,17 @@ public class EditorController {
 					float distOld = Vector2.dst(lastX, lastY, t.transform.worldPosition.x, t.transform.worldPosition.y);
 					float distNew = Vector2.dst(currPos.x, currPos.y, t.transform.worldPosition.x, t.transform.worldPosition.y);
 
-					if (distOld > 0.1f) {
+					// 防止除零和极小距离的跳变
+					if (distOld > 0.2f) {
 						float ratio = distNew / distOld;
 
-						// [修正] 适配 Vector2 scale
+						// [修复] 针对不同模式应用缩放
 						if (currentDragMode == DragMode.SCALE_X) {
 							t.transform.scale.x *= ratio;
 						} else if (currentDragMode == DragMode.SCALE_Y) {
 							t.transform.scale.y *= ratio;
 						} else {
-							// 整体缩放
+							// SCALE (中心): 等比缩放
 							t.transform.scale.scl(ratio);
 						}
 					}
@@ -958,13 +959,16 @@ public class EditorController {
 			float zoom = sceneCamera.zoom * 1.4f;
 			float axisLen = EditorGizmoSystem.AXIS_LEN * zoom;
 			float hitR = 20f * zoom;
+
 			float tx = t.transform.worldPosition.x;
 			float ty = t.transform.worldPosition.y;
 			float rot = t.transform.worldRotation;
 			float rad = rot * MathUtils.degreesToRadians;
 			float c = MathUtils.cos(rad);
 			float s = MathUtils.sin(rad);
+
 			EditorGizmoSystem.Mode mode = gizmoSystem.mode;
+
 			if (mode == EditorGizmoSystem.Mode.MOVE) {
 				if (pos.dst(tx + c * axisLen, ty + s * axisLen) < hitR) return DragMode.MOVE_X;
 				if (pos.dst(tx - s * axisLen, ty + c * axisLen) < hitR) return DragMode.MOVE_Y;
@@ -973,9 +977,20 @@ public class EditorController {
 				if (pos.dst(tx + c * axisLen, ty + s * axisLen) < hitR) return DragMode.ROTATE;
 			}
 			else if (mode == EditorGizmoSystem.Mode.SCALE) {
+				// [新增] 1. 中心方块检测 (优先检测)
+				if (pos.dst(tx, ty) < 12f * zoom) return DragMode.SCALE;
+
+				// [修复] 2. X轴手柄检测
 				if (pos.dst(tx + c * axisLen, ty + s * axisLen) < hitR) return DragMode.SCALE_X;
+
+				// [修复] 3. Y轴手柄检测 (之前缺失)
+				if (pos.dst(tx - s * axisLen, ty + c * axisLen) < hitR) return DragMode.SCALE_Y;
 			}
-			if (pos.dst(tx, ty) < 15 * zoom) return DragMode.BODY;
+
+			// 点击物体中心 (Body)
+			// 注意：如果是 SCALE 模式，中心已经被 DragMode.SCALE 抢占了，所以这里要避开
+			if (mode != EditorGizmoSystem.Mode.SCALE && pos.dst(tx, ty) < 15 * zoom) return DragMode.BODY;
+
 			return DragMode.NONE;
 		}
 		private GObject hitTestGObject(Vector2 p) {
