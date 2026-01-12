@@ -47,19 +47,6 @@ public class SimpleCameraController implements InputProcessor {
 	}
 
 	public void update(float dt) {
-		if (inputEnabled) {
-			// 键盘漫游逻辑 (保持不变，基于视口宽度的自适应速度)
-			float baseSpeed = camera.viewportWidth;
-			float speed = baseSpeed * dt; // 移除了 camera.zoom，因为 viewportWidth 通常已经是世界单位了?
-			// 不，camera.zoom 确实影响视野范围。通常 speed = viewportWidth * zoom * dt。
-			// 之前的逻辑是正确的，这里稍微保留即可。
-			float moveStep = speed * camera.zoom;
-
-			if(Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) camera.translate(-moveStep, 0);
-			if(Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) camera.translate(moveStep, 0);
-			if(Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) camera.translate(0, moveStep);
-			if(Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) camera.translate(0, -moveStep);
-		}
 		camera.update();
 	}
 

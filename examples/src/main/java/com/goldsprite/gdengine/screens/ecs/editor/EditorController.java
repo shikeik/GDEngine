@@ -877,7 +877,7 @@ public class EditorController {
 				startScale.set(target.transform.scale);
 			}
 
-			// [同步] 映射到 3 个基础状态
+			// [修正] 映射逻辑
 			switch (mode) {
 				case MOVE_X:
 				case SCALE_X:
@@ -887,11 +887,18 @@ public class EditorController {
 				case SCALE_Y:
 					gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_Y;
 					break;
-				case BODY:
+
 				case ROTATE:
-				case SCALE:
+					// 旋转手柄使用专用 ID
+					gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_ROTATE;
+					break;
+
+				case BODY:  // 移动中心点
+				case SCALE: // 缩放中心点
+					// 统一使用 CENTER ID
 					gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_CENTER;
 					break;
+
 				default:
 					gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_NONE;
 					break;

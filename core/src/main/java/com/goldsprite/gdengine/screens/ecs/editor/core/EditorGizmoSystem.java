@@ -16,7 +16,8 @@ public class EditorGizmoSystem {
 	public static final int HANDLE_NONE = 0;
 	public static final int HANDLE_X = 1;
 	public static final int HANDLE_Y = 2;
-	public static final int HANDLE_CENTER = 3; // 用于 Body(Move), Rotate, Center(Scale)
+	public static final int HANDLE_CENTER = 3;
+	public static final int HANDLE_ROTATE = 4;
 
 	private final EditorSceneManager sceneManager;
 
@@ -49,9 +50,11 @@ public class EditorGizmoSystem {
 		float sin = MathUtils.sin(rad);
 
 		// 计算反馈缩放系数
-		float scaleX = (activeHandle == HANDLE_X) ? 1.5f : 1.0f;
-		float scaleY = (activeHandle == HANDLE_Y) ? 1.5f : 1.0f;
-		float scaleC = (activeHandle == HANDLE_CENTER) ? 1.5f : 1.0f;
+		float sclMul = 1.5f;
+		float scaleX = (activeHandle == HANDLE_X) ? sclMul : 1.0f;
+		float scaleY = (activeHandle == HANDLE_Y) ? sclMul : 1.0f;
+		float scaleC = (activeHandle == HANDLE_CENTER) ? sclMul : 1.0f;
+		float scaleRot = (activeHandle == HANDLE_ROTATE) ? sclMul : 1.0f;
 
 		// 2. 根据模式绘制
 		if (mode == Mode.MOVE) {
@@ -73,6 +76,9 @@ public class EditorGizmoSystem {
 			drawArrowHead(batch, s, endYx, endYy, rot + 90f, arrowSize * scaleY, Color.GREEN); // 应用放大
 		}
 		else if (mode == Mode.ROTATE) {
+			// [修复] Body -> scaleC (独立反馈)
+			drawDualCircle(batch, s, x, y, 5f * s * scaleC, Color.YELLOW, true);
+
 			// 旋转手柄 -> HANDLE_CENTER (复用)
 			float hx = x + cos * centerDist;
 			float hy = y + sin * centerDist;
@@ -80,8 +86,8 @@ public class EditorGizmoSystem {
 			drawDualLine(batch, s, x, y, hx, hy, 1.5f * s, Color.YELLOW);
 			batch.drawCircle(x, y, centerDist, 1.5f * s, new Color(1, 1, 0, 0.3f), 64, false);
 
-			// 手柄圆球
-			drawDualCircle(batch, s, hx, hy, (HANDLE_SIZE/2 * s) * scaleC, Color.YELLOW, true);
+			// [修复] 旋转手柄 -> scaleRot (独立反馈)
+			drawDualCircle(batch, s, hx, hy, (HANDLE_SIZE/2 * s) * scaleRot, Color.YELLOW, true);
 		}
 		else if (mode == Mode.SCALE) {
 			float boxSize = 10f * s;
