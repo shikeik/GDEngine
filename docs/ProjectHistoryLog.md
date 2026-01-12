@@ -1,6 +1,7 @@
 ## 版本
 
 ## `1.10.x` 对标UnityEditor整合GDEngineEditor
+### `1.10.5.x`
 ### `1.10.4.x` 
 - 正式转为引擎开发
 - 清理所有旧代码, 包括SoloEditor, IconEditor, GDEngine业务代码

@@ -81,7 +81,9 @@ public class TransformComponent extends Component {
 	 * 自动计算逆矩阵，反推 LocalPosition
 	 */
 	public void setWorldPosition(float wx, float wy) {
-		if (transform == null && gobject != null && gobject.getParent() != null) {
+		// [修复] 移除了错误的 `transform == null` 判断
+		// 只要有父级，就需要将世界坐标转换到父级的局部空间
+		if (gobject != null && gobject.getParent() != null) {
 			// 获取父级组件引用
 			TransformComponent parent = gobject.getParent().transform;
 			if (parent != null) {
