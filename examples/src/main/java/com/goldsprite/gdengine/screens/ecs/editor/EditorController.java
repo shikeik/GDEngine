@@ -821,10 +821,13 @@ public class EditorController {
 	}
 
 	private class NativeEditorInput extends InputAdapter {
-		private boolean isDragging = false;
 		private enum DragMode { NONE, BODY, MOVE_X, MOVE_Y, ROTATE, SCALE_X, SCALE_Y, SCALE }
 		private DragMode currentDragMode = DragMode.NONE;
 		private float lastX, lastY;
+
+		// [新增] 记录拖拽开始时的初始状态
+		private Vector2 startScale = new Vector2();
+		private Vector2 startDragPos = new Vector2(); // 记录按下时的鼠标世界坐标
 
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
@@ -834,23 +837,34 @@ public class EditorController {
 			if (sel != null) {
 				DragMode gizmoHit = hitTestGizmo(sel, wPos);
 				if (gizmoHit != DragMode.NONE) {
-					startDrag(gizmoHit, wPos);
+					startDrag(gizmoHit, wPos, sel); // 修改调用，传入 sel
 					return true;
 				}
 			}
 			GObject hit = hitTestGObject(wPos);
 			if (hit != null) {
 				if (hit != sel) sceneManager.select(hit);
-				startDrag(DragMode.BODY, wPos);
+				startDrag(DragMode.BODY, wPos, hit); // 修改调用，传入 hit
 				return true;
 			}
 			if (sel != null) sceneManager.select(null);
 			return false;
 		}
-		private void startDrag(DragMode mode, Vector2 pos) {
+		// [修改] startDrag: 增加 activeScaleHandle 的设置
+		private void startDrag(DragMode mode, Vector2 pos, GObject target) {
 			currentDragMode = mode;
 			lastX = pos.x;
 			lastY = pos.y;
+			startDragPos.set(pos);
+			if(target != null) {
+				startScale.set(target.transform.scale);
+			}
+
+			// 同步 Gizmo 视觉状态
+			if (mode == DragMode.SCALE_X) gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_X;
+			else if (mode == DragMode.SCALE_Y) gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_Y;
+			else if (mode == DragMode.SCALE) gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_CENTER;
+			else gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_NONE;
 		}
 		@Override
 		public boolean touchDragged(int screenX, int screenY, int pointer) {
@@ -869,6 +883,8 @@ public class EditorController {
 		public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 			if (currentDragMode != DragMode.NONE) {
 				currentDragMode = DragMode.NONE;
+				// [新增] 还原 Gizmo 视觉状态
+				gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_NONE;
 				return true;
 			}
 			return false;
@@ -881,8 +897,16 @@ public class EditorController {
 			float c = MathUtils.cos(rad);
 			float s = MathUtils.sin(rad);
 
+			float cx = t.transform.worldPosition.x;
+			float cy = t.transform.worldPosition.y;
+
 			// 复制当前物体世界坐标作为计算基准
 			Vector2 targetWorldPos = t.transform.worldPosition.cpy();
+
+			// [新增] 缩放步进灵敏度 (每 100 像素 = 1.0 倍率变化)
+			float scaleSensitivity = 0.01f;
+			// 最小缩放极限 (绝对值)
+			float minScaleLimit = 0.01f;
 
 			switch (currentDragMode) {
 				case BODY:
@@ -909,8 +933,6 @@ public class EditorController {
 
 				case ROTATE:
 					// 旋转计算：计算鼠标相对于物体中心的角度差
-					float cx = t.transform.worldPosition.x;
-					float cy = t.transform.worldPosition.y;
 
 					// lastX, lastY 是上一帧鼠标的世界坐标
 					Vector2 prevDir = new Vector2(lastX - cx, lastY - cy);
@@ -921,28 +943,60 @@ public class EditorController {
 					t.transform.rotation += angleDelta;
 					break;
 
+				// [重构] 缩放逻辑：本地轴向投影
 				case SCALE_X:
 				case SCALE_Y:
-				case SCALE:
-					// 距离比率缩放
-					float distOld = Vector2.dst(lastX, lastY, t.transform.worldPosition.x, t.transform.worldPosition.y);
-					float distNew = Vector2.dst(currPos.x, currPos.y, t.transform.worldPosition.x, t.transform.worldPosition.y);
+				case SCALE: {
+					// 1. 构建本地方向向量
+					Vector2 dirX = new Vector2(c, s);        // 本地 X 正方向
+					Vector2 dirY = new Vector2(-s, c);       // 本地 Y 正方向
+					Vector2 dirUni = new Vector2(c-s, s+c).nor(); // 本地 (1,1) 方向 (右上)
 
-					// 防止除零和极小距离的跳变
-					if (distOld > 0.2f) {
-						float ratio = distNew / distOld;
+					// 2. 计算鼠标拖拽向量 (相对于按下点)
+					Vector2 dragVec = new Vector2(currPos).sub(startDragPos);
 
-						// [修复] 针对不同模式应用缩放
-						if (currentDragMode == DragMode.SCALE_X) {
-							t.transform.scale.x *= ratio;
-						} else if (currentDragMode == DragMode.SCALE_Y) {
-							t.transform.scale.y *= ratio;
-						} else {
-							// SCALE (中心): 等比缩放
-							t.transform.scale.scl(ratio);
-						}
+					// 3. 计算投影增量 (Dot Product)
+					// 投影值 > 0 表示沿正方向拖动，< 0 表示沿负方向
+					float delta = 0;
+
+					if (currentDragMode == DragMode.SCALE_X) {
+						delta = dragVec.dot(dirX) * scaleSensitivity;
 					}
+					else if (currentDragMode == DragMode.SCALE_Y) {
+						delta = dragVec.dot(dirY) * scaleSensitivity;
+					}
+					else {
+						// 等比: 投影到右上角方向
+						delta = dragVec.dot(dirUni) * scaleSensitivity;
+					}
+
+					// 4. 应用增量 (代数叠加)
+					float newSx = startScale.x;
+					float newSy = startScale.y;
+
+					if (currentDragMode == DragMode.SCALE_X) {
+						newSx += delta;
+					} else if (currentDragMode == DragMode.SCALE_Y) {
+						newSy += delta;
+					} else {
+						newSx += delta;
+						newSy += delta;
+					}
+
+					// 5. 零点限制 (禁止跨越 0)
+					// 如果初始是正，结果必须 >= 0.01
+					// 如果初始是负，结果必须 <= -0.01
+					if (startScale.x > 0) newSx = Math.max(minScaleLimit, newSx);
+					else newSx = Math.min(-minScaleLimit, newSx);
+
+					if (startScale.y > 0) newSy = Math.max(minScaleLimit, newSy);
+					else newSy = Math.min(-minScaleLimit, newSy);
+
+					// 6. 赋值
+					t.transform.scale.x = newSx;
+					t.transform.scale.y = newSy;
 					break;
+				}
 			}
 		}
 		private void applyWorldPosToLocal(GObject t, Vector2 targetWorldPos) {
