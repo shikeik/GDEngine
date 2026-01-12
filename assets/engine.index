@@ -1,9 +1,3 @@
-com.goldsprite.dockablewindow.core.DockableWindow
-com.goldsprite.dockablewindow.core.DockableWindowManager
-com.goldsprite.dockablewindow.core.DockingEdge
-com.goldsprite.dockablewindow.core.FloatingWindow
-com.goldsprite.dockablewindow.core.NestingSplitPanel
-com.goldsprite.dockablewindow.core.WindowStatus
 com.goldsprite.gdengine.PlatformImpl
 com.goldsprite.gdengine.assets.ColorTextureUtils
 com.goldsprite.gdengine.assets.CustomAtlasLoader
