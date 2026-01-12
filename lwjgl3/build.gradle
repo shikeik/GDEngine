@@ -88,7 +88,8 @@ jar {
 tasks.register('dist') {
 	dependsOn 'jar'
 }
-compileJava.finalizedBy('dist')
+//注释掉, jar任务平常比较慢, 发布时手动运行比较好
+//compileJava.finalizedBy('dist')
 
 distributions {
 	main {

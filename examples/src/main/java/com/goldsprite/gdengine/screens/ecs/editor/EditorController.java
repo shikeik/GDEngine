@@ -627,26 +627,29 @@ public class EditorController {
 		sceneWidget = new ViewWidget(sceneTarget);
 		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 
-		// 使用 Listener 转发事件
+		// [核心] 初始化控制器并注入映射策略
+		sceneCamController = new SimpleCameraController(sceneCamera);
+		sceneCamController.setCoordinateMapper((sx, sy) ->
+			sceneWidget.screenToWorld(sx, sy, sceneCamera)
+		);
+
+		// 使用 Listener 转发事件 (Input routing)
 		sceneWidget.addListener(new InputListener() {
+			// 滚轮直接转发，内部已处理 FBO 坐标
 			@Override
 			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-				// 转发滚轮缩放
 				return sceneCamController.scrolled(amountX, amountY);
 			}
 
+			// 鼠标/触摸转发: 使用 Gdx.input 原生坐标，SimpleCameraController 会通过 mapper 转换
 			@Override
 			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-				// 转发按下 (SimpleCamController 内部只处理右键/中键，不会抢左键)
-				// 注意：传入 Gdx.input 的全局坐标，因为 SimpleCam 内部计算 delta 需要连续性
 				return sceneCamController.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
 			}
-
 			@Override
 			public void touchDragged(InputEvent event, float x, float y, int pointer) {
 				sceneCamController.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
 			}
-
 			@Override
 			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
 				sceneCamController.touchUp(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
@@ -831,23 +834,37 @@ public class EditorController {
 
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-			if (button != Input.Buttons.LEFT) return false;
-			Vector2 wPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
-			GObject sel = sceneManager.getSelection();
-			if (sel != null) {
-				DragMode gizmoHit = hitTestGizmo(sel, wPos);
-				if (gizmoHit != DragMode.NONE) {
-					startDrag(gizmoHit, wPos, sel); // 修改调用，传入 sel
-					return true;
+			// 多指操作 或 右键/中键 -> 视为相机操作，不拦截，返回 false 让它穿透到 sceneWidget 的 Listener
+			if (pointer > 0 || button == Input.Buttons.RIGHT || button == Input.Buttons.MIDDLE) {
+				return false;
+			}
+
+			// 左键单指 -> 检测 Gizmo
+			if (button == Input.Buttons.LEFT) {
+				Vector2 wPos = sceneWidget.screenToWorld(screenX, screenY, sceneCamera);
+				GObject sel = sceneManager.getSelection();
+				if (sel != null) {
+					DragMode gizmoHit = hitTestGizmo(sel, wPos);
+					if (gizmoHit != DragMode.NONE) {
+						startDrag(gizmoHit, wPos, sel);
+						return true; // 拦截
+					}
 				}
+				GObject hit = hitTestGObject(wPos);
+				if (hit != null) {
+					if (hit != sel) sceneManager.select(hit);
+					startDrag(DragMode.BODY, wPos, hit);
+					return true; // 拦截
+				}
+
+				// 点空了 -> 取消选中
+				if (sel != null) sceneManager.select(null);
 			}
-			GObject hit = hitTestGObject(wPos);
-			if (hit != null) {
-				if (hit != sel) sceneManager.select(hit);
-				startDrag(DragMode.BODY, wPos, hit); // 修改调用，传入 hit
-				return true;
-			}
-			if (sel != null) sceneManager.select(null);
+
+			// 既没点中 Gizmo 也没点中物体，返回 false，
+			// 让事件穿透到 sceneWidget，从而触发 CameraController 的单指拖拽(如果有定义)
+			// 不过 SimpleCameraController 默认只处理右键平移。
+			// 如果想支持左键空白处平移，可以在这里返回 false。
 			return false;
 		}
 		// [修改] startDrag: 增加 activeScaleHandle 的设置
@@ -860,11 +877,25 @@ public class EditorController {
 				startScale.set(target.transform.scale);
 			}
 
-			// 同步 Gizmo 视觉状态
-			if (mode == DragMode.SCALE_X) gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_X;
-			else if (mode == DragMode.SCALE_Y) gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_Y;
-			else if (mode == DragMode.SCALE) gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_CENTER;
-			else gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_NONE;
+			// [同步] 映射到 3 个基础状态
+			switch (mode) {
+				case MOVE_X:
+				case SCALE_X:
+					gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_X;
+					break;
+				case MOVE_Y:
+				case SCALE_Y:
+					gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_Y;
+					break;
+				case BODY:
+				case ROTATE:
+				case SCALE:
+					gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_CENTER;
+					break;
+				default:
+					gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_NONE;
+					break;
+			}
 		}
 		@Override
 		public boolean touchDragged(int screenX, int screenY, int pointer) {
@@ -883,8 +914,7 @@ public class EditorController {
 		public boolean touchUp(int screenX, int screenY, int pointer, int button) {
 			if (currentDragMode != DragMode.NONE) {
 				currentDragMode = DragMode.NONE;
-				// [新增] 还原 Gizmo 视觉状态
-				gizmoSystem.activeScaleHandle = EditorGizmoSystem.HANDLE_NONE;
+				gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_NONE; // 还原
 				return true;
 			}
 			return false;

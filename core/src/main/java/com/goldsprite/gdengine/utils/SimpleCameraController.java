@@ -7,6 +7,7 @@ import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
 public class SimpleCameraController implements InputProcessor {
@@ -14,38 +15,50 @@ public class SimpleCameraController implements InputProcessor {
 	private final OrthographicCamera camera;
 	private final GestureDetector gestureDetector;
 	private final InputAdapter mouseInputAdapter;
-
-	// 输入锁定开关
 	private boolean inputEnabled = true;
 
 	public static float minZoom = 0.001f;
 	public static float maxZoom = 100.0f;
-	public static float scrollFactor = 0.1f;
+
+	// [新增] 坐标映射策略接口
+	public interface CoordinateMapper {
+		Vector2 map(float screenX, float screenY);
+	}
+
+	// 默认策略: 标准全屏 Unproject
+	private CoordinateMapper mapper;
 
 	public SimpleCameraController(OrthographicCamera camera) {
 		this.camera = camera;
+
+		// 默认实现
+		this.mapper = (x, y) -> {
+			Vector3 v = camera.unproject(new Vector3(x, y, 0));
+			return new Vector2(v.x, v.y);
+		};
+
 		GestureDetector.GestureListener listener = new CameraGestureListener();
-		// 移动端手势
 		this.gestureDetector = new GestureDetector(20, 0.4f, 1.1f, 0.15f, listener);
-		// PC端鼠标
 		this.mouseInputAdapter = new CameraMouseListener();
 	}
 
-	public void setInputEnabled(boolean enabled) {
-		this.inputEnabled = enabled;
+	public void setCoordinateMapper(CoordinateMapper mapper) {
+		this.mapper = mapper;
 	}
 
 	public void update(float dt) {
 		if (inputEnabled) {
-			// [修复] 移动速度基于视口宽度，实现自适应
-			// 基础速度：1秒移动 1 个屏幕宽度
+			// 键盘漫游逻辑 (保持不变，基于视口宽度的自适应速度)
 			float baseSpeed = camera.viewportWidth;
-			float speed = baseSpeed * camera.zoom * dt;
+			float speed = baseSpeed * dt; // 移除了 camera.zoom，因为 viewportWidth 通常已经是世界单位了?
+			// 不，camera.zoom 确实影响视野范围。通常 speed = viewportWidth * zoom * dt。
+			// 之前的逻辑是正确的，这里稍微保留即可。
+			float moveStep = speed * camera.zoom;
 
-//			if(Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) camera.translate(-speed, 0);
-//			if(Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) camera.translate(speed, 0);
-//			if(Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) camera.translate(0, speed);
-//			if(Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) camera.translate(0, -speed);
+			if(Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) camera.translate(-moveStep, 0);
+			if(Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) camera.translate(moveStep, 0);
+			if(Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) camera.translate(0, moveStep);
+			if(Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) camera.translate(0, -moveStep);
 		}
 		camera.update();
 	}
@@ -53,7 +66,9 @@ public class SimpleCameraController implements InputProcessor {
 	// --- 代理 InputProcessor ---
 	@Override public boolean touchDown(int x, int y, int pointer, int button) {
 		if(!inputEnabled) return false;
+		// 优先处理鼠标逻辑 (PC右键)
 		if (mouseInputAdapter.touchDown(x, y, pointer, button)) return true;
+		// 其次处理手势 (Android双指/单指拖拽)
 		return gestureDetector.touchDown(x, y, pointer, button);
 	}
 	@Override public boolean touchUp(int x, int y, int pointer, int button) {
@@ -66,36 +81,43 @@ public class SimpleCameraController implements InputProcessor {
 		return gestureDetector.touchDragged(x, y, pointer);
 	}
 	@Override public boolean scrolled(float amountX, float amountY) {
+		if(!inputEnabled) return false;
 		return mouseInputAdapter.scrolled(amountX, amountY);
 	}
+	// ... 其他方法直接返回 false 或调用 super ...
+	@Override public boolean keyDown(int keycode) { return false; }
+	@Override public boolean keyUp(int keycode) { return false; }
+	@Override public boolean keyTyped(char character) { return false; }
+	@Override public boolean mouseMoved(int screenX, int screenY) { return false; }
+	@Override public boolean touchCancelled(int screenX, int screenY, int pointer, int button) { return false; }
 
-	@Override public boolean keyDown(int keycode) { return mouseInputAdapter.keyDown(keycode); }
-	@Override public boolean keyUp(int keycode) { return mouseInputAdapter.keyUp(keycode); }
-	@Override public boolean keyTyped(char character) { return mouseInputAdapter.keyTyped(character); }
-	@Override public boolean mouseMoved(int screenX, int screenY) { return mouseInputAdapter.mouseMoved(screenX, screenY); }
-	@Override public boolean touchCancelled(int screenX, int screenY, int pointer, int button) { return gestureDetector.touchCancelled(screenX, screenY, pointer, button); }
-
-	// --- 手势逻辑 (Mobile) ---
+	// --- 手势逻辑 (Mobile / Touch) ---
 	private class CameraGestureListener extends GestureDetector.GestureAdapter {
 		private float initialScale = 1f;
+
 		@Override
 		public boolean pan(float x, float y, float deltaX, float deltaY) {
-			if(!inputEnabled) return false;
-			if (Gdx.app.getType() != com.badlogic.gdx.Application.ApplicationType.Desktop) {
-				// [修复] 计算屏幕像素到世界单位的比例
-				float unitsPerPixel = camera.viewportWidth / Gdx.graphics.getWidth();
-				camera.translate(-deltaX * unitsPerPixel * camera.zoom, deltaY * unitsPerPixel * camera.zoom);
-				return true;
-			}
-			return false;
+			// Android 单指平移 (如果需要的话，或者交给 MouseListener 的 touchDragged 处理)
+			// 这里为了跟手，我们也应该使用 mapper。
+			// 但 GestureDetector 的 pan delta 是屏幕像素。
+			// 简单实现：将屏幕 delta 转为世界 delta
+			// 世界增量 = 屏幕增量 * (世界宽 / 屏幕宽)
+			// 或者利用两个点：
+			Vector2 p1 = mapper.map(x, y);
+			Vector2 p2 = mapper.map(x - deltaX, y - deltaY);
+			camera.translate(p2.x - p1.x, p2.y - p1.y);
+			return true;
 		}
+
 		@Override
 		public boolean zoom(float initialDistance, float distance) {
+			// 双指缩放
 			float ratio = initialDistance / distance;
 			float newZoom = MathUtils.clamp(initialScale * ratio, minZoom, maxZoom);
 			camera.zoom = newZoom;
 			return true;
 		}
+
 		@Override
 		public boolean touchDown(float x, float y, int pointer, int button) {
 			initialScale = camera.zoom;
@@ -103,17 +125,18 @@ public class SimpleCameraController implements InputProcessor {
 		}
 	}
 
-	// --- 鼠标逻辑 (PC) ---
+	// --- 鼠标逻辑 (PC / Mouse) ---
 	private class CameraMouseListener extends InputAdapter {
-		private int lastX, lastY;
+		private Vector2 lastWorldPos = new Vector2();
 		private boolean isPanning = false;
 
 		@Override
 		public boolean touchDown(int x, int y, int pointer, int button) {
+			// 允许 右键 或 中键 拖拽
 			if (button == Input.Buttons.RIGHT || button == Input.Buttons.MIDDLE) {
 				isPanning = true;
-				lastX = x;
-				lastY = y;
+				// 记录按下时的世界坐标锚点
+				lastWorldPos.set(mapper.map(x, y));
 				return true;
 			}
 			return false;
@@ -131,13 +154,25 @@ public class SimpleCameraController implements InputProcessor {
 		@Override
 		public boolean touchDragged(int x, int y, int pointer) {
 			if (isPanning) {
-				float dx = x - lastX;
-				float dy = y - lastY;
-				// [修复] 计算屏幕像素到世界单位的比例
-				float unitsPerPixel = camera.viewportWidth / Gdx.graphics.getWidth();
-				camera.translate(-dx * unitsPerPixel * camera.zoom, dy * unitsPerPixel * camera.zoom);
-				lastX = x;
-				lastY = y;
+				// [核心跟手逻辑]
+				// 1. 获取当前鼠标位置对应的"新"世界坐标 (假设相机没动)
+				Vector2 currWorldPos = mapper.map(x, y);
+
+				// 2. 计算差异：鼠标当前指着的点，和上一帧指着的点，在世界空间差了多少
+				// 实际上我们希望鼠标底下的世界点不动。
+				// 所以相机需要移动，抵消这个差值。
+				float dx = lastWorldPos.x - currWorldPos.x;
+				float dy = lastWorldPos.y - currWorldPos.y;
+
+				camera.translate(dx, dy);
+				camera.update();
+
+				// 注意：相机移动后，mapper.map(x,y) 的结果会变，
+				// 但因为我们是把"上一帧的世界点"对齐到"当前鼠标位置"，
+				// 所以下一帧比较的基准(lastWorldPos)依然应该是那个固定的世界点吗？
+				// 不，最简单的做法是每帧重置锚点：
+				// 移动完相机后，重新采样当前的鼠标世界位置作为下一帧的基准。
+				lastWorldPos.set(mapper.map(x, y));
 				return true;
 			}
 			return false;
@@ -145,12 +180,23 @@ public class SimpleCameraController implements InputProcessor {
 
 		@Override
 		public boolean scrolled(float amountX, float amountY) {
-			Vector3 before = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
-			float targetZoom = camera.zoom + amountY * scrollFactor * camera.zoom;
+			// [锚点缩放]
+			// 1. 获取缩放中心 (鼠标位置)
+			float mouseX = Gdx.input.getX();
+			float mouseY = Gdx.input.getY();
+			Vector2 anchor = mapper.map(mouseX, mouseY);
+
+			// 2. 执行缩放
+			float zoomFactor = 0.1f;
+			float targetZoom = camera.zoom + amountY * zoomFactor * camera.zoom;
 			camera.zoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
 			camera.update();
-			Vector3 after = camera.unproject(new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
-			camera.translate(before.x - after.x, before.y - after.y);
+
+			// 3. 补偿位移：缩放后，鼠标指向的新世界坐标变了，要把相机移回去
+			Vector2 newAnchor = mapper.map(mouseX, mouseY);
+			camera.translate(anchor.x - newAnchor.x, anchor.y - newAnchor.y);
+			camera.update();
+
 			return true;
 		}
 	}
