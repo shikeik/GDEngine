@@ -406,5 +406,21 @@
 	  listStyle: default,
 	  backgroundOpen: select-box-down
 	}
+  },
+  "com.kotcrab.vis.ui.Sizes": {
+	"default": {
+	  "scaleFactor": 1,
+	  "spacingBottom": 8,
+	  "spacingRight": 6,
+	  "buttonBarSpacing": 10,
+	  "menuItemIconSize": 22,
+	  "borderSize": 1,
+	  "spinnerButtonHeight": 12,
+	  "spinnerFieldSize": 40,
+	  "fileChooserViewModeBigIconsSize": 200,
+	  "fileChooserViewModeMediumIconsSize": 128,
+	  "fileChooserViewModeSmallIconsSize": 64,
+	  "fileChooserViewModeListWidthSize": 155
+	}
   }
 }
