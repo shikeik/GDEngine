@@ -3,7 +3,7 @@
 
 代码缩进规定使用Tab
 代码设计原则:
-代码复用, OCP原则, 做好封装内聚, 易于扩展
+代码复用/逻辑统一性(避免重复代码), OCP原则, 做好封装内聚, 易于扩展
 
 项目配置: java17, libgdx1.12.1, gdx-freetype, vis-ui_1.5.3
 平台: Android, Windows双端

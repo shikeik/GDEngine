@@ -4,12 +4,12 @@ REM ================= 配置区域 =================
 
 REM 1. 设置目标文件后缀 (例如: *.java, *.txt, *.*)
 REM 如果想要所有文件，请设置为 *.*
-set "TARGET_EXT=*.*"
+set "TARGET_EXT=*.java"
 
 REM 2. 设置排除的目录或文件名关键词 (使用空格分隔)
 REM 注意：脚本会自动排除自身和输出文件，无需在此重复添加
 REM 示例: \build\ \.git\ \node_modules\ \target\
-set "EXCLUDE_PATTERN=\build\ \.git\ \target\ \.idea\ \out\"
+set "EXCLUDE_PATTERN=\build\ \bin\ \.git\ \target\ \.idea\ \out\ \GDEngine\"
 
 REM 3. 输出文件名
 set "OUTPUT_FILE=ProjectCode.txt"

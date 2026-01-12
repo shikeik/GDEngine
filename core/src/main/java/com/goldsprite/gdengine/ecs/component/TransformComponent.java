@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Affine2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.core.annotations.ReadOnly;
+import com.goldsprite.gdengine.core.annotations.Tooltip;
 
 /**
  * 变换组件 (Matrix v3.0)
@@ -12,7 +13,9 @@ import com.goldsprite.gdengine.core.annotations.ReadOnly;
 public class TransformComponent extends Component {
 
 	// --- 核心数据 (Local - 序列化) ---
+	@Tooltip("变换组件的位置")
 	public final Vector2 position = new Vector2();
+	@Tooltip("变换组件的旋转角度 (单位: 度)")
 	public float rotation = 0f;
 	public final Vector2 scale = new Vector2(1, 1);
 
