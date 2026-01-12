@@ -141,11 +141,57 @@ tasks.register('packageEngineCore', Jar) {
         println "✅ [Engine] 文档库 (Javadoc) 已发布到 assets/engine/libs/gdengine-javadoc.jar"
     }
 }
-
 // 注意：这里删除了所有 dependsOn / finalizedBy 代码
 // 全部移交 root_build.gradle 统一管理
-// 引擎任务==================================================
 
+
+// [新增] 自动生成引擎类索引任务
+// 这是一个编译期黑科技：在打 JAR 包之前，把所有源码类名写进一个小本本里
+tasks.register('generateEngineIndex') {
+	// 定义输出路径：放在 resources 目录下，这样会被自动打包进 JAR
+	def outputDir = file("src/main/resources")
+	def indexFile = file("${outputDir}/engine.index")
+
+	// 声明输入输出，支持 Gradle 增量构建 (虽然对于这个任务快得没必要)
+	inputs.files(sourceSets.main.allJava)
+	outputs.file(indexFile)
+
+	doLast {
+		if (!outputDir.exists()) outputDir.mkdirs()
+
+		def classNames = new TreeSet() // 使用 TreeSet 自动排序
+
+		// 遍历 core 模块的所有 Java 源文件
+		sourceSets.main.allJava.each { File file ->
+			// 过滤掉非 Java 文件和 package-info
+			if (file.name.endsWith(".java") && !file.name.equals("package-info.java")) {
+
+				// 计算包名+类名
+				// 逻辑：找到 srcDir (例如 src/main/java)，截取后面的路径
+				sourceSets.main.java.srcDirs.each { File srcDir ->
+					if (file.absolutePath.startsWith(srcDir.absolutePath)) {
+						// 截取相对路径: com/goldsprite/gdengine/ecs/component/TransformComponent.java
+						def relPath = file.absolutePath.substring(srcDir.absolutePath.length() + 1)
+
+						// 转换为全类名: com.goldsprite.gdengine.ecs.component.TransformComponent
+						def className = relPath.replace(File.separator, ".").replace(".java", "")
+
+						classNames.add(className)
+					}
+				}
+			}
+		}
+
+		// 写入文件
+		indexFile.text = classNames.join("\n")
+		println ">>> [AutoIndex] 生成所有引擎类路径到 engine.index, 共 ${classNames.size()} 个类."
+	}
+}
+// [关键] 挂钩到 processResources 任务
+// 确保在处理资源（打包前）时执行此任务
+processResources.dependsOn(generateEngineIndex)
+
+// 引擎任务==================================================
 
 testing {
 	suites {

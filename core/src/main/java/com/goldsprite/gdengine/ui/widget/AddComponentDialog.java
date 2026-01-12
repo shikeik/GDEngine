@@ -7,6 +7,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Array;
+import com.goldsprite.gdengine.core.ComponentRegistry;
 import com.goldsprite.gdengine.core.utils.ComponentScanner;
 import com.goldsprite.gdengine.ecs.component.Component;
 import com.goldsprite.gdengine.ecs.entity.GObject;
@@ -36,8 +37,8 @@ public class AddComponentDialog extends BaseDialog {
 		closeOnEscape();
 		addCloseButton();
 
-		// 1. 扫描所有组件
-		allComponents = ComponentScanner.scanAll();
+		// [修改] 直接从注册表获取，极快，且包含用户脚本
+		allComponents = ComponentRegistry.getAll();
 
 		// 2. 搜索框
 		Table searchTable = new Table();

@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -50,16 +51,11 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		prepareDependencies();
 	}
 
-	// ... [compile 和 runEcjCompile/runD8Dexing/loadScriptJar 方法保持不变，省略以节省篇幅] ...
-	// 请保留之前的 compile, runEcjCompile, runD8Dexing, loadScriptJar, extractDexFromJar, recursiveFindJavaFiles, deleteRecursive 方法
-
 	@Override
 	public Class<?> compile(String mainClassName, String projectPath) {
-		// ... (保持原样)
-		// 这里为了代码完整性，请确保保留之前正确的实现逻辑
 		try {
 			File projectDir = new File(projectPath);
-			Debug.logT("Compiler", "=== 开始编译项目: %s ===", projectDir.getName());
+			Debug.logT("Compiler", "=== Android 编译开始: %s ===", projectDir.getName());
 
 			File scriptsDir = new File(projectDir, "src/main/java");
 			if (!scriptsDir.exists()) {
@@ -74,7 +70,6 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 				Debug.logT("Compiler", "⚠️ 项目中没有 .java 文件");
 				return null;
 			}
-			Debug.logT("Compiler", "扫描到 %d 个源文件", javaFiles.size());
 
 			File classOutputDir = new File(cacheDir, "classes");
 			if(classOutputDir.exists()) deleteRecursive(classOutputDir);
@@ -100,6 +95,9 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 				return null;
 			}
 
+			// [新增] 编译成功后，根据源码生成 project.index
+			generateProjectIndex(javaFiles, scriptsDir, projectDir);
+
 			return loadScriptJar(dexJarFile, mainClassName);
 
 		} catch (Exception e) {
@@ -109,10 +107,52 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 		}
 	}
 
-	// ... (ECJ, D8, Loader 方法保持不变) ...
+	/**
+	 * [新增] Android 端索引生成器
+	 * 直接分析源码路径，比反编译 Dex 快得多
+	 */
+	private void generateProjectIndex(List<File> javaFiles, File srcRoot, File projectDir) {
+		try {
+			TreeSet<String> classNames = new TreeSet<>();
+			int rootLen = srcRoot.getAbsolutePath().length();
+
+			for (File f : javaFiles) {
+				String absPath = f.getAbsolutePath();
+				if (absPath.startsWith(srcRoot.getAbsolutePath())) {
+					// 截取: /com/mygame/Player.java
+					String relPath = absPath.substring(rootLen);
+					// 转换: com.mygame.Player
+					String className = relPath
+						.replace(File.separatorChar, '.')
+						.replace(".java", "");
+
+					if (className.startsWith(".")) className = className.substring(1);
+
+					classNames.add(className);
+				}
+			}
+
+			// 写入 project.index
+			File indexFile = new File(projectDir, "project.index");
+			StringBuilder sb = new StringBuilder();
+			for (String name : classNames) {
+				sb.append(name).append("\n");
+			}
+
+			// Android 下简单的文件写入
+			FileOutputStream fos = new FileOutputStream(indexFile);
+			fos.write(sb.toString().getBytes("UTF-8"));
+			fos.close();
+
+			Debug.logT("Compiler", "Index generated: " + classNames.size() + " classes.");
+
+		} catch (Exception e) {
+			Debug.logT("Compiler", "⚠️ Index gen failed: " + e.getMessage());
+		}
+	}
 
 	private boolean runEcjCompile(List<File> javaFiles, File outputDir, String classpath) {
-		Debug.logT("Compiler", "2. ECJ 编译中...");
+		Debug.logT("Compiler", "ECJ 编译中...");
 		StringWriter ecjLog = new StringWriter();
 		PrintWriter ecjWriter = new PrintWriter(ecjLog);
 
@@ -128,16 +168,16 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 			new org.eclipse.jdt.internal.compiler.batch.Main(ecjWriter, ecjWriter, false, null, null);
 
 		boolean success = ecjCompiler.compile(args.toArray(new String[0]));
-		if (!success) Debug.logT("Compiler", "ECJ 编译失败:\n%s", ecjLog.toString());
+		if (!success) Debug.logT("Compiler", "ECJ 失败:\n%s", ecjLog.toString());
 		return success;
 	}
 
 	private boolean runD8Dexing(File classDir, File outputDexFile, File[] libJars) {
-		Debug.logT("Compiler", "3. D8 转换中...");
+		Debug.logT("Compiler", "D8 转换中...");
 		try {
 			List<Path> classFiles = Files.walk(Paths.get(classDir.getAbsolutePath()))
 				.filter(p -> p.toString().endsWith(".class"))
-			.collect(Collectors.toList());
+				.collect(Collectors.toList());
 
 			D8Command.Builder builder = D8Command.builder();
 			builder.setMode(CompilationMode.DEBUG);
@@ -173,7 +213,11 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 				getClass().getClassLoader()
 			);
 		}
-		Debug.logT("Compiler", "✅ 加载主类: %s", mainClassName);
+
+		// [核心设置] 供 ComponentRegistry 使用
+		Thread.currentThread().setContextClassLoader(classLoader);
+
+		Debug.logT("Compiler", "✅ 加载主类: " + mainClassName);
 		return classLoader.loadClass(mainClassName);
 	}
 
@@ -226,18 +270,14 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 			String[] libFiles = context.getAssets().list("engine/libs");
 			if (libFiles != null) {
 				for (String fileName : libFiles) {
-					// 所有的 libs 下的 jar 都跟随版本刷新
 					extractAsset("engine/libs/" + fileName, new File(libsDir, fileName), isNewVersion);
 				}
 			}
 		} catch (IOException e) {
 			Debug.logT("Compiler", "⚠️ 无法列出 assets/libs 目录");
 		}
-
 		// 刷新完毕，保存当前版本信息
-		if (isNewVersion) {
-			saveCurrentAppVersion();
-		}
+		if (isNewVersion) saveCurrentAppVersion();
 	}
 
 	/**
@@ -288,9 +328,9 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 			int len;
 			while ((len = is.read(buffer)) > 0) fos.write(buffer, 0, len);
 
-			// Debug.logT("Compiler", "已提取: " + assetName); // 减少日志刷屏，仅在出错或大版本更新时关注
+			Debug.logT("Compiler", "已提取: " + assetName); // 减少日志刷屏，仅在出错或大版本更新时关注
 		} catch (IOException e) {
-			Debug.logT("Compiler", "❌ 提取库失败: " + assetName + " -> " + e.getMessage());
+			Debug.logT("Compiler", "❌ 提取失败: " + assetName);
 		}
 	}
 }
