@@ -25,6 +25,7 @@ import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.ui.event.ContextListener;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.ChangeLogDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
@@ -210,45 +211,31 @@ public class GDEngineHubScreen extends GScreen {
 			//pathLabel.setFontScale(0.8f);
 			item.add(pathLabel).right().padRight(20);
 
-			// [修改] 统一交互逻辑：单击弹窗(延时)，双击直达
-			item.addListener(new ActorGestureListener(20, 0.4f, 0.4f, 0.15f) {
+			// [修改] 使用 ContextListener 统一交互
+			item.addListener(new ContextListener() {
 				private Timer.Task tapTask;
 
 				@Override
-				public void tap(InputEvent event, float x, float y, int count, int button) {
-					if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
-						if (count == 2) {
-							// 双击 (Pro): 取消单击任务，直接打开
-							if (tapTask != null && !tapTask.isScheduled()) {
-								// 如果任务已经在运行中(极小概率)，取消可能没用，但在单线程模型下通常安全
-							}
-							if (tapTask != null) tapTask.cancel();
-
-							openProject(projDir);
-						}
-						else if (count == 1) {
-							// 单击 (Safe): 延迟 0.25s 执行，给双击留出时间窗
-							// 如果用户手速快(0.25s内)点第二下，这个任务就会被上面的 count==2 取消
-							// 如果手速慢，弹窗就会出来，挡住第二次点击(符合预期)
-							tapTask = Timer.schedule(new Timer.Task() {
-								@Override
-								public void run() {
-									new ConfirmOpenDialog(projDir.name(), () -> {
-										openProject(projDir);
-									}).show(stage);
-								}
-							}, 0.2f);
-						}
-					} else if (button == com.badlogic.gdx.Input.Buttons.RIGHT) {
-						showProjectMenu(projDir, event.getStageX(), event.getStageY());
-					}
+				public void onShowMenu(float stageX, float stageY) {
+					showProjectMenu(projDir, stageX, stageY);
 				}
 
 				@Override
-				public boolean longPress(Actor actor, float x, float y) {
-					com.badlogic.gdx.math.Vector2 v = actor.localToStageCoordinates(new com.badlogic.gdx.math.Vector2(x, y));
-					showProjectMenu(projDir, v.x, v.y);
-					return true;
+				public void onLeftClick(InputEvent event, float x, float y, int count) {
+					// 保持原有的 单击/双击 区分逻辑
+					if (count == 2) {
+						if (tapTask != null) tapTask.cancel();
+						openProject(projDir);
+					} else if (count == 1) {
+						tapTask = Timer.schedule(new Timer.Task() {
+							@Override
+							public void run() {
+								new ConfirmOpenDialog(projDir.name(), () -> {
+									openProject(projDir);
+								}).show(stage);
+							}
+						}, 0.2f);
+					}
 				}
 			});
 

@@ -54,6 +54,7 @@ import com.goldsprite.gdengine.screens.ecs.editor.core.EditorGizmoSystem;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorSceneManager;
 import com.goldsprite.gdengine.screens.ecs.editor.inspector.InspectorBuilder;
 import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
+import com.goldsprite.gdengine.ui.event.ContextListener;
 import com.goldsprite.gdengine.ui.input.SmartInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
 import com.goldsprite.gdengine.ui.widget.AddComponentDialog;
@@ -402,19 +403,18 @@ public class EditorController {
 
 			// --- 交互逻辑 ---
 
-			// 左键点击: 选中
-			table.addListener(new ClickListener() {
-				@Override public void clicked(InputEvent event, float x, float y) {
-					sceneManager.select(obj);
-				}
-			});
-
 			// 右键菜单
-			table.addListener(new ActorGestureListener() {
-				@Override public void tap(InputEvent event, float x, float y, int count, int button) {
-					if (button == Input.Buttons.RIGHT) {
-						showHierarchyMenu(obj, event.getStageX(), event.getStageY());
-					}
+			// [修改] 使用 ContextListener 统一处理 左键选中 和 右键/长按菜单
+			table.addListener(new ContextListener() {
+				@Override
+				public void onShowMenu(float stageX, float stageY) {
+					showHierarchyMenu(obj, stageX, stageY);
+				}
+
+				@Override
+				public void onLeftClick(InputEvent event, float x, float y, int count) {
+					// 左键点击选中
+					sceneManager.select(obj);
 				}
 			});
 
@@ -515,12 +515,14 @@ public class EditorController {
 		VisScrollPane hierarchyScroll = new VisScrollPane(hierarchyContainer);
 		hierarchyScroll.setFadeScrollBars(false);
 
-		// 右键背景菜单
-		hierarchyContainer.addListener(new ActorGestureListener() {
+		// Hierarchy 背景板右键菜单
+		// [修改] 使用 ContextListener
+		hierarchyContainer.addListener(new ContextListener() {
 			@Override
-			public void tap(InputEvent event, float x, float y, int count, int button) {
-				if (button == Input.Buttons.RIGHT && hierarchyTree.getOverNode() == null) {
-					showHierarchyMenu(null, event.getStageX(), event.getStageY());
+			public void onShowMenu(float stageX, float stageY) {
+				// 只有当没有 hover 到具体节点时才触发背景菜单
+				if (hierarchyTree.getOverNode() == null) {
+					showHierarchyMenu(null, stageX, stageY);
 				}
 			}
 		});

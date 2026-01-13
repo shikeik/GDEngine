@@ -21,6 +21,7 @@ import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.screens.ecs.GameRunnerScreen;
 import com.goldsprite.gdengine.core.Gd;
+import com.goldsprite.gdengine.ui.event.ContextListener;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
 import com.goldsprite.gdengine.ui.widget.BioCodeEditor;
@@ -402,6 +403,7 @@ public class GDEngineEditorScreen extends GScreen {
 		restoreExpansionState(fileTree.getNodes(), expandedPaths);
 	}
 
+
 	private void recursiveAddNodes(FileNode parentNode, FileHandle dir) {
 		FileHandle[] files = dir.list();
 		java.util.Arrays.sort(files, (a, b) -> {
@@ -416,37 +418,21 @@ public class GDEngineEditorScreen extends GScreen {
 
 			Actor actor = node.getActor();
 
-			// [重构] 交互逻辑：使用 ActorGestureListener 统一接管
-			// 参数: halfTapSquareSize=20, tapCountInterval=0.4, longPressDuration=0.4 (变快), maxFlingDelay=0.15
-			actor.addListener(new ActorGestureListener(20, 0.4f, 0.4f, 0.15f) {
-
+			// [修改] 使用 ContextListener 替换原有的 ActorGestureListener
+			actor.addListener(new ContextListener() {
 				@Override
-				public void tap(InputEvent event, float x, float y, int count, int button) {
-					// 左键单击 -> 展开/打开
-					if (button == Input.Buttons.LEFT) {
-						if (file.isDirectory()) {
-							node.setExpanded(!node.isExpanded());
-						} else {
-							loadFile(file);
-						}
-					}
-					// 右键单击 -> 菜单 (PC习惯)
-					else if (button == Input.Buttons.RIGHT) {
-						showContextMenu(node, event.getStageX(), event.getStageY());
-					}
+				public void onShowMenu(float stageX, float stageY) {
+					showContextMenu(node, stageX, stageY);
 				}
 
 				@Override
-				public boolean longPress(Actor actor, float x, float y) {
-					// 长按 -> 菜单 (Mobile习惯)
-					// longPress 返回 true 会阻止后续可能的事件，但 tap 是在 touchUp 触发，
-					// 而 longPress 是在按下 0.4s 后触发。
-					// 只要这里触发了菜单，用户松手时虽然技术上可能触发 tap，但菜单已经模态遮挡或者逻辑上已拦截。
-					// 实际上 ActorGestureListener 内部机制保证了 longPress 触发后通常不会再回调 tap。
-
-					com.badlogic.gdx.math.Vector2 v = actor.localToStageCoordinates(new com.badlogic.gdx.math.Vector2(x, y));
-					showContextMenu(node, v.x, v.y);
-					return true;
+				public void onLeftClick(InputEvent event, float x, float y, int count) {
+					// 原有的左键逻辑
+					if (file.isDirectory()) {
+						node.setExpanded(!node.isExpanded());
+					} else {
+						loadFile(file);
+					}
 				}
 			});
 
