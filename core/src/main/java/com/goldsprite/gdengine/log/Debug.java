@@ -40,6 +40,7 @@ public class Debug {
 		"Runner Y",
 		"Registry Y",
 		"System Y",
+		"SceneLoader Y",
 
 		// Test
 		"TEST Y",

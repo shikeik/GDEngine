@@ -41,6 +41,7 @@ import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.command.CommandManager;
 import com.goldsprite.gdengine.core.input.ShortcutManager;
 import com.goldsprite.gdengine.core.utils.GdxJsonSetup;
+import com.goldsprite.gdengine.core.utils.SceneLoader;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.component.Component;
 import com.goldsprite.gdengine.ecs.component.RenderComponent;
@@ -204,7 +205,7 @@ public class EditorController {
 			loadScene(); // loadScene 内部会调用 getSceneFile
 		} else if (Gdx.files.local("scene_debug.json").exists() && currentProj == null) {
 			// 只有在没项目时才加载沙盒缓存
-			loadSceneFromHandle(Gdx.files.local("scene_debug.json"));
+			SceneLoader.load(Gdx.files.local("scene_debug.json"));
 		} else {
 			initTestScene();
 		}
@@ -237,7 +238,8 @@ public class EditorController {
 	}
 
 	private void loadScene() {
-		loadSceneFromHandle(getSceneFile());
+//		loadSceneFromHandle(getSceneFile());
+		SceneLoader.load(getSceneFile());
 	}
 
 	// 提取出来的底层加载逻辑
