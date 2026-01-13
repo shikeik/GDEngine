@@ -160,10 +160,12 @@ public class GDEngineHubScreen extends GScreen {
 		btnLog.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
+				// 调用 show(stage) 使用全屏逻辑
 				new ChangeLogDialog().show(stage);
 			}
 		});
 
+		// 稍微加点 Padding 让它离底边有点距离
 		bottomBar.add(btnLog).pad(5).left();
 
 		// 将底部栏添加到 root 的最后

@@ -22,8 +22,10 @@ public class SettingsWindow extends BaseDialog {
 		super("Engine Settings");
 		this.onConfigChanged = onConfigChanged;
 
+//		debugAll();
+
 		// --- 标题 ---
-		add(new VisLabel("Engine Preferences")).padBottom(20).row();
+		getContentTable().add(new VisLabel("Engine Preferences")).padBottom(20).row();
 
 		// --- 表单区域 ---
 		VisTable form = new VisTable();
@@ -41,15 +43,15 @@ public class SettingsWindow extends BaseDialog {
 		pathField.setMessageText("Leave empty to use default");
 		form.add(pathField).width(400).row();
 
-		add(form).padBottom(20).row();
+		getContentTable().add(form).padBottom(20).row();
 
 		// --- 错误提示 ---
 		errorLabel = new VisLabel("");
 		errorLabel.setColor(Color.RED);
-		add(errorLabel).center().padBottom(10).row();
+		getContentTable().add(errorLabel).center().padBottom(10).row();
 
 		// --- 按钮栏 ---
-		add(createButtonPanel()).growX();
+		getContentTable().add(createButtonPanel()).growX();
 
 		pack();
 		centerWindow();
