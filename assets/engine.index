@@ -33,6 +33,7 @@ com.goldsprite.gdengine.ecs.GameWorld
 com.goldsprite.gdengine.ecs.component.Component
 com.goldsprite.gdengine.ecs.component.FsmComponent
 com.goldsprite.gdengine.ecs.component.NeonAnimatorComponent
+com.goldsprite.gdengine.ecs.component.RenderComponent
 com.goldsprite.gdengine.ecs.component.SkeletonComponent
 com.goldsprite.gdengine.ecs.component.SpriteComponent
 com.goldsprite.gdengine.ecs.component.TransformComponent
@@ -53,9 +54,8 @@ com.goldsprite.gdengine.ecs.skeleton.data.NeonDataModels
 com.goldsprite.gdengine.ecs.skeleton.data.NeonJsonUtils
 com.goldsprite.gdengine.ecs.system.BaseSystem
 com.goldsprite.gdengine.ecs.system.SceneSystem
-com.goldsprite.gdengine.ecs.system.SkeletonRenderSystem
 com.goldsprite.gdengine.ecs.system.SkeletonSystem
-com.goldsprite.gdengine.ecs.system.SpriteSystem
+com.goldsprite.gdengine.ecs.system.WorldRenderSystem
 com.goldsprite.gdengine.input.Event
 com.goldsprite.gdengine.log.Debug
 com.goldsprite.gdengine.log.DebugConsole

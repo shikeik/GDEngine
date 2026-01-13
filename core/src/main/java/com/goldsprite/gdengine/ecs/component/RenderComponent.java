@@ -9,7 +9,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
  */
 public abstract class RenderComponent extends Component {
 
-	public RenderComponent() {}int k;
+	public RenderComponent() {}
 	
 	/** 排序层级 (数值越大越靠前/后覆盖) */
 	public int sortingOrder = 0;
