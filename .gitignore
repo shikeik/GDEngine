@@ -161,6 +161,7 @@ Thumbs.db
 /outputs/GDEngine*.exe
 /outputs/GDEngine*.apk
 /outputs/GDEngine*.jar
+outputs/GDEngine.exe4j
 /outputs/error.log
 
 changes.diff
@@ -174,3 +175,5 @@ docs/tmp/
 # GDEngine Config (Local Preferences)
 GDEngine/engine_config.json
 GDEngine/UserProjects/
+assets/engine.index
+assets/engine/libs/

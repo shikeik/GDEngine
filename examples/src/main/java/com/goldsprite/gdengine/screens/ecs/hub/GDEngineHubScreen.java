@@ -26,6 +26,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
+import com.goldsprite.gdengine.ui.widget.ChangeLogDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
 import com.goldsprite.gdengine.BuildConfig;
 import com.kotcrab.vis.ui.VisUI;
@@ -148,7 +149,25 @@ public class GDEngineHubScreen extends GScreen {
 
 		// 3. Console
 		console = new IDEConsole();
-		root.add(console).growX();
+		root.add(console).growX().row();
+
+		// [新增] 底部栏 (包含日志按钮)
+		VisTable bottomBar = new VisTable();
+		bottomBar.left();
+
+		VisTextButton btnLog = new VisTextButton("📅 更新日志");
+		btnLog.setColor(Color.SKY);
+		btnLog.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				new ChangeLogDialog().show(stage);
+			}
+		});
+
+		bottomBar.add(btnLog).pad(5).left();
+
+		// 将底部栏添加到 root 的最后
+		root.add(bottomBar).growX().left();
 	}
 
 	public void refreshList() {
