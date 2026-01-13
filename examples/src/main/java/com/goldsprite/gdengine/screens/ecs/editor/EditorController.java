@@ -212,7 +212,7 @@ public class EditorController {
 	// [新增] 获取当前应该读写的场景文件
 	private FileHandle getSceneFile() {
 		if (GDEngineHubScreen.ProjectManager.currentProject != null) {
-			return GDEngineHubScreen.ProjectManager.currentProject.child("assets/main.scene");
+			return GDEngineHubScreen.ProjectManager.currentProject.child("scenes/main.scene");
 		}
 		return Gdx.files.local("scene_debug.json"); // 沙盒回退
 	}

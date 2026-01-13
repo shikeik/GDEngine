@@ -152,7 +152,7 @@ public class GDEngineEditorScreen extends GScreen {
 				@Override public void changed(ChangeEvent event, Actor actor) {
 					// 跳转到可视化编辑器
 					// 注意：ProjectManager.currentProject 此时已经是设置好的，EditorController 会自动读取
-					getScreenManager().setCurScreen(EditorGameScreen.class, true);
+					getScreenManager().turnNewScreen(EditorGameScreen.class);
 				}
 			});
 

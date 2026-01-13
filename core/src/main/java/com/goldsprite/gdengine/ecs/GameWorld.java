@@ -181,14 +181,14 @@ public class GameWorld {
 			// 确保第一帧也能执行 Start 逻辑
 			sceneSystem.executeStartTask();
 			Debug.log("GameWorld: 逻辑循环已启动");
-			
+
 			// [修改] 优化的系统统计日志
             Debug.log("=== 系统苏醒完毕 (Total: %d) ===", systems.size());
             logSystemList("Logic ", updateSystems);
             logSystemList("Fixed ", fixedUpdateSystems);
             logSystemList("Render", renderSystems);
             Debug.log("===============================");
-			
+
 			return; // 第一帧通常 delta 不稳定，跳过逻辑运行
 		}
 
@@ -236,7 +236,7 @@ public class GameWorld {
 			}
 		}
 	}
-	
+
 
     // [新增] 内部辅助方法：格式化输出系统列表
     private void logSystemList(String tag, List<BaseSystem> list) {
@@ -371,7 +371,7 @@ public class GameWorld {
 		// 强制刷新缓冲区，确保下一帧逻辑干净
 		flushEntities();
 	}
-	
+
 	public static void autoDispose() {
 		if(inst() == null) return;
 		inst().dispose();
@@ -379,14 +379,18 @@ public class GameWorld {
 	/** 资源释放与重置 */
 	public void dispose() {
 		Debug.log("GameWorld: Disposing...");
+
+		totalTime = 0f;
+
 		rootEntities.clear();
 		pendingAdds.clear();
 		pendingRemoves.clear();
 
+		systemMap.clear();
 		systems.clear();
 		updateSystems.clear();
 		fixedUpdateSystems.clear();
-		systemMap.clear();
+		renderSystems.clear();
 
 		// [修复] 彻底销毁组件管理器状态，防止静态变量污染下一次运行
 		ComponentManager.dispose();
