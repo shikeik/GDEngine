@@ -15,7 +15,8 @@ engine/templates/FlappyGame/src/main/java/com/flappy/NeonDigitDrawer.java
 engine/templates/FlappyGame/template.json
 engine/templates/HelloGame/assets/gd_icon.png
 engine/templates/HelloGame/project.json
-engine/templates/HelloGame/src/main/java/com/mygame/Main.java
+engine/templates/HelloGame/src/main/java/com/hellogame/Main.java
+engine/templates/HelloGame/src/main/java/com/hellogame/RotorComponent.java
 engine/templates/HelloGame/template.json
 engine/templates/MultiSampleDemo/assets/gd_icon.png
 engine/templates/MultiSampleDemo/project.json

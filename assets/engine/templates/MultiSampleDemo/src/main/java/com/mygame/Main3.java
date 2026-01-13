@@ -38,7 +38,6 @@ public class Main3 implements IGameScriptEntry {
 		worldHeight = GameWorld.worldCamera.viewportHeight;
 
 		String info = ": "+worldHeight
-			+"\n"+GameWorld.inst().getSystem(SpriteSystem.class)
 			;
 		Debug.logT("Script", "RotCube onStart(). \ninfo: \n%s", info);
 

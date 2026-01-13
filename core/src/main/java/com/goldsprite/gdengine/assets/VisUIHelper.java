@@ -71,6 +71,7 @@ public class VisUIHelper {
 			skin.get(MenuItem.MenuItemStyle.class).font = smFont;
 			skin.get(Window.WindowStyle.class).titleFont = smFont;
 			skin.get(SelectBox.SelectBoxStyle.class).font = smFont;
+			skin.get(List.ListStyle.class).font = smFont;
 
 			//VisScrollPane.ScrollPaneStyle 没有font
 

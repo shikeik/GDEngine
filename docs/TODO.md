@@ -3,6 +3,7 @@ ignored: indentFix codeFormatFix
 ## 待办
 
 - 临时上线，手感优化
+- 内置更新日志板
 - - [ ] hierarchy自动刷新临时30帧刷新即可
 - - [ ] 拖拽按钮按下时禁用滑动焦点
 - - [ ] 禁用横向滑动，禁用超限滑动
