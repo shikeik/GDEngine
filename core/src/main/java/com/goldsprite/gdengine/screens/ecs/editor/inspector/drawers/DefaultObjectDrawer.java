@@ -15,12 +15,12 @@ public class DefaultObjectDrawer implements IPropertyDrawer {
             Object val = field.get(target);
             VisTable table = new VisTable();
             table.left();
-            table.add(new VisLabel(field.getName())).width(80).padRight(5);
+            table.add(new VisLabel(field.getName())).padRight(5);
 
             String text = (val == null) ? "null" : val.toString();
             VisLabel valLabel = new VisLabel(text);
             valLabel.setColor(Color.GRAY); // 默认灰色，表示只读/不可编辑
-            table.add(valLabel).growX();
+			table.add(valLabel).growX();
 
 			// [修复] 支持多行文本
 			valLabel.setWrap(true);

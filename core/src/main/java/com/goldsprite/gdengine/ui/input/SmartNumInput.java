@@ -31,7 +31,7 @@ public class SmartNumInput extends SmartInput<Float> {
 
         this.textField.addListener(new ClickListener() {
 				@Override public void clicked(InputEvent event, float x, float y) {
-					if (!textField.isDisabled()) showNumPad();
+					showNumPad();
 				}
 			});
 
@@ -39,12 +39,12 @@ public class SmartNumInput extends SmartInput<Float> {
         dragBtn = new VisTextButton("<>");
         setupDragListener();
 
-//		add().growX();
+		add().padRight(5);
         VisTable controls = new VisTable();
 		controls.add().growX();
-        controls.add(dragBtn).width(28).padRight(2);
+		controls.add(dragBtn).width(28).padRight(2);
 
-		controls.add(textField).align(Align.left).maxWidth(150);
+		controls.add(textField).align(Align.left);
 
         addContent(controls);
     }
@@ -119,7 +119,6 @@ public class SmartNumInput extends SmartInput<Float> {
     }
 
     private void showNumPad() {
-        if (dragBtn.isDisabled()) return; // 只读时不弹窗
         if (sharedNumPad == null) sharedNumPad = new SimpleNumPad();
         if (getStage() != null && sharedNumPad.getStage() != getStage()) {
             getStage().addActor(sharedNumPad);

@@ -16,7 +16,7 @@ public class InspectorBuilder {
 	public static void build(VisTable container, Object target) {
 		if (target == null) return;
 
-		container.debugAll();
+//		container.debugAll();
 
 		Class<?> clazz = target.getClass();
 		Field[] fields = clazz.getDeclaredFields(); // 获取所有字段，包括 private

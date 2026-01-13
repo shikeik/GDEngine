@@ -23,7 +23,7 @@ public abstract class SmartInput<T> extends VisTable {
     protected VisLabel labelActor;
 
     public SmartInput(String labelText, T initValue, Consumer<T> onChange) {
-		debugAll();
+//		debugAll();
         this.value = initValue;
         this.onChange = onChange;
 

@@ -38,8 +38,9 @@ public class Vector2Drawer implements IPropertyDrawer {
 
             // 布局：一行显示
             Table row = new Table();
-            row.add(inputX).growX().padRight(5);
-            row.add(inputY).growX();
+			row.add().growX();
+            row.add(inputX);
+            row.add(inputY);
 
             container.add(row).growX();
             return container;
