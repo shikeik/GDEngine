@@ -106,6 +106,9 @@ public class EditorController {
 
 	private FileHandle currentProj;
 
+	private float hierarchyTimer = 0f;
+	private final float HIERARCHY_REFRESH_RATE = 1f / 30f; // 限制为 30fps
+
 	public EditorController(EditorGameScreen screen) {
 		this.screen = screen;
 	}
@@ -723,7 +726,16 @@ public class EditorController {
 		gameCamera.update();
 		sceneCamera.update();
 
-		if (hierarchyDirty) { refreshHierarchy(); hierarchyDirty = false; }
+//		if (hierarchyDirty) { refreshHierarchy(); hierarchyDirty = false; }
+		// [修改] 降频刷新 Hierarchy
+		if (hierarchyDirty) {
+			hierarchyTimer += delta;
+			if (hierarchyTimer >= HIERARCHY_REFRESH_RATE) {
+				refreshHierarchy();
+				hierarchyDirty = false;
+				hierarchyTimer = 0f;
+			}
+		}
 
 		// 2. 画 Game View (FBO)
 		gameTarget.renderToFbo(() -> {
