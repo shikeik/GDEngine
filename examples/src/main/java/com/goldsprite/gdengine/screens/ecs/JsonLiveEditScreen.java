@@ -8,7 +8,6 @@ import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.ecs.component.NeonAnimatorComponent;
 import com.goldsprite.gdengine.ecs.component.SkeletonComponent;
-import com.goldsprite.gdengine.ecs.system.SkeletonRenderSystem;
 import com.goldsprite.gdengine.ecs.system.SkeletonSystem;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.ScreenManager;
@@ -22,6 +21,7 @@ import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.goldsprite.gdengine.screens.ecs.skeleton.TestSkeletonFactory;
+import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 
 public class JsonLiveEditScreen extends ExampleGScreen {
 
@@ -104,8 +104,8 @@ public class JsonLiveEditScreen extends ExampleGScreen {
 		world = new GameWorld();
 		world.setReferences(getUIViewport(), worldCamera);
 
-		world.registerSystem(new SkeletonSystem());
-		world.registerSystem(new SkeletonRenderSystem(neonBatch, getWorldCamera()));
+		new SkeletonSystem();
+		new WorldRenderSystem(neonBatch, getWorldCamera());
 
 		createTestEntity();
 		initUI();
@@ -198,7 +198,7 @@ public class JsonLiveEditScreen extends ExampleGScreen {
 		neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.GRAY);
 		neonBatch.end();
 
-		world.getSystem(SkeletonRenderSystem.class).update(delta);
+		world.getSystem(WorldRenderSystem.class).update(delta);
 
 		uiStage.act(delta);
 		uiStage.draw();

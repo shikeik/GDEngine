@@ -1,12 +1,16 @@
 package com.goldsprite.gdengine.ecs.component;
 
+import com.badlogic.gdx.graphics.Camera;
 import com.goldsprite.gdengine.ecs.skeleton.NeonSkeleton;
+import com.goldsprite.gdengine.ecs.skeleton.NeonSlot;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
 
 /**
  * 骨架组件
  * 职责：将 NeonSkeleton 挂载到 ECS 实体上，并同步 Transform
  */
-public class SkeletonComponent extends Component {
+// [修改] 继承 RenderComponent
+public class SkeletonComponent extends RenderComponent {
 
 	private final NeonSkeleton skeleton;
 
@@ -31,5 +35,28 @@ public class SkeletonComponent extends Component {
 
 		// 然后触发骨骼矩阵计算
 		skeleton.update();
+	}
+	
+	// [新增] 迁移自 SkeletonRenderSystem
+	@Override
+	public void render(NeonBatch batch, Camera camera) {
+		if (!isEnable() || skeleton == null) return;
+
+		for (NeonSlot slot : skeleton.getDrawOrder()) {
+			slot.draw(batch);
+		}
+	}
+
+	// [新增] 简单的命中检测 (基于 RootBone 周围半径)
+	@Override
+	public boolean contains(float x, float y) {
+		if (transform == null) return false;
+
+		// 简单判定：距离中心点 50 像素范围内
+		// 实际上骨骼形状复杂，OBB检测很难，这里用一个经验值
+		float dist = com.badlogic.gdx.math.Vector2.dst(x, y, transform.worldPosition.x, transform.worldPosition.y);
+		float threshold = 50f * Math.max(Math.abs(transform.worldScale.x), Math.abs(transform.worldScale.y));
+
+		return dist < threshold;
 	}
 }

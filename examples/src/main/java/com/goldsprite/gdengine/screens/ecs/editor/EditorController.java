@@ -14,7 +14,10 @@ import com.badlogic.gdx.graphics.glutils.HdpiUtils;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.*;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Group;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -33,17 +36,18 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.core.ComponentRegistry;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.command.CommandManager;
 import com.goldsprite.gdengine.core.input.ShortcutManager;
 import com.goldsprite.gdengine.core.utils.GdxJsonSetup;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.component.Component;
+import com.goldsprite.gdengine.ecs.component.RenderComponent;
 import com.goldsprite.gdengine.ecs.component.SpriteComponent;
 import com.goldsprite.gdengine.ecs.component.TransformComponent;
 import com.goldsprite.gdengine.ecs.entity.GObject;
-import com.goldsprite.gdengine.ecs.system.SkeletonRenderSystem;
-import com.goldsprite.gdengine.ecs.system.SpriteSystem;
+import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorGizmoSystem;
@@ -53,8 +57,8 @@ import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
 import com.goldsprite.gdengine.ui.input.SmartInput;
 import com.goldsprite.gdengine.ui.input.SmartTextInput;
 import com.goldsprite.gdengine.ui.widget.AddComponentDialog;
-import com.goldsprite.gdengine.utils.SimpleCameraController;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
+import com.goldsprite.gdengine.utils.SimpleCameraController;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.MenuItem;
 import com.kotcrab.vis.ui.widget.PopupMenu;
@@ -67,7 +71,6 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTree;
 import java.util.ArrayList;
 import java.util.List;
-import com.goldsprite.gdengine.core.ComponentRegistry;
 
 public class EditorController {
 	private EditorGameScreen screen;
@@ -96,8 +99,7 @@ public class EditorController {
 	private SpriteBatch spriteBatch;
 	private NeonBatch neonBatch;
 	private ShapeRenderer shapeRenderer;
-	private SpriteSystem spriteSystem;
-	private SkeletonRenderSystem skeletonRenderSystem;
+	private WorldRenderSystem worldRenderSystem; // New
 	private Stack gameWidgetStack;
 
 	private boolean hierarchyDirty = false;
@@ -164,8 +166,9 @@ public class EditorController {
 		spriteBatch = new SpriteBatch();
 		neonBatch = new NeonBatch();
 		shapeRenderer = new ShapeRenderer();
-		spriteSystem = new SpriteSystem(spriteBatch, gameCamera);
-		skeletonRenderSystem = new SkeletonRenderSystem(neonBatch, gameCamera);
+		// [修改] 注册统一渲染系统
+		worldRenderSystem = new WorldRenderSystem(neonBatch, gameCamera);
+		// 注意：WorldRenderSystem 内部会处理 batch.begin/end，它使用 NeonBatch (兼容 SpriteBatch)
 
 		createUI();
 
@@ -755,20 +758,21 @@ public class EditorController {
 
 		gameTarget.renderToFbo(() -> {
 			gameViewport.apply();
-			spriteSystem.setCamera(gameCamera);
-			spriteSystem.update(delta);
-			skeletonRenderSystem.setCamera(gameCamera);
-			skeletonRenderSystem.update(delta);
+			
+			// [修改] 使用统一渲染系统
+			worldRenderSystem.setCamera(gameCamera);
+			worldRenderSystem.update(delta);
 		});
 		sceneTarget.renderToFbo(() -> {
 			Gdx.gl.glViewport(0, 0, sceneTarget.getFboWidth(), sceneTarget.getFboHeight());
 			Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
 			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 			drawGrid(sceneCamera);
-			spriteSystem.setCamera(sceneCamera);
-			spriteSystem.update(delta);
-			skeletonRenderSystem.setCamera(sceneCamera);
-			skeletonRenderSystem.update(delta);
+			
+			// [修改] 场景视图也使用统一渲染系统
+			worldRenderSystem.setCamera(sceneCamera);
+			worldRenderSystem.update(delta);
+			
 			neonBatch.setProjectionMatrix(sceneCamera.combined);
 			neonBatch.begin();
 			if(sceneManager.getSelection() != null) {
@@ -1082,12 +1086,20 @@ public class EditorController {
 
 			return DragMode.NONE;
 		}
+		// [重构] 选中检测：基于渲染层级 (所见即所得)
 		private GObject hitTestGObject(Vector2 p) {
-			for(GObject root : GameWorld.inst().getRootEntities()) {
-				if(p.dst(root.transform.worldPosition) < 60) return root;
-				GObject childHit = hitTestRecursive(root, p);
-				if (childHit != null) return childHit;
+			// 1. 获取当前帧已排序的渲染列表 (底 -> 顶)
+			List<RenderComponent> renderables = worldRenderSystem.getSortedRenderables();
+
+			// 2. 倒序遍历 (顶 -> 底)
+			for (int i = renderables.size() - 1; i >= 0; i--) {
+				RenderComponent rc = renderables.get(i);
+				// 检查点击是否在范围内
+				if (rc.contains(p.x, p.y)) {
+					return rc.getGObject();
+				}
 			}
+
 			return null;
 		}
 		private GObject hitTestRecursive(GObject parent, Vector2 p) {

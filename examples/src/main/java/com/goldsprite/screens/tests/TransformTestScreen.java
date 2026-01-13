@@ -8,11 +8,11 @@ import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.component.SpriteComponent;
 import com.goldsprite.gdengine.ecs.component.TransformComponent;
 import com.goldsprite.gdengine.ecs.entity.GObject;
-import com.goldsprite.gdengine.ecs.system.SpriteSystem;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
 import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 
 public class TransformTestScreen extends ExampleGScreen {
 
@@ -43,7 +43,7 @@ public class TransformTestScreen extends ExampleGScreen {
 		world = new GameWorld();
 
 		// Initialize Systems
-		new SpriteSystem(neonBatch, getWorldCamera());
+		new WorldRenderSystem(neonBatch, getWorldCamera());
 
 		// Create Test Entity
 		testObj = new GObject("TestBox");

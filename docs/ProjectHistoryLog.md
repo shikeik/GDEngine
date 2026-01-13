@@ -1,7 +1,12 @@
 ## 版本
 
 ## `1.10.x` 对标UnityEditor整合GDEngineEditor
+### `1.10.6.x`
+- [ ] 修复渲染层级
 ### `1.10.5.x`
+- [x] 优化变换手柄操作体验
+- [x] 相机右键拖拽移动不跟手
+- [x] pc滚轮缩放, android双指缩放拖拽移动不起效的问题
 ### `1.10.4.x` 
 - 正式转为引擎开发
 - 清理所有旧代码, 包括SoloEditor, IconEditor, GDEngine业务代码

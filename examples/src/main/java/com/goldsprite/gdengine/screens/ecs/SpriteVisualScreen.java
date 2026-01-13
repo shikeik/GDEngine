@@ -12,7 +12,6 @@ import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.ecs.component.NeonAnimatorComponent;
 import com.goldsprite.gdengine.ecs.component.SpriteComponent;
-import com.goldsprite.gdengine.ecs.system.SpriteSystem;
 import com.goldsprite.gdengine.ecs.skeleton.animation.NeonAnimation;
 import com.goldsprite.gdengine.ecs.skeleton.animation.NeonProperty;
 import com.goldsprite.gdengine.ecs.skeleton.animation.NeonTimeline;
@@ -23,6 +22,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.neonbatch.NeonStage;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 
 public class SpriteVisualScreen extends ExampleGScreen {
 
@@ -62,7 +62,7 @@ public class SpriteVisualScreen extends ExampleGScreen {
 		world = new GameWorld();
 		world.setReferences(getUIViewport(), worldCamera);
 
-		new SpriteSystem(neonBatch, getWorldCamera());
+		new WorldRenderSystem(neonBatch, getWorldCamera());
 
 		createTestEntity();
 		initUI();
@@ -166,7 +166,7 @@ public class SpriteVisualScreen extends ExampleGScreen {
 		neonBatch.drawLine(0, -200, 0, 200, 1, Color.GRAY);
 		neonBatch.end();
 
-		world.getSystem(SpriteSystem.class).update(delta);
+		world.getSystem(WorldRenderSystem.class).update(delta);
 
 		uiStage.act(delta);
 		uiStage.draw();

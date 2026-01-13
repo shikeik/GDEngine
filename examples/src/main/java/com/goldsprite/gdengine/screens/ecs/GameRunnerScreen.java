@@ -9,15 +9,14 @@ import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
 import com.goldsprite.gdengine.core.scripting.ScriptResourceTracker;
 import com.goldsprite.gdengine.ecs.GameWorld;
-import com.goldsprite.gdengine.ecs.system.SkeletonRenderSystem;
 import com.goldsprite.gdengine.ecs.system.SkeletonSystem;
-import com.goldsprite.gdengine.ecs.system.SpriteSystem;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.neonbatch.NeonStage; // [新增]
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 
 public class GameRunnerScreen extends GScreen {
 
@@ -64,9 +63,8 @@ public class GameRunnerScreen extends GScreen {
 		world = new GameWorld();
 		world.setReferences(getUIViewport(), getWorldCamera());
 
-		new SpriteSystem(neonBatch, getWorldCamera());
 		new SkeletonSystem();
-		new SkeletonRenderSystem(neonBatch, getWorldCamera());
+		new WorldRenderSystem(neonBatch, getWorldCamera());
 
 		// [新增] 初始化 UI 层
 		initUI();
