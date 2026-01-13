@@ -117,6 +117,28 @@ tasks.register('generateAssetList') {
 	}
 }
 
+tasks.register('copyChangeLogToAssets') {
+	doLast {
+		// 定义源文件和目标文件
+		def sourceFile = rootProject.file('docs/ProjectHistoryLog.md')
+		def targetFile = rootProject.file('assets/docs/ProjectHistoryLog.md')
+
+		// 检查源文件是否存在
+		if (sourceFile.exists()) {
+			// 创建目标目录（如果不存在）
+			targetFile.parentFile.mkdirs()
+			// 复制文件
+			copy {
+				from sourceFile
+				into targetFile.parentFile
+			}
+			println "✅ ProjectHistoryLog.md 已成功复制到 assets 目录"
+		} else {
+			println "❌ 源文件 docs/ProjectHistoryLog.md 不存在"
+		}
+	}
+}
+
 // ============================================================
 // 2. 集中管理依赖关系
 // ============================================================
@@ -127,6 +149,7 @@ tasks.named('generateAssetList') {
 	dependsOn 'syncEngineTemplates'
 	dependsOn ':core:copyEngineLibs'
 	dependsOn ':core:packageEngineCore'
+	dependsOn ':copyChangeLogToAssets'
 }
 
 // [核心修复] 仅将资源准备任务挂载到【消费者】项目，切断 :core 的闭环

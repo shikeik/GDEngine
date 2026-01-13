@@ -52,7 +52,7 @@ tasks.javadoc {
 	}
 }
 // 在构建过程中执行该任务
-build.dependsOn javadoc
+//build.dependsOn javadoc
 
 //自动同步版本文件
 def projectPackage = project.projectPackage//获取项目包名

@@ -39,7 +39,7 @@ public class ChangeLogDialog extends BaseDialog {
 		// 策略: 优先读项目根目录 docs (Dev环境)，其次读 assets/docs (Release环境)
 		FileHandle file = Gdx.files.local("docs/ProjectHistoryLog.md");
 		if (!file.exists()) {
-			file = Gdx.files.internal("docs/changelog.md");
+			file = Gdx.files.internal("docs/ProjectHistoryLog.md");
 		}
 
 		Array<LogEntry> data = LogParser.parse(file);
@@ -74,20 +74,17 @@ public class ChangeLogDialog extends BaseDialog {
 		contentTable.add(contentText).growX().top();
 
 		// 跳转监听
-		contentText.addListener(new EventListener() {
-			@Override
-			public boolean handle(Event e) {
-				if (e instanceof RichTextEvent) {
-					String eventId = ((RichTextEvent) e).eventId;
-					if (eventId.startsWith("goto:")) {
-						// 这里的 targetTitle 需要匹配 MD 文件里的 "v1.10.x" 这种字符串
-						String targetTitle = eventId.substring(5);
-						navigateTo(targetTitle);
-						return true;
-					}
+		contentText.addListener(e -> {
+			if (e instanceof RichTextEvent) {
+				String eventId = ((RichTextEvent) e).eventId;
+				if (eventId.startsWith("goto:")) {
+					// 这里的 targetTitle 需要匹配 MD 文件里的 "v1.10.x" 这种字符串
+					String targetTitle = eventId.substring(5);
+					navigateTo(targetTitle);
+					return true;
 				}
-				return false;
 			}
+			return false;
 		});
 
 		VisScrollPane contentScroll = new VisScrollPane(contentTable);
@@ -97,7 +94,7 @@ public class ChangeLogDialog extends BaseDialog {
 		split.setSplitAmount(0.25f);
 
 		getContentTable().add(split).minWidth(0).grow();
-		setFillParent(true);
+//		setFillParent(true);
 
 		// 默认选中 Current 版本 (简单逻辑：包含当前版本号的节点)
 		findAndSelectCurrent();
