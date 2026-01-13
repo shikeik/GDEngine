@@ -31,7 +31,7 @@
 
 **交互手感 (Interaction)**
 - [ ] **[Fix] 滚动冲突**: 拖拽数值/手柄按下时，暂时禁用父级滚动视图 (ScrollFocus)
-- [ ] **[Adj] 滚动体验**: 禁用 ScrollPane 的横向滚动与超限回弹 (Overscroll)
+- [x] **[Adj] 滚动体验**: 禁用 ScrollPane 的横向滚动与超限回弹 (Overscroll)
 - [ ] **[New] 统一菜单**: 统一右键(PC)与长按(Mobile)唤出上下文菜单的逻辑
 
 **UI 视觉 (Visual Polish)**

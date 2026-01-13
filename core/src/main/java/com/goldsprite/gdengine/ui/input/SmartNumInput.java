@@ -63,10 +63,7 @@ public class SmartNumInput extends SmartInput<Float> {
 
 					// [修复] 禁用父级滚动，防止拖拽数值时触发列表滚动
 					parentScroll = findParentScrollPane(SmartNumInput.this);
-					if (parentScroll != null) {
-						parentScroll.setCancelTouchFocus(false); // 关键：禁止 ScrollPane 拦截
-						event.getStage().setScrollFocus(null);   // 关键：清除滚动焦点
-					}
+					if (parentScroll != null) event.stop();
 					return true;
 				}
 
@@ -83,10 +80,7 @@ public class SmartNumInput extends SmartInput<Float> {
 
 				@Override
 				public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-					if (parentScroll != null) {
-						parentScroll.setCancelTouchFocus(true);
-						parentScroll = null;
-					}
+					if (parentScroll != null) parentScroll = null;
 					notifyCommand(startDragValue, value);
 				}
 			});

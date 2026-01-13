@@ -33,10 +33,6 @@ public class AddComponentDialog extends BaseDialog {
 		this.targetObject = target;
 		this.onAdded = onAdded;
 
-		setModal(true);
-		closeOnEscape();
-		addCloseButton();
-
 		// [修改] 直接从注册表获取，极快，且包含用户脚本
 		allComponents = ComponentRegistry.getAll();
 
@@ -47,7 +43,7 @@ public class AddComponentDialog extends BaseDialog {
 		searchField.setMessageText("Component Name...");
 		searchTable.add(searchField).growX();
 
-		add(searchTable).growX().pad(5).row();
+		getContentTable().add(searchTable).growX().pad(5).row();
 
 		// 3. 列表区域
 		listTable = new VisTable();
@@ -56,7 +52,7 @@ public class AddComponentDialog extends BaseDialog {
 		VisScrollPane scrollPane = new VisScrollPane(listTable);
 		scrollPane.setFadeScrollBars(false);
 
-		add(scrollPane).width(300).height(400).pad(5).row();
+		getContentTable().add(scrollPane).width(300).height(400).pad(5).row();
 
 		// 4. 事件监听
 		searchField.addListener(new ChangeListener() {
