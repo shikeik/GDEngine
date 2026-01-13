@@ -246,10 +246,16 @@ public class ComponentManager {
 	public static void updateEntityComponentMask(GObject entity) {
 		BitSet mask = new BitSet();
 
-		// 遍历实体所有组件 (通过 GObject 的内部访问器)
+		// 遍历实体所有组件
 		for (List<Component> components : entity.getComponentsMap().values()) {
 			for (Component comp : components) {
-				mask.set(getComponentId(comp.getClass()));
+				// [修复核心] 支持多态：不仅注册当前类，还注册所有父类组件
+				Class<?> clazz = comp.getClass();
+				while (clazz != null && Component.class.isAssignableFrom(clazz)) {
+					// 只要是 Component 的子类（包括 RenderComponent），都打上标记
+					mask.set(getComponentId((Class<? extends Component>) clazz));
+					clazz = clazz.getSuperclass();
+				}
 			}
 		}
 

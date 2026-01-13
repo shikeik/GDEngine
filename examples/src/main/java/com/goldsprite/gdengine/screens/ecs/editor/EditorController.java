@@ -745,20 +745,15 @@ public class EditorController {
 
 	// [修改] render 循环
 	public void render(float delta) {
-		GameWorld.inst().update(delta);
-		if (hierarchyDirty) { refreshHierarchy(); hierarchyDirty = false; }
-
-		// [新增] 更新相机平滑逻辑
-		if (sceneCamController != null) {
-			sceneCamController.update(delta);
-		}
-
 		gameCamera.update();
 		sceneCamera.update();
 
+		if (hierarchyDirty) { refreshHierarchy(); hierarchyDirty = false; }
+
 		gameTarget.renderToFbo(() -> {
 			gameViewport.apply();
-			
+
+			GameWorld.inst().update(delta);
 			// [修改] 使用统一渲染系统
 			worldRenderSystem.setCamera(gameCamera);
 			worldRenderSystem.update(delta);
@@ -768,11 +763,11 @@ public class EditorController {
 			Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
 			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 			drawGrid(sceneCamera);
-			
+
 			// [修改] 场景视图也使用统一渲染系统
 			worldRenderSystem.setCamera(sceneCamera);
 			worldRenderSystem.update(delta);
-			
+
 			neonBatch.setProjectionMatrix(sceneCamera.combined);
 			neonBatch.begin();
 			if(sceneManager.getSelection() != null) {

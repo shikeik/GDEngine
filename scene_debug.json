@@ -1,41 +1,29 @@
 [
 {
-	"name": "Back",
+	"name": "Player",
+	"tag": "Untagged",
+	"layer": 0,
 	"components": [
 		{
 			"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
-			"gid": 12,
-			"name": "TransformComponent",
-			"isEnabled": true,
-			"isDestroyed": false,
 			"position": {
-				"x": -72.40921,
-				"y": 1.2714539
+				"x": -187.27457,
+				"y": 74.215904
 			},
-			"scale": 1.2091959,
-			"rotation": 0,
-			"worldTransform": {
-				"m00": 1.2091959,
-				"m01": 0,
-				"m02": -72.40921,
-				"m10": 0,
-				"m11": 1.2091959,
-				"m12": 1.2714539
-			},
-			"worldPosition": {
-				"x": -72.40921,
-				"y": 1.2714539
-			},
-			"worldRotation": 0,
-			"worldScale": 1.2091959
+			"rotation": -20.069866,
+			"scale": {
+				"x": 1.3627853,
+				"y": 1.3627853
+			}
 		},
 		{
 			"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
-			"gid": 23,
+			"gid": 4,
 			"name": "SpriteComponent",
 			"isEnabled": true,
 			"isDestroyed": false,
-			"assetPath": "sprites/tempBack.png",
+			"sortingOrder": 0,
+			"assetPath": "gd_icon.png",
 			"color": {
 				"r": 1,
 				"g": 1,
@@ -46,58 +34,6 @@
 			"flipY": false,
 			"offsetX": 0,
 			"offsetY": 0,
-			"width": 1024,
-			"height": 1024
-		}
-	]
-},
-{
-	"name": "Player",
-	"components": [
-		{
-			"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
-			"gid": 4,
-			"name": "TransformComponent",
-			"isEnabled": true,
-			"isDestroyed": false,
-			"position": {
-				"x": 66.18561,
-				"y": 30.830353
-			},
-			"scale": 2.46196,
-			"rotation": -37.508514,
-			"worldTransform": {
-				"m00": 1.9527252,
-				"m01": 1.4986215,
-				"m02": 66.18561,
-				"m10": -1.4986215,
-				"m11": 1.9527252,
-				"m12": 30.830353
-			},
-			"worldPosition": {
-				"x": 66.18561,
-				"y": 30.830353
-			},
-			"worldRotation": -37.508514,
-			"worldScale": 2.46196
-		},
-		{
-			"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
-			"gid": 5,
-			"name": "SpriteComponent",
-			"isEnabled": true,
-			"isDestroyed": false,
-			"assetPath": "gd_icon.png",
-			"color": {
-				"r": 0.67058825,
-				"g": 0.28627452,
-				"b": 0.28627452,
-				"a": 1
-			},
-			"flipX": false,
-			"flipY": false,
-			"offsetX": 1.0666622,
-			"offsetY": 0,
 			"width": 100,
 			"height": 100
 		}
@@ -105,45 +41,33 @@
 	"children": [
 		{
 			"name": "Weapon",
+			"tag": "Untagged",
+			"layer": 0,
 			"components": [
 				{
 					"class": "com.goldsprite.gdengine.ecs.component.TransformComponent",
-					"gid": 8,
-					"name": "TransformComponent",
-					"isEnabled": true,
-					"isDestroyed": false,
 					"position": {
-						"x": 121.858505,
-						"y": 9.4602165
+						"x": 193.86302,
+						"y": 21.30083
 					},
-					"scale": 0.51441777,
-					"rotation": 45.59547,
-					"worldTransform": {
-						"m00": 2.715324,
-						"m01": 1.5303006,
-						"m02": 487.98474,
-						"m10": -1.5303006,
-						"m11": 2.715324,
-						"m12": -706.5393
-					},
-					"worldPosition": {
-						"x": 318.31906,
-						"y": -133.31621
-					},
-					"worldRotation": 8.086956,
-					"worldScale": 1.266476
+					"rotation": -306.83978,
+					"scale": {
+						"x": 1.2212327,
+						"y": 1.2212327
+					}
 				},
 				{
 					"class": "com.goldsprite.gdengine.ecs.component.SpriteComponent",
-					"gid": 8,
+					"gid": 7,
 					"name": "SpriteComponent",
 					"isEnabled": true,
 					"isDestroyed": false,
-					"assetPath": "back.png",
+					"sortingOrder": 0,
+					"assetPath": "gd_icon.png",
 					"color": {
 						"r": 1,
-						"g": 1,
-						"b": 1,
+						"g": 0,
+						"b": 0,
 						"a": 1
 					},
 					"flipX": false,

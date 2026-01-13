@@ -28,6 +28,7 @@ public class GdxJsonSetup {
 			@Override
 			public void write(Json json, TransformComponent object, Class knownType) {
 				json.writeObjectStart();
+				json.writeValue("class", TransformComponent.class.getName());
 				// 写入基本属性
 				json.writeValue("position", object.position);
 				json.writeValue("rotation", object.rotation);

@@ -46,10 +46,6 @@ public class SimpleCameraController implements InputProcessor {
 		this.mapper = mapper;
 	}
 
-	public void update(float dt) {
-		camera.update();
-	}
-
 	// --- 代理 InputProcessor ---
 	@Override public boolean touchDown(int x, int y, int pointer, int button) {
 		if(!inputEnabled) return false;
