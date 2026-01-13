@@ -1,6 +1,6 @@
 package com.goldsprite.gdengine;
 public class BuildConfig {
 	public static final String PROJECT_NAME = "GDEngine";
-	public static final String DEV_VERSION = "1.10.6.2-alpha";
+	public static final String DEV_VERSION = "1.10.7.2";
 	public static final String JDK_VERSION = "17";
 }
