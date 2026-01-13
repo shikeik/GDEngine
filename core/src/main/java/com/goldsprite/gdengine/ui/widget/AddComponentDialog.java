@@ -3,9 +3,12 @@ package com.goldsprite.gdengine.ui.widget;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.goldsprite.gdengine.core.ComponentRegistry;
 import com.goldsprite.gdengine.core.utils.ComponentScanner;
@@ -88,7 +91,7 @@ public class AddComponentDialog extends BaseDialog {
 
 	private void addItem(Class<? extends Component> clazz) {
 		VisTextButton btn = new VisTextButton(clazz.getSimpleName(), "toggle"); // 使用 toggle 样式看起来像列表项
-		btn.getLabel().setAlignment(com.badlogic.gdx.utils.Align.left);
+		btn.getLabel().setAlignment(Align.left);
 
 		// 区分内置和自定义 (简单的颜色区分)
 		if (!clazz.getName().startsWith("com.goldsprite.gdengine")) {

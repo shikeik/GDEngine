@@ -3,6 +3,7 @@ package com.goldsprite.gdengine.ecs.component;
 import com.badlogic.gdx.math.Affine2;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.goldsprite.gdengine.core.annotations.Hide;
 import com.goldsprite.gdengine.core.annotations.ReadOnly;
 import com.goldsprite.gdengine.core.annotations.Tooltip;
 
@@ -20,17 +21,13 @@ public class TransformComponent extends Component {
 	public final Vector2 scale = new Vector2(1, 1);
 
 	// --- 矩阵缓存 (World - 运行时计算) ---
-	public final Affine2 localTransform = new Affine2();
-	public final Affine2 worldTransform = new Affine2();
+	@Hide public final Affine2 localTransform = new Affine2();
+	@Hide public final Affine2 worldTransform = new Affine2();
 
 	// --- 派生数据缓存 (World Cache - 只读) ---
 	public final Vector2 worldPosition = new Vector2();
 	public float worldRotation = 0f;
 	public final Vector2 worldScale = new Vector2(1, 1);
-
-	// --- 编辑器调试信息 ---
-	@ReadOnly
-	public String worldInfo = "";
 
 	public TransformComponent() {
 		super();
@@ -62,10 +59,6 @@ public class TransformComponent extends Component {
 		// sx = len(m00, m10), sy = len(m01, m11)
 		worldScale.x = (float)Math.sqrt(worldTransform.m00 * worldTransform.m00 + worldTransform.m10 * worldTransform.m10);
 		worldScale.y = (float)Math.sqrt(worldTransform.m01 * worldTransform.m01 + worldTransform.m11 * worldTransform.m11);
-
-		// 4. 更新调试字符串
-		worldInfo = String.format("WPos:(%.1f, %.1f)\nWRot:%.1f\nWScl:(%.2f, %.2f)",
-			worldPosition.x, worldPosition.y, worldRotation, worldScale.x, worldScale.y);
 	}
 
 	// --- API (Local) ---

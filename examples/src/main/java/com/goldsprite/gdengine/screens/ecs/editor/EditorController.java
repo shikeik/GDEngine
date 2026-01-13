@@ -147,14 +147,9 @@ public class EditorController {
 		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
 		// 3. 初始化 ECS (保持不变)
-		if(GameWorld.inst() == null){
-			new GameWorld();
-			// 注册统一渲染系统
-			worldRenderSystem = new WorldRenderSystem(neonBatch, gameCamera);
-			// 注意：WorldRenderSystem 内部会处理 batch.begin/end，它使用 NeonBatch (兼容 SpriteBatch)
-		}else {
-			worldRenderSystem = GameWorld.inst().getSystem(WorldRenderSystem.class);
-		}
+		GameWorld.autoDispose();
+		new GameWorld();
+		worldRenderSystem = new WorldRenderSystem(neonBatch, gameCamera);
 		GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
 
 		commandManager = new CommandManager();
@@ -528,7 +523,7 @@ public class EditorController {
 		});
 
 		inspectorContainer = new VisTable();
-		inspectorContainer.setBackground("button");
+		inspectorContainer.setBackground("window-bg");
 		inspectorContainer.top().left();
 		//检查器滑动面板
 		VisScrollPane inspectorScroll = new VisScrollPane(inspectorContainer);
@@ -679,9 +674,11 @@ public class EditorController {
 	}
 
 	private void buildComponentUI(Component c, GObject owner) {
+		VisTable compContainer = new VisTable();
+//		compContainer.setBackground("button");
 		VisTable header = new VisTable();
 		// [优化] Header 背景: button (稍亮)
-		header.setBackground("button");
+		header.setBackground("panel1");
 		header.add(new VisLabel(c.getClass().getSimpleName())).expandX().left().pad(5);
 		if (!(c instanceof TransformComponent)) {
 			VisTextButton btnRemove = new VisTextButton("X");
@@ -692,19 +689,20 @@ public class EditorController {
 					refreshInspector(owner);
 				}
 			});
-			header.add(btnRemove).size(25, 25).right();
+			header.add(btnRemove).size(25, 25).padRight(5).right();
 		}
-		inspectorContainer.add(header).growX().colspan(2).padTop(5).row();
+		compContainer.add(header).growX().colspan(2).pad(2).row();
 		VisTable body = new VisTable();
 		// [优化] Body 背景: window-bg (稍暗) 或其他深色 drawable
 		// 如果没有合适的 drawable，可以用 ColorTextureUtils 生成一个半透明黑
-		body.setBackground("window-bg");
+//		body.setBackground("window-bg");
 		body.pad(5); // 内边距
 
         // [核心替换] 一行代码搞定所有反射逻辑！
         InspectorBuilder.build(body, c);
 
-        inspectorContainer.add(body).growX().colspan(2).row();
+		compContainer.add(body).growX().colspan(2).pad(5).row();
+		inspectorContainer.add(compContainer).growX().colspan(2).row();
     }
 
 	// [修改] 替换原来的 showAddComponentMenu 方法

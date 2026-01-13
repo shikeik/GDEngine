@@ -78,6 +78,7 @@ public class VisUIHelper {
 			// Button / TextButton
 			skin.get(TextButton.TextButtonStyle.class).font = cnFont;
 			skin.get(VisTextButton.VisTextButtonStyle.class).font = cnFont;
+			skin.get("toggle", VisTextButton.VisTextButtonStyle.class).font = smFont;
 
 			// TextField (输入框)
 			skin.get(VisTextField.VisTextFieldStyle.class).font = cnFont;
