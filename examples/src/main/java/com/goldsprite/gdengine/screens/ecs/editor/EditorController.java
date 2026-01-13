@@ -142,16 +142,6 @@ public class EditorController {
 		float scl = PlatformImpl.isAndroidUser() ? 1.3f : 2.0f;
 		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
-		commandManager = new CommandManager();
-		sceneManager = new EditorSceneManager(commandManager);
-		gizmoSystem = new EditorGizmoSystem(sceneManager);
-		dragAndDrop = new DragAndDrop();
-
-		Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(gameTarget), Gd.compiler);
-
-		// 2. [核心修改] 注入项目上下文
-		reloadProjectContext();
-
 		// 3. 初始化 ECS (保持不变)
 		if(GameWorld.inst() == null){
 			new GameWorld();
@@ -162,6 +152,17 @@ public class EditorController {
 			worldRenderSystem = GameWorld.inst().getSystem(WorldRenderSystem.class);
 		}
 		GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
+
+		commandManager = new CommandManager();
+		sceneManager = new EditorSceneManager(commandManager);
+		gizmoSystem = new EditorGizmoSystem(sceneManager);
+		dragAndDrop = new DragAndDrop();
+
+		Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(gameTarget), Gd.compiler);
+
+		// 2. [核心修改] 注入项目上下文
+		reloadProjectContext();
+
 		reloadGameViewport();
 
 		spriteBatch = new SpriteBatch();
