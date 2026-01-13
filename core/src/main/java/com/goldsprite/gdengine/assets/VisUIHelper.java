@@ -2,13 +2,9 @@ package com.goldsprite.gdengine.assets;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Pixmap;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
-import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.goldsprite.gdengine.log.Debug;
 import com.kotcrab.vis.ui.VisUI;
@@ -88,7 +84,7 @@ public class VisUIHelper {
 
 			Debug.log("VisUI 中文字体调整成功.");
 
-			fixSplitPaneHandle();
+			fixHandleSize();
 		} catch (Exception e) {
 			e.printStackTrace();
 			Debug.log("VisUI 中文字体调整失败: " + e.getMessage());
@@ -132,17 +128,12 @@ public class VisUIHelper {
 		skin.add("nobackground", noBackgroundScrollStyle);
 	}
 
-	private static void fixSplitPaneHandle() {
-		float size = 20f;
+	private static void fixHandleSize() {
 		Skin skin = VisUI.getSkin();
-
-		// [新增] 移植 GlobalAssets 的 SplitPane handle 逻辑
+		float size = 20f;
 		float splitBarThickness = 15;
-		Pixmap pm = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
 		float g = 0.4f;
-		pm.setColor(new Color(g, g, g, 0.4f));
-		pm.fill();
-		TextureRegionDrawable cDrawable = new TextureRegionDrawable(new TextureRegion(new Texture(pm)));
+		TextureRegionDrawable cDrawable = ColorTextureUtils.createColorDrawable(new Color(g, g, g, 0.4f));
 
 		SplitPane.SplitPaneStyle splitPaneStyle = skin.get("default-vertical", SplitPane.SplitPaneStyle.class);
 		// 优先使用 shade 的 handle，如果不想用 shade 的可以覆盖
@@ -167,5 +158,20 @@ public class VisUIHelper {
 		skin.get("default", VisTree.TreeStyle.class).plus.setMinHeight(size);
 		skin.get("default", VisTree.TreeStyle.class).minus.setMinWidth(size);
 		skin.get("default", VisTree.TreeStyle.class).minus.setMinHeight(size);
+
+
+		// VisCheckBox fixes
+		size = 30;
+		VisCheckBox.VisCheckBoxStyle checkBoxStyle = skin.get(VisCheckBox.VisCheckBoxStyle.class);
+		checkBoxStyle.checkBackground.setMinWidth(size);
+		checkBoxStyle.checkBackground.setMinHeight(size);
+		checkBoxStyle.checkBackgroundDown.setMinWidth(size);
+		checkBoxStyle.checkBackgroundDown.setMinHeight(size);
+		checkBoxStyle.checkBackgroundOver.setMinWidth(size);
+		checkBoxStyle.checkBackgroundOver.setMinHeight(size);
+		checkBoxStyle.checkedDown.setMinWidth(size);
+		checkBoxStyle.checkedDown.setMinHeight(size);
+		checkBoxStyle.checkedOver.setMinWidth(size);
+		checkBoxStyle.checkedOver.setMinHeight(size);
 	}
 }
