@@ -16,6 +16,8 @@ public class InspectorBuilder {
 	public static void build(VisTable container, Object target) {
 		if (target == null) return;
 
+		container.debugAll();
+
 		Class<?> clazz = target.getClass();
 		Field[] fields = clazz.getDeclaredFields(); // 获取所有字段，包括 private
 
@@ -73,7 +75,13 @@ public class InspectorBuilder {
 					}
 				}
 
-				container.add(widget).growX().colspan(2).row();
+				// [优化] 给每一行属性添加微弱的背景色，提升可读性
+				// 注意：需要在 VisTable 中嵌套一个 Table 并设置背景
+				// 或者简单点，我们假设外部调用者已经设置好了 Body 的背景
+				// 这里我们直接 add，如果需要斑马纹，可以在外部容器层做
+
+				// 暂时方案：只加 Padding，依靠外部容器背景
+				container.add(widget).growX().padBottom(4).row();
 			}
 		}
 	}

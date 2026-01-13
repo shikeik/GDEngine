@@ -19,20 +19,20 @@ public class Vector2Drawer implements IPropertyDrawer {
     public Actor draw(Object target, Field field, boolean isReadOnly) {
         try {
             Vector2 val = (Vector2) field.get(target);
-            
+
             // 外层容器
             VisTable container = new VisTable();
-            container.add(new VisLabel(field.getName())).left().width(80).padRight(5);
-            
+            container.add(new VisLabel(field.getName())).left().padRight(5);
+
             // X 分量
             SmartNumInput inputX = new SmartNumInput("X", val.x, 0.1f, v -> {
-               val.x = v; 
+               val.x = v;
             });
             inputX.setReadOnly(isReadOnly);
-            
+
             // Y 分量
             SmartNumInput inputY = new SmartNumInput("Y", val.y, 0.1f, v -> {
-               val.y = v; 
+               val.y = v;
             });
             inputY.setReadOnly(isReadOnly);
 
@@ -40,10 +40,10 @@ public class Vector2Drawer implements IPropertyDrawer {
             Table row = new Table();
             row.add(inputX).growX().padRight(5);
             row.add(inputY).growX();
-            
+
             container.add(row).growX();
             return container;
-            
+
         } catch (Exception e) { return null; }
     }
 }

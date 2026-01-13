@@ -528,7 +528,9 @@ public class EditorController {
 		inspectorContainer = new VisTable();
 		inspectorContainer.setBackground("button");
 		inspectorContainer.top().left();
+		//检查器滑动面板
 		VisScrollPane inspectorScroll = new VisScrollPane(inspectorContainer);
+		inspectorScroll.setOverscroll(false, false);
 
 		Stack centerStack = new Stack();
 		VisSplitPane viewSplit = new VisSplitPane(sceneWidget, gameWidgetStack, true);
@@ -676,6 +678,7 @@ public class EditorController {
 
 	private void buildComponentUI(Component c, GObject owner) {
 		VisTable header = new VisTable();
+		// [优化] Header 背景: button (稍亮)
 		header.setBackground("button");
 		header.add(new VisLabel(c.getClass().getSimpleName())).expandX().left().pad(5);
 		if (!(c instanceof TransformComponent)) {
@@ -691,7 +694,10 @@ public class EditorController {
 		}
 		inspectorContainer.add(header).growX().colspan(2).padTop(5).row();
 		VisTable body = new VisTable();
-		body.padLeft(10);
+		// [优化] Body 背景: window-bg (稍暗) 或其他深色 drawable
+		// 如果没有合适的 drawable，可以用 ColorTextureUtils 生成一个半透明黑
+		body.setBackground("window-bg");
+		body.pad(5); // 内边距
 
         // [核心替换] 一行代码搞定所有反射逻辑！
         InspectorBuilder.build(body, c);

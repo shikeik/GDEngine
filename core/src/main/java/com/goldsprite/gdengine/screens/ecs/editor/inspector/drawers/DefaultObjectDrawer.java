@@ -16,12 +16,17 @@ public class DefaultObjectDrawer implements IPropertyDrawer {
             VisTable table = new VisTable();
             table.left();
             table.add(new VisLabel(field.getName())).width(80).padRight(5);
-            
+
             String text = (val == null) ? "null" : val.toString();
             VisLabel valLabel = new VisLabel(text);
             valLabel.setColor(Color.GRAY); // 默认灰色，表示只读/不可编辑
             table.add(valLabel).growX();
-            
+
+			// [修复] 支持多行文本
+			valLabel.setWrap(true);
+			// 这里 growX 会让 label 占据剩余宽度，配合 wrap 实现换行
+			table.add(valLabel).growX().left();
+
             return table;
         } catch (Exception e) { return null; }
     }

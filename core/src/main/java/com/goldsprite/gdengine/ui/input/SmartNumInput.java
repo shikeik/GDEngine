@@ -39,9 +39,12 @@ public class SmartNumInput extends SmartInput<Float> {
         dragBtn = new VisTextButton("<>");
         setupDragListener();
 
+//		add().growX();
         VisTable controls = new VisTable();
-        controls.add(dragBtn).width(24).padRight(2);
-        controls.add(textField).growX();
+		controls.add().growX();
+        controls.add(dragBtn).width(28).padRight(2);
+
+		controls.add(textField).align(Align.left).maxWidth(150);
 
         addContent(controls);
     }
@@ -57,8 +60,13 @@ public class SmartNumInput extends SmartInput<Float> {
 					if (dragBtn.isDisabled()) return false;
 					lastStageX = event.getStageX();
 					startDragValue = value;
+
+					// [修复] 禁用父级滚动，防止拖拽数值时触发列表滚动
 					parentScroll = findParentScrollPane(SmartNumInput.this);
-					if (parentScroll != null) parentScroll.setCancelTouchFocus(false);
+					if (parentScroll != null) {
+						parentScroll.setCancelTouchFocus(false); // 关键：禁止 ScrollPane 拦截
+						event.getStage().setScrollFocus(null);   // 关键：清除滚动焦点
+					}
 					return true;
 				}
 
@@ -67,6 +75,8 @@ public class SmartNumInput extends SmartInput<Float> {
 					float currentStageX = event.getStageX();
 					float dx = currentStageX - lastStageX;
 					if (dx == 0) return;
+
+					// 未来可在此处加入 Shift/Alt 变速逻辑
 					notifyValueChanged(value + dx * step);
 					lastStageX = currentStageX;
 				}

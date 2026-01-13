@@ -341,35 +341,15 @@
 	  checkboxOn: check-on,
 	  checkboxOff: check-off,
 	  font: font-label,
-	  fontColor: {
-		a: 1,
-		b: 1,
-		g: 1,
-		r: 1
-	  },
-	  downFontColor: {
-		a: 1,
-		b: 1,
-		g: 0.2,
-		r: 1
-	  }
+	  fontColor: { a: 1, b: 1, g: 1, r: 1 },
+	  downFontColor: { a: 1, b: 1, g: 0.2, r: 1 }
 	},
 	switch: {
 	  checkboxOn: switch,
 	  checkboxOff: switch-off,
 	  font: font-label,
-	  fontColor: {
-		a: 1,
-		b: 1,
-		g: 1,
-		r: 1
-	  },
-	  downFontColor: {
-		a: 1,
-		b: 1,
-		g: 0.2,
-		r: 1
-	  }
+	  fontColor: { a: 1, b: 1, g: 1, r: 1 },
+	  downFontColor: { a: 1, b: 1, g: 0.2, r: 1 }
 	}
   },
   com.badlogic.gdx.scenes.scene2d.ui.Tree$TreeStyle: {
@@ -407,6 +387,8 @@
 	  backgroundOpen: select-box-down
 	}
   },
+
+
   "com.kotcrab.vis.ui.Sizes": {
 	"default": {
 	  "scaleFactor": 1,

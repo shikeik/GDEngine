@@ -1,5 +1,6 @@
 package com.goldsprite.gdengine.ui.input;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -14,7 +15,10 @@ public class SmartBooleanInput extends SmartInput<Boolean> {
         super(label, initValue, onChange);
 
         checkBox = new VisCheckBox("", initValue);
-        checkBox.addListener(new ChangeListener() {
+		checkBox.setSize(100, 100);
+		checkBox.setScale(2);
+
+		checkBox.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
 					boolean newVal = checkBox.isChecked();
