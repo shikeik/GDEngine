@@ -4,6 +4,7 @@ ignored: indentFix codeFormatFix
 
 - [ ] 相机右键拖拽移动不跟手
 - [ ] pc滚轮缩放, android双指缩放拖拽移动不起效的问题
+- [ ] gizmos选中应优先最上面的物体
 
 
 

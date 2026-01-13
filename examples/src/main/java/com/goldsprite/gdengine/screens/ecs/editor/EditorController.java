@@ -176,18 +176,22 @@ public class EditorController {
 		sceneManager.onSelectionChanged.add(this::refreshInspector);
 
 		// 在 create() 中初始化控制器
+		// [核心] 初始化控制器并注入映射策略
 		sceneCamController = new SimpleCameraController(sceneCamera);
-
+		sceneCamController.setCoordinateMapper((sx, sy) ->
+			sceneWidget.screenToWorld(sx, sy, sceneCamera)
+		);
 		NativeEditorInput editorInput = new NativeEditorInput();
 		InputMultiplexer multiplexer = new InputMultiplexer();
 		multiplexer.addProcessor(stage);
 		multiplexer.addProcessor(shortcutManager);
 		multiplexer.addProcessor(editorInput);
+		multiplexer.addProcessor(sceneCamController); // 添加相机事件监听管线
 
 		if (screen != null && screen.getImp() != null) {
 			screen.getImp().addProcessor(multiplexer);
 		} else {
-			Gdx.input.setInputProcessor(multiplexer);
+			Gd.input.setInputProcessor(multiplexer);
 		}
 
 
@@ -627,34 +631,28 @@ public class EditorController {
 		sceneWidget = new ViewWidget(sceneTarget);
 		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
 
-		// [核心] 初始化控制器并注入映射策略
-		sceneCamController = new SimpleCameraController(sceneCamera);
-		sceneCamController.setCoordinateMapper((sx, sy) ->
-			sceneWidget.screenToWorld(sx, sy, sceneCamera)
-		);
-
-		// 使用 Listener 转发事件 (Input routing)
-		sceneWidget.addListener(new InputListener() {
-			// 滚轮直接转发，内部已处理 FBO 坐标
-			@Override
-			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-				return sceneCamController.scrolled(amountX, amountY);
-			}
-
-			// 鼠标/触摸转发: 使用 Gdx.input 原生坐标，SimpleCameraController 会通过 mapper 转换
-			@Override
-			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-				return sceneCamController.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
-			}
-			@Override
-			public void touchDragged(InputEvent event, float x, float y, int pointer) {
-				sceneCamController.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
-			}
-			@Override
-			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-				sceneCamController.touchUp(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
-			}
-		});
+//		// 使用 Listener 转发事件 (Input routing)
+//		sceneWidget.addListener(new InputListener() {
+//			// 滚轮直接转发，内部已处理 FBO 坐标
+//			@Override
+//			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
+//				return sceneCamController.scrolled(amountX, amountY);
+//			}
+//
+//			// 鼠标/触摸转发: 使用 Gdx.input 原生坐标，SimpleCameraController 会通过 mapper 转换
+//			@Override
+//			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+//				return sceneCamController.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
+//			}
+//			@Override
+//			public void touchDragged(InputEvent event, float x, float y, int pointer) {
+//				sceneCamController.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
+//			}
+//			@Override
+//			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+//				sceneCamController.touchUp(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
+//			}
+//		});
 	}
 
 	private void addToolBtn(Table t, String text, Runnable act) {
