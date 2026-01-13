@@ -2,11 +2,11 @@
 package com.goldsprite.gdengine.ecs.system;
 
 import com.goldsprite.gdengine.ecs.GameSystemInfo;
+import com.goldsprite.gdengine.ecs.SystemType;
 import com.goldsprite.gdengine.ecs.component.SkeletonComponent;
 import com.goldsprite.gdengine.ecs.component.TransformComponent;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.ecs.skeleton.NeonSkeleton;
-
 import java.util.List;
 
 /**
@@ -14,7 +14,7 @@ import java.util.List;
  * 职责：在逻辑帧的末尾（渲染前），统一同步 Transform 并计算骨骼矩阵。
  * 必须在 SceneSystem 之后运行。
  */
-@GameSystemInfo(interestComponents = {SkeletonComponent.class})
+@GameSystemInfo(type = SystemType.UPDATE, interestComponents = {SkeletonComponent.class})
 public class SkeletonSystem extends BaseSystem {
 
 	@Override

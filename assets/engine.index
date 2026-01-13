@@ -30,6 +30,7 @@ com.goldsprite.gdengine.ecs.ComponentManager
 com.goldsprite.gdengine.ecs.EcsObject
 com.goldsprite.gdengine.ecs.GameSystemInfo
 com.goldsprite.gdengine.ecs.GameWorld
+com.goldsprite.gdengine.ecs.SystemType
 com.goldsprite.gdengine.ecs.component.Component
 com.goldsprite.gdengine.ecs.component.FsmComponent
 com.goldsprite.gdengine.ecs.component.NeonAnimatorComponent
@@ -53,6 +54,7 @@ com.goldsprite.gdengine.ecs.skeleton.animation.NeonTimeline
 com.goldsprite.gdengine.ecs.skeleton.data.NeonDataModels
 com.goldsprite.gdengine.ecs.skeleton.data.NeonJsonUtils
 com.goldsprite.gdengine.ecs.system.BaseSystem
+com.goldsprite.gdengine.ecs.system.RenderLayerManager
 com.goldsprite.gdengine.ecs.system.SceneSystem
 com.goldsprite.gdengine.ecs.system.SkeletonSystem
 com.goldsprite.gdengine.ecs.system.WorldRenderSystem

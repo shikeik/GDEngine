@@ -112,6 +112,8 @@ public class GameRunnerScreen extends GScreen {
 		}
 
 		world.update(delta);
+		
+		world.render(neonBatch, worldCamera);
 
 		// [新增] 绘制 UI
 		uiStage.act(delta);

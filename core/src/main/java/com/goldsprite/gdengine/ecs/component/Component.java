@@ -1,9 +1,11 @@
 package com.goldsprite.gdengine.ecs.component;
 
+import com.badlogic.gdx.graphics.Camera;
 import com.goldsprite.gdengine.ecs.ComponentManager;
 import com.goldsprite.gdengine.ecs.EcsObject;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
 
 public abstract class Component extends EcsObject {
 
@@ -88,6 +90,9 @@ public abstract class Component extends EcsObject {
 
 	// 编辑器/调试绘图接口
 	public void onDrawGizmos() {}
+	
+	// 渲染钩子
+	public void onRender(NeonBatch batch, Camera camera) {}
 
 	// ==========================================
 	// 7. 销毁逻辑

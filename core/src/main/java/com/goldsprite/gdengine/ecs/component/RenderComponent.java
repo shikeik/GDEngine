@@ -11,9 +11,18 @@ public abstract class RenderComponent extends Component {
 
 	public RenderComponent() {}
 	
-	/** 排序层级 (数值越大越靠前/后覆盖) */
-	public int sortingOrder = 0;
+	/** [修改] 排序层名称 (对应 RenderLayerManager) */
+	public String sortingLayer = "Default";
+	
+	/** 排序层级 (数值越大越靠前/后覆盖) 层内排序 (微调) */
+	public int orderInLayer = 0;
 
+	// [新增] 实现基类钩子，桥接到抽象 render 方法
+	@Override
+	public void onRender(NeonBatch batch, Camera camera) {
+		render(batch, camera);
+	}
+	
 	/**
 	 * 执行绘制
 	 * @param batch 统一的渲染批处理

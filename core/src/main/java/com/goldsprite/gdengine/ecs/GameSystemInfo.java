@@ -12,21 +12,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface GameSystemInfo {
+	// 更新类型
+	int type() default SystemType.UPDATE;
 	// 系统关心的组件列表 (用于自动筛选实体)
 	Class<? extends Component>[] interestComponents() default {};
-
-	// 更新类型
-	SystemType type() default SystemType.UPDATE;
-
-	enum SystemType {
-		UPDATE,
-		FIXED_UPDATE,
-		BOTH;
-
-		public boolean has(SystemType systemType) {
-			if (this == BOTH) return true;
-			if (this == systemType) return true;
-			return false;
-		}
-	}
 }

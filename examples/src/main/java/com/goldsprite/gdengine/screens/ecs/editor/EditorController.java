@@ -110,12 +110,6 @@ public class EditorController {
 		this.screen = screen;
 	}
 
-	// [新增] 提供给 Screen 调用的刷新接口
-    public void onShow() {
-        // 每次回到编辑器，检查是否有新的类索引（比如刚从 Runner 编译回来）
-        reloadProjectContext();
-    }
-
 	// [修改] 提取加载逻辑
     private void reloadProjectContext() {
         currentProj = GDEngineHubScreen.ProjectManager.currentProject;
@@ -159,7 +153,7 @@ public class EditorController {
 		reloadProjectContext();
 
 		// 3. 初始化 ECS (保持不变)
-		if (GameWorld.inst() == null) new GameWorld();
+		if(GameWorld.inst() == null) new GameWorld();
 		GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
 		reloadGameViewport();
 
@@ -264,8 +258,6 @@ public class EditorController {
 		}
 	}
 
-	// ... [中间的方法保持不变：registerShortcuts, initTestScene, saveScene, loadScene] ...
-	// 为了节省篇幅，这里略过未修改的方法，请保持原样
 	private void registerShortcuts() {
 		shortcutManager.register("TOOL_MOVE", () -> gizmoSystem.mode = EditorGizmoSystem.Mode.MOVE);
 		shortcutManager.register("TOOL_ROTATE", () -> gizmoSystem.mode = EditorGizmoSystem.Mode.ROTATE);
@@ -340,7 +332,7 @@ public class EditorController {
 
 		@Override
 		public void draw(Batch batch, float parentAlpha) {
-			// [新增] 核心布局修复：强制宽度等于 Tree 的宽度
+			// 核心布局修复：强制宽度等于 Tree 的宽度
 			// 这样 expandX 才能生效，把名字推左边，把手柄推右边
 			if (hierarchyTree != null) {
 				// 减去节点的缩进 X (getX())，得到剩余可用宽度
@@ -353,7 +345,7 @@ public class EditorController {
 
 			super.draw(batch, parentAlpha);
 
-			// ... (原本的蓝色插入线绘制逻辑保持不变) ...
+			// 蓝色插入线绘制逻辑
 			if (node != null && node.dropState != DropState.NONE) {
 				// ...
 				Drawable white = VisUI.getSkin().getDrawable("white");
@@ -500,9 +492,6 @@ public class EditorController {
 		}
 	}
 
-	// ... [createUI, createGameWidget 等其他 UI 代码保持不变] ...
-	// 请确保 createUI 方法里保留了 addActor(new ToastUI()) 和 hierarchyContainer 的 Listener
-
 	private void createUI() {
 		createGameWidget();
 		createSceneWidget();
@@ -633,29 +622,6 @@ public class EditorController {
 	private void createSceneWidget() {
 		sceneWidget = new ViewWidget(sceneTarget);
 		sceneWidget.setDisplayMode(ViewWidget.DisplayMode.COVER);
-
-//		// 使用 Listener 转发事件 (Input routing)
-//		sceneWidget.addListener(new InputListener() {
-//			// 滚轮直接转发，内部已处理 FBO 坐标
-//			@Override
-//			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-//				return sceneCamController.scrolled(amountX, amountY);
-//			}
-//
-//			// 鼠标/触摸转发: 使用 Gdx.input 原生坐标，SimpleCameraController 会通过 mapper 转换
-//			@Override
-//			public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-//				return sceneCamController.touchDown(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
-//			}
-//			@Override
-//			public void touchDragged(InputEvent event, float x, float y, int pointer) {
-//				sceneCamController.touchDragged(Gdx.input.getX(), Gdx.input.getY(), pointer);
-//			}
-//			@Override
-//			public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-//				sceneCamController.touchUp(Gdx.input.getX(), Gdx.input.getY(), pointer, button);
-//			}
-//		});
 	}
 
 	private void addToolBtn(Table t, String text, Runnable act) {
@@ -743,33 +709,37 @@ public class EditorController {
 		menu.addItem(item);
 	}
 
-	// [修改] render 循环
+	// render 循环
 	public void render(float delta) {
+		// 1. 跑逻辑
+		GameWorld.inst().update(delta);
+		
+		// 相机更新
 		gameCamera.update();
 		sceneCamera.update();
-
+		
 		if (hierarchyDirty) { refreshHierarchy(); hierarchyDirty = false; }
 
+		// 2. 画 Game View (FBO)
 		gameTarget.renderToFbo(() -> {
 			gameViewport.apply();
-
-			GameWorld.inst().update(delta);
-			// [修改] 使用统一渲染系统
-			worldRenderSystem.setCamera(gameCamera);
-			worldRenderSystem.update(delta);
+			GameWorld.inst().render(neonBatch, gameCamera);
 		});
+
+		// 3. 画 Scene View (FBO)
 		sceneTarget.renderToFbo(() -> {
 			Gdx.gl.glViewport(0, 0, sceneTarget.getFboWidth(), sceneTarget.getFboHeight());
 			Gdx.gl.glClearColor(0.1f, 0.1f, 0.1f, 1);
 			Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 			drawGrid(sceneCamera);
 
-			// [修改] 场景视图也使用统一渲染系统
-			worldRenderSystem.setCamera(sceneCamera);
-			worldRenderSystem.update(delta);
+			// 复用渲染管线
+			GameWorld.inst().render(neonBatch, sceneCamera);
 
+			// 画 Gizmo
 			neonBatch.setProjectionMatrix(sceneCamera.combined);
 			neonBatch.begin();
+			// 选中框
 			if(sceneManager.getSelection() != null) {
 				GObject sel = sceneManager.getSelection();
 				float x = sel.transform.worldPosition.x;
@@ -779,6 +749,7 @@ public class EditorController {
 			gizmoSystem.render(neonBatch, sceneCamera.zoom);
 			neonBatch.end();
 		});
+		
 		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);

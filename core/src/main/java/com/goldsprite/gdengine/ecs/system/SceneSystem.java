@@ -1,9 +1,9 @@
 package com.goldsprite.gdengine.ecs.system;
 
 import com.goldsprite.gdengine.ecs.GameSystemInfo;
+import com.goldsprite.gdengine.ecs.SystemType;
 import com.goldsprite.gdengine.ecs.component.Component;
 import com.goldsprite.gdengine.ecs.entity.GObject;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +14,7 @@ import java.util.List;
  * 2. <b>Update 驱动</b>: 遍历所有 GObject 并调用其 Update。
  * 3. <b>Destroy 管理</b>: 收集并执行销毁任务。
  */
-@GameSystemInfo(type = GameSystemInfo.SystemType.BOTH)
+@GameSystemInfo(type = SystemType.BOTH_UPDATE)
 public class SceneSystem extends BaseSystem {
 
 	// 死亡名单

@@ -39,6 +39,7 @@ public class Debug {
 		"AUTOMATION Y",
 		"Runner Y",
 		"Registry Y",
+		"System Y",
 
 		// Test
 		"TEST Y",

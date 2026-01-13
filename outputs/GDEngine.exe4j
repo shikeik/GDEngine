@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <exe4j version="10.0" transformSequenceNumber="3">
   <directoryPresets config="C:/Users/26670/.jdks" />
-  <application name="GDEngine" distributionSourceDir="E:/WorkSpaces/Libgdx_WSpace/Projs/GDEngine/outputs" />
-  <executable name="GDEngine_V1.10.5.4-alpha" wrapperType="embed" iconSet="true" iconFile="E:/WorkSpaces/Libgdx_WSpace/Projs/GDEngine/assets/icon.ico" executableDir="." executableMode="gui" checkConsoleParameter="true" />
+  <application name="GDEngine" distributionSourceDir="/storage/emulated/0/AppProjects/new_dev/GDEngine/outputs" />
+  <executable name="GDEngine_V1.10.5.4-alpha" wrapperType="embed" iconSet="true" iconFile="/storage/emulated/0/AppProjects/new_dev/GDEngine/assets/icon.ico" executableDir="." executableMode="gui" checkConsoleParameter="true" />
   <java mainClass="com.goldsprite.gdengine.lwjgl3.Lwjgl3Launcher" minVersion="17">
     <searchSequence>
       <registry />
       <envVar name="JAVA_HOME" />
       <envVar name="JDK_HOME" />
-      <directory location="C:/Users/26670/.jdks/jdk-17" />
+      <directory location="/data/data/com.termux/files/usr/lib/jvm/java-17-openjdk" />
     </searchSequence>
     <classPath>
-      <archive location="E:/WorkSpaces/Libgdx_WSpace/Projs/GDEngine/outputs/GDEngine_V1.10.5.4-alpha.jar" failOnError="false" />
+      <archive location="/storage/emulated/0/AppProjects/new_dev/GDEngine/outputs/GDEngine_V1.10.5.4-alpha.jar" failOnError="false" />
     </classPath>
   </java>
 </exe4j>

@@ -3,19 +3,19 @@ package com.goldsprite.gdengine.ecs;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.ecs.component.Component;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.ecs.system.BaseSystem;
 import com.goldsprite.gdengine.ecs.system.SceneSystem;
 import com.goldsprite.gdengine.input.Event;
-
+import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.badlogic.gdx.graphics.OrthographicCamera;
 
 /**
  * 游戏世界容器 (ECS 上下文 核心循环)
@@ -81,8 +81,10 @@ public class GameWorld {
 	private final Map<Class<? extends BaseSystem>, BaseSystem> systemMap = new HashMap<>();
 
 	// 性能优化：按类型分组，避免每帧 update 时做 instanceof 判断
+	// [修改] 系统分类列表
 	private final List<BaseSystem> updateSystems = new ArrayList<>();
 	private final List<BaseSystem> fixedUpdateSystems = new ArrayList<>();
+	private final List<BaseSystem> renderSystems = new ArrayList<>();
 
 	/** 核心系统：负责驱动 GObject 的生命周期 (Unity 兼容层) */
 	public SceneSystem sceneSystem;
@@ -152,6 +154,7 @@ public class GameWorld {
 	// ==========================================
 
 	/**
+	 * 逻辑管线
 	 * 每帧调用，驱动整个世界
 	 * @param rawDelta Gdx.graphics.getDeltaTime() 传入的原始时间
 	 */
@@ -177,6 +180,13 @@ public class GameWorld {
 			// 确保第一帧也能执行 Start 逻辑
 			sceneSystem.executeStartTask();
 			Debug.log("GameWorld: 逻辑循环已启动");
+			
+			Debug.log("系统苏醒完毕=========");int k;
+			String str = "";
+			for(BaseSystem sys : renderSystems) str += sys.getName() + ", ";
+			Debug.log("renderSystems: %s, 共%s", str, renderSystems.size());
+			Debug.log("===================");
+			
 			return; // 第一帧通常 delta 不稳定，跳过逻辑运行
 		}
 
@@ -213,6 +223,16 @@ public class GameWorld {
 		// 8. [Late Flush] 立即移除刚刚销毁的物体
 		// 这样 rootEntities 列表在帧结束时就是干净的，引用断开，利于 GC 尽快回收
 		flushEntities();
+	}
+
+	/** 渲染管线 */
+	public void render(NeonBatch batch, Camera camera) {
+		for (int i = 0; i < renderSystems.size(); i++) {
+			BaseSystem sys = renderSystems.get(i);
+			if (sys.isEnabled()) {
+				sys.render(batch, camera);
+			}
+		}
 	}
 
 	/** 将缓冲队列应用到主列表 */
@@ -279,18 +299,18 @@ public class GameWorld {
 			systems.add(system);
 			systemMap.put(system.getClass(), system);
 
-			// 根据注解分类
-			GameSystemInfo info = system.getSystemInfo();
-			boolean isUpdate = true;
-			boolean isFixed = false;
+			int flags = system.getSystemType();
 
-			if (info != null) {
-				isUpdate = info.type().has(GameSystemInfo.SystemType.UPDATE);
-				isFixed = info.type().has(GameSystemInfo.SystemType.FIXED_UPDATE);
+			// [核心] 位运算分流
+			if (SystemType.isUpdate(flags)) {
+				updateSystems.add(system);
 			}
-
-			if (isUpdate) updateSystems.add(system);
-			if (isFixed) fixedUpdateSystems.add(system);
+			if (SystemType.isFixed(flags)) {
+				fixedUpdateSystems.add(system);
+			}
+			if (SystemType.isRender(flags)) {
+				renderSystems.add(system);
+			}
 		}
 	}
 
@@ -298,6 +318,19 @@ public class GameWorld {
 	public <T extends BaseSystem> T getSystem(Class<T> type) {
 		return (T) systemMap.get(type);
 	}
+
+    // [新增] 仅供测试或调试使用的只读访问器
+    public List<BaseSystem> getUpdateSystems() {
+        return new ArrayList<>(updateSystems);
+    }
+
+    public List<BaseSystem> getFixedUpdateSystems() {
+        return new ArrayList<>(fixedUpdateSystems);
+    }
+
+    public List<BaseSystem> getRenderSystems() {
+        return new ArrayList<>(renderSystems);
+    }
 
 	// ==========================================
 	// 静态工具 (Time)

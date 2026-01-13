@@ -1,11 +1,15 @@
 package com.goldsprite.gdengine.ecs.system;
 
+import com.badlogic.gdx.graphics.Camera;
 import com.goldsprite.gdengine.ecs.ComponentManager;
-import com.goldsprite.gdengine.ecs.EcsObject; // [变更]
+import com.goldsprite.gdengine.ecs.EcsObject;
 import com.goldsprite.gdengine.ecs.GameSystemInfo;
 import com.goldsprite.gdengine.ecs.GameWorld;
-import com.goldsprite.gdengine.ecs.component.Component; // [变更]
+import com.goldsprite.gdengine.ecs.SystemType;
+import com.goldsprite.gdengine.ecs.component.Component;
 import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import java.util.List;
 
 /**
@@ -15,10 +19,11 @@ public abstract class BaseSystem extends EcsObject {
 
 	protected GameWorld world;
 	private boolean isEnabled = true;
+	private int systemTypeFlags; // 缓存类型掩码
 
 	// 系统关注的组件类型
 	private Class<? extends Component>[] interestComponents;
-
+	
 	public BaseSystem() {
 		super(); // 分配 ID
 		this.world = GameWorld.inst();
@@ -27,6 +32,12 @@ public abstract class BaseSystem extends EcsObject {
 		GameSystemInfo info = this.getClass().getAnnotation(GameSystemInfo.class);
 		if (info != null) {
 			this.interestComponents = info.interestComponents();
+			this.systemTypeFlags = info.type();
+			// [新增] 调试日志，方便定位注解解析问题
+			Debug.logT("System", "Init %s: typeFlags=%d", getClass().getSimpleName(), systemTypeFlags);
+		} else {
+			this.systemTypeFlags = SystemType.UPDATE;
+			Debug.logT("System", "Init %s: No Annotation, default to UPDATE", getClass().getSimpleName());
 		}
 
 		// 自动注册到世界 (构造即生效)
@@ -48,10 +59,19 @@ public abstract class BaseSystem extends EcsObject {
 
 	public void awake() {}
 
-	// 默认空实现，子类按需覆盖
+	// --- 逻辑管线 ---
 	@Override public void fixedUpdate(float fixedDelta){}
 	@Override public void update(float delta){}
+	// --- 渲染管线 ---
+	public void render(NeonBatch batch, Camera camera) {}
 
+	// --- 状态查询 API ---
+	public boolean isUpdateSystem() { return SystemType.isUpdate(systemTypeFlags); }
+	public boolean isFixedSystem() { return SystemType.isFixed(systemTypeFlags); }
+	public boolean isRenderSystem() { return SystemType.isRender(systemTypeFlags); }
+	public boolean isLogicSystem() { return SystemType.isLogic(systemTypeFlags); }
+	public int getSystemType() { return systemTypeFlags; }
+	
 	public boolean isEnabled() { return isEnabled; }
 	public void setEnabled(boolean enabled) { isEnabled = enabled; }
 
