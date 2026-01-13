@@ -163,6 +163,10 @@ public class ScreenManager implements Disposable {
 		return this;
 	}
 
+	private void removeScreen(Class<? extends GScreen> key) {
+		screens.remove(key);
+	}
+
 	/**
 	 * 通过键获取游戏屏幕
 	 */
@@ -205,6 +209,14 @@ public class ScreenManager implements Disposable {
 		}
 		this.curScreen = screen;
 		this.curScreen.show();
+	}
+
+	public void turnNewScreen(Class<? extends GScreen> key) {
+		if(existsScreen(key)) {
+			getScreen(key).dispose();
+			removeScreen(key);
+		}
+		setCurScreen(key, true);
 	}
 
 	public void setCurScreen(Class<? extends GScreen> key, boolean autoCreate) {

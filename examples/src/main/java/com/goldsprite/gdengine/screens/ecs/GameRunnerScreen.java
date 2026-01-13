@@ -1,5 +1,6 @@
 package com.goldsprite.gdengine.screens.ecs;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
@@ -15,6 +16,8 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.neonbatch.NeonStage; // [新增]
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.screens.ecs.editor.EditorGameGraphics;
+import com.goldsprite.gdengine.screens.ecs.editor.EditorGameInput;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 
@@ -66,6 +69,9 @@ public class GameRunnerScreen extends GScreen {
 		new SkeletonSystem();
 		new WorldRenderSystem(neonBatch, getWorldCamera());
 
+		// 初始化为实机模式(防止从编辑器模式返回后无编辑器实例报错)
+		Gd.init(Gd.Mode.EDITOR, Gdx.input, Gdx.graphics, Gd.compiler);
+
 		// [新增] 初始化 UI 层
 		initUI();
 
@@ -112,7 +118,7 @@ public class GameRunnerScreen extends GScreen {
 		}
 
 		world.update(delta);
-		
+
 		world.render(neonBatch, worldCamera);
 
 		// [新增] 绘制 UI
@@ -138,7 +144,7 @@ public class GameRunnerScreen extends GScreen {
 
 		// [新增] 核心清理：释放所有脚本加载的图片
 		ScriptResourceTracker.disposeAll();
-		
+
 		// [核心修复] 注释掉这一行！
         // 在编辑器模式下，我们需要保留这个 ClassLoader，
         // 否则回到编辑器后，Inspector 就无法反射用户组件了。

@@ -19,11 +19,11 @@ public class SetupDialog extends BaseDialog {
 		super("Welcome to GDEngine");
 		this.onSuccess = onSuccess;
 
-		add(new VisLabel("Initialize Engine Workspace")).padBottom(20).row();
-		add(new VisLabel("Engine Root Directory:")).left().row();
+		getContentTable().add(new VisLabel("Initialize Engine Workspace")).padBottom(20).row();
+		getContentTable().add(new VisLabel("Engine Root Directory:")).left().row();
 
 		pathField = new VisTextField(GDEngineConfig.getRecommendedRoot());
-		add(pathField).width(400).padBottom(20).row();
+		getContentTable().add(pathField).width(400).padBottom(20).row();
 
 		VisTextButton btnConfirm = new VisTextButton("Initialize 和 Enter");
 		btnConfirm.setColor(Color.CYAN);
@@ -50,7 +50,7 @@ public class SetupDialog extends BaseDialog {
 			}
 		});
 
-		add(btnConfirm).growX().height(50);
+		getContentTable().add(btnConfirm).growX().height(50);
 		pack();
 		centerWindow();
 	}
