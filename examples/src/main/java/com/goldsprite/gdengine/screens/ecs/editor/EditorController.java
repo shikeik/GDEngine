@@ -153,16 +153,20 @@ public class EditorController {
 		reloadProjectContext();
 
 		// 3. 初始化 ECS (保持不变)
-		if(GameWorld.inst() == null) new GameWorld();
+		if(GameWorld.inst() == null){
+			new GameWorld();
+			// 注册统一渲染系统
+			worldRenderSystem = new WorldRenderSystem(neonBatch, gameCamera);
+			// 注意：WorldRenderSystem 内部会处理 batch.begin/end，它使用 NeonBatch (兼容 SpriteBatch)
+		}else {
+			worldRenderSystem = GameWorld.inst().getSystem(WorldRenderSystem.class);
+		}
 		GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
 		reloadGameViewport();
 
 		spriteBatch = new SpriteBatch();
 		neonBatch = new NeonBatch();
 		shapeRenderer = new ShapeRenderer();
-		// [修改] 注册统一渲染系统
-		worldRenderSystem = new WorldRenderSystem(neonBatch, gameCamera);
-		// 注意：WorldRenderSystem 内部会处理 batch.begin/end，它使用 NeonBatch (兼容 SpriteBatch)
 
 		createUI();
 
@@ -713,11 +717,11 @@ public class EditorController {
 	public void render(float delta) {
 		// 1. 跑逻辑
 		GameWorld.inst().update(delta);
-		
+
 		// 相机更新
 		gameCamera.update();
 		sceneCamera.update();
-		
+
 		if (hierarchyDirty) { refreshHierarchy(); hierarchyDirty = false; }
 
 		// 2. 画 Game View (FBO)
@@ -749,7 +753,7 @@ public class EditorController {
 			gizmoSystem.render(neonBatch, sceneCamera.zoom);
 			neonBatch.end();
 		});
-		
+
 		HdpiUtils.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 		Gdx.gl.glClearColor(0.2f, 0.2f, 0.2f, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);

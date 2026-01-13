@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 游戏世界容器 (ECS 上下文 核心循环)
@@ -181,11 +182,12 @@ public class GameWorld {
 			sceneSystem.executeStartTask();
 			Debug.log("GameWorld: 逻辑循环已启动");
 			
-			Debug.log("系统苏醒完毕=========");int k;
-			String str = "";
-			for(BaseSystem sys : renderSystems) str += sys.getName() + ", ";
-			Debug.log("renderSystems: %s, 共%s", str, renderSystems.size());
-			Debug.log("===================");
+			// [修改] 优化的系统统计日志
+            Debug.log("=== 系统苏醒完毕 (Total: %d) ===", systems.size());
+            logSystemList("Logic ", updateSystems);
+            logSystemList("Fixed ", fixedUpdateSystems);
+            logSystemList("Render", renderSystems);
+            Debug.log("===============================");
 			
 			return; // 第一帧通常 delta 不稳定，跳过逻辑运行
 		}
@@ -234,6 +236,13 @@ public class GameWorld {
 			}
 		}
 	}
+	
+
+    // [新增] 内部辅助方法：格式化输出系统列表
+    private void logSystemList(String tag, List<BaseSystem> list) {
+        String names = list.stream().map(BaseSystem::getSystemName).collect(Collectors.joining(", "));
+        Debug.log("[%s : %d] %s", tag, list.size(), names);
+    }
 
 	/** 将缓冲队列应用到主列表 */
 	private void flushEntities() {

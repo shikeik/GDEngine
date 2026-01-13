@@ -165,6 +165,7 @@ public class GDEngineEditorScreen extends GScreen {
 
 		// [修改] 仅在开发者模式下显示 Export 按钮
 		boolean isDevMode = Boolean.getBoolean("gd.dev") || System.getenv("GD_DEV") != null;
+		isDevMode = true; // 这里内测阶段方便aide更新模板版本先设为true
 
 		if (isDevMode) {
 			VisTextButton btnExport = new VisTextButton("Export Tpl");
