@@ -119,7 +119,7 @@ public class EditorController {
     private void reloadProjectContext() {
         currentProj = GDEngineHubScreen.ProjectManager.currentProject;
         if (currentProj != null) {
-            GameWorld.projectAssetsRoot = currentProj.child("assets");
+			GameWorld.projectAssetsRoot = currentProj.child("assets");
 			Debug.logT("Editor", "🔗 链接到项目: " + currentProj.name());
 
             FileHandle indexFile = currentProj.child("project.index");
@@ -147,6 +147,9 @@ public class EditorController {
 		float scl = PlatformImpl.isAndroidUser() ? 1.3f : 2.0f;
 		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
+		// 2. [核心修改] 注入项目上下文
+		reloadProjectContext();
+
 		// 3. 初始化 ECS (保持不变)
 		GameWorld.autoDispose();
 		new GameWorld();
@@ -159,9 +162,6 @@ public class EditorController {
 		dragAndDrop = new DragAndDrop();
 
 		Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(gameTarget), Gd.compiler);
-
-		// 2. [核心修改] 注入项目上下文
-		reloadProjectContext();
 
 		reloadGameViewport();
 

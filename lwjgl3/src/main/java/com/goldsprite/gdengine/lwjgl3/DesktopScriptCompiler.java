@@ -59,9 +59,11 @@ public class DesktopScriptCompiler implements IScriptCompiler {
 
 			// 3. 准备输出目录
 			File outputDir = new File(cacheDir, "classes");
-			if (!outputDir.exists()) outputDir.mkdirs();
 			// PC端编译速度快，我们可以选择不强行清空，覆盖即可，或者为了干净每次清空
 			// 这里选择不清空，依靠编译器覆盖
+			// 这里必须清掉, 否则 project.index会有遗留导致错误信息
+			outputDir.delete();
+			if (!outputDir.exists()) outputDir.mkdirs();
 
 			// 4. 构建 Classpath
 			// 【核心优势】直接利用 JVM 当前的 Classpath
