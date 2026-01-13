@@ -104,42 +104,35 @@ public class ChangeLogDialog extends BaseDialog {
 	}
 
 	private void buildTree(Array<LogEntry> data) {
-		// 使用 Map 暂存 Category 节点，以便将 Version 挂载上去
-		// LogParser 已经帮我们标记了 parentCategory，这里只需要对应查找即可
-
-		// 但由于 LogParser 返回的是扁平列表 (为了保持文件顺序)，我们需要一次遍历重建树
-		// 或者 LogParser 已经处理好了 parent 引用? 是的。
-
-		// 维护一个 Map: Entry -> Node，用于查找父节点 Node
+		// 映射表：数据节点 -> UI节点
 		ObjectMap<LogEntry, LogNode> entryToNodeMap = new ObjectMap<>();
 
 		for (LogEntry entry : data) {
 			LogNode node = new LogNode(entry);
 			entryToNodeMap.put(entry, node);
 
-			// 索引，用于 goto
-			// 简单处理：提取版本号部分作为 Key (例如 "v1.10.6.x")
-			// 我们的 title 可能是 "v1.10.6.x (Current)"，需要模糊匹配或精确匹配
-			// 这里直接用 Full Title 索引，跳转链接需写全名
-			// 或者我们在 LogNode 里做包含匹配
+			// 索引 Title 用于 goto 跳转
 			nodeMap.put(entry.title, node);
 
-			if (entry.type == LogParser.EntryType.VERSION) {
-				// 如果有父级，挂到父级下
-				if (entry.parentCategory != null) {
-					LogNode parentNode = entryToNodeMap.get(entry.parentCategory);
-					if (parentNode != null) {
-						parentNode.add(node);
-						parentNode.setExpanded(true); // 默认展开
-						continue;
+			// [核心修改] 通用父子级构建逻辑
+			if (entry.parentCategory != null) {
+				// 如果有父级，尝试找到父级 UI 节点并挂载
+				LogNode parentNode = entryToNodeMap.get(entry.parentCategory);
+				if (parentNode != null) {
+					parentNode.add(node);
+
+					// 如果父级是顶层分类（如 Plan/Current），默认展开
+					// 如果父级是 History，则 History 默认展开，但里面的子分类(1.9.x)默认折叠保持整洁
+					if (entry.parentCategory.parentCategory == null) {
+						// 这是一个二级节点 (如 v1.10.6 或 1.9.x)
+						// 保持展开
+						parentNode.setExpanded(true);
 					}
 				}
-			}
-
-			// 否则作为根节点 (Overview, Category)
-			navTree.add(node);
-			if(entry.type == LogParser.EntryType.CATEGORY) {
-				node.setExpanded(true);
+			} else {
+				// 没有父级 -> 顶层节点 (Overview, Plan, Current, History)
+				navTree.add(node);
+				node.setExpanded(true); // 顶层默认展开
 			}
 		}
 	}

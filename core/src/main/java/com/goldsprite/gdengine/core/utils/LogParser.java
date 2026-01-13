@@ -1,6 +1,5 @@
 package com.goldsprite.gdengine.core.utils;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Array;
 import java.io.BufferedReader;
@@ -46,51 +45,59 @@ public class LogParser {
 			LogEntry currentEntry = null;
 			LogEntry currentCategory = null;
 
+			// [新增] 历史归档根节点标记
+			LogEntry historyRoot = null;
+
 			while ((line = reader.readLine()) != null) {
 				line = line.trim();
 
-				// 1. 识别一级标题 (Category / Overview)
-				// 格式: ## [Type] Title
+				// 1. 识别二级标题 (Category / Overview)
 				if (line.startsWith("## ")) {
-					String rawTitle = line.substring(3).trim(); // 去掉 "## "
+					String rawTitle = line.substring(3).trim();
 
-					// 提取类型标识 [Plan], [Current], [History], [Overview]
+					// 类型判定
 					String typeTag = "";
 					if (rawTitle.startsWith("[")) {
 						int endIdx = rawTitle.indexOf("]");
 						if (endIdx != -1) {
 							typeTag = rawTitle.substring(1, endIdx);
-							// rawTitle = rawTitle.substring(endIdx + 1).trim(); // 保留完整标题更好看
 						}
 					}
 
+					boolean isHistoryHeader = typeTag.equalsIgnoreCase("History") || rawTitle.contains("历史");
 					EntryType type = "Overview".equalsIgnoreCase(typeTag) ? EntryType.OVERVIEW : EntryType.CATEGORY;
 
 					currentEntry = new LogEntry(rawTitle, type);
-					entries.add(currentEntry);
 
-					// 如果是分类节点，记录为当前父级
-					if (type == EntryType.CATEGORY) {
+					// [核心逻辑] 归档处理
+					if (isHistoryHeader) {
+						// 这是一个历史总入口 (Top Level)
+						historyRoot = currentEntry;
+						currentCategory = currentEntry;
+					} else if (historyRoot != null) {
+						// 如果已经进入历史区，且这是一个普通的 ## 标题 (如 ## 1.9.x)
+						// 它应该作为 historyRoot 的子节点
+						currentEntry.parentCategory = historyRoot;
+						// 同时它自己也是一个 Category，供后续的 ### 版本挂载
 						currentCategory = currentEntry;
 					} else {
-						currentCategory = null; // Overview 没有子节点
+						// 普通顶层节点 (Plan, Current, Overview)
+						currentCategory = currentEntry;
 					}
+
+					entries.add(currentEntry);
 				}
-				// 2. 识别二级标题 (Version)
-				// 格式: ### `v1.10.x` Title
+				// 2. 识别三级标题 (Version)
 				else if (line.startsWith("### ")) {
-					String verTitle = line.substring(4).trim();
-					// 去掉 Markdown 的反引号 `
-					verTitle = verTitle.replace("`", "");
+					String verTitle = line.substring(4).trim().replace("`", "");
 
 					currentEntry = new LogEntry(verTitle, EntryType.VERSION);
-					currentEntry.parentCategory = currentCategory; // 绑定父级
+					currentEntry.parentCategory = currentCategory; // 挂载到最近的一个 ## 节点
 					entries.add(currentEntry);
 				}
 				// 3. 内容行
 				else {
 					if (currentEntry != null) {
-						// 简单的 Markdown -> RichText 转换
 						String richLine = processLine(line);
 						currentEntry.content.append(richLine).append("\n");
 					}
@@ -106,14 +113,10 @@ public class LogParser {
 	private static String processLine(String line) {
 		if (line.isEmpty()) return "";
 
-		// 列表项 Checkbox
-		if (line.startsWith("- [ ]")) {
-			line = line.replace("- [ ]", "[color=gray]□[/color]");
-		} else if (line.startsWith("- [x]")) {
-			line = line.replace("- [x]", "[color=green]■[/color]");
-		} else if (line.startsWith("- ")) {
-			line = line.replaceFirst("- ", " • ");
-		}
+		// Checkbox
+		if (line.startsWith("- [ ]")) line = line.replace("- [ ]", "[color=gray]□[/color]");
+		else if (line.startsWith("- [x]")) line = line.replace("- [x]", "[color=green]■[/color]");
+		else if (line.startsWith("- ")) line = line.replaceFirst("- ", " • ");
 
 		// 关键词高亮 (Regex)
 		line = line.replaceAll("\\[New\\]", "[color=green][New][/color]");
@@ -121,8 +124,7 @@ public class LogParser {
 		line = line.replaceAll("\\[Adj\\]", "[color=gold][Adj][/color]");
 		line = line.replaceAll("\\[Refactor\\]", "[color=orange][Refactor][/color]");
 
-		// 粗体 **text** -> [color=white]text[/color] (或者其他高亮色)
-		// 简单正则替换，暂不支持嵌套
+		// Bold & Code
 		line = line.replaceAll("\\*\\*(.*?)\\*\\*", "[color=cyan]$1[/color]");
 
 		// 代码块 `code` -> [color=gray]code[/color]
