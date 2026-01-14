@@ -2,58 +2,76 @@ package com.goldsprite.gdengine.screens.ecs.editor.mvp.hierarchy;
 
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.entity.GObject;
-import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorEvents;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorSceneManager;
+import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorEvents;
 
 public class HierarchyPresenter {
-	private final IHierarchyView view;
-	private final EditorSceneManager sceneManager;
+    private final IHierarchyView view;
+    private final EditorSceneManager sceneManager;
 
-	public HierarchyPresenter(IHierarchyView view, EditorSceneManager sceneManager) {
-		this.view = view;
-		this.sceneManager = sceneManager;
-		view.setPresenter(this);
+    // [新增] 节流阀状态，防止一帧内多次刷新导致闪烁和性能浪费
+    private boolean isDirty = false;
+    private float timer = 0f;
+    private final float REFRESH_RATE = 1f / 30f; // 限制为 30FPS 刷新
 
-		// 监听全局事件刷新 UI
-		EditorEvents.inst().subscribeStructure(v -> refresh());
+    public HierarchyPresenter(IHierarchyView view, EditorSceneManager sceneManager) {
+        this.view = view;
+        this.sceneManager = sceneManager;
+        view.setPresenter(this);
 
-		// 初始刷新
-		refresh();
-	}
+        // 监听事件：只标记脏状态，不立即刷新
+        EditorEvents.inst().subscribeStructure(v -> isDirty = true);
+        EditorEvents.inst().subscribeSceneLoaded(v -> isDirty = true);
 
-	public void refresh() {
-		view.showNodes(GameWorld.inst().getRootEntities());
-	}
+        // 初始强制刷新一次
+        refresh();
+    }
 
-	// --- 业务操作 ---
+    // [新增] 每帧调用，处理延迟刷新
+    public void update(float delta) {
+        if (isDirty) {
+            timer += delta;
+            if (timer >= REFRESH_RATE) {
+                refresh();
+                isDirty = false;
+                timer = 0f;
+            }
+        }
+    }
 
-	public void selectObject(GObject obj) {
-		sceneManager.select(obj);
-		EditorEvents.inst().emitSelectionChanged(obj);
-	}
+    private void refresh() {
+        // 获取最新的根节点列表并重建树
+        view.showNodes(GameWorld.inst().getRootEntities());
+    }
 
-	public void createObject(GObject parent) {
-		GObject obj = new GObject("GameObject");
-		if (parent != null) obj.setParent(parent);
+    // --- 业务操作 ---
 
-		// 通知发生结构变化
-		EditorEvents.inst().emitStructureChanged();
-		selectObject(obj);
-	}
+    public void selectObject(GObject obj) {
+        sceneManager.select(obj);
+        EditorEvents.inst().emitSelectionChanged(obj);
+    }
 
-	public void deleteObject(GObject obj) {
-		if (obj != null) {
-			obj.destroyImmediate();
-			EditorEvents.inst().emitStructureChanged();
-			// 如果删除了当前选中的，清空选中
-			if (sceneManager.getSelection() == obj) {
-				selectObject(null);
-			}
-		}
-	}
+    public void createObject(GObject parent) {
+        GObject obj = new GObject("GameObject");
+        if (parent != null) obj.setParent(parent);
 
-	public void moveEntity(GObject target, GObject newParent, int index) {
-		sceneManager.moveEntity(target, newParent, index);
-		EditorEvents.inst().emitStructureChanged();
-	}
+        // 发送结构变化事件，这会将 isDirty 设为 true
+        EditorEvents.inst().emitStructureChanged();
+        selectObject(obj);
+    }
+
+    public void deleteObject(GObject obj) {
+        if (obj != null) {
+            obj.destroyImmediate();
+            EditorEvents.inst().emitStructureChanged();
+            if (sceneManager.getSelection() == obj) {
+                selectObject(null);
+            }
+        }
+    }
+
+    public void moveEntity(GObject target, GObject newParent, int index) {
+        sceneManager.moveEntity(target, newParent, index);
+        EditorEvents.inst().emitStructureChanged();
+    }
 }

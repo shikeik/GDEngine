@@ -5,10 +5,8 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
@@ -20,7 +18,9 @@ import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.command.CommandManager;
 import com.goldsprite.gdengine.core.input.ShortcutManager;
 import com.goldsprite.gdengine.core.project.ProjectService;
+import com.goldsprite.gdengine.core.utils.SceneLoader;
 import com.goldsprite.gdengine.ecs.GameWorld;
+import com.goldsprite.gdengine.ecs.component.SpriteComponent;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 import com.goldsprite.gdengine.log.Debug;
@@ -42,218 +42,255 @@ import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 
 public class EditorController {
-	private EditorGameScreen screen;
-	private Stage stage;
+    private EditorGameScreen screen;
+    private Stage stage;
 
-	// --- Core Logic Systems ---
-	private CommandManager commandManager;
-	private EditorSceneManager sceneManager;
-	private ShortcutManager shortcutManager;
+    // --- Core Logic Systems (Global) ---
+    private CommandManager commandManager;
+    private EditorSceneManager sceneManager;
+    private ShortcutManager shortcutManager;
 
-	// --- Rendering Core ---
-	// 这些核心对象由 Controller 创建并分发给需要的 Presenter
-	private NeonBatch neonBatch;
-	private WorldRenderSystem worldRenderSystem;
-	private OrthographicCamera gameCamera; // 用于 Game View 的逻辑相机
+    // --- Shared Resources ---
+    private NeonBatch neonBatch;
+    private WorldRenderSystem worldRenderSystem; // 逻辑层需要，传递给 ScenePresenter 做检测
+    private OrthographicCamera gameCamera;       // 逻辑层游戏相机
 
-	// --- MVP Modules ---
-	private HierarchyPanel hierarchyPanel;
-	private InspectorPanel inspectorPanel;
-	private ScenePanel scenePanel;
-	private ScenePresenter scenePresenter; // 需要持有引用以处理 Shortcut
-	private GamePanel gamePanel;
-	private GamePresenter gamePresenter;
+    // --- MVP Modules ---
+    private HierarchyPanel hierarchyPanel;
+    private InspectorPanel inspectorPanel;
+    private ScenePanel scenePanel;
+    private ScenePresenter scenePresenter; 
+    private GamePanel gamePanel;
+    private GamePresenter gamePresenter;
 
-	public EditorController(EditorGameScreen screen) {
-		this.screen = screen;
-	}
+    private FileHandle currentProj;
 
-	public void create() {
-		if (!VisUI.isLoaded()) VisUI.load();
+    public EditorController(EditorGameScreen screen) {
+        this.screen = screen;
+    }
 
-		// 1. 初始化 Stage (UI)
-		float scl = PlatformImpl.isAndroidUser() ? 1.3f : 2.0f;
-		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
+    public void create() {
+        if (!VisUI.isLoaded()) VisUI.load();
 
-		// 2. 加载项目上下文 (Project Index)
-		reloadProjectContext();
+        // 1. 初始化 Stage (UI)
+        float scl = PlatformImpl.isAndroidUser() ? 1.3f : 2.0f;
+        stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
-		// 3. 初始化 ECS 核心
-		initEcsCore();
+        // 2. 加载项目上下文
+        reloadProjectContext();
 
-		// 4. 初始化图形资源
-		neonBatch = new NeonBatch();
+        // 3. 初始化 ECS 核心
+        initEcsCore();
 
-		// 5. [核心] 组装 MVP 模块
-		buildModules();
+        // 4. 初始化图形资源 (Batch 共享)
+        neonBatch = new NeonBatch();
 
-		// 6. 组装 UI 布局
-		buildLayout();
+        // 5. 组装 MVP 模块
+        buildModules();
 
-		// 7. 配置输入与快捷键
-		setupInput();
+        // 6. 组装 UI 布局
+        buildLayout();
 
-		// 8. 启动初始场景
-		// 延迟一帧调用 Load，确保 UI 布局完成
-		Gdx.app.postRunnable(() -> scenePresenter.loadScene());
-	}
+        // 7. 配置输入与快捷键
+        setupInput();
 
-	private void reloadProjectContext() {
-		FileHandle currentProj = ProjectService.inst().getCurrentProject();
-		if (currentProj != null) {
-			GameWorld.projectAssetsRoot = currentProj.child("assets");
-			Debug.logT("Editor", "🔗 链接到项目: " + currentProj.name());
+        // 8. 启动初始场景 (延迟一帧以确保 UI 布局就绪)
+        Gdx.app.postRunnable(() -> loadInitialScene());
+    }
 
-			FileHandle indexFile = currentProj.child("project.index");
-			if (indexFile.exists()) {
-				ComponentRegistry.reloadUserIndex(indexFile);
-			} else {
-				Debug.logT("Editor", "⚠️ project.index not found. (Compile to generate)");
-			}
-		}
-	}
+    private void reloadProjectContext() {
+        currentProj = ProjectService.inst().getCurrentProject();
+        if (currentProj != null) {
+            GameWorld.projectAssetsRoot = currentProj.child("assets");
+            Debug.logT("Editor", "🔗 链接到项目: " + currentProj.name());
 
-	private void initEcsCore() {
-		GameWorld.autoDispose();
-		new GameWorld();
+            FileHandle indexFile = currentProj.child("project.index");
+            if (indexFile.exists()) {
+                ComponentRegistry.reloadUserIndex(indexFile);
+            } else {
+                Debug.logT("Editor", "⚠️ project.index not found.");
+            }
+        }
+    }
 
-		// Game Camera 属于核心逻辑的一部分 (RenderSystem 需要它)
-		gameCamera = new OrthographicCamera();
-		// 初始化 RenderSystem (但不负责 FBO 绘制，只负责逻辑排序和剔除)
-		worldRenderSystem = new WorldRenderSystem(neonBatch, gameCamera);
+    private void initEcsCore() {
+        GameWorld.autoDispose();
+        new GameWorld();
 
-		// 绑定全局引用 (GameWorld 需要知道视口大小，暂时绑定 Stage 的，GamePresenter 会更新它)
-		GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
+        // 初始化逻辑层相机和渲染系统 (用于 Raycast)
+        gameCamera = new OrthographicCamera();
+        worldRenderSystem = new WorldRenderSystem(neonBatch, gameCamera);
 
-		commandManager = new CommandManager();
-		sceneManager = new EditorSceneManager(commandManager);
+        // 绑定全局引用
+        GameWorld.inst().setReferences(stage.getViewport(), gameCamera);
 
-		// 事件桥接：SceneManager -> EventBus
-		sceneManager.onStructureChanged.add(o -> EditorEvents.inst().emitStructureChanged());
-		sceneManager.onSelectionChanged.add(o -> EditorEvents.inst().emitSelectionChanged(o));
-	}
+        commandManager = new CommandManager();
+        sceneManager = new EditorSceneManager(commandManager);
 
-	private void buildModules() {
-		// Hierarchy
-		hierarchyPanel = new HierarchyPanel();
-		new HierarchyPresenter(hierarchyPanel, sceneManager);
+        // 事件桥接：SceneManager -> EventBus
+        sceneManager.onStructureChanged.add(o -> EditorEvents.inst().emitStructureChanged());
+        sceneManager.onSelectionChanged.add(o -> EditorEvents.inst().emitSelectionChanged(o));
+    }
 
-		// Inspector
-		inspectorPanel = new InspectorPanel();
-		new InspectorPresenter(inspectorPanel, sceneManager);
+    private void buildModules() {
+        // Hierarchy
+        hierarchyPanel = new HierarchyPanel();
+        new HierarchyPresenter(hierarchyPanel, sceneManager);
 
-		// Scene View
-		scenePanel = new ScenePanel();
-		// ScenePresenter 需要 RenderSystem 来做点击检测，需要 NeonBatch 来画 Gizmo
-		scenePresenter = new ScenePresenter(scenePanel, sceneManager, neonBatch, worldRenderSystem);
+        // Inspector
+        inspectorPanel = new InspectorPanel();
+        new InspectorPresenter(inspectorPanel, sceneManager);
 
-		// Game View
-		gamePanel = new GamePanel();
-		// GamePresenter 需要 NeonBatch 来渲染画面
-		gamePresenter = new GamePresenter(gamePanel, neonBatch);
+        // Scene View (负责编辑渲染和交互)
+        scenePanel = new ScenePanel();
+        // 注入 SceneManager, NeonBatch, RenderSystem (用于点击检测)
+        scenePresenter = new ScenePresenter(scenePanel, sceneManager, neonBatch, worldRenderSystem);
 
-		// 跨模块交互：从 Hierarchy 拖拽到 Scene
-		setupDragAndDrop();
-	}
+        // Game View (负责游戏相机渲染)
+        gamePanel = new GamePanel();
+        gamePresenter = new GamePresenter(gamePanel, neonBatch);
 
-	private void buildLayout() {
-		VisTable root = new VisTable();
-		root.setFillParent(true);
-		root.setBackground("window-bg");
+        // 跨模块交互：从 Hierarchy 拖拽到 Scene
+        setupDragAndDrop();
+    }
 
-		// 中间区域：Scene | Game (上下分割)
-		Stack centerStack = new Stack();
-		VisSplitPane viewSplit = new VisSplitPane(scenePanel, gamePanel, true);
-		viewSplit.setSplitAmount(0.5f);
-		centerStack.add(viewSplit);
+    private void buildLayout() {
+        VisTable root = new VisTable();
+        root.setFillParent(true);
+        root.setBackground("window-bg");
 
-		// 右侧区域：中间 | Inspector
-		VisSplitPane rightSplit = new VisSplitPane(centerStack, inspectorPanel, false);
-		rightSplit.setSplitAmount(0.75f);
+        // 中间区域：Scene | Game (上下分割)
+        Stack centerStack = new Stack();
+        VisSplitPane viewSplit = new VisSplitPane(scenePanel, gamePanel, true);
+        viewSplit.setSplitAmount(0.5f);
+        centerStack.add(viewSplit);
 
-		// 主分割：Hierarchy | 右侧
-		VisSplitPane mainSplit = new VisSplitPane(hierarchyPanel, rightSplit, false);
-		mainSplit.setSplitAmount(0.2f);
+        // 右侧区域：中间 | Inspector
+        VisSplitPane rightSplit = new VisSplitPane(centerStack, inspectorPanel, false);
+        rightSplit.setSplitAmount(0.75f);
 
-		root.add(mainSplit).grow();
-		stage.addActor(root);
-		stage.addActor(new ToastUI());
-	}
+        // 主分割：Hierarchy | 右侧
+        VisSplitPane mainSplit = new VisSplitPane(hierarchyPanel, rightSplit, false);
+        mainSplit.setSplitAmount(0.2f);
 
-	private void setupInput() {
-		shortcutManager = new ShortcutManager(stage);
+        root.add(mainSplit).grow();
+        stage.addActor(root);
+        stage.addActor(new ToastUI());
+    }
 
-		// 注册快捷键 -> 代理给各个 Presenter
-		shortcutManager.register("TOOL_MOVE", () -> scenePresenter.setGizmoMode(EditorGizmoSystem.Mode.MOVE));
-		shortcutManager.register("TOOL_ROTATE", () -> scenePresenter.setGizmoMode(EditorGizmoSystem.Mode.ROTATE));
-		shortcutManager.register("TOOL_SCALE", () -> scenePresenter.setGizmoMode(EditorGizmoSystem.Mode.SCALE));
+    private void setupInput() {
+        shortcutManager = new ShortcutManager(stage);
 
-		shortcutManager.register("ACTION_UNDO", () -> commandManager.undo());
-		shortcutManager.register("ACTION_REDO", () -> commandManager.redo());
-		shortcutManager.register("ACTION_SAVE", () -> scenePresenter.saveScene());
-		shortcutManager.register("ACTION_DELETE", () -> sceneManager.deleteSelection());
+        // 注册快捷键 -> 代理给 ScenePresenter
+        shortcutManager.register("TOOL_MOVE", () -> scenePresenter.setGizmoMode(EditorGizmoSystem.Mode.MOVE));
+        shortcutManager.register("TOOL_ROTATE", () -> scenePresenter.setGizmoMode(EditorGizmoSystem.Mode.ROTATE));
+        shortcutManager.register("TOOL_SCALE", () -> scenePresenter.setGizmoMode(EditorGizmoSystem.Mode.SCALE));
 
-		// 输入管线
-		InputMultiplexer multiplexer = new InputMultiplexer();
-		multiplexer.addProcessor(stage);           // 1. UI 优先
-		multiplexer.addProcessor(shortcutManager); // 2. 快捷键
+        shortcutManager.register("ACTION_UNDO", () -> commandManager.undo());
+        shortcutManager.register("ACTION_REDO", () -> commandManager.redo());
+        shortcutManager.register("ACTION_SAVE", () -> scenePresenter.saveScene());
+        shortcutManager.register("ACTION_DELETE", () -> sceneManager.deleteSelection());
 
-		// 3. Scene View 输入 (Gizmo, Picking, Camera)
-		scenePresenter.registerInput(multiplexer);
+        // 输入管线
+        InputMultiplexer multiplexer = new InputMultiplexer();
+        multiplexer.addProcessor(stage);           // 1. UI 优先
+        multiplexer.addProcessor(shortcutManager); // 2. 快捷键
 
-		// 应用输入处理器
-		if (screen != null && screen.getImp() != null) {
-			screen.getImp().addProcessor(multiplexer);
-		} else {
-			Gd.input.setInputProcessor(multiplexer);
-		}
+        // 3. Scene View 输入 (Gizmo, Picking, Camera) -> 委托给 Presenter
+        scenePresenter.registerInput(multiplexer); 
 
-		// 初始化 Gd.input 代理 (暂时使用 Scene View 的代理作为主输入，或根据鼠标位置切换)
-		// 这一步比较微妙，为了简单起见，我们暂不设置 Gd.input 的代理，因为编辑器模式下逻辑 Update 不依赖点击输入
-		// 如果需要测试游戏输入，GamePresenter 可能会接管。目前保持默认。
-	}
+        // 应用输入处理器
+        if (screen != null && screen.getImp() != null) {
+            screen.getImp().addProcessor(multiplexer);
+        } else {
+            Gd.input.setInputProcessor(multiplexer);
+        }
+    }
 
-	private void setupDragAndDrop() {
-		DragAndDrop dnd = hierarchyPanel.getDragAndDrop();
-		if (dnd != null) {
-			dnd.addTarget(new Target(scenePanel.getDropTargetActor()) {
-				@Override
-				public boolean drag(Source source, Payload payload, float x, float y, int pointer) {
-					return true;
-				}
-				@Override
-				public void drop(Source source, Payload payload, float x, float y, int pointer) {
-					// 暂无特殊逻辑，可视作放入场景
-				}
-			});
-		}
-	}
+    private void setupDragAndDrop() {
+        DragAndDrop dnd = hierarchyPanel.getDragAndDrop();
+        if (dnd != null) {
+            // 使用 HierarchyPanel 的保护方法添加 Target
+            hierarchyPanel.addSceneDropTarget(new Target(scenePanel.getDropTargetActor()) {
+					@Override
+					public boolean drag(Source source, Payload payload, float x, float y, int pointer) {
+						return true;
+					}
+					@Override
+					public void drop(Source source, Payload payload, float x, float y, int pointer) {
+						// 未来可以在这里处理“拖拽prefab实例化”
+					}
+				});
+        }
+    }
 
-	// --- Loop ---
+    private void loadInitialScene() {
+        FileHandle projectScene = getSceneFile();
+        if (projectScene != null && projectScene.exists()) {
+            scenePresenter.loadScene();
+        } else if (Gdx.files.local("scene_debug.json").exists() && currentProj == null) {
+            SceneLoader.load(Gdx.files.local("scene_debug.json"));
+            EditorEvents.inst().emitStructureChanged();
+            EditorEvents.inst().emitSceneLoaded();
+        } else {
+            initTestScene();
+            EditorEvents.inst().emitStructureChanged();
+        }
+    }
 
-	public void render(float delta) {
-		// 1. 逻辑更新
-		GameWorld.inst().update(delta);
+    private FileHandle getSceneFile() {
+        if (currentProj != null) {
+            return currentProj.child("scenes/main.scene");
+        }
+        return Gdx.files.local("scene_debug.json");
+    }
 
-		// 2. 模块渲染更新 (相机更新、FBO 绘制)
-		scenePresenter.update(delta);
-		gamePresenter.update(delta);
+    private void initTestScene() {
+        // 创建默认测试场景
+        GObject player = new GObject("Player");
+        player.transform.setPosition(0, 0);
+        SpriteComponent sp = player.addComponent(SpriteComponent.class);
+        sp.setPath("gd_icon.png");
+        sp.width = 100; sp.height = 100;
 
-		// 3. UI 渲染
-		stage.act(delta);
-		stage.draw();
-	}
+        GObject child = new GObject("Weapon");
+        child.setParent(player);
+        child.transform.setPosition(80, 0);
+        child.transform.setScale(0.5f);
+        SpriteComponent sp2 = child.addComponent(SpriteComponent.class);
+        sp2.setPath("gd_icon.png");
+        sp2.width = 100; sp2.height = 100;
+        sp2.color.set(Color.RED);
+    }
 
-	public void resize(int width, int height) {
-		stage.getViewport().update(width, height, true);
-	}
+    // --- Loop ---
 
-	public void dispose() {
-		if (stage != null) stage.dispose();
-		if (neonBatch != null) neonBatch.dispose();
+    public void render(float delta) {
+        // 1. 逻辑更新
+        GameWorld.inst().update(delta);
 
-		// Modules dispose
-		if (scenePanel != null) scenePanel.dispose();
-		if (gamePanel != null) gamePanel.dispose();
-	}
+        // 2. 模块渲染更新 (委托给 Presenters)
+        scenePresenter.update(delta);
+        gamePresenter.update(delta);
+
+        // 3. UI 渲染
+        stage.act(delta);
+        stage.draw();
+    }
+
+    public void resize(int width, int height) {
+        stage.getViewport().update(width, height, true);
+    }
+
+    public void dispose() {
+        if (stage != null) stage.dispose();
+        if (neonBatch != null) neonBatch.dispose();
+
+        // Modules dispose
+        if (scenePanel != null) scenePanel.dispose();
+        if (gamePanel != null) gamePanel.dispose();
+
+        // 清理全局事件
+        EditorEvents.inst().clear();
+    }
 }
