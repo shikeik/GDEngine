@@ -2,6 +2,7 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
+- [ ] 自定义滑动布局, 全向自由滑动
 - [ ] 面板焦点高亮框绘制，以及仅在sceneview焦点时才可触发gizmo/cam操作
 - [ ] 把渲染系统变为内置系统，以修复内置场景无渲染画面问题
 

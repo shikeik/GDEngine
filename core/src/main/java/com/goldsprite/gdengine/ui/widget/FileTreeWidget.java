@@ -1,0 +1,115 @@
+package com.goldsprite.gdengine.ui.widget;
+
+import com.badlogic.gdx.files.FileHandle;
+	import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.goldsprite.gdengine.ui.event.ContextListener;
+import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisTree;
+
+import java.util.Arrays;
+import java.util.function.Consumer;
+
+/**
+ * 通用文件树控件
+ */
+public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle> {
+
+    private Consumer<FileHandle> onFileSelected;
+    private ContextMenuProvider contextMenuProvider;
+
+    public interface ContextMenuProvider {
+        void showMenu(FileHandle file, float x, float y);
+    }
+
+    public FileTreeWidget() {
+        super();
+        getSelection().setProgrammaticChangeEvents(false);
+        setIndentSpacing(20f);
+        
+        // 监听选中
+        addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, Actor actor) {
+                FileNode selection = getSelection().first();
+                if (selection != null && onFileSelected != null) {
+                    onFileSelected.accept(selection.getValue());
+                }
+            }
+        });
+    }
+
+    public void setCallbacks(Consumer<FileHandle> onSelect, ContextMenuProvider menuProvider) {
+        this.onFileSelected = onSelect;
+        this.contextMenuProvider = menuProvider;
+    }
+
+    public void build(FileHandle rootDir) {
+        clearChildren();
+        if (rootDir == null || !rootDir.exists()) return;
+
+        FileNode rootNode = new FileNode(rootDir);
+        rootNode.setExpanded(true);
+        add(rootNode);
+
+        recursiveAddNodes(rootNode, rootDir);
+    }
+
+    private void recursiveAddNodes(FileNode parentNode, FileHandle dir) {
+        FileHandle[] files = dir.list();
+        // 排序: 文件夹在前
+        Arrays.sort(files, (a, b) -> {
+            if (a.isDirectory() && !b.isDirectory()) return -1;
+            if (!a.isDirectory() && b.isDirectory()) return 1;
+            return a.name().compareTo(b.name());
+        });
+
+        for (FileHandle file : files) {
+            // 只显示文件夹 (Unity风格: 左侧只看树状结构，右侧看内容)
+            // 但为了方便，我们也显示文件，您可以根据喜好注释掉下面这行
+            // if (!file.isDirectory()) continue; 
+
+            // 过滤隐藏文件
+            if (file.name().startsWith(".")) continue;
+
+            FileNode node = new FileNode(file);
+            parentNode.add(node);
+
+            // 右键菜单
+            node.getActor().addListener(new ContextListener() {
+                @Override
+                public void onShowMenu(float stageX, float stageY) {
+                    getSelection().choose(node);
+                    if (contextMenuProvider != null) {
+                        contextMenuProvider.showMenu(file, stageX, stageY);
+                    }
+                }
+            });
+
+            if (file.isDirectory()) {
+                recursiveAddNodes(node, file);
+            }
+        }
+    }
+
+    // --- Node ---
+    public static class FileNode extends VisTree.Node<FileNode, FileHandle, VisLabel> {
+        public FileNode(FileHandle file) {
+            super(new VisLabel(file.name()));
+            setValue(file);
+            
+            VisLabel lbl = getActor();
+            if (file.isDirectory()) {
+                lbl.setColor(Color.GOLD);
+                lbl.setText(file.name());
+            } else {
+                String ext = file.extension().toLowerCase();
+                if (ext.equals("java")) lbl.setColor(Color.CYAN);
+                else if (ext.equals("scene")) lbl.setColor(Color.ORANGE);
+                else lbl.setColor(Color.WHITE);
+            }
+        }
+    }
+}

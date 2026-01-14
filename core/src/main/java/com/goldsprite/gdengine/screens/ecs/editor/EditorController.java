@@ -34,6 +34,8 @@ import com.goldsprite.gdengine.screens.ecs.editor.mvp.hierarchy.HierarchyPanel;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.hierarchy.HierarchyPresenter;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.inspector.InspectorPanel;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.inspector.InspectorPresenter;
+import com.goldsprite.gdengine.screens.ecs.editor.mvp.project.ProjectPanel;
+import com.goldsprite.gdengine.screens.ecs.editor.mvp.project.ProjectPresenter;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.scene.ScenePanel;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.scene.ScenePresenter;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
@@ -62,6 +64,8 @@ public class EditorController {
     private ScenePresenter scenePresenter; 
     private GamePanel gamePanel;
     private GamePresenter gamePresenter;
+    private ProjectPanel projectPanel; 
+    private ProjectPresenter projectPresenter;
 
     private FileHandle currentProj;
 
@@ -150,6 +154,10 @@ public class EditorController {
         gamePanel = new GamePanel();
         gamePresenter = new GamePresenter(gamePanel, neonBatch);
 
+        // Project Module
+        projectPanel = new ProjectPanel();
+        projectPresenter = new ProjectPresenter(projectPanel);
+		
         // 跨模块交互：从 Hierarchy 拖拽到 Scene
         setupDragAndDrop();
     }
@@ -159,17 +167,22 @@ public class EditorController {
         root.setFillParent(true);
         root.setBackground("window-bg");
 
-        // 中间区域：Scene | Game (上下分割)
+        // 1. Center: Scene | Game
         Stack centerStack = new Stack();
         VisSplitPane viewSplit = new VisSplitPane(scenePanel, gamePanel, true);
         viewSplit.setSplitAmount(0.5f);
         centerStack.add(viewSplit);
 
-        // 右侧区域：中间 | Inspector
-        VisSplitPane rightSplit = new VisSplitPane(centerStack, inspectorPanel, false);
+        // 2. Center + Project (垂直分割)
+        // 上面是 ViewSplit，下面是 ProjectPanel
+        VisSplitPane centerWithProject = new VisSplitPane(viewSplit, projectPanel, true);
+        centerWithProject.setSplitAmount(0.7f); // Project 占底部 30%
+
+        // 3. Right: Center+Project | Inspector
+        VisSplitPane rightSplit = new VisSplitPane(centerWithProject, inspectorPanel, false);
         rightSplit.setSplitAmount(0.75f);
 
-        // 主分割：Hierarchy | 右侧
+        // 4. Main: Hierarchy | Right
         VisSplitPane mainSplit = new VisSplitPane(hierarchyPanel, rightSplit, false);
         mainSplit.setSplitAmount(0.2f);
 
