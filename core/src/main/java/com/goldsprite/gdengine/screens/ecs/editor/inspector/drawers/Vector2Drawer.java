@@ -22,7 +22,8 @@ public class Vector2Drawer implements IPropertyDrawer {
 
             // 外层容器
             VisTable container = new VisTable();
-            container.add(new VisLabel(field.getName())).left().padRight(5);
+			VisLabel nameLbl = new VisLabel(field.getName() + ":");
+            container.add(nameLbl).minWidth(20).left().padRight(10);
 
             // X 分量
             SmartNumInput inputX = new SmartNumInput("X", val.x, 0.1f, v -> {
@@ -40,7 +41,7 @@ public class Vector2Drawer implements IPropertyDrawer {
             Table row = new Table();
 			row.add().growX();
             row.add(inputX);
-            row.add(inputY);
+            row.add(inputY).width(inputY.getPrefWidth());
 
             container.add(row).growX();
             return container;

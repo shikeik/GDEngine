@@ -64,9 +64,9 @@ public class InspectorBuilder {
 			Actor widget = drawer.draw(target, field, isReadOnly);
 
 			if (widget != null) {
+//				widget.debug();
 				// 应用 SmartInput 的额外视觉效果
-				if (widget instanceof SmartInput) {
-					SmartInput<?> input = (SmartInput<?>) widget;
+				if (widget instanceof SmartInput<?> input) {
 					if (isStatic) input.markAsStatic();
 					if (isReadOnly) input.markAsReadOnly();
 
