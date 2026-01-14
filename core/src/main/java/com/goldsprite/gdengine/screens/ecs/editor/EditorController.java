@@ -188,17 +188,6 @@ public class EditorController {
         sceneGameSplit.setSplitAmount(0.5f);
         sceneStack.add(sceneGameSplit);
 
-        // 1.1 Toolbar (Save/Load/Gizmo) - 浮在 Scene 上面
-        Table toolbar = new Table();
-        toolbar.top().left().pad(5);
-        addToolBtn(toolbar, "Save", scenePresenter::saveScene);
-        addToolBtn(toolbar, "Load", scenePresenter::loadScene);
-        toolbar.add().width(20);
-        addToolBtn(toolbar, "M", () -> scenePresenter.setGizmoMode(EditorGizmoSystem.Mode.MOVE));
-        addToolBtn(toolbar, "R", () -> scenePresenter.setGizmoMode(EditorGizmoSystem.Mode.ROTATE));
-        addToolBtn(toolbar, "S", () -> scenePresenter.setGizmoMode(EditorGizmoSystem.Mode.SCALE));
-        sceneStack.add(toolbar);
-
         // 2. Top Split: Hierarchy (Left) | SceneStack (Right)
         VisSplitPane topSplit = new VisSplitPane(hierarchyPanel, sceneStack, false);
         topSplit.setSplitAmount(0.2f); // Hierarchy 占 20% 宽度

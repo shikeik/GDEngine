@@ -29,7 +29,7 @@ public class SmartBooleanInput extends SmartInput<Boolean> {
 		});
 
 		VisTable t = new VisTable();
-		t.add().growX();int k;
+		t.add().growX();
 		t.add(checkBox);
 		addContent(t);
 	}

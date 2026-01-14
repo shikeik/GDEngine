@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 
 public class SmartNumInput extends SmartInput<Float> {
 
-    private final VisTextField textField;
+	private final VisTextField textField;
     private final VisTextButton dragBtn; // 提升为成员变量
     private final float step;
 
