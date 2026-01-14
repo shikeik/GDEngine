@@ -18,7 +18,7 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 	protected void initScreenMapping(Map<String, Class<? extends GScreen>> map) {
 		// --- 核心开发工具 ---
 		map.put(">>> GDEngine Hub (项目管理) <<<", GDEngineHubScreen.class);
-		map.put(">>> Editor Core (场景编辑器) <<<", EditorGameScreen.class);
+//		map.put(">>> Editor Core (场景编辑器) <<<", EditorGameScreen.class); // 注释掉, 已被 GDEngineHubScreen 取代, 无项目上下文启动没有意义
 
 		map.put("", null); // 分隔线
 

@@ -6,6 +6,7 @@ import com.goldsprite.gdengine.core.project.ProjectService;
 import com.goldsprite.gdengine.core.project.model.TemplateInfo;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.ScreenManager;
+import com.goldsprite.gdengine.screens.ecs.editor.EditorGameScreen;
 import com.goldsprite.gdengine.screens.ecs.hub.GDEngineEditorScreen;
 
 /**
@@ -56,7 +57,7 @@ public class HubPresenter {
 		service.setCurrentProject(project);
 
 		// 2. 跳转场景 (Screen 跳转逻辑暂时还在这里，未来可以用 Router 解耦)
-		ScreenManager.getInstance().setCurScreen(GDEngineEditorScreen.class, true);
+		ScreenManager.getInstance().turnNewScreen(EditorGameScreen.class);
 	}
 
 	public void onProjectDeleteRequest(FileHandle project) {
