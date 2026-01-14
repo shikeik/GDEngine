@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -27,6 +28,9 @@ public class ScenePanel extends EditorPanel implements ISceneView {
 	// UI Buttons
 	private VisTextButton btnMove, btnRotate, btnScale;
 
+	// [新增] 引用 Save/Load 按钮
+	private VisTextButton btnSave, btnLoad;
+
 	public ScenePanel() {
 		super("Scene");
 
@@ -48,9 +52,9 @@ public class ScenePanel extends EditorPanel implements ISceneView {
 	}
 
 	private void createToolbar(Table t) {
-		// Save/Load
-		addToolBtn(t, "Save", () -> presenter.saveScene(), Color.WHITE);
-		addToolBtn(t, "Load", () -> presenter.loadScene(), Color.WHITE);
+		// [修改] 赋值给成员变量
+		btnSave = addToolBtn(t, "Save", () -> presenter.saveScene(), Color.WHITE);
+		btnLoad = addToolBtn(t, "Load", () -> presenter.loadScene(), Color.WHITE);
 
 		t.add().width(20);
 
@@ -58,6 +62,22 @@ public class ScenePanel extends EditorPanel implements ISceneView {
 		btnMove = addToolBtn(t, "M", () -> presenter.setGizmoMode(EditorGizmoSystem.Mode.MOVE), Color.GRAY);
 		btnRotate = addToolBtn(t, "R", () -> presenter.setGizmoMode(EditorGizmoSystem.Mode.ROTATE), Color.GRAY);
 		btnScale = addToolBtn(t, "S", () -> presenter.setGizmoMode(EditorGizmoSystem.Mode.SCALE), Color.GRAY);
+	}
+
+	@Override
+	public void setStorageEnabled(boolean enabled) {
+		// 变灰 + 禁用触摸
+		Color c = enabled ? Color.WHITE : Color.GRAY;
+		Touchable t = enabled ? Touchable.enabled : Touchable.disabled;
+
+		if (btnSave != null) {
+			btnSave.setColor(c);
+			btnSave.setTouchable(t);
+		}
+		if (btnLoad != null) {
+			btnLoad.setColor(c);
+			btnLoad.setTouchable(t);
+		}
 	}
 
 	private VisTextButton addToolBtn(Table t, String text, Runnable act, Color c) {

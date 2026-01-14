@@ -17,4 +17,7 @@ public interface ISceneView {
 	void updateGizmoModeUI(int mode);
 
 	boolean isMouseOver(); // [新增]
+
+	// [新增] 控制存档功能的可用性 (运行时禁用)
+	void setStorageEnabled(boolean enabled);
 }

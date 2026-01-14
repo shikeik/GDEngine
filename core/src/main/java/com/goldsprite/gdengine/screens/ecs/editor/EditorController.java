@@ -22,6 +22,7 @@ import com.goldsprite.gdengine.core.command.CommandManager;
 import com.goldsprite.gdengine.core.input.ShortcutManager;
 import com.goldsprite.gdengine.core.project.ProjectService;
 import com.goldsprite.gdengine.core.project.model.ProjectConfig;
+import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
 import com.goldsprite.gdengine.core.utils.SceneLoader;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.component.SpriteComponent;
@@ -54,6 +55,9 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class EditorController {
 	private FileHandle currentProj;
+
+	// [新增] 当前运行的用户脚本实例
+	private IGameScriptEntry currentUserScript;
 
 	private final EditorGameScreen screen;
 	private Stage stage;
@@ -383,70 +387,92 @@ public class EditorController {
 		}
 	}
 
+	// [核心逻辑] 注入用户脚本生命周期
 	private void startEditorRun() {
 		Debug.logT("Editor", ">>> Enter PLAY Mode");
 
-		// 1. 保存快照 (Snapshot)
-		// 存到临时目录，避免污染项目
+		// 1. Snapshot & Mode Switch
 		tempSceneSnapshot = Gdx.files.local("build/temp_editor_snapshot.scene");
 		SceneLoader.saveCurrentScene(tempSceneSnapshot);
-
-		// 2. 切换模式
 		GameWorld.inst().setMode(GameWorld.Mode.PLAY);
 
-		// 3. 触发 Start 生命周期
-		// SceneSystem 会在下一帧自动处理 pendingStart，或者这里手动触发一次
-		// 注意：现有的 GObject 已经在场景里了，它们不会重新触发 Awake，但如果是刚加载完没 Run 过，Start 也没跑过。
-		// 如果是 Stop 后重置回来的，那是新对象。
-		// 对于已经在场景里的对象，我们需要一种机制触发它们的 onStart。
-		// 目前 SceneSystem 的 executeStartTask 是基于 registerStart 的。
-		// 简单策略：Play 模式下，update 循环会自动跑起来。
-		// 如果组件设计规范 (在 Start 里初始化)，那么对于已存在的组件，它们可能已经 Start 过了？
-		// 不，现在的编辑器逻辑里，Add Component 后立马就 Awake 了。
-		// 我们需要模拟“游戏启动”的感觉。
-		// 实际上，Snapshot 保存再 Load 是最彻底的模拟。但为了性能，我们这里只是切换 Mode？
-		// 不，如果不 Reload，变量状态是脏的。
-		// 比如 Player 移动了位置，Stop 后回不去了。
-
-		// [修正策略] Run 的本质是：保存 -> 重载 -> 运行
-		// 这样才能保证 Run 时的初始状态是当前编辑器看到的状态，且 Stop 能回滚。
-
-		// 2.5 重载场景 (以运行态加载)
+		// 2. Reload Scene
 		SceneLoader.load(tempSceneSnapshot);
-		// Load 后，所有物体都是新的，状态重置。
-		// GameWorld 依然是同一个实例，但 Mode 变了。
 
-		// 3. UI 反馈
+		// 3. UI Update
 		btnRunEditor.setText("Stop");
 		btnRunEditor.setColor(Color.RED);
-		centerTabs.getTabbedPane().switchTab(0); // 确保在 Preview
+		centerTabs.getTabbedPane().switchTab(0);
 		ToastUI.inst().show("Game Started");
 
-		// 刷新 Hierarchy (因为对象全变了)
+		// [新增] 禁用 Save/Load
+		scenePanel.setStorageEnabled(false);
+
 		EditorEvents.inst().emitStructureChanged();
-		// 取消选中，防止操作到空引用
 		sceneManager.select(null);
+
+		// 4. [新增] 启动用户入口脚本 (IGameScriptEntry)
+		// 这一步模拟 GameRunner 的启动逻辑
+		launchUserScript();
+	}
+
+	private void launchUserScript() {
+		if (currentProj == null) return;
+
+		try {
+			// 4.1 读取配置找入口类
+			String entryClassName = "com.game.Main";
+			FileHandle configFile = currentProj.child("project.json");
+			if (configFile.exists()) {
+				ProjectConfig cfg = new Json().fromJson(ProjectConfig.class, configFile);
+				if (cfg.entryClass != null) entryClassName = cfg.entryClass;
+			}
+
+			// 4.2 反射实例化
+			// 注意：必须用 Gd.scriptClassLoader，否则找不到用户类
+			Class<?> cls = Class.forName(entryClassName, true, Gd.scriptClassLoader);
+			if (IGameScriptEntry.class.isAssignableFrom(cls)) {
+				currentUserScript = (IGameScriptEntry) cls.getDeclaredConstructor().newInstance();
+
+				// 4.3 调用 onStart
+				Debug.logT("Editor", "🚀 Launching User Script: " + entryClassName);
+				currentUserScript.onStart(GameWorld.inst());
+			} else {
+				Debug.logT("Editor", "Entry class must implement IGameScriptEntry");
+			}
+
+		} catch (Exception e) {
+			Debug.logT("Editor", "❌ Failed to launch user script: " + e.getMessage());
+			e.printStackTrace();
+			// 运行出错不强制停止，允许只跑场景
+		}
 	}
 
 	private void stopEditorRun() {
 		Debug.logT("Editor", "<<< Exit PLAY Mode");
 
-		// 1. 切换模式
+		// 1. [新增] 清理用户脚本
+		currentUserScript = null;
+
+		// 2. Mode Switch
 		GameWorld.inst().setMode(GameWorld.Mode.EDIT);
 
-		// 2. 恢复快照 (Restore)
+		// 3. Restore Snapshot
 		if (tempSceneSnapshot != null && tempSceneSnapshot.exists()) {
 			SceneLoader.load(tempSceneSnapshot);
 		} else {
-			GameWorld.inst().clear(); // 出事了就清空
+			GameWorld.inst().clear();
 		}
 
-		// 3. UI 反馈
+		// 4. UI Update
 		btnRunEditor.setText("Run Editor");
 		btnRunEditor.setColor(Color.GREEN);
+
+		// [新增] 恢复 Save/Load
+		scenePanel.setStorageEnabled(true);
+
 		ToastUI.inst().show("Game Stopped");
 
-		// 刷新 Hierarchy
 		EditorEvents.inst().emitStructureChanged();
 		sceneManager.select(null);
 	}
@@ -639,7 +665,15 @@ public class EditorController {
 
 		shortcutManager.register("ACTION_UNDO", () -> commandManager.undo());
 		shortcutManager.register("ACTION_REDO", () -> commandManager.redo());
-		shortcutManager.register("ACTION_SAVE", () -> scenePresenter.saveScene());
+		// [修改] Save 快捷键增加模式检查
+		shortcutManager.register("ACTION_SAVE", () -> {
+			// 运行时禁止保存，防止把测试状态覆盖掉源文件
+			if (GameWorld.inst().isPlayMode()) {
+				ToastUI.inst().show("Cannot Save in Play Mode!");
+				return;
+			}
+			scenePresenter.saveScene();
+		});
 		shortcutManager.register("ACTION_DELETE", () -> sceneManager.deleteSelection());
 
 		// 输入管线
@@ -719,7 +753,19 @@ public class EditorController {
 
 	// --- Loop ---
 
+	// [新增] 在主循环中驱动用户脚本
 	public void render(float delta) {
+		// 1. 逻辑更新
+		// 如果有用户脚本，先跑它的 onUpdate (通常处理全局逻辑/输入)
+		if (currentUserScript != null && GameWorld.inst().isPlayMode()) {
+			try {
+				currentUserScript.onUpdate(delta);
+			} catch (Exception e) {
+				Debug.logT("Editor", "Script Runtime Error: " + e.getMessage());
+				// 出错后为了防止刷屏，可以暂停或移除
+				currentUserScript = null;
+			}
+		}
 		// 1. 逻辑更新
 		GameWorld.inst().update(delta);
 
