@@ -2,6 +2,7 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
+- [ ] 面板焦点高亮框绘制，以及仅在sceneview焦点时才可触发gizmo/cam操作
 - [ ] 把渲染系统变为内置系统，以修复内置场景无渲染画面问题
 
 - [ ] 编辑器面板基类: 面板title hierarchy, project...
