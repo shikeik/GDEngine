@@ -154,12 +154,21 @@ public class ScenePresenter {
 	}
 
 	public void loadScene() {
+		// 原有的默认加载保留，或者让它调用带参版本
 		FileHandle file = com.goldsprite.gdengine.core.project.ProjectService.inst().getCurrentProject().child("scenes/main.scene");
-		if(file.exists()) {
+		loadScene(file);
+	}
+
+	// [新增] 加载指定场景文件
+	public void loadScene(FileHandle file) {
+		if(file != null && file.exists()) {
 			SceneLoader.load(file);
 			EditorEvents.inst().emitStructureChanged();
 			EditorEvents.inst().emitSceneLoaded();
 			sceneManager.select(null);
+
+			// 提示一下
+			ToastUI.inst().show("Scene Loaded: " + file.nameWithoutExtension());
 		}
 	}
 

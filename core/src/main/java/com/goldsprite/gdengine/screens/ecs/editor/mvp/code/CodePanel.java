@@ -89,6 +89,11 @@ public class CodePanel extends EditorPanel {
 		}
 	}
 
+	// [新增] 公开保存接口
+	public void save() {
+		saveCurrentFile();
+	}
+
 	public FileHandle getCurrentFile() {
 		return currentFile;
 	}

@@ -13,6 +13,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
+import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.ComponentRegistry;
@@ -20,6 +21,7 @@ import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.command.CommandManager;
 import com.goldsprite.gdengine.core.input.ShortcutManager;
 import com.goldsprite.gdengine.core.project.ProjectService;
+import com.goldsprite.gdengine.core.project.model.ProjectConfig;
 import com.goldsprite.gdengine.core.utils.SceneLoader;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.component.SpriteComponent;
@@ -86,6 +88,9 @@ public class EditorController {
 	private VisSplitPane leftMainSplit;
 	private VisSplitPane rootSplit;
 	private boolean isCodeMaximized;
+
+	// [新增] 提升为成员变量，以便在编译失败时切换 Tab
+	private SmartTabPane bottomTabs;
 
 	public EditorController(EditorGameScreen screen) {
 		this.screen = screen;
@@ -229,9 +234,10 @@ public class EditorController {
 		topSectionSplit.setSplitAmount(0.2f);
 
 		// --- 4. Bottom Tabs: Project & Console ---
-		SmartTabPane bottomTabs = new SmartTabPane();
+		// [修改] 赋值给成员变量
+		bottomTabs = new SmartTabPane();
 		bottomTabs.addTab("Project", projectPanel);
-		bottomTabs.addTab("Console", consolePanel);
+		bottomTabs.addTab("Console", consolePanel); // 假设 Console 是第 2 个 (Index 1)
 		bottomTabs.getTabbedPane().switchTab(0);
 
 		// --- 5. Main Left Split: Top Section / Bottom Tabs ---
@@ -298,8 +304,8 @@ public class EditorController {
 		btnBuild.setColor(Color.GOLD);
 		btnBuild.addListener(new ClickListener() {
 			@Override public void clicked(InputEvent event, float x, float y) {
-				ToastUI.inst().show("Build started... (Mock)");
-				// TODO: Phase 2 Implement Build Logic
+				// [修改] 调用真实的构建逻辑
+				performBuild();
 			}
 		});
 		bar.add(btnBuild).padRight(10);
@@ -329,6 +335,94 @@ public class EditorController {
 		return bar;
 	}
 
+	// [核心构建逻辑] 完全复刻并优化 BuildAndRun
+	private void performBuild() {
+		// 1. 自动保存代码 (如同 GDEngineEditorScreen)
+		codePanel.save();
+
+		FileHandle projectDir = ProjectService.inst().getCurrentProject();
+		if (projectDir == null) { ToastUI.inst().show("Error: No Project"); return; }
+		if (Gd.compiler == null) { ToastUI.inst().show("Error: No Compiler"); return; }
+
+		ToastUI.inst().show("Compiling...");
+
+		new Thread(() -> {
+			try {
+				// 2. [关键] 注入项目资源上下文 (抄自 buildAndRun)
+				// 确保编译后的组件初始化时能找到图片等资源
+				GameWorld.projectAssetsRoot = projectDir.child("assets");
+				if (!GameWorld.projectAssetsRoot.exists()) {
+					GameWorld.projectAssetsRoot.mkdirs();
+				}
+
+				// 3. 获取入口配置 (抄自 buildAndRun)
+				String entryClass = "com.game.Main";
+				FileHandle configFile = projectDir.child("project.json");
+				if (configFile.exists()) {
+					try {
+						ProjectConfig cfg = new Json().fromJson(ProjectConfig.class, configFile);
+						if (cfg != null && cfg.entryClass != null && !cfg.entryClass.isEmpty()) {
+							entryClass = cfg.entryClass;
+						}
+					} catch (Exception e) {
+						Debug.logT("Editor", "Config error: " + e.getMessage());
+					}
+				}
+
+				String projectPath = projectDir.file().getAbsolutePath();
+				long startTime = System.currentTimeMillis();
+
+				// 4. 执行编译
+				// DesktopScriptCompiler 会生成 .class 并返回加载了这些类的 ClassLoader 里的 MainClass
+				Class<?> resultMainClass = Gd.compiler.compile(entryClass, projectPath);
+
+				long duration = System.currentTimeMillis() - startTime;
+
+				Gdx.app.postRunnable(() -> {
+					if (resultMainClass != null) {
+						// 5. [关键] 更新全局脚本加载器
+						// 这样 ComponentRegistry 才能通过反射加载到用户新写的组件
+						Gd.scriptClassLoader = resultMainClass.getClassLoader();
+						Debug.logT("Editor", "ClassLoader Updated: " + Gd.scriptClassLoader);
+
+						onBuildSuccess(projectDir, duration);
+					} else {
+						onBuildFail();
+					}
+				});
+
+			} catch (Exception e) {
+				e.printStackTrace();
+				Gdx.app.postRunnable(() -> {
+					Debug.logT("Compiler", "Exception: " + e.getMessage());
+					onBuildFail();
+				});
+			}
+		}).start();
+	}
+
+	private void onBuildSuccess(FileHandle projectDir, long duration) {
+		// 6. 刷新组件注册表 (使用上面更新过的 Gd.scriptClassLoader)
+		FileHandle indexFile = projectDir.child("project.index");
+		ComponentRegistry.reloadUserIndex(indexFile);
+
+		// 7. 刷新 Inspector UI
+		GObject currentSelection = sceneManager.getSelection();
+		if (currentSelection != null) {
+			EditorEvents.inst().emitSelectionChanged(currentSelection);
+		}
+
+		ToastUI.inst().show("Build Success (" + duration + "ms)");
+		Debug.logT("Compiler", "[GREEN]Build finished in " + duration + "ms");
+	}
+
+	private void onBuildFail() {
+		if (bottomTabs != null) {
+			bottomTabs.getTabbedPane().switchTab(1); // Console
+		}
+		ToastUI.inst().show("Build Failed!");
+	}
+
 	private VisTextButton createMenuBtn(String text) {
 		VisTextButton btn = new VisTextButton(text);
 		// btn.setStyle(...); // 可以设置无边框样式
@@ -347,18 +441,12 @@ public class EditorController {
 		String ext = file.extension().toLowerCase();
 
 		if (ext.equals("java") || ext.equals("json") || ext.equals("xml")) {
-			// 打开 Code Tab
-			centerTabs.getTabbedPane().switchTab(1); // Index 1 is Code
+			centerTabs.getTabbedPane().switchTab(1); // Code
 			codePanel.openFile(file);
-		} else if (ext.equals("scene")) {
-			// 切换到 Scene Tab (Index 0) 并加载
-			centerTabs.getTabbedPane().switchTab(0);
-			// 这里需要 ScenePresenter 提供加载指定文件的 API
-			// 暂时先用 Toast 演示，后续打通 ScenePresenter.loadScene(file)
-			ToastUI.inst().show("Loading Scene: " + file.name());
-
-			// TODO: 调用 scenePresenter.loadScene(file);
-			// 现有 loadScene 是无参的，需要改造 ScenePresenter
+		}
+		else if (ext.equals("scene")) {
+			centerTabs.getTabbedPane().switchTab(0); // Preview
+			scenePresenter.loadScene(file);
 		}
 	}
 
