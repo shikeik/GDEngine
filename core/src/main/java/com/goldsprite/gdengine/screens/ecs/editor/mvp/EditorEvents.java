@@ -19,9 +19,8 @@ public class EditorEvents {
     private final List<Consumer<Void>> onStructureChanged = new ArrayList<>();
     private final List<Consumer<Void>> onPropertyChanged = new ArrayList<>();
     private final List<Consumer<Void>> onSceneLoaded = new ArrayList<>();
-
-	// 打开文件事件 (Project -> Editor/Code)
-	private final List<Consumer<FileHandle>> onOpenFile = new ArrayList<>();
+	private final List<Consumer<FileHandle>> onOpenFile = new ArrayList<>(); // 打开文件事件 (Project -> Editor/Code)
+	private final List<Runnable> onToggleMaximizeCode = new ArrayList<>(); // [新增] 切换代码编辑器最大化
 
     // --- 订阅接口 ---
     public void subscribeSelection(Consumer<Object> listener) { onSelectionChanged.add(listener); }
@@ -29,6 +28,7 @@ public class EditorEvents {
     public void subscribeProperty(Consumer<Void> listener) { onPropertyChanged.add(listener); }
     public void subscribeSceneLoaded(Consumer<Void> listener) { onSceneLoaded.add(listener); }
 	public void subscribeOpenFile(Consumer<FileHandle> listener) { onOpenFile.add(listener); }
+	public void subscribeToggleMaximizeCode(Runnable listener) { onToggleMaximizeCode.add(listener); }
 
     // --- 发布接口 ---
     public void emitSelectionChanged(Object selection) { for (var l : onSelectionChanged) l.accept(selection); }
@@ -37,11 +37,13 @@ public class EditorEvents {
     public void emitPropertyChanged() { for (var l : onPropertyChanged) l.accept(null); }
     public void emitSceneLoaded() { for (var l : onSceneLoaded) l.accept(null); }
 	public void emitOpenFile(FileHandle file) { for (var l : onOpenFile) l.accept(file); }
+	public void emitToggleMaximizeCode() { for (var l : onToggleMaximizeCode) l.run(); }
 
     public void clear() {
         onSelectionChanged.clear();
         onStructureChanged.clear();
         onPropertyChanged.clear();
         onSceneLoaded.clear();
+		onToggleMaximizeCode.clear();
     }
 }

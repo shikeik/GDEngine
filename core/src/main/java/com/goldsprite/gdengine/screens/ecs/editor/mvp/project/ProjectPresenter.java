@@ -91,38 +91,60 @@ public class ProjectPresenter {
 	// --- Menu ---
 
 	public void onShowContextMenu(FileHandle file, float x, float y) {
-		// [Fix] 如果 file 为 null，使用当前所在目录
-		FileHandle target = (file != null) ? file : currentDir;
-
 		PopupMenu menu = new PopupMenu();
+		boolean needSeparator = false; // [Fix] 分割线状态标记
 
-		if (file.isDirectory()) {
-			menu.addItem(new MenuItem("Create Folder", new ChangeListener() {
+		// 1. [Open] - 仅针对文件
+		if (file != null && !file.isDirectory()) {
+			menu.addItem(new MenuItem("Open", new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
-					file.child("NewFolder").mkdirs();
-					refresh();
+					EditorEvents.inst().emitOpenFile(file);
 				}
 			}));
-
-			// 简单的创建脚本逻辑
-			menu.addItem(new MenuItem("Create Script", new ChangeListener() {
-				@Override public void changed(ChangeEvent event, Actor actor) {
-					file.child("NewScript.java").writeString("public class NewScript {}", false);
-					refresh();
-				}
-			}));
+			needSeparator = true;
 		}
 
-		MenuItem delItem = new MenuItem("Delete");
-		delItem.getLabel().setColor(Color.RED);
-		delItem.addListener(new ChangeListener() {
-			@Override public void changed(ChangeEvent event, Actor actor) {
-				if (file.isDirectory()) file.deleteDirectory();
-				else file.delete();
-				refresh();
-			}
-		});
-		menu.addItem(delItem);
+		// 2. [Create Group] - 统一逻辑
+		// 如果选中了文件夹，就在里面创建；
+		// 如果选中了文件 或 空白处，就在当前浏览的目录下创建 (currentDir)
+		FileHandle createTarget = (file != null && file.isDirectory()) ? file : currentDir;
+
+		if (createTarget != null && createTarget.exists()) {
+			if (needSeparator) { menu.addSeparator(); needSeparator = false; }
+
+			menu.addItem(new MenuItem("Create Folder", new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					createTarget.child("NewFolder").mkdirs();
+					refresh();
+				}
+			}));
+
+			menu.addItem(new MenuItem("Create Script", new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					createTarget.child("NewScript.java").writeString("public class NewScript {}", false);
+					refresh();
+				}
+			}));
+
+			// 创建组结束，标记可能需要分割线（如果后面还有Delete）
+			needSeparator = true;
+		}
+
+		// 3. [Delete] - 仅针对选中项 (文件或文件夹)
+		if (file != null) {
+			if (needSeparator) { menu.addSeparator(); needSeparator = false; }
+
+			MenuItem delItem = new MenuItem("Delete");
+			delItem.getLabel().setColor(Color.RED);
+			delItem.addListener(new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) {
+					if (file.isDirectory()) file.deleteDirectory();
+					else file.delete();
+					refresh();
+				}
+			});
+			menu.addItem(delItem);
+		}
 
 		view.showMenu(menu, x, y);
 	}

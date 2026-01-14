@@ -16,9 +16,11 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Json;
 import com.goldsprite.gdengine.core.utils.GdxJsonSetup;
 import com.goldsprite.gdengine.core.utils.SceneLoader;
+import com.goldsprite.gdengine.ecs.ComponentManager;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.component.RenderComponent;
 import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.ecs.system.RenderLayerManager;
 import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
@@ -29,6 +31,7 @@ import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.goldsprite.gdengine.utils.SimpleCameraController;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ScenePresenter {
@@ -322,11 +325,15 @@ public class ScenePresenter {
 		}
 
 		private GObject hitTestGObject(Vector2 p) {
-			// 利用 RenderSystem 的排序列表进行点击检测
-			List<RenderComponent> renderables = renderSystem.getSortedRenderables();
-			for (int i = renderables.size() - 1; i >= 0; i--) {
-				RenderComponent rc = renderables.get(i);
-				if (rc.contains(p.x, p.y)) return rc.getGObject();
+			// [Fix] 调用 RenderSystem 的无副作用查询接口
+			List<RenderComponent> candidates = renderSystem.queryRenderables();
+
+			// 倒序遍历 (从最上层开始检测)
+			for (int i = candidates.size() - 1; i >= 0; i--) {
+				RenderComponent rc = candidates.get(i);
+				if (rc.contains(p.x, p.y)) {
+					return rc.getGObject();
+				}
 			}
 			return null;
 		}

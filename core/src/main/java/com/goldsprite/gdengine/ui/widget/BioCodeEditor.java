@@ -95,7 +95,11 @@ public class BioCodeEditor extends VisTable {
 
 		// --- 布局 ---
 		contentTable = new VisTable();
-		contentTable.add(lineNumbers).top().right().padRight(12).padTop(3);
+		// [Fix] 给行号左边加一点点 Padding，防止贴死在边缘
+		// 之前的代码: contentTable.add(lineNumbers).top().right().padRight(5).padTop(3);
+		// 修改后:
+		contentTable.add(lineNumbers).top().right().padLeft(5).padRight(10).padTop(3);
+
 		contentTable.add(textArea).grow().top();
 
 		scrollPane = new VisScrollPane(contentTable);
@@ -108,6 +112,7 @@ public class BioCodeEditor extends VisTable {
 		createPopupMenu();
 		setupInteraction();
 
+		// [Fix] 确保 ScrollPane 填满
 		this.add(scrollPane).grow();
 	}
 

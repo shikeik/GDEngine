@@ -38,7 +38,10 @@ public class WorldRenderSystem extends BaseSystem {
 
 	@Override
 	public void render(NeonBatch batch, Camera camera) {
-		collectRenderables();
+		// 渲染循环专用：清空并复用成员变量，零GC
+		renderList.clear();
+		collectTo(renderList); // 复用逻辑
+
 		Collections.sort(renderList, comparator);
 
 		batch.setProjectionMatrix(camera.combined);
@@ -49,24 +52,35 @@ public class WorldRenderSystem extends BaseSystem {
 		batch.end();
 	}
 
-	private void collectRenderables() {
-		renderList.clear();
+	/**
+	 * [新增] 对外查询接口：获取当前所有需要渲染的组件（排序后）
+	 * 专门给点击检测 (Picking) 使用，与渲染循环解耦，互不干扰。
+	 */
+	public List<RenderComponent> queryRenderables() {
+		List<RenderComponent> result = new ArrayList<>();
+		collectTo(result);
+		result.sort(comparator);
+		return result;
+	}
+
+	/** 提取出的公共逻辑 */
+	private void collectTo(List<RenderComponent> targetList) {
 		List<GObject> entities = getInterestEntities();
-		
 		for (GObject obj : entities) {
 			if (!obj.isActive() || obj.isDestroyed()) continue;
-			
+
 			List<RenderComponent> comps = obj.getComponents(RenderComponent.class);
 			for (RenderComponent c : comps) {
 				if (c.isEnable() && !c.isDestroyed()) {
 					if (RenderLayerManager.isLayerWorldSpace(c.sortingLayer)) {
-						renderList.add(c);
+						targetList.add(c);
 					}
 				}
 			}
 		}
 	}
 
+	// 这个方法之前返回的是成员变量，现在为了安全，建议废弃或仅供调试
 	public List<RenderComponent> getSortedRenderables() {
 		return renderList;
 	}

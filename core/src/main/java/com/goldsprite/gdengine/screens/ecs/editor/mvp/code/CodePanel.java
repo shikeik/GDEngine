@@ -1,12 +1,19 @@
+// core/src/main/java/com/goldsprite/gdengine/screens/ecs/editor/mvp/code/CodePanel.java
+
 package com.goldsprite.gdengine.screens.ecs.editor.mvp.code;
 
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorEvents;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
 import com.goldsprite.gdengine.ui.widget.BioCodeEditor;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class CodePanel extends EditorPanel {
 
@@ -17,10 +24,34 @@ public class CodePanel extends EditorPanel {
 	public CodePanel() {
 		super("Code");
 
-		// 信息栏
+		// [Fix] 移除 EditorPanel 默认的背景和 Padding，让代码编辑器贴边充满
+		setBackground((com.badlogic.gdx.scenes.scene2d.utils.Drawable)null);
+		pad(0);
+		contentTable.pad(0); // 确保内容容器也没有 Padding
+
+		// --- 顶部工具栏容器 (嵌入在编辑器顶部) ---
+		VisTable toolbar = new VisTable();
+		toolbar.setBackground("button"); // 给工具栏单独加个深色背景区分
+
+		// 1. 文件信息
 		fileInfoLabel = new VisLabel("No file open");
 		fileInfoLabel.setColor(Color.GRAY);
-		contentTable.add(fileInfoLabel).growX().pad(5).row();
+		toolbar.add(fileInfoLabel).expandX().left().padLeft(5); // 左侧留点空隙
+
+		// 2. 全屏切换按钮
+		VisTextButton btnMax = new VisTextButton("[ ]");
+		btnMax.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				EditorEvents.inst().emitToggleMaximizeCode();
+				if (btnMax.getText().toString().equals("[ ]")) btnMax.setText("><");
+				else btnMax.setText("[ ]");
+			}
+		});
+		toolbar.add(btnMax).width(30).height(25); // 紧贴右边，不要 padRight
+
+		// 添加工具栏到顶部
+		contentTable.add(toolbar).growX().height(26).row();
 
 		// 编辑器核心
 		codeEditor = new BioCodeEditor();
