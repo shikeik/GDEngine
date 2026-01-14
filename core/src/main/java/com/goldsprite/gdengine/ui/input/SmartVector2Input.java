@@ -26,27 +26,28 @@ public class SmartVector2Input extends SmartInput<Vector2> {
 	public SmartVector2Input(String label, Vector2 initValue, Consumer<Vector2> onChange) {
 		super(label, initValue, onChange);
 
-		// 构建容器
 		VisTable container = new VisTable();
+		// [核心修复] 1. 强制右对齐
+		container.right();
 
-		// 1. 占位符：把内容顶到右边，实现统一右对齐
+		// 2. 占位符 (让内容尽量靠右)
 		container.add().growX();
 
-		// 2. X轴编辑器
+		// 3. X轴编辑器 (给 minWidth 防止被压扁)
 		editorX = new AxisEditor("X", initValue.x, val -> {
 			value.x = val;
 			notifyChange();
 		});
-		container.add(editorX.root).width(120).padRight(5); // 限制单轴宽度
+		// [核心修复] width 改为 prefWidth, 并增加 minWidth(80) 铁布衫
+		container.add(editorX.root).width(120).minWidth(80).padRight(5);
 
-		// 3. Y轴编辑器
+		// 4. Y轴编辑器
 		editorY = new AxisEditor("Y", initValue.y, val -> {
 			value.y = val;
 			notifyChange();
 		});
-		container.add(editorY.root).width(120);
+		container.add(editorY.root).width(120).minWidth(80);
 
-		// 将容器添加到 SmartInput 的内容区
 		addContent(container);
 	}
 

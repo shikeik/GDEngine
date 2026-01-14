@@ -225,7 +225,8 @@ public class EditorController {
         VisTable bottomGroup = new VisTable();
         bottomGroup.setBackground("button"); // 给整个底部区域一个背景
 		// [布局优化] 加上 expandX().fillX() 确保 Tab 条横向撑满
-		bottomGroup.add(tabbedPane.getTable()).left().growX().row();
+		// [修复 Item 11] 增加 minHeight(26) 给 Tab 标题栏
+		bottomGroup.add(tabbedPane.getTable()).left().growX().minHeight(26).row();
 		bottomGroup.add(tabContentContainer).grow(); // Tab 内容区
 
         // 4. Main Left Split: Top(Hierarchy+Scene) / Bottom(Tabs)

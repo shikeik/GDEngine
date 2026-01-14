@@ -8,7 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
-import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target; 
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
@@ -53,6 +53,40 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
         addContent(scrollPane);
     }
 
+	// [新增] 实现接口：在树中查找并选中节点
+	@Override
+	public void selectNode(GObject target) {
+		if (target == null) {
+			tree.getSelection().clear();
+			return;
+		}
+		// 递归查找节点
+		GObjectNode node = findNode(tree.getNodes(), target);
+		if (node != null) {
+			// 展开父节点以确保可见
+			expandParents(node);
+			tree.getSelection().choose(node);
+		}
+	}
+
+	private GObjectNode findNode(com.badlogic.gdx.utils.Array<GObjectNode> nodes, GObject target) {
+		for (GObjectNode node : nodes) {
+			if (node.getValue() == target) return node;
+			if (node.getChildren().size > 0) {
+				GObjectNode found = findNode(node.getChildren(), target);
+				if (found != null) return found;
+			}
+		}
+		return null;
+	}
+
+	private void expandParents(GObjectNode node) {
+		if (node.getParent() != null) {
+			node.getParent().setExpanded(true);
+			expandParents(node.getParent());
+		}
+	}
+
     @Override
     public void setPresenter(HierarchyPresenter presenter) {
         this.presenter = presenter;
@@ -88,7 +122,7 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
         tree.clearChildren();
 
         // [关键修复] 清理旧的 Source/Target，但要把之前保存的外部 Target 加回来
-        dragAndDrop.clear(); 
+        dragAndDrop.clear();
 
         for (Target t : externalTargets) {
             dragAndDrop.addTarget(t);
@@ -125,7 +159,7 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
             setValue(obj);
 
             VisTable table = getActor();
-            table.setBackground("button"); 
+            table.setBackground("button");
 
             // 名字
             VisLabel lbl = new VisLabel(obj.getName());
@@ -136,15 +170,50 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
             handle.setColor(Color.GRAY);
             table.add(handle).right().padRight(10).width(20);
 
-            // 交互
-            table.addListener(new ContextListener() {
-					@Override public void onShowMenu(float stageX, float stageY) {
-						showMenu(obj, stageX, stageY);
-					}
-					@Override public void onLeftClick(InputEvent event, float x, float y, int count) {
-						presenter.selectObject(obj);
-					}
-				});
+			// [核心修复 Item 3] 给 Handle 增加一个无操作的 Touchable，防止事件穿透？
+			// 不，ContextListener 是加在 table 上的。handle 是 table 的子元素。
+			// 只要 handle 处理了 touchDown，父级 table 就收不到了（前提是 return true）。
+			// 但 DragAndDrop.Source 内部也是监听 input。
+			// 最简单的办法：给 handle 加一个空的 ClickListener 并停止冒泡，或者依赖 DragSource 的 consume。
+			// 实际上 DragAndDrop.Source 默认不阻止事件冒泡。
+			// 我们手动给 handle 加一个 InputFilter。
+			handle.addListener(new com.badlogic.gdx.scenes.scene2d.InputListener() {
+				@Override
+				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+					// 如果点击了手柄，这就是拖拽操作的开始
+					// 我们返回 false 让 DragSource 去处理？DragSource 也是 InputLisener。
+					// 关键是 ContextListener 在 table 上。
+					// 如果这里返回 true，table 上的 listener 就收不到 touchDown 了。
+					// 但 DragSource 需要收到。
+					// 只要确保 DragSource 先于 ContextListener 执行即可？
+					// 或者更简单：在 ContextListener 里判断 target 是否是 handle。
+					return false;
+				}
+			});
+			// 修正策略：修改 ContextListener 的判定逻辑比修改这里更稳妥。
+			// 见下方 table 的 ContextListener 修改。
+
+			table.add(handle).right().padRight(10).width(20);
+
+			// [修改] 交互逻辑：排除手柄区域
+			table.addListener(new ContextListener() {
+				@Override public void onShowMenu(float stageX, float stageY) {
+					showMenu(obj, stageX, stageY);
+				}
+				@Override public void onLeftClick(InputEvent event, float x, float y, int count) {
+					// [修复 Item 3] 如果点击目标是 handle，则不触发选中逻辑（让它去拖拽）
+					if (event.getTarget() == handle) return;
+					presenter.selectObject(obj);
+				}
+
+				@Override
+				public boolean longPress(Actor actor, float x, float y) {
+					// [修复 Item 3] 长按手柄也不弹菜单
+					Actor hit = actor.hit(x, y, true);
+					if (hit == handle) return false;
+					return super.longPress(actor, x, y);
+				}
+			});
 
             // 绘制插入线 (使用匿名子类)
             VisTable content = new VisTable() {
@@ -166,9 +235,10 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
             setActor(content);
             content.add(lbl).expandX().fillX().left().padLeft(5);
             content.add(handle).right().padRight(10).width(20);
-            content.addListener(table.getListeners().first());
+			// 重新绑定 Listener 到 content
+			content.addListener(table.getListeners().first());
 
-            setupDragAndDrop(handle, content, obj);
+			setupDragAndDrop(handle, content, obj);
         }
 
         private void setupDragAndDrop(Actor handle, Actor targetActor, GObject obj) {
