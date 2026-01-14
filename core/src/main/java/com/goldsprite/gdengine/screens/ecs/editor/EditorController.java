@@ -70,7 +70,7 @@ public class EditorController {
     private HierarchyPanel hierarchyPanel;
     private InspectorPanel inspectorPanel;
     private ScenePanel scenePanel;
-    private ScenePresenter scenePresenter; 
+    private ScenePresenter scenePresenter;
     private GamePanel gamePanel;
     private GamePresenter gamePresenter;
     private ProjectPanel projectPanel;
@@ -170,12 +170,12 @@ public class EditorController {
 
         // 新增 Console
         consolePanel = new ConsolePanel();
-		
+
         // 跨模块交互：从 Hierarchy 拖拽到 Scene
         setupDragAndDrop();
     }
 
-        // [核心修改] 布局重组：Unity 风格
+    // [核心修改] 布局重组：Unity 风格
     private void buildLayout() {
         VisTable root = new VisTable();
         root.setFillParent(true);
@@ -187,7 +187,7 @@ public class EditorController {
         VisSplitPane sceneGameSplit = new VisSplitPane(scenePanel, gamePanel, true);
         sceneGameSplit.setSplitAmount(0.5f);
         sceneStack.add(sceneGameSplit);
-        
+
         // 1.1 Toolbar (Save/Load/Gizmo) - 浮在 Scene 上面
         Table toolbar = new Table();
         toolbar.top().left().pad(5);
@@ -203,10 +203,17 @@ public class EditorController {
         VisSplitPane topSplit = new VisSplitPane(hierarchyPanel, sceneStack, false);
         topSplit.setSplitAmount(0.2f); // Hierarchy 占 20% 宽度
 
-        // 3. Bottom Tabs: Project & Console
-        // 3.1 创建 TabbedPane
-        TabbedPane tabbedPane = new TabbedPane();
-        VisTable tabContentContainer = new VisTable(); // 用来放 Tab 内容
+		// 3. Bottom Tabs: Project & Console
+		// ---------------------------------------------------------
+		// [核心修复] 使用测试通过的逻辑：复制样式并强制设为 false
+		TabbedPane.TabbedPaneStyle defaultStyle = VisUI.getSkin().get(TabbedPane.TabbedPaneStyle.class);
+		TabbedPane.TabbedPaneStyle horizontalStyle = new TabbedPane.TabbedPaneStyle(defaultStyle);
+		horizontalStyle.vertical = false; // 必须是 false (横向)
+
+		TabbedPane tabbedPane = new TabbedPane(horizontalStyle);
+		// ---------------------------------------------------------
+
+		VisTable tabContentContainer = new VisTable(); // 用来放 Tab 内容
         tabbedPane.addListener(new TabbedPaneAdapter() {
             @Override
             public void switchedTab(Tab tab) {
@@ -218,18 +225,19 @@ public class EditorController {
         // 3.2 封装 Project Tab
         SimpleTab projectTab = new SimpleTab("Project", projectPanel);
         SimpleTab consoleTab = new SimpleTab("Console", consolePanel);
-        
+
         tabbedPane.add(projectTab);
         tabbedPane.add(consoleTab);
-        
+
         // 默认显示 Project
         tabbedPane.switchTab(projectTab);
 
         // 3.3 组装 Tab 区域 (Tab Header + Content)
         VisTable bottomGroup = new VisTable();
         bottomGroup.setBackground("button"); // 给整个底部区域一个背景
-        bottomGroup.add(tabbedPane.getTable()).left().row(); // Tab 按钮条
-        bottomGroup.add(tabContentContainer).grow(); // Tab 内容区
+		// [布局优化] 加上 expandX().fillX() 确保 Tab 条横向撑满
+		bottomGroup.add(tabbedPane.getTable()).left().growX().row();
+		bottomGroup.add(tabContentContainer).grow(); // Tab 内容区
 
         // 4. Main Left Split: Top(Hierarchy+Scene) / Bottom(Tabs)
         VisSplitPane leftMainSplit = new VisSplitPane(topSplit, bottomGroup, true);
@@ -243,7 +251,7 @@ public class EditorController {
         stage.addActor(root);
         stage.addActor(new ToastUI());
     }
-	
+
 	// 简单的 Tab 适配器类
     private static class SimpleTab extends Tab {
         private String title;
@@ -278,7 +286,7 @@ public class EditorController {
         multiplexer.addProcessor(shortcutManager); // 2. 快捷键
 
         // 3. Scene View 输入 (Gizmo, Picking, Camera) -> 委托给 Presenter
-        scenePresenter.registerInput(multiplexer); 
+        scenePresenter.registerInput(multiplexer);
 
         // 应用输入处理器
         if (screen != null && screen.getImp() != null) {
@@ -291,8 +299,8 @@ public class EditorController {
 	// [补全] 漏掉的辅助方法
     private void addToolBtn(Table t, String text, Runnable act) {
 		VisTextButton b = new VisTextButton(text);
-		b.addListener(new ClickListener() { 
-			@Override public void clicked(InputEvent e, float x, float y) { act.run(); } 
+		b.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent e, float x, float y) { act.run(); }
 		});
 		t.add(b).padRight(5);
 	}
