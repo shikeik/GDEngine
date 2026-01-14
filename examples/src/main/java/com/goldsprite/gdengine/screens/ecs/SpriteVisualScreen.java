@@ -166,7 +166,7 @@ public class SpriteVisualScreen extends ExampleGScreen {
 		neonBatch.drawLine(0, -200, 0, 200, 1, Color.GRAY);
 		neonBatch.end();
 
-		world.getSystem(WorldRenderSystem.class).update(delta);
+		world.render(neonBatch, worldCamera);
 
 		uiStage.act(delta);
 		uiStage.draw();

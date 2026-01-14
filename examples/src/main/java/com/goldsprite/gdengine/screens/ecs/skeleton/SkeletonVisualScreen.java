@@ -134,7 +134,7 @@ public class SkeletonVisualScreen extends ExampleGScreen {
 		neonBatch.drawLine(-1000, 0, 2000, 0, 2, Color.GRAY); // 地面
 		neonBatch.end();
 
-		world.getSystem(WorldRenderSystem.class).update(delta);
+		world.render(neonBatch, worldCamera);
 
 		uiStage.act(delta);
 		uiStage.draw();

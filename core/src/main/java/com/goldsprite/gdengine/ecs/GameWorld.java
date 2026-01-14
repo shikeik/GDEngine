@@ -9,6 +9,7 @@ import com.goldsprite.gdengine.ecs.component.Component;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.ecs.system.BaseSystem;
 import com.goldsprite.gdengine.ecs.system.SceneSystem;
+import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 import com.goldsprite.gdengine.input.Event;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
@@ -89,6 +90,7 @@ public class GameWorld {
 
 	/** 核心系统：负责驱动 GObject 的生命周期 (Unity 兼容层) */
 	public SceneSystem sceneSystem;
+	public WorldRenderSystem worldRenderSystem;
 
 	// ==========================================
 	// 4. 全局服务引用
@@ -140,6 +142,8 @@ public class GameWorld {
 		Debug.log("GameWorld: 正在初始化核心系统...");
 		// 初始化场景系统，它会自动调用 registerSystem 把自己注册进来
 		sceneSystem = new SceneSystem();
+		// 初始化渲染系统
+		worldRenderSystem = new WorldRenderSystem();
 	}
 
 	/**

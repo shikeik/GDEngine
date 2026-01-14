@@ -198,7 +198,7 @@ public class JsonLiveEditScreen extends ExampleGScreen {
 		neonBatch.drawLine(-1000, 0, 1000, 0, 2, Color.GRAY);
 		neonBatch.end();
 
-		world.getSystem(WorldRenderSystem.class).update(delta);
+		world.render(neonBatch, worldCamera);
 
 		uiStage.act(delta);
 		uiStage.draw();

@@ -1,10 +1,13 @@
 ignored: indentFix codeFormatFix  
 
 ## 待办
+- [ ] 需要更健壮的tabbed面板, 然后完成自由嵌入分离tab操作功能
+- [ ] region assetPath显示重设计
+- [ ] 输一个字符就焦点被取消的bug, 这可能不止是输字符会有bug, 还要检查其他是否有同类情况并修复
+- [ ] javadoc 需要up-to-date
+- [ ] FreePanViewer 字体缩放功能无效
 
-- [ ] 自定义滑动布局, 全向自由滑动
-- [ ] 面板焦点高亮框绘制，以及仅在sceneview焦点时才可触发gizmo/cam操作
-- [ ] 把渲染系统变为内置系统，以修复内置场景无渲染画面问题
+- [x] 把渲染系统变为内置系统，以修复内置场景无渲染画面问题
 
 - [ ] 编辑器面板基类: 面板title hierarchy, project...
 - [ ] project面板(以及tab页的console面板)
