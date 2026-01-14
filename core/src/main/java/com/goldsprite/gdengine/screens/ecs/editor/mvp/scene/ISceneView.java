@@ -15,4 +15,6 @@ public interface ISceneView {
 
 	/** 设置 Gizmo 模式按钮的高亮状态 */
 	void updateGizmoModeUI(int mode);
+
+	boolean isMouseOver(); // [新增]
 }

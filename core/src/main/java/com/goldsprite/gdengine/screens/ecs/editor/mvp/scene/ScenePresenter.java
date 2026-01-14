@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.Json;
 import com.goldsprite.gdengine.core.utils.GdxJsonSetup;
@@ -24,6 +25,7 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorGizmoSystem;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorSceneManager;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorEvents;
+import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.goldsprite.gdengine.utils.SimpleCameraController;
 
@@ -67,13 +69,18 @@ public class ScenePresenter {
 		cameraController = new SimpleCameraController(camera);
 		cameraController.setCoordinateMapper((sx, sy) -> view.screenToWorld(sx, sy, camera));
 
+		// [核心修复] 配置看门狗
+		// 只有当 ScenePanel (View) 处于 hover 状态 (鼠标在上面) 时，相机才响应
+		// [最终修复]
+		cameraController.setActivationCondition(view::isMouseOver);
+
 		inputProcessor = new SceneInputProcessor();
 	}
 
 	public void update(float delta) {
 		camera.update();
 		// 渲染到 FBO
-		view.getRenderTarget().renderToFbo(() -> renderSceneContent());
+		view.getRenderTarget().renderToFbo(this::renderSceneContent);
 	}
 
 	private void renderSceneContent() {
@@ -167,12 +174,13 @@ public class ScenePresenter {
 		private enum DragMode { NONE, BODY, MOVE_X, MOVE_Y, ROTATE, SCALE_X, SCALE_Y, SCALE }
 		private DragMode currentDragMode = DragMode.NONE;
 		private float lastX, lastY;
-		private Vector2 startScale = new Vector2();
-		private Vector2 startDragPos = new Vector2();
+		private final Vector2 startScale = new Vector2();
+		private final Vector2 startDragPos = new Vector2();
 
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
 			if (pointer > 0 || button == Input.Buttons.RIGHT || button == Input.Buttons.MIDDLE) return false;
+			if (!view.isMouseOver()) return false;
 
 			if (button == Input.Buttons.LEFT) {
 				Vector2 wPos = view.screenToWorld(screenX, screenY, camera);

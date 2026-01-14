@@ -109,4 +109,9 @@ public class ScenePanel extends EditorPanel implements ISceneView {
 	public Actor getDropTargetActor() {
 		return sceneWidget;
 	}
+
+	@Override
+	public boolean isMouseOver() {
+		return hasFocus; // 直接返回 EditorPanel 维护的焦点状态
+	}
 }

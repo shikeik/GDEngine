@@ -10,6 +10,8 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 
+import java.util.function.BooleanSupplier;
+
 public class SimpleCameraController implements InputProcessor {
 
 	private final OrthographicCamera camera;
@@ -27,6 +29,9 @@ public class SimpleCameraController implements InputProcessor {
 
 	// 默认策略: 标准全屏 Unproject
 	private CoordinateMapper mapper;
+
+	// [新增] 激活条件
+	private BooleanSupplier activationCondition;
 
 	public SimpleCameraController(OrthographicCamera camera) {
 		this.camera = camera;
@@ -46,9 +51,22 @@ public class SimpleCameraController implements InputProcessor {
 		this.mapper = mapper;
 	}
 
+	// [新增] 设置激活条件
+	public void setActivationCondition(BooleanSupplier condition) {
+		this.activationCondition = condition;
+	}
+
+	// [新增] 内部检查
+	private boolean shouldIgnore() {
+		// 如果 inputEnabled 为 false，或者设置了条件但条件不满足，则忽略
+		return !inputEnabled || (activationCondition != null && !activationCondition.getAsBoolean());
+	}
+
 	// --- 代理 InputProcessor ---
 	@Override public boolean touchDown(int x, int y, int pointer, int button) {
-		if(!inputEnabled) return false;
+		// [修改] 增加检查
+		if (shouldIgnore()) return false;
+
 		// 优先处理鼠标逻辑 (PC右键)
 		if (mouseInputAdapter.touchDown(x, y, pointer, button)) return true;
 		// 其次处理手势 (Android双指/单指拖拽)
@@ -59,12 +77,15 @@ public class SimpleCameraController implements InputProcessor {
 		return gestureDetector.touchUp(x, y, pointer, button);
 	}
 	@Override public boolean touchDragged(int x, int y, int pointer) {
-		if(!inputEnabled) return false;
+		// 拖拽过程中通常不需要检查 condition (因为 touchDown 已经检查过了)
+		// 但为了安全，如果 inputEnabled 被强关，还是断开比较好
+		if (shouldIgnore()) return false;
 		if (mouseInputAdapter.touchDragged(x, y, pointer)) return true;
 		return gestureDetector.touchDragged(x, y, pointer);
 	}
 	@Override public boolean scrolled(float amountX, float amountY) {
-		if(!inputEnabled) return false;
+		// [修改] 增加检查 (解决滚轮串味的核心)
+		if (shouldIgnore()) return false;
 		return mouseInputAdapter.scrolled(amountX, amountY);
 	}
 	// ... 其他方法直接返回 false 或调用 super ...
