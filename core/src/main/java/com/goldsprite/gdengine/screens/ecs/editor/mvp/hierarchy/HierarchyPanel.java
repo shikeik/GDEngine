@@ -31,6 +31,11 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
     // [修复] 缓存外部注册的 Targets (例如 SceneView)，防止刷新时丢失
     private List<Target> externalTargets = new ArrayList<>();
 
+	// 1. 在 HierarchyPanel 类中定义一些常量，方便调整
+	private static final float INDENT_WIDTH = 20f; // 缩进宽度，必须与 tree.setIndentSpacing(20f) 一致
+	private static final float LINE_ALPHA = 0.3f;
+	private static final float LINE_OFFSET_X = 10f; // 线条相对于缩进格的偏移 (居中)
+
     public HierarchyPanel() {
         super("Hierarchy");
 
@@ -216,22 +221,69 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 			});
 
             // 绘制插入线 (使用匿名子类)
-            VisTable content = new VisTable() {
-                @Override
-                public void draw(Batch batch, float parentAlpha) {
-                    if (tree != null) {
-                        float targetWidth = tree.getWidth() - getX();
-                        if (targetWidth > 0 && getWidth() != targetWidth) {
-                            setWidth(targetWidth);
-                            invalidate();
-                        }
-                    }
-                    super.draw(batch, parentAlpha);
-                    if (dropState != DropState.NONE) {
-                        drawDropLine(batch, getX(), getY(), getWidth(), getHeight(), dropState);
-                    }
-                }
-            };
+			VisTable content = new VisTable() {
+				@Override
+				public void draw(Batch batch, float parentAlpha) {
+					// --- 1. 绘制引导线 (新增逻辑) ---
+					if (getParent() != null) { // 根节点通常不画线
+						Drawable white = VisUI.getSkin().getDrawable("white");
+						Color old = batch.getColor();
+
+						// 使用灰色，带透明度
+						batch.setColor(0.5f, 0.5f, 0.5f, LINE_ALPHA * parentAlpha);
+
+						int level = getLevel(); // 获取当前节点深度 (VisTree.Node 自带方法)
+						float h = getHeight();
+
+						// 循环绘制每一级父级的竖线
+						// 每一级缩进 INDENT_WIDTH
+						for (int i = 1; i < level; i++) {
+							// 计算线条 X 坐标: (i * indent) - indent/2 (居中)
+							// 注意：这里是相对于 Node Actor 的坐标，Tree 的缩进是靠 Padding 实现的吗？
+							// VisTree 的实现通常是 Actor 自己偏移。
+							// 实际上，VisTree 的 Node Actor 的 X 坐标通常是 0，Tree 也就是个 VerticalGroup。
+							// 等等，VisTree 的 indent 是通过 padLeft 实现的吗？
+							// 经过查阅 VisTree 源码，它是通过在 Actor 左侧留空实现的。
+							// 我们可以简单地根据 level 反推 X 位置。
+
+							// 修正：我们不需要画所有的竖线，只需要画 "连接线"。
+							// 但简单的 IDE 风格通常是画很多条淡淡的竖线表示层级轨道。
+
+							float lineX = getX() - (level - i) * INDENT_WIDTH + LINE_OFFSET_X;
+
+							// 画一条竖线贯穿整个 Item 高度
+							white.draw(batch, lineX, getY(), 1, h);
+						}
+
+						// 画 "L" 型连接线 (指向自己的横线)
+						float currentLineX = getX() + LINE_OFFSET_X;
+						float midY = getY() + h / 2f;
+
+						// 竖线部分 (上半截)
+						white.draw(batch, currentLineX, midY, 1, h / 2f);
+						// 横线部分
+						white.draw(batch, currentLineX, midY, 8f, 1);
+
+						batch.setColor(old);
+					}
+
+					// --- 2. 原有的宽度调整逻辑 (保持不变) ---
+					if (tree != null) {
+						float targetWidth = tree.getWidth() - getX();
+						if (targetWidth > 0 && getWidth() != targetWidth) {
+							setWidth(targetWidth);
+							invalidate();
+						}
+					}
+
+					super.draw(batch, parentAlpha);
+
+					// --- 3. 原有的 DropLine 逻辑 (保持不变) ---
+					if (dropState != DropState.NONE) {
+						drawDropLine(batch, getX(), getY(), getWidth(), getHeight(), dropState);
+					}
+				}
+			};
             setActor(content);
             content.add(lbl).expandX().fillX().left().padLeft(5);
             content.add(handle).right().padRight(10).width(20);

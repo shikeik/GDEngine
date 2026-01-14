@@ -28,7 +28,7 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
         super();
         getSelection().setProgrammaticChangeEvents(false);
         setIndentSpacing(20f);
-        
+
         // 监听选中
         addListener(new ChangeListener() {
             @Override
@@ -69,7 +69,7 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
         for (FileHandle file : files) {
             // 只显示文件夹 (Unity风格: 左侧只看树状结构，右侧看内容)
             // 但为了方便，我们也显示文件，您可以根据喜好注释掉下面这行
-            // if (!file.isDirectory()) continue; 
+            // if (!file.isDirectory()) continue;
 
             // 过滤隐藏文件
             if (file.name().startsWith(".")) continue;
@@ -92,6 +92,19 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
                 recursiveAddNodes(node, file);
             }
         }
+
+		// [新增] 智能展开逻辑
+		// 条件：
+		// 1. 当前目录不为空
+		// 2. 当前目录只有一个子元素 (files.length == 1)
+		// 3. 这个子元素是目录
+		if (files.length == 1 && files[0].isDirectory()) {
+			// 获取刚刚添加进去的那个子节点
+			if (parentNode.getChildren().size > 0) {
+				FileNode childNode = parentNode.getChildren().get(0);
+				childNode.setExpanded(true); // 自动展开
+			}
+		}
     }
 
     // --- Node ---
@@ -99,7 +112,7 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
         public FileNode(FileHandle file) {
             super(new VisLabel(file.name()));
             setValue(file);
-            
+
             VisLabel lbl = getActor();
             if (file.isDirectory()) {
                 lbl.setColor(Color.GOLD);
