@@ -20,6 +20,9 @@ public abstract class EditorPanel extends VisTable {
     protected VisTable contentTable;
     protected VisLabel titleLabel;
 
+	// [新增] 引用标题栏 Table，以便控制显示隐藏
+	protected VisTable titleBar;
+
 	// [新增] 焦点状态
 	protected boolean hasFocus = false;
 	private final Drawable whitePixel;
@@ -31,7 +34,7 @@ public abstract class EditorPanel extends VisTable {
 		whitePixel = VisUI.getSkin().getDrawable("white");
 
         // 1. Title Bar
-        VisTable titleBar = new VisTable();
+		titleBar = new VisTable(); // [修改] 赋值给成员变量
         titleBar.setBackground("button");
 
         titleLabel = new VisLabel(title);
@@ -51,6 +54,14 @@ public abstract class EditorPanel extends VisTable {
 		// [核心修复] 焦点管理与滚轮隔离
 		setupFocusListener();
     }
+
+	// [新增] 控制标题栏显隐
+	public void setHeaderVisible(boolean visible) {
+		titleBar.setVisible(visible);
+		// 重新触发布局，如果隐藏了，高度应为0
+		getCell(titleBar).height(visible ? 26 : 0).minHeight(visible ? 26 : 0);
+		invalidateHierarchy();
+	}
 
 	private void setupFocusListener() {
 		addListener(new InputListener() {

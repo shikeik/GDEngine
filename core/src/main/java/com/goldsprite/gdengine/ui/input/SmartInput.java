@@ -32,7 +32,7 @@ public abstract class SmartInput<T> extends VisTable {
             float prefW = labelActor.getPrefWidth();
 //            float finalW = Math.max(60, prefW);
 //            add(labelActor).align(Align.center).width(finalW).left().padRight(5);
-            add(labelActor).width(5).minWidth(0).left().padRight(5);
+            add(labelActor).width(15).minWidth(10).left().padRight(10);
         }
     }
 

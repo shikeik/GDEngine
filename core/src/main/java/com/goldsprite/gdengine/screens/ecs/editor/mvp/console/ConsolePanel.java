@@ -1,22 +1,98 @@
 package com.goldsprite.gdengine.screens.ecs.editor.mvp.console;
 
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.utils.Align;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
-import com.goldsprite.gdengine.ui.widget.IDEConsole;
+import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisScrollPane;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextButton;
 
-// 这里暂时没有写 ConsolePresenter，因为 IDEConsole 内部已经监听了 Log 静态数据。为了架构统一，以后可以加，目前先跑起来。)
+import java.util.List;
+
 public class ConsolePanel extends EditorPanel {
 
-    private IDEConsole consoleWidget;
+	private VisLabel logLabel;
+	private VisScrollPane scrollPane;
+	private boolean autoScroll = true;
 
-    public ConsolePanel() {
-        super("Console");
+	public ConsolePanel() {
+		super("Console");
 
-        consoleWidget = new IDEConsole();
-        // 强制展开并去掉它的折叠按钮（因为现在是独立面板了）
-        // 如果 IDEConsole 没有公开相应方法，暂时直接用，
-        // 建议你修改 IDEConsole 让它支持 "嵌入模式"，不过这里先直接嵌入
-        consoleWidget.setExpanded(true); 
+		// 1. 工具栏 (Clear, AutoScroll)
+		VisTable toolbar = new VisTable();
+		toolbar.left();
 
-        addContent(consoleWidget);
-    }
+		VisTextButton btnClear = new VisTextButton("Clear");
+		btnClear.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				com.goldsprite.gdengine.log.Debug.getLogs().clear();
+				updateLog();
+			}
+		});
+
+		VisTextButton btnTest = new VisTextButton("Test Log");
+		btnTest.addListener(new ClickListener() {
+			@Override public void clicked(InputEvent event, float x, float y) { com.goldsprite.gdengine.log.Debug.log("Test log entry..."); }
+		});
+
+		toolbar.add(btnClear).padRight(5);
+		toolbar.add(btnTest).padRight(5);
+
+		// 添加到 Content 的顶部
+		contentTable.add(toolbar).growX().pad(5).row();
+
+		// 2. 日志内容区
+		logLabel = new VisLabel();
+		logLabel.setAlignment(Align.topLeft);
+		logLabel.setWrap(true); // 允许换行
+
+		scrollPane = new VisScrollPane(logLabel);
+		scrollPane.setFadeScrollBars(false);
+		scrollPane.setScrollingDisabled(true, false); // 只允许纵向滚动
+
+		VisTable logContainer = new VisTable();
+		logContainer.setBackground("list"); //稍微深一点的背景
+		logContainer.add(scrollPane).grow().pad(5);
+
+		contentTable.add(logContainer).grow();
+	}
+
+	@Override
+	public void act(float delta) {
+		super.act(delta);
+		// 简单轮询刷新 (生产环境可以用事件驱动)
+		updateLog();
+	}
+
+	private int lastLogSize = 0;
+
+	private void updateLog() {
+		List<String> logs = com.goldsprite.gdengine.log.Debug.getLogs();
+		if (logs.size() == lastLogSize) return; // 无变化
+
+		lastLogSize = logs.size();
+
+		if (logs.isEmpty()) {
+			logLabel.setText("");
+			return;
+		}
+
+		// 性能优化：只显示最后 100 行，避免 Text 爆炸
+		StringBuilder sb = new StringBuilder();
+		int start = Math.max(0, logs.size() - 100);
+		for (int i = start; i < logs.size(); i++) {
+			sb.append(logs.get(i)).append("\n");
+		}
+
+		logLabel.setText(sb.toString());
+
+		// 自动滚动到底部
+		if (autoScroll) {
+			scrollPane.layout();
+			scrollPane.setScrollY(scrollPane.getMaxY());
+		}
+	}
 }

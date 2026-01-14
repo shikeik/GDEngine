@@ -5,11 +5,8 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
-import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
@@ -31,7 +28,6 @@ import com.goldsprite.gdengine.neonbatch.NeonBatch;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorGizmoSystem;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorSceneManager;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorEvents;
-import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.console.ConsolePanel;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.game.GamePanel;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.game.GamePresenter;
@@ -43,14 +39,11 @@ import com.goldsprite.gdengine.screens.ecs.editor.mvp.project.ProjectPanel;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.project.ProjectPresenter;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.scene.ScenePanel;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.scene.ScenePresenter;
+import com.goldsprite.gdengine.ui.widget.SmartTabPane;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
-import com.kotcrab.vis.ui.widget.VisTextButton;
-import com.kotcrab.vis.ui.widget.tabbedpane.Tab;
-import com.kotcrab.vis.ui.widget.tabbedpane.TabbedPane;
-import com.kotcrab.vis.ui.widget.tabbedpane.TabbedPaneAdapter;
 
 public class EditorController {
     private EditorGameScreen screen;
@@ -75,7 +68,8 @@ public class EditorController {
     private GamePresenter gamePresenter;
     private ProjectPanel projectPanel;
     private ProjectPresenter projectPresenter;
-	private ConsolePanel consolePanel;
+	// [修改] 声明类型变化
+	private ConsolePanel consolePanel; // 用 LogPanel 替换 ConsolePanel
 
     private FileHandle currentProj;
 
@@ -109,7 +103,7 @@ public class EditorController {
         setupInput();
 
         // 8. 启动初始场景 (延迟一帧以确保 UI 布局就绪)
-        Gdx.app.postRunnable(() -> loadInitialScene());
+        Gdx.app.postRunnable(this::loadInitialScene);
     }
 
     private void reloadProjectContext() {
@@ -168,94 +162,52 @@ public class EditorController {
         projectPanel = new ProjectPanel();
         projectPresenter = new ProjectPresenter(projectPanel);
 
-        // 新增 Console
-        consolePanel = new ConsolePanel();
+		// [修改] 隐藏 ProjectPanel 的标题栏 (因为 Tab 栏已经有了标题)
+		projectPanel.setHeaderVisible(false);
+
+		// [修改] 使用新的 LogPanel
+		consolePanel = new ConsolePanel();
+		// 同样隐藏标题栏
+		consolePanel.setHeaderVisible(false);
 
         // 跨模块交互：从 Hierarchy 拖拽到 Scene
         setupDragAndDrop();
     }
 
-    // [核心修改] 布局重组：Unity 风格
-    private void buildLayout() {
-        VisTable root = new VisTable();
-        root.setFillParent(true);
-        root.setBackground("window-bg");
+	// [核心修改] 布局重组
+	private void buildLayout() {
+		VisTable root = new VisTable();
+		root.setFillParent(true);
+		root.setBackground("window-bg");
 
-        // 1. Center Area: Scene | Game (Stack)
-        // 这一块保持不变，是中间的画面区域
-        Stack sceneStack = new Stack();
-        VisSplitPane sceneGameSplit = new VisSplitPane(scenePanel, gamePanel, true);
-        sceneGameSplit.setSplitAmount(0.5f);
-        sceneStack.add(sceneGameSplit);
+		// 1. Center Area (Scene | Game)
+		Stack sceneStack = new Stack();
+		VisSplitPane sceneGameSplit = new VisSplitPane(scenePanel, gamePanel, true);
+		sceneGameSplit.setSplitAmount(0.5f);
+		sceneStack.add(sceneGameSplit);
 
-        // 2. Top Split: Hierarchy (Left) | SceneStack (Right)
-        VisSplitPane topSplit = new VisSplitPane(hierarchyPanel, sceneStack, false);
-        topSplit.setSplitAmount(0.2f); // Hierarchy 占 20% 宽度
+		// 2. Top Split (Hierarchy | SceneStack)
+		VisSplitPane topSplit = new VisSplitPane(hierarchyPanel, sceneStack, false);
+		topSplit.setSplitAmount(0.2f);
 
-		// 3. Bottom Tabs: Project & Console
-		// ---------------------------------------------------------
-		// [核心修复] 使用测试通过的逻辑：复制样式并强制设为 false
-		TabbedPane.TabbedPaneStyle defaultStyle = VisUI.getSkin().get(TabbedPane.TabbedPaneStyle.class);
-		TabbedPane.TabbedPaneStyle horizontalStyle = new TabbedPane.TabbedPaneStyle(defaultStyle);
-		horizontalStyle.vertical = false; // 必须是 false (横向)
+		// 3. Bottom Tabs: Project & Console [使用 SmartTabPane]
+		SmartTabPane bottomTabs = new SmartTabPane();
+		bottomTabs.addTab("Project", projectPanel);
+		bottomTabs.addTab("Console", consolePanel);
+		bottomTabs.getTabbedPane().switchTab(0);
 
-		TabbedPane tabbedPane = new TabbedPane(horizontalStyle);
-		// ---------------------------------------------------------
+		// 4. Main Left Split (Top / Bottom)
+		VisSplitPane leftMainSplit = new VisSplitPane(topSplit, bottomTabs, true);
+		leftMainSplit.setSplitAmount(0.7f);
 
-		VisTable tabContentContainer = new VisTable(); // 用来放 Tab 内容
-        tabbedPane.addListener(new TabbedPaneAdapter() {
-            @Override
-            public void switchedTab(Tab tab) {
-                tabContentContainer.clearChildren();
-                tabContentContainer.add(tab.getContentTable()).grow();
-            }
-        });
+		// 5. Root Split (LeftMain | Inspector)
+		VisSplitPane rootSplit = new VisSplitPane(leftMainSplit, inspectorPanel, false);
+		rootSplit.setSplitAmount(0.8f);
 
-        // 3.2 封装 Project Tab
-        SimpleTab projectTab = new SimpleTab("Project", projectPanel);
-        SimpleTab consoleTab = new SimpleTab("Console", consolePanel);
-
-        tabbedPane.add(projectTab);
-        tabbedPane.add(consoleTab);
-
-        // 默认显示 Project
-        tabbedPane.switchTab(projectTab);
-
-        // 3.3 组装 Tab 区域 (Tab Header + Content)
-        VisTable bottomGroup = new VisTable();
-        bottomGroup.setBackground("button"); // 给整个底部区域一个背景
-		// [布局优化] 加上 expandX().fillX() 确保 Tab 条横向撑满
-		// [修复 Item 11] 增加 minHeight(26) 给 Tab 标题栏
-		bottomGroup.add(tabbedPane.getTable()).left().growX().minHeight(26).row();
-		bottomGroup.add(tabContentContainer).grow(); // Tab 内容区
-
-        // 4. Main Left Split: Top(Hierarchy+Scene) / Bottom(Tabs)
-        VisSplitPane leftMainSplit = new VisSplitPane(topSplit, bottomGroup, true);
-        leftMainSplit.setSplitAmount(0.7f); // 底部占 30% 高度
-
-        // 5. Root Split: LeftMain | Inspector (Right)
-        VisSplitPane rootSplit = new VisSplitPane(leftMainSplit, inspectorPanel, false);
-        rootSplit.setSplitAmount(0.8f); // Inspector 占 20% 宽度
-
-        root.add(rootSplit).grow();
-        stage.addActor(root);
-        stage.addActor(new ToastUI());
-    }
-
-	// 简单的 Tab 适配器类
-    private static class SimpleTab extends Tab {
-        private String title;
-        private EditorPanel content;
-
-        public SimpleTab(String title, EditorPanel content) {
-            super(false, false);
-            this.title = title;
-            this.content = content;
-        }
-
-        @Override public String getTabTitle() { return title; }
-        @Override public Table getContentTable() { return content; }
-    }
+		root.add(rootSplit).grow();
+		stage.addActor(root);
+		stage.addActor(new ToastUI());
+	}
 
     private void setupInput() {
         shortcutManager = new ShortcutManager(stage);
@@ -285,15 +237,6 @@ public class EditorController {
             Gd.input.setInputProcessor(multiplexer);
         }
     }
-
-	// [补全] 漏掉的辅助方法
-    private void addToolBtn(Table t, String text, Runnable act) {
-		VisTextButton b = new VisTextButton(text);
-		b.addListener(new ClickListener() {
-			@Override public void clicked(InputEvent e, float x, float y) { act.run(); }
-		});
-		t.add(b).padRight(5);
-	}
 
     private void setupDragAndDrop() {
         DragAndDrop dnd = hierarchyPanel.getDragAndDrop();

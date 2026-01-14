@@ -8,6 +8,9 @@ import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.goldsprite.gdengine.assets.ColorTextureUtils;
+import com.kotcrab.vis.ui.VisUI;
+import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.color.ColorPicker;
 import com.kotcrab.vis.ui.widget.color.ColorPickerAdapter;
@@ -22,11 +25,7 @@ public class SmartColorInput extends SmartInput<Color> {
 	public SmartColorInput(String label, Color initValue, Consumer<Color> onChange) {
 		super(label, new Color(initValue), onChange);
 
-		Pixmap p = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
-		p.setColor(Color.WHITE);
-		p.fill();
-		drawable = new TextureRegionDrawable(new Texture(p));
-		p.dispose();
+		drawable = ColorTextureUtils.createColorDrawable(Color.WHITE);
 
 		previewBtn = new VisTextButton(value.toString());
 		TextButton.TextButtonStyle style = new TextButton.TextButtonStyle(previewBtn.getStyle());
@@ -42,7 +41,11 @@ public class SmartColorInput extends SmartInput<Color> {
 			});
 
 		updateUI();
-		addContent(previewBtn);
+
+		VisTable controls = new VisTable();
+		controls.add().growX();
+		controls.add(previewBtn).width(180);
+		addContent(controls);
 	}
 
     @Override

@@ -58,8 +58,8 @@ public class ProjectPanel extends EditorPanel {
     public void setPresenter(ProjectPresenter presenter) {
         this.presenter = presenter;
         fileTree.setCallbacks(
-            file -> presenter.onTreeSelected(file),
-		(file, x, y) -> presenter.onShowContextMenu(file, x, y)
+			presenter::onTreeSelected,
+			presenter::onShowContextMenu
         );
     }
 
@@ -132,7 +132,7 @@ public class ProjectPanel extends EditorPanel {
     // --- [修复点 2] ---
     // 返回类型改为 Drawable (接口)，因为 tint 返回的不一定是 TextureRegionDrawable
     private Drawable getIconDrawable(FileHandle file) {
-        String drawableName = "white"; 
+        String drawableName = "white";
         // 确保从 Skin 获取 Region 并包装
         TextureRegionDrawable drawable = new TextureRegionDrawable(VisUI.getSkin().getRegion(drawableName));
 
