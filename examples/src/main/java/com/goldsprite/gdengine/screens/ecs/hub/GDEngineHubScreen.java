@@ -219,6 +219,13 @@ public class GDEngineHubScreen extends GScreen {
 				public void onShowMenu(float stageX, float stageY) {
 					showProjectMenu(projDir, stageX, stageY);
 				}
+				
+				@Override
+				public boolean longPress(Actor actor, float x, float y) {
+					if (tapTask != null) tapTask.cancel(); // 取消延迟确认弹窗
+					int k5;
+					return super.longPress(actor, x, y);
+				}
 
 				@Override
 				public void onLeftClick(InputEvent event, float x, float y, int count) {

@@ -6,6 +6,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
+import com.goldsprite.gdengine.log.Debug;
 
 /**
  * 统一上下文菜单监听器
@@ -15,11 +16,19 @@ import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
  * </p>
  */
 public abstract class ContextListener extends ActorGestureListener {
+	private boolean longPressed;
 
 	// 参数: halfTapSquareSize, tapCountInterval, longPressDuration, maxFlingDelay
 	public ContextListener() {
 		// 长按时间设为 0.4s，比较跟手
 		super(20, 0.4f, 0.4f, 0.15f);
+	}
+
+	@Override
+	public void touchDown(InputEvent event, float x, float y, int pointer, int button) {
+		// TODO: Implement this method
+		super.touchDown(event, x, y, pointer, button);
+		longPressed = false;
 	}
 
 	/**
@@ -37,7 +46,9 @@ public abstract class ContextListener extends ActorGestureListener {
 
 	@Override
 	public void tap(InputEvent event, float x, float y, int count, int button) {
-		if (button == Input.Buttons.RIGHT) {
+		if (longPressed) return; // 触发长按则取消
+		
+		if (button == Input.Buttons.RIGHT) {int k;
 			onShowMenu(event.getStageX(), event.getStageY());
 		} else if (button == Input.Buttons.LEFT) {
 			onLeftClick(event, x, y, count);
@@ -46,6 +57,8 @@ public abstract class ContextListener extends ActorGestureListener {
 
 	@Override
 	public boolean longPress(Actor actor, float x, float y) {
+		longPressed = true;
+		
 		// 转换局部坐标到舞台坐标
 		Vector2 stagePos = actor.localToStageCoordinates(new Vector2(x, y));
 
