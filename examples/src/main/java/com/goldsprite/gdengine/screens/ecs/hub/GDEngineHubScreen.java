@@ -20,6 +20,9 @@ import com.badlogic.gdx.utils.Timer;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.config.GDEngineConfig;
+import com.goldsprite.gdengine.core.project.ProjectService;
+import com.goldsprite.gdengine.core.project.model.ProjectConfig;
+import com.goldsprite.gdengine.core.project.model.TemplateInfo;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
@@ -175,7 +178,7 @@ public class GDEngineHubScreen extends GScreen {
 
 	public void refreshList() {
 		projectListTable.clearChildren();
-		Array<FileHandle> projects = ProjectManager.listProjects();
+		Array<FileHandle> projects = ProjectService.inst().listProjects();
 
 		if (projects.size == 0) {
 			VisLabel emptyLabel = new VisLabel("No projects found.\nClick [+ New Project] to start.", Align.center);
@@ -200,7 +203,7 @@ public class GDEngineHubScreen extends GScreen {
 			FileHandle conf = projDir.child("project.json");
 			if (conf.exists()) {
 				try {
-					ProjectManager.ProjectConfig cfg = new Json().fromJson(ProjectManager.ProjectConfig.class, conf);
+					ProjectConfig cfg = new Json().fromJson(ProjectConfig.class, conf);
 					if (cfg.engineVersion != null) projEngineVer = cfg.engineVersion;
 				} catch(Exception e) {}
 			}
@@ -219,7 +222,7 @@ public class GDEngineHubScreen extends GScreen {
 				public void onShowMenu(float stageX, float stageY) {
 					showProjectMenu(projDir, stageX, stageY);
 				}
-				
+
 				@Override
 				public boolean longPress(Actor actor, float x, float y) {
 					if (tapTask != null) tapTask.cancel(); // 取消延迟确认弹窗
@@ -289,7 +292,7 @@ public class GDEngineHubScreen extends GScreen {
 	}
 
 	private void openProject(FileHandle projectDir) {
-		ProjectManager.currentProject = projectDir;
+		ProjectService.inst().setCurrentProject(projectDir);
 		Debug.logT("Hub", "Opening project: %s", projectDir.path());
 		getScreenManager().setCurScreen(GDEngineEditorScreen.class, true);
 	}
@@ -318,313 +321,6 @@ public class GDEngineHubScreen extends GScreen {
 		if (neonBatch != null) neonBatch.dispose();
 	}
 
-
-	// =========================================================================================
-	// Logic: ProjectManager (Full Refactor)
-	// =========================================================================================
-	public static class ProjectManager {
-		public static FileHandle currentProject;
-		private static final Json json = new Json();
-
-		// [新增] 静态块配置 Json
-		static {
-			json.setIgnoreUnknownFields(true);
-			json.setOutputType(com.badlogic.gdx.utils.JsonWriter.OutputType.json);
-		}
-
-		// 简单的 DTO
-		public static class TemplateInfo {
-			public String id; // 文件夹名
-			public String displayName;
-			public String description;
-			public String originEntry; // "com.mygame.Main"
-			public String version;       // 模板自身版本 (e.g. 1.0)
-			public String engineVersion; // [新增] 适配的引擎版本 (e.g. 1.8.11.1-alpha)
-			public FileHandle dirHandle; // assets/engine/templates/{id}
-		}
-
-		public static class ProjectConfig {
-			public String name;
-			public String entryClass;
-			public TemplateRef template;
-			// [新增] 记录项目关联的引擎版本
-			public String engineVersion;
-		}
-
-		public static class TemplateRef {
-			public String sourceName;
-			public String version;
-			public String engineVersion;
-		}
-
-		public static Array<FileHandle> listProjects() {
-			// 添加null检查，防止NullPointerException
-			if (Gd.engineConfig == null) {
-				return new Array<>(); // 返回空列表而不是抛出异常
-			}
-
-			FileHandle root = Gd.engineConfig.getProjectsDir();
-			FileHandle[] files = root.list();
-			Array<FileHandle> projects = new Array<>();
-			if(files != null) {
-				for (FileHandle f : files) {
-					if (f.isDirectory()) projects.add(f);
-				}
-			}
-			return projects;
-		}
-
-		/** 扫描所有可用模板 */
-		public static Array<TemplateInfo> listTemplates() {
-			Array<TemplateInfo> list = new Array<>();
-			FileHandle templatesRoot = Gd.files.internal("engine/templates");
-			if (!templatesRoot.exists()) return list;
-
-			for (FileHandle dir : templatesRoot.list()) {
-				if (!dir.isDirectory()) continue;
-
-				TemplateInfo info = new TemplateInfo();
-				info.id = dir.name();
-				info.dirHandle = dir;
-
-				// 尝试读取 template.json
-				FileHandle metaFile = dir.child("template.json");
-				if (metaFile.exists()) {
-					try {
-						TemplateInfo meta = json.fromJson(TemplateInfo.class, metaFile);
-						info.displayName = meta.displayName;
-						info.description = meta.description;
-						info.originEntry = meta.originEntry;
-						info.version = meta.version;
-						info.engineVersion = meta.engineVersion;
-					} catch (Exception e) {
-						Debug.logT("Hub", "Template parse error: " + dir.name());
-						info.displayName = info.id + " (Error)";
-					}
-				} else {
-					info.displayName = info.id;
-					info.description = "No description.";
-					info.originEntry = "com.game.Main"; // Fallback
-				}
-				list.add(info);
-			}
-			return list;
-		}
-
-		/**
-		 * 通用创建逻辑
-		 * 核心：Scripts/ (assets) -> src/main/java/ (user) + Package Refactoring
-		 */
-		public static String createProject(TemplateInfo tmpl, String name, String packageName) {
-			// 1. 校验
-			if (name == null || name.trim().isEmpty()) return "Name cannot be empty.";
-			if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
-			if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
-
-			FileHandle finalTarget = Gd.engineConfig.getProjectsDir().child(name);
-			if (finalTarget.exists()) return "Project already exists!";
-
-			// 原始包名 (例如: com.mygame)
-			String originPkg = "";
-			if (tmpl.originEntry != null && tmpl.originEntry.contains(".")) {
-				originPkg = tmpl.originEntry.substring(0, tmpl.originEntry.lastIndexOf('.'));
-			}
-			String targetPkg = packageName;
-
-			Debug.logT("Hub", "Creating project '%s' from template '%s'", name, tmpl.id);
-
-			// 临时目录
-			FileHandle tempRoot = Gdx.files.local("build/tmp_creation").child(name);
-			if (tempRoot.exists()) tempRoot.deleteDirectory();
-			tempRoot.mkdirs();
-
-			try {
-				// [核心修改] 遍历模板根目录
-				// 我们不再使用通用的递归，而是针对根目录的特定文件夹做处理，更安全
-				processRootDirectory(tmpl.dirHandle, tempRoot, originPkg, targetPkg, name, tmpl);
-
-				// --- [新增] 注入通用构建脚本 (来自模板根目录) ---
-				FileHandle templatesRoot = tmpl.dirHandle.parent();
-				FileHandle commonBuild = templatesRoot.child("build.gradle");
-				FileHandle commonSettings = templatesRoot.child("settings.gradle");
-
-				if (commonBuild.exists()) {
-					String content = commonBuild.readString("UTF-8");
-					// 这里的 build.gradle 已经包含了我们注入的 idea {} 魔法代码
-					tempRoot.child("build.gradle").writeString(content, false, "UTF-8");
-				}
-
-				if (commonSettings.exists()) {
-					String content = commonSettings.readString("UTF-8");
-					// 替换项目名称占位符 (如果存在)
-					// 注意：settings.gradle 通常包含 rootProject.name = '${PROJECT_NAME}'
-					content = content.replace("${PROJECT_NAME}", name);
-					tempRoot.child("settings.gradle").writeString(content, false, "UTF-8");
-				}
-
-				// --- 注入依赖库 ---
-				// [核心修改] 路径自动探测
-				FileHandle libsSource = Gdx.files.internal("engine/libs");
-				if (!libsSource.exists()) {
-					libsSource = Gdx.files.internal("assets/engine/libs");
-				}
-
-				FileHandle libsTarget = tempRoot.child("libs");
-				libsTarget.mkdirs();
-				for (FileHandle jar : libsSource.list(".jar")) {
-					jar.copyTo(libsTarget);
-				}
-
-				// --- 交付 ---
-				tempRoot.copyTo(finalTarget.parent());
-				tempRoot.deleteDirectory();
-
-				return null;
-			} catch (Exception e) {
-				e.printStackTrace();
-				if (tempRoot.exists()) tempRoot.deleteDirectory();
-				return "Error: " + e.getMessage();
-			}
-		}
-
-		/**
-		 * 处理模板根目录
-		 */
-		private static void processRootDirectory(FileHandle sourceDir, FileHandle destDir, String originPkg, String targetPkg, String projName, TemplateInfo tmpl) {
-			for (FileHandle file : sourceDir.list()) {
-				if (file.name().equals("template.json")) continue;
-				if (file.name().equals("preview.png")) continue;
-
-				if (file.isDirectory()) {
-					if (file.name().equals("src")) {
-						// [核心] 遇到 src 目录，进入源码处理模式
-						// 假设结构标准为 src/main/java
-						FileHandle srcJavaSource = file.child("main").child("java");
-						if (srcJavaSource.exists()) {
-							FileHandle srcJavaTarget = destDir.child("src").child("main").child("java");
-							processSourceCode(srcJavaSource, srcJavaTarget, originPkg, targetPkg);
-						} else {
-							// 非标准结构？直接复制整个 src
-							file.copyTo(destDir);
-						}
-					} else {
-						// 其他目录 (如 assets)，直接复制
-						file.copyTo(destDir);
-					}
-				} else {
-					// 根目录下的文件处理
-					if (file.name().equals("project.json")) {
-						processProjectConfig(file, destDir.child("project.json"), targetPkg, projName, tmpl);
-					} else if (file.name().equals("settings.gradle") || file.name().equals("build.gradle")) {
-						// 处理 Gradle 文件中的文本替换
-						String content = file.readString("UTF-8");
-						content = content.replace("${PROJECT_NAME}", projName);
-						if (!originPkg.isEmpty()) content = content.replace(originPkg, targetPkg);
-						destDir.child(file.name()).writeString(content, false, "UTF-8");
-					} else {
-						// 其他文件原样复制
-						file.copyTo(destDir);
-					}
-				}
-			}
-		}
-
-		/**
-		 * 处理源码目录：递归查找 Java 文件，重构路径并修改内容
-		 * @param sourceRoot 模板里的 Scripts/ 目录
-		 * @param targetRoot 目标里的 src/main/java/ 目录
-		 */
-		private static void processSourceCode(FileHandle sourceRoot, FileHandle targetRoot, String originPkg, String targetPkg) {
-			// 1. 递归获取所有 .java 文件
-			Array<FileHandle> javaFiles = new Array<>();
-			findJavaFiles(sourceRoot, javaFiles);
-
-			// 路径前缀 (如 com/mygame)
-			String originPathPrefix = originPkg.replace('.', '/');
-			String targetPathPrefix = targetPkg.replace('.', '/');
-
-			for (FileHandle javaFile : javaFiles) {
-				// 2. 计算相对路径
-				// 假设 javaFile: .../templates/HelloGame/src/main/java/com/mygame/Main.java
-				// rootPath: .../templates/HelloGame/src/main/java
-				// relativePath: com/mygame/Main.java
-				String fullPath = javaFile.path();
-				String rootPath = sourceRoot.path();
-
-				// 简单的路径截取
-				String relativePath = fullPath.substring(rootPath.length());
-				if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
-					relativePath = relativePath.substring(1);
-				}
-
-				// 3. 路径重构 (Package Refactoring)
-				// 如果路径以原始包路径开头，替换为目标包路径
-				// com/mygame/Main.java -> com/user/new/Main.java
-				String newRelativePath = relativePath;
-
-				// 统一分隔符比较
-				String checkPath = relativePath.replace('\\', '/');
-				if (!originPathPrefix.isEmpty() && checkPath.startsWith(originPathPrefix)) {
-					newRelativePath = checkPath.replaceFirst(originPathPrefix, targetPathPrefix);
-				}
-
-				FileHandle targetFile = targetRoot.child(newRelativePath);
-
-				// 4. 内容重构 (Text Replacement)
-				String content = javaFile.readString("UTF-8");
-				if (!originPkg.isEmpty()) {
-					// 替换包声明 package com.mygame; -> package com.user.new;
-					content = content.replace("package " + originPkg, "package " + targetPkg);
-					// 替换 import
-					content = content.replace("import " + originPkg, "import " + targetPkg);
-					// 替换其他可能的引用
-					content = content.replace(originPkg, targetPkg);
-				}
-
-				targetFile.writeString(content, false, "UTF-8");
-			}
-		}
-
-		private static void findJavaFiles(FileHandle dir, Array<FileHandle> out) {
-			for (FileHandle f : dir.list()) {
-				if (f.isDirectory()) findJavaFiles(f, out);
-				else if (f.extension().equals("java")) out.add(f);
-			}
-		}
-
-		private static void processProjectConfig(FileHandle source, FileHandle target, String targetPkg, String projName, TemplateInfo tmpl) {
-			try {
-				String content = source.readString("UTF-8");
-				// 先做通用替换
-				if (tmpl.originEntry != null && tmpl.originEntry.contains(".")) {
-					String originPkg = tmpl.originEntry.substring(0, tmpl.originEntry.lastIndexOf('.'));
-					content = content.replace(originPkg, targetPkg);
-				}
-
-				// 解析 JSON 对象进行精确修改
-				ProjectConfig cfg = json.fromJson(ProjectConfig.class, content);
-				cfg.name = projName;
-
-				// 注入模板信息
-				TemplateRef ref = new TemplateRef();
-				ref.sourceName = tmpl.id;
-				ref.version = tmpl.version;
-				ref.engineVersion = tmpl.engineVersion;
-				cfg.template = ref;
-				// [新增] 注入当前引擎版本
-				cfg.engineVersion = tmpl.engineVersion;
-
-				target.writeString(json.prettyPrint(cfg), false, "UTF-8");
-			} catch (Exception e) {
-				// [新增] 打印错误日志，方便调试测试失败原因
-				Debug.logT("Hub", "⚠️ project.json 处理失败，回退为直接复制: " + e.getMessage());
-				e.printStackTrace(); // 打印堆栈
-				// Fallback: 直接复制
-				source.copyTo(target);
-			}
-		}
-	}
-
 	// =========================================================================================
 	// Dialogs (Updated)
 	// =========================================================================================
@@ -641,13 +337,13 @@ public class GDEngineHubScreen extends GScreen {
 		// [新增] 详情展示组件
 		private final VisLabel descLabel;
 		private final VisLabel versionLabel, enginVersionLabel;
-		private final Array<ProjectManager.TemplateInfo> templates;
+		private final Array<TemplateInfo> templates;
 
 		public CreateProjectDialog(Runnable onSuccess) {
 			super("New Project");
 			this.onSuccess = onSuccess;
 
-			templates = ProjectManager.listTemplates();
+			templates = ProjectService.inst().listTemplates();
 
 			// --- [布局优化] ---
 			// 核心容器：设置最小宽度，让其不再窄小
@@ -660,7 +356,7 @@ public class GDEngineHubScreen extends GScreen {
 			tplRow.add(new VisLabel("Template:")).width(labelWidth).left();
 			templateBox = new VisSelectBox<>();
 			Array<String> names = new Array<>();
-			for(ProjectManager.TemplateInfo t : templates) names.add(t.displayName);
+			for(TemplateInfo t : templates) names.add(t.displayName);
 			templateBox.setItems(names);
 			tplRow.add(templateBox).width(labelWidth*3);
 
@@ -769,7 +465,7 @@ public class GDEngineHubScreen extends GScreen {
 		private void updateTemplateInfo() {
 			int idx = templateBox.getSelectedIndex();
 			if(idx < 0 || idx >= templates.size) return;
-			ProjectManager.TemplateInfo tmpl = templates.get(idx);
+			TemplateInfo tmpl = templates.get(idx);
 
 			// Update Text
 			descLabel.setText(tmpl.description != null ? tmpl.description : "No description.");
@@ -796,11 +492,11 @@ public class GDEngineHubScreen extends GScreen {
 			int idx = templateBox.getSelectedIndex();
 			if(idx < 0) { errorLabel.setText("Please select a template"); return; }
 
-			ProjectManager.TemplateInfo tmpl = templates.get(idx);
+			TemplateInfo tmpl = templates.get(idx);
 			String name = nameField.getText().trim();
 			String pkg = pkgField.getText().trim();
 
-			String err = ProjectManager.createProject(tmpl, name, pkg);
+			String err = ProjectService.inst().createProject(tmpl, name, pkg);
 			if (err == null) {
 				onSuccess.run();
 				fadeOut();
@@ -842,7 +538,7 @@ public class GDEngineHubScreen extends GScreen {
 		 * @param meta 用户填写的模板元数据
 		 * @return 错误信息，成功返回 null
 		 */
-		public static String exportProject(FileHandle projectDir, ProjectManager.TemplateInfo meta) {
+		public static String exportProject(FileHandle projectDir, TemplateInfo meta) {
 			// 1. 定位 InternalProjectTemplates 目录
 			// 假设我们在 IDE 环境下运行，根目录是项目根
 			FileHandle internalRoot = Gdx.files.absolute(System.getProperty("user.dir")).child("GDEngine/InternalProjectTemplates");
@@ -878,7 +574,7 @@ public class GDEngineHubScreen extends GScreen {
 				// 4.3 project.json (需清洗)
 				FileHandle projJson = projectDir.child("project.json");
 				if (projJson.exists()) {
-					ProjectManager.ProjectConfig cfg = new Json().fromJson(ProjectManager.ProjectConfig.class, projJson);
+					ProjectConfig cfg = new Json().fromJson(ProjectConfig.class, projJson);
 					// 清洗：移除 template 引用信息，恢复纯净状态
 					cfg.template = null;
 					// 写入
@@ -892,7 +588,7 @@ public class GDEngineHubScreen extends GScreen {
 
 				// 4.4 生成 template.json
 				// 构造干净的 meta 对象用于序列化
-				ProjectManager.TemplateInfo finalMeta = new ProjectManager.TemplateInfo();
+				TemplateInfo finalMeta = new TemplateInfo();
 				finalMeta.displayName = meta.displayName;
 				finalMeta.description = meta.description;
 				finalMeta.version = meta.version;
@@ -919,7 +615,7 @@ public class GDEngineHubScreen extends GScreen {
 
 			String entryClass = null;
 			try {
-				ProjectManager.ProjectConfig cfg = new Json().fromJson(ProjectManager.ProjectConfig.class, configFile);
+				ProjectConfig cfg = new Json().fromJson(ProjectConfig.class, configFile);
 				entryClass = cfg.entryClass;
 			} catch(Exception e) { return "Invalid project.json format"; }
 
@@ -1008,7 +704,7 @@ public class GDEngineHubScreen extends GScreen {
 				pack(); return;
 			}
 
-			ProjectManager.TemplateInfo meta = new ProjectManager.TemplateInfo();
+			TemplateInfo meta = new TemplateInfo();
 			meta.id = id;
 			meta.displayName = nameField.getText();
 			meta.description = descArea.getText();

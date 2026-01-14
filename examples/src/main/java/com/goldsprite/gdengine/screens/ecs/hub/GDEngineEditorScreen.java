@@ -14,6 +14,8 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.core.project.ProjectService;
+import com.goldsprite.gdengine.core.project.model.ProjectConfig;
 import com.goldsprite.gdengine.core.scripting.IGameScriptEntry;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.log.Debug;
@@ -175,7 +177,7 @@ public class GDEngineEditorScreen extends GScreen {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
 					if (currentEditingFile != null) saveCurrentFile();
-					FileHandle proj = GDEngineHubScreen.ProjectManager.currentProject;
+					FileHandle proj = ProjectService.inst().getCurrentProject();
 					if (proj != null) {
 						new GDEngineHubScreen.ExportTemplateDialog(proj).show(stage);
 					}
@@ -191,14 +193,14 @@ public class GDEngineEditorScreen extends GScreen {
 	}
 
 	private void checkEngineUpdate(Table toolbar) {
-		FileHandle projectDir = GDEngineHubScreen.ProjectManager.currentProject;
+		FileHandle projectDir = ProjectService.inst().getCurrentProject();
 		if (projectDir == null) return;
 
 		try {
 			FileHandle configFile = projectDir.child("project.json");
 			if (configFile.exists()) {
-				GDEngineHubScreen.ProjectManager.ProjectConfig cfg = new Json().fromJson(
-					GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+				ProjectConfig cfg = new Json().fromJson(
+					ProjectConfig.class, configFile);
 
 				String currentEngineVer = com.goldsprite.gdengine.BuildConfig.DEV_VERSION;
 				String projectEngineVer = cfg.engineVersion;
@@ -228,14 +230,14 @@ public class GDEngineEditorScreen extends GScreen {
 	private void refreshBtnUpdate() {
 		if(btnUpdate == null && verLabel == null) return;
 
-		FileHandle projectDir = GDEngineHubScreen.ProjectManager.currentProject;
+		FileHandle projectDir = ProjectService.inst().getCurrentProject();
 		FileHandle configFile = projectDir.child("project.json");
 		if(!configFile.exists()){
 			btnUpdate.setText("v?");
 			return;
 		}
-		GDEngineHubScreen.ProjectManager.ProjectConfig cfg = new Json().fromJson(
-			GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+		ProjectConfig cfg = new Json().fromJson(
+			ProjectConfig.class, configFile);
 		String currentEngineVer = com.goldsprite.gdengine.BuildConfig.DEV_VERSION;
 		String projectEngineVer = cfg.engineVersion;
 
@@ -275,8 +277,8 @@ public class GDEngineEditorScreen extends GScreen {
 			// 2. Update Config
 			FileHandle configFile = projectDir.child("project.json");
 			Json json = new Json();
-			GDEngineHubScreen.ProjectManager.ProjectConfig cfg = json.fromJson(
-				GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+			ProjectConfig cfg = json.fromJson(
+				ProjectConfig.class, configFile);
 
 			cfg.engineVersion = targetVer;
 			configFile.writeString(json.prettyPrint(cfg), false, "UTF-8");
@@ -300,7 +302,7 @@ public class GDEngineEditorScreen extends GScreen {
 	private void buildAndRun() {
 		if (currentEditingFile != null) saveCurrentFile();
 
-		FileHandle projectDir = GDEngineHubScreen.ProjectManager.currentProject;
+		FileHandle projectDir = ProjectService.inst().getCurrentProject();
 		if (projectDir == null) { statusLabel.setText("Error: No Project"); return; }
 
 		if (Gd.compiler == null) {
@@ -319,7 +321,7 @@ public class GDEngineEditorScreen extends GScreen {
 
 				if (configFile.exists()) {
 					try {
-						GDEngineHubScreen.ProjectManager.ProjectConfig cfg = new Json().fromJson(GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+						ProjectConfig cfg = new Json().fromJson(ProjectConfig.class, configFile);
 						if (cfg != null && cfg.entryClass != null && !cfg.entryClass.isEmpty()) {
 							entryClass = cfg.entryClass;
 						}
@@ -384,7 +386,7 @@ public class GDEngineEditorScreen extends GScreen {
 
 		fileTree.clearChildren();
 
-		FileHandle currentProj = GDEngineHubScreen.ProjectManager.currentProject;
+		FileHandle currentProj = ProjectService.inst().getCurrentProject();
 		if (currentProj == null || !currentProj.exists()) {
 			statusLabel.setText("Error: No Project Loaded");
 			return;
@@ -493,7 +495,7 @@ public class GDEngineEditorScreen extends GScreen {
 
 	// [新增] 设置启动入口逻辑
 	private void setProjectEntry(FileHandle file) {
-		FileHandle projectDir = GDEngineHubScreen.ProjectManager.currentProject;
+		FileHandle projectDir = ProjectService.inst().getCurrentProject();
 		FileHandle srcRoot = projectDir.child("src").child("main").child("java");
 
 		// 1. 计算全类名
@@ -516,13 +518,13 @@ public class GDEngineEditorScreen extends GScreen {
 		// 2. 修改 project.json
 		try {
 			FileHandle configFile = projectDir.child("project.json");
-			GDEngineHubScreen.ProjectManager.ProjectConfig cfg;
+			ProjectConfig cfg;
 			Json json = new Json();
 
 			if (configFile.exists()) {
-				cfg = json.fromJson(GDEngineHubScreen.ProjectManager.ProjectConfig.class, configFile);
+				cfg = json.fromJson(ProjectConfig.class, configFile);
 			} else {
-				cfg = new GDEngineHubScreen.ProjectManager.ProjectConfig();
+				cfg = new ProjectConfig();
 				cfg.name = projectDir.name();
 			}
 
@@ -594,7 +596,7 @@ public class GDEngineEditorScreen extends GScreen {
 					FileHandle newFile = targetDir.child(name + ".java");
 					if (newFile.exists()) { errLabel.setText("Exists!"); dialog.pack(); return; }
 
-					FileHandle scriptsRoot = GDEngineHubScreen.ProjectManager.currentProject.child("src").child("main").child("java");
+					FileHandle scriptsRoot = ProjectService.inst().getCurrentProject().child("src").child("main").child("java");
 					String relPath = targetDir.path().replace(scriptsRoot.path(), "");
 					if (relPath.startsWith("/")) relPath = relPath.substring(1);
 					if (relPath.startsWith("\\")) relPath = relPath.substring(1);

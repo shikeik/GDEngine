@@ -20,6 +20,8 @@ import com.goldsprite.gdengine.log.Debug;
  */
 public class ProjectService {
 	private static ProjectService instance;
+	// 当前打开的项目 (运行时状态)
+	private FileHandle currentProject;
 	private final Json json;
 
 	// 私有构造，单例模式
@@ -32,6 +34,14 @@ public class ProjectService {
 	public static ProjectService inst() {
 		if (instance == null) instance = new ProjectService();
 		return instance;
+	}
+
+	public FileHandle getCurrentProject() {
+		return currentProject;
+	}
+
+	public void setCurrentProject(FileHandle project) {
+		this.currentProject = project;
 	}
 
 	// =========================================================================================

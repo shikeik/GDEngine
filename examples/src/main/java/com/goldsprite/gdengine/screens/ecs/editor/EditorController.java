@@ -40,6 +40,7 @@ import com.goldsprite.gdengine.core.ComponentRegistry;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.command.CommandManager;
 import com.goldsprite.gdengine.core.input.ShortcutManager;
+import com.goldsprite.gdengine.core.project.ProjectService;
 import com.goldsprite.gdengine.core.utils.GdxJsonSetup;
 import com.goldsprite.gdengine.core.utils.SceneLoader;
 import com.goldsprite.gdengine.ecs.GameWorld;
@@ -117,7 +118,7 @@ public class EditorController {
 
 	// [修改] 提取加载逻辑
     private void reloadProjectContext() {
-        currentProj = GDEngineHubScreen.ProjectManager.currentProject;
+        currentProj = ProjectService.inst().getCurrentProject();
         if (currentProj != null) {
 			GameWorld.projectAssetsRoot = currentProj.child("assets");
 			Debug.logT("Editor", "🔗 链接到项目: " + currentProj.name());
@@ -212,8 +213,8 @@ public class EditorController {
 	}
 	// [新增] 获取当前应该读写的场景文件
 	private FileHandle getSceneFile() {
-		if (GDEngineHubScreen.ProjectManager.currentProject != null) {
-			return GDEngineHubScreen.ProjectManager.currentProject.child("scenes/main.scene");
+		if (ProjectService.inst().getCurrentProject() != null) {
+			return ProjectService.inst().getCurrentProject().child("scenes/main.scene");
 		}
 		return Gdx.files.local("scene_debug.json"); // 沙盒回退
 	}
@@ -654,11 +655,11 @@ public class EditorController {
 			inspectorContainer.add(new VisLabel("No Selection")).pad(10);
 			return;
 		}
-		
+
 		// 物体元数据
 		VisTable objMetaContainer = new VisTable();int k5;
 		objMetaContainer.setBackground("panel1");
-		
+
 		objMetaContainer.add(new VisLabel("Name:")).left().padLeft(5);
 		objMetaContainer.add(new SmartTextInput(null, selection.getName(), v -> {
 			selection.setName(v);
@@ -667,14 +668,14 @@ public class EditorController {
 		objMetaContainer.add(new VisLabel("Tag:")).left().padLeft(5);
 		objMetaContainer.add(new SmartTextInput(null, selection.getTag(), selection::setTag)).growX().padRight(5).row();
 		inspectorContainer.add(objMetaContainer).growX().pad(pad).row();
-		
+
 		// 组件面板块
 		for (List<Component> comps : selection.getComponentsMap().values()) {
 			for (Component c : comps) {
 				buildComponentUI(c, selection);
 			}
 		}
-		
+
 		//添加组件按钮
 		VisTextButton btnAdd = new VisTextButton("Add Component");
 		btnAdd.setColor(Color.GREEN);
