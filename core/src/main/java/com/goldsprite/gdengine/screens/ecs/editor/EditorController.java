@@ -47,11 +47,14 @@ import com.goldsprite.gdengine.screens.ecs.editor.mvp.scene.ScenePresenter;
 import com.goldsprite.gdengine.ui.widget.SmartTabPane;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.VisUI;
+import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class EditorController {
+	private FileHandle currentProj;
+
 	private final EditorGameScreen screen;
 	private Stage stage;
 
@@ -81,8 +84,6 @@ public class EditorController {
 	// 中央 Tab 面板引用，用于代码跳转
 	private SmartTabPane centerTabs;
 
-	private FileHandle currentProj;
-
 	// [新增] 提升 SplitPane 为成员变量，以便控制布局
 	private VisSplitPane topSectionSplit;
 	private VisSplitPane leftMainSplit;
@@ -91,6 +92,13 @@ public class EditorController {
 
 	// [新增] 提升为成员变量，以便在编译失败时切换 Tab
 	private SmartTabPane bottomTabs;
+	// [新增] 引用 Build 按钮以便改色
+	private VisTextButton btnBuild;
+
+	private VisLabel statusLabel; // [新增] 状态标签
+
+	// [新增]
+	private EditorState currentEditorState = EditorState.CLEAN;
 
 	public EditorController(EditorGameScreen screen) {
 		this.screen = screen;
@@ -126,6 +134,10 @@ public class EditorController {
 
 		// 监听最大化事件
 		EditorEvents.inst().subscribeToggleMaximizeCode(this::toggleCodeMaximize);
+
+		// [新增] 监听编译状态
+		EditorEvents.inst().subscribeCodeDirty(this::onCodeDirty);
+		EditorEvents.inst().subscribeCodeClean(this::onCodeClean);
 
 		// 8. 启动初始场景 (延迟一帧以确保 UI 布局就绪)
 		Gdx.app.postRunnable(this::loadInitialScene);
@@ -297,14 +309,17 @@ public class EditorController {
 		bar.add(createMenuBtn("Help"));
 
 		bar.add().expandX(); // Spacer
+		// [新增] 状态标签 (放在 Build 按钮左边)
+		statusLabel = new VisLabel("[ CLEAN ]");
+		statusLabel.setColor(Color.GREEN);
+		bar.add(statusLabel).padRight(15);
 
 		// Right: Functional Buttons
 		// [Build]
-		VisTextButton btnBuild = new VisTextButton("Build");
+		btnBuild = new VisTextButton("Build"); // 赋值给成员变量
 		btnBuild.setColor(Color.GOLD);
 		btnBuild.addListener(new ClickListener() {
 			@Override public void clicked(InputEvent event, float x, float y) {
-				// [修改] 调用真实的构建逻辑
 				performBuild();
 			}
 		});
@@ -335,6 +350,44 @@ public class EditorController {
 		return bar;
 	}
 
+	// --- 状态响应 (重写) ---
+
+	private void updateEditorState(EditorState state) {
+		this.currentEditorState = state;
+
+		// 1. 通知 GamePresenter 停止/恢复渲染
+		if (gamePresenter != null) {
+			gamePresenter.setEditorState(state);
+		}
+
+		// 2. 更新 UI
+		if (statusLabel != null && btnBuild != null) {
+			switch (state) {
+				case CLEAN:
+					statusLabel.setText("[ CLEAN ]");
+					statusLabel.setColor(Color.GREEN);
+					btnBuild.setColor(Color.GOLD);
+					btnBuild.setText("Build");
+					btnBuild.setDisabled(false);
+					break;
+				case DIRTY:
+					statusLabel.setText("[ DIRTY ]");
+					statusLabel.setColor(Color.ORANGE);
+					btnBuild.setColor(Color.SCARLET); // 醒目红
+					btnBuild.setText("Build *");
+					btnBuild.setDisabled(false);
+					break;
+				case COMPILING:
+					statusLabel.setText("[ BUILDING... ]");
+					statusLabel.setColor(Color.CYAN);
+					btnBuild.setColor(Color.GRAY);
+					btnBuild.setText("Wait...");
+					btnBuild.setDisabled(true); // 编译中禁止再次点击
+					break;
+			}
+		}
+	}
+
 	// [核心构建逻辑] 完全复刻并优化 BuildAndRun
 	private void performBuild() {
 		// 1. 自动保存代码 (如同 GDEngineEditorScreen)
@@ -344,6 +397,8 @@ public class EditorController {
 		if (projectDir == null) { ToastUI.inst().show("Error: No Project"); return; }
 		if (Gd.compiler == null) { ToastUI.inst().show("Error: No Compiler"); return; }
 
+		// 1. 设置状态为编译中
+		updateEditorState(EditorState.COMPILING);
 		ToastUI.inst().show("Compiling...");
 
 		new Thread(() -> {
@@ -401,6 +456,17 @@ public class EditorController {
 		}).start();
 	}
 
+	// --- 状态响应 ---
+	// 绑定事件回调
+	private void onCodeDirty() {
+		updateEditorState(EditorState.DIRTY);
+	}
+
+	private void onCodeClean() {
+		// 只有 Build 成功才会调用这个，所以逻辑是对的
+		updateEditorState(EditorState.CLEAN);
+	}
+
 	private void onBuildSuccess(FileHandle projectDir, long duration) {
 		// 6. 刷新组件注册表 (使用上面更新过的 Gd.scriptClassLoader)
 		FileHandle indexFile = projectDir.child("project.index");
@@ -412,11 +478,18 @@ public class EditorController {
 			EditorEvents.inst().emitSelectionChanged(currentSelection);
 		}
 
+		// 2. 恢复干净状态
+		// emitCodeClean 会调用 updateEditorState(CLEAN)
+		EditorEvents.inst().emitCodeClean();
+
 		ToastUI.inst().show("Build Success (" + duration + "ms)");
 		Debug.logT("Compiler", "[GREEN]Build finished in " + duration + "ms");
 	}
 
 	private void onBuildFail() {
+		// 3. 编译失败，保持 Dirty 状态 (或者是 Error 状态，这里暂用 Dirty 提示用户重试)
+		updateEditorState(EditorState.DIRTY);
+
 		if (bottomTabs != null) {
 			bottomTabs.getTabbedPane().switchTab(1); // Console
 		}

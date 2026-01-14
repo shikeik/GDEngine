@@ -1,14 +1,21 @@
 package com.goldsprite.gdengine.screens.ecs.editor.mvp.game;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.StretchViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
+import com.goldsprite.gdengine.assets.FontUtils;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import com.goldsprite.gdengine.screens.ecs.editor.EditorState;
 import com.goldsprite.gdengine.screens.ecs.editor.ViewWidget;
 
 public class GamePresenter {
@@ -17,6 +24,10 @@ public class GamePresenter {
 	private Viewport viewport;
 
 	private final NeonBatch neonBatch;
+	private final BitmapFont font; // 用于绘制提示文字
+
+	// [新增] 当前编辑器状态
+	private EditorState currentState = EditorState.CLEAN;
 
 	public GamePresenter(GamePanel view, NeonBatch batch) {
 		this.view = view;
@@ -24,16 +35,58 @@ public class GamePresenter {
 		view.setPresenter(this);
 
 		camera = new OrthographicCamera();
+		// 从 Skin 获取字体，或者使用 FontUtils
+		font = FontUtils.generateAutoClarity(45);
 		reloadViewport();
+	}
+
+	// [新增] 状态设置接口
+	public void setEditorState(EditorState state) {
+		this.currentState = state;
 	}
 
 	public void update(float delta) {
 		camera.update();
 		view.getRenderTarget().renderToFbo(() -> {
 			viewport.apply();
-			// 这里 GameWorld.render 负责调用 RenderSystem
-			GameWorld.inst().render(neonBatch, camera);
+
+			// [核心逻辑] 根据状态决定渲染内容
+			if (currentState == EditorState.CLEAN) {
+				// 正常渲染游戏画面
+				GameWorld.inst().render(neonBatch, camera);
+			} else {
+				renderWarningOverlay();
+			}
 		});
+	}
+
+	private void renderWarningOverlay() {
+		// 1. 清屏 (深红色表示 Dirty，深灰色表示 Compiling)
+		float r = (currentState == EditorState.DIRTY) ? 0.2f : 0.1f;
+		Gdx.gl.glClearColor(r, 0.1f, 0.1f, 1f);
+		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+
+		// 2. 绘制提示文字
+		neonBatch.setProjectionMatrix(camera.combined);
+		neonBatch.begin();
+
+		String msg = (currentState == EditorState.DIRTY)
+			? "WARNING: Code is Dirty!\nPlease Build Project."
+			: "Compiling Scripts...\nPlease Wait.";
+
+		Color c = (currentState == EditorState.DIRTY) ? Color.ORANGE : Color.CYAN;
+
+		font.setColor(c);
+		font.getData().setScale(1.5f);
+
+		// 简单的居中计算 (基于相机位置)
+		float x = camera.position.x;
+		float y = camera.position.y;
+
+		font.draw(neonBatch, msg, x - 200, y + 20, 400, Align.center, true);
+
+		font.getData().setScale(1f); // 还原
+		neonBatch.end();
 	}
 
 	public void setViewportMode(String mode) {

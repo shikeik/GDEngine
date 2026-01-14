@@ -81,7 +81,10 @@ public class CodePanel extends EditorPanel {
 			try {
 				currentFile.writeString(codeEditor.getText(), false, "UTF-8");
 				ToastUI.inst().show("Saved: " + currentFile.name());
-				// TODO: 触发编译请求 (EditorState.setDirty)
+
+				// [Fix] 解决 TODO: 触发脏状态，提示需要编译
+				EditorEvents.inst().emitCodeDirty();
+
 			} catch (Exception e) {
 				ToastUI.inst().show("Save Failed!");
 				e.printStackTrace();
