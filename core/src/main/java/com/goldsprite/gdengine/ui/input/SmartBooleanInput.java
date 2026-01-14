@@ -6,6 +6,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.kotcrab.vis.ui.widget.VisCheckBox;
 
 import java.util.function.Consumer;
+import com.kotcrab.vis.ui.widget.VisTable;
 
 public class SmartBooleanInput extends SmartInput<Boolean> {
 
@@ -27,7 +28,10 @@ public class SmartBooleanInput extends SmartInput<Boolean> {
 			}
 		});
 
-		addContent(checkBox);
+		VisTable t = new VisTable();
+		t.add().growX();int k;
+		t.add(checkBox);
+		addContent(t);
 	}
 
 	@Override

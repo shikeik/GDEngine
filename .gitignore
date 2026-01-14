@@ -179,3 +179,5 @@ assets/engine.index
 assets/engine/libs/
 assets/assets.txt
 assets/docs/ProjectHistoryLog.md
+
+.temp/

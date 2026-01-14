@@ -525,7 +525,7 @@ public class EditorController {
 		});
 
 		inspectorContainer = new VisTable();
-		inspectorContainer.setBackground("window-bg");
+		inspectorContainer.setBackground("window-bg");int k;
 		inspectorContainer.top().left();
 		//检查器滑动面板
 		VisScrollPane inspectorScroll = new VisScrollPane(inspectorContainer);
@@ -647,24 +647,35 @@ public class EditorController {
 		if (gameTarget != null) gameViewport.update(gameTarget.getFboWidth(), gameTarget.getFboHeight());
 	}
 
+	float pad = 15;
 	private void refreshInspector(GObject selection) {
 		inspectorContainer.clearChildren();
 		if (selection == null) {
 			inspectorContainer.add(new VisLabel("No Selection")).pad(10);
 			return;
 		}
-		inspectorContainer.add(new VisLabel("Name:")).left();
-		inspectorContainer.add(new SmartTextInput(null, selection.getName(), v -> {
+		
+		// 物体元数据
+		VisTable objMetaContainer = new VisTable();int k5;
+		objMetaContainer.setBackground("panel1");
+		
+		objMetaContainer.add(new VisLabel("Name:")).left().padLeft(5);
+		objMetaContainer.add(new SmartTextInput(null, selection.getName(), v -> {
 			selection.setName(v);
 			hierarchyDirty = true;
-		})).growX().row();
-		inspectorContainer.add(new VisLabel("Tag:")).left();
-		inspectorContainer.add(new SmartTextInput(null, selection.getTag(), selection::setTag)).growX().row();
+		})).growX().padRight(5).row();
+		objMetaContainer.add(new VisLabel("Tag:")).left().padLeft(5);
+		objMetaContainer.add(new SmartTextInput(null, selection.getTag(), selection::setTag)).growX().padRight(5).row();
+		inspectorContainer.add(objMetaContainer).growX().pad(pad).row();
+		
+		// 组件面板块
 		for (List<Component> comps : selection.getComponentsMap().values()) {
 			for (Component c : comps) {
 				buildComponentUI(c, selection);
 			}
 		}
+		
+		//添加组件按钮
 		VisTextButton btnAdd = new VisTextButton("Add Component");
 		btnAdd.setColor(Color.GREEN);
 		btnAdd.addListener(new ClickListener() {
@@ -672,15 +683,15 @@ public class EditorController {
 				showAddComponentMenu(selection, event.getStageX(), event.getStageY());
 			}
 		});
-		inspectorContainer.add(btnAdd).growX().padTop(20).padBottom(10).colspan(2);
+		inspectorContainer.add(btnAdd).growX().pad(pad).colspan(2);
 	}
 
 	private void buildComponentUI(Component c, GObject owner) {
 		VisTable compContainer = new VisTable();
-//		compContainer.setBackground("button");
+		compContainer.setBackground("panel1");
 		VisTable header = new VisTable();
 		// [优化] Header 背景: button (稍亮)
-		header.setBackground("panel1");
+		header.setBackground("list");
 		header.add(new VisLabel(c.getClass().getSimpleName())).expandX().left().pad(5);
 		if (!(c instanceof TransformComponent)) {
 			VisTextButton btnRemove = new VisTextButton("X");
@@ -693,7 +704,7 @@ public class EditorController {
 			});
 			header.add(btnRemove).size(25, 25).padRight(5).right();
 		}
-		compContainer.add(header).growX().colspan(2).pad(2).row();
+		compContainer.add(header).growX().pad(2).row();
 		VisTable body = new VisTable();
 		// [优化] Body 背景: window-bg (稍暗) 或其他深色 drawable
 		// 如果没有合适的 drawable，可以用 ColorTextureUtils 生成一个半透明黑
@@ -701,10 +712,10 @@ public class EditorController {
 		body.pad(5); // 内边距
 
         // [核心替换] 一行代码搞定所有反射逻辑！
-        InspectorBuilder.build(body, c);
+        InspectorBuilder.build(body, c);int k2;
 
-		compContainer.add(body).growX().colspan(2).pad(5).row();
-		inspectorContainer.add(compContainer).growX().colspan(2).row();
+		compContainer.add(body).growX().pad(2).row();
+		inspectorContainer.add(compContainer).growX().pad(pad).row();
     }
 
 	// [修改] 替换原来的 showAddComponentMenu 方法
@@ -712,17 +723,6 @@ public class EditorController {
 		// 使用新的对话框
 		// 传入回调：当组件添加成功后，刷新 Inspector
 		new AddComponentDialog(selection, () -> refreshInspector(selection)).show(stage);
-	}
-
-	private void registerCompMenuItem(PopupMenu menu, GObject obj, Class<? extends Component> clazz) {
-		MenuItem item = new MenuItem(clazz.getSimpleName());
-		item.addListener(new ChangeListener() {
-			@Override public void changed(ChangeEvent event, Actor actor) {
-				obj.addComponent(clazz);
-				refreshInspector(obj);
-			}
-		});
-		menu.addItem(item);
 	}
 
 	// render 循环
