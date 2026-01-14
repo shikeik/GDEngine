@@ -179,7 +179,7 @@ public class GDEngineEditorScreen extends GScreen {
 					if (currentEditingFile != null) saveCurrentFile();
 					FileHandle proj = ProjectService.inst().getCurrentProject();
 					if (proj != null) {
-						new GDEngineHubScreen.ExportTemplateDialog(proj).show(stage);
+						new ExportTemplateDialog(proj).show(stage);
 					}
 				}
 			});

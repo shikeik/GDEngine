@@ -169,9 +169,9 @@ public class VisUIHelper {
 		checkBoxStyle.checkBackgroundDown.setMinHeight(size);
 		checkBoxStyle.checkBackgroundOver.setMinWidth(size);
 		checkBoxStyle.checkBackgroundOver.setMinHeight(size);
-		checkBoxStyle.checkedDown.setMinWidth(size);
-		checkBoxStyle.checkedDown.setMinHeight(size);
-		checkBoxStyle.checkedOver.setMinWidth(size);
-		checkBoxStyle.checkedOver.setMinHeight(size);
+//		checkBoxStyle.checkedDown.setMinWidth(size);
+//		checkBoxStyle.checkedDown.setMinHeight(size);
+//		checkBoxStyle.checkedOver.setMinWidth(size);
+//		checkBoxStyle.checkedOver.setMinHeight(size);
 	}
 }
