@@ -1,0 +1,265 @@
+package com.goldsprite.gdengine.screens.ecs.editor.mvp.hierarchy;
+
+import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
+import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
+import com.goldsprite.gdengine.ecs.GameWorld;
+import com.goldsprite.gdengine.ecs.entity.GObject;
+import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
+import com.goldsprite.gdengine.ui.event.ContextListener;
+import com.kotcrab.vis.ui.VisUI;
+import com.kotcrab.vis.ui.widget.*;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class HierarchyPanel extends EditorPanel implements IHierarchyView {
+
+	private HierarchyPresenter presenter;
+	private VisTree<GObjectNode, GObject> tree;
+	private DragAndDrop dragAndDrop;
+
+	public HierarchyPanel() {
+		super("Hierarchy");
+
+		dragAndDrop = new DragAndDrop();
+
+		tree = new VisTree<>();
+		tree.setIndentSpacing(20f);
+		tree.getSelection().setProgrammaticChangeEvents(false);
+
+		VisScrollPane scrollPane = new VisScrollPane(tree);
+		scrollPane.setFadeScrollBars(false);
+
+		// 背景菜单监听
+		scrollPane.addListener(new ContextListener() {
+			@Override public void onShowMenu(float stageX, float stageY) {
+				if (tree.getOverNode() == null) showMenu(null, stageX, stageY);
+			}
+		});
+
+		addContent(scrollPane);
+	}
+
+	@Override
+	public void setPresenter(HierarchyPresenter presenter) {
+		this.presenter = presenter;
+	}
+
+	@Override
+	public DragAndDrop getDragAndDrop() {
+		return dragAndDrop;
+	}
+
+	@Override
+	public void showNodes(List<GObject> roots) {
+		// 保存展开状态
+		Set<String> expanded = new HashSet<>();
+		saveExpansion(tree.getNodes(), expanded);
+
+		tree.clearChildren();
+		dragAndDrop.clear(); // 清理旧的 Source/Target
+
+		for (GObject root : roots) {
+			buildNode(root, null);
+		}
+
+		// 恢复展开
+		restoreExpansion(tree.getNodes(), expanded);
+	}
+
+	private void buildNode(GObject obj, GObjectNode parent) {
+		GObjectNode node = new GObjectNode(obj);
+		if (parent == null) tree.add(node);
+		else parent.add(node);
+
+		for (GObject child : obj.getChildren()) {
+			buildNode(child, node);
+		}
+	}
+
+	// --- 内部类: 节点与交互 ---
+
+	enum DropState { NONE, INSERT_ABOVE, INSERT_BELOW, REPARENT }
+
+	class GObjectNode extends VisTree.Node<GObjectNode, GObject, VisTable> {
+		DropState dropState = DropState.NONE;
+
+		public GObjectNode(GObject obj) {
+			super(new VisTable());
+			setValue(obj);
+
+			VisTable table = getActor();
+			table.setBackground("button"); // 默认背景
+
+			// 1. 名字
+			VisLabel lbl = new VisLabel(obj.getName());
+			table.add(lbl).expandX().fillX().left().padLeft(5);
+
+			// 2. 拖拽手柄
+			VisLabel handle = new VisLabel("::");
+			handle.setColor(Color.GRAY);
+			table.add(handle).right().padRight(10).width(20);
+
+			// 交互
+			table.addListener(new ContextListener() {
+				@Override public void onShowMenu(float stageX, float stageY) {
+					showMenu(obj, stageX, stageY);
+				}
+				@Override public void onLeftClick(InputEvent event, float x, float y, int count) {
+					presenter.selectObject(obj);
+				}
+			});
+
+			// 自定义绘制 (画插入线)
+			// 匿名子类重写 draw
+			VisTable content = new VisTable() {
+				@Override
+				public void draw(Batch batch, float parentAlpha) {
+					// 强制宽度铺满 Tree
+					if (tree != null) {
+						float targetWidth = tree.getWidth() - getX();
+						if (targetWidth > 0 && getWidth() != targetWidth) {
+							setWidth(targetWidth);
+							invalidate();
+						}
+					}
+					super.draw(batch, parentAlpha);
+
+					// 绘制蓝线
+					if (dropState != DropState.NONE) {
+						drawDropLine(batch, getX(), getY(), getWidth(), getHeight(), dropState);
+					}
+				}
+			};
+			// 替换 Actor
+			setActor(content);
+			content.add(lbl).expandX().fillX().left().padLeft(5);
+			content.add(handle).right().padRight(10).width(20);
+			content.addListener(table.getListeners().first()); // 转移监听器
+
+			// 配置拖拽
+			setupDragAndDrop(handle, content, obj);
+		}
+
+		private void setupDragAndDrop(Actor handle, Actor targetActor, GObject obj) {
+			// Source
+			dragAndDrop.addSource(new DragAndDrop.Source(handle) {
+				@Override
+				public DragAndDrop.Payload dragStart(InputEvent event, float x, float y, int pointer) {
+					DragAndDrop.Payload payload = new DragAndDrop.Payload();
+					payload.setObject(obj);
+					Label dragActor = new Label(obj.getName(), VisUI.getSkin());
+					dragActor.setColor(Color.YELLOW);
+					payload.setDragActor(dragActor);
+					return payload;
+				}
+			});
+
+			// Target
+			dragAndDrop.addTarget(new DragAndDrop.Target(targetActor) {
+				@Override
+				public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload, float x, float y, int pointer) {
+					GObject dragging = (GObject) payload.getObject();
+					if (dragging == obj) return false;
+
+					float h = getActor().getHeight();
+					if (y > h * 0.75f) dropState = DropState.INSERT_ABOVE;
+					else if (y < h * 0.25f) dropState = DropState.INSERT_BELOW;
+					else dropState = DropState.REPARENT;
+
+					return true;
+				}
+
+				@Override
+				public void drop(DragAndDrop.Source source, DragAndDrop.Payload payload, float x, float y, int pointer) {
+					GObject dragging = (GObject) payload.getObject();
+					GObject newParent = null;
+					int index = -1;
+
+					// 计算逻辑 (简化版，具体由 Presenter -> Logic 处理)
+					// ... 为了简洁，这里直接调用 Presenter，逻辑参数传递需要稍微处理一下
+					// 这里我们假设 Presenter 有一个智能的 moveEntity
+
+					if (dropState == DropState.INSERT_ABOVE) {
+						presenter.moveEntity(dragging, obj.getParent(), getSiblingIndex(obj));
+					} else if (dropState == DropState.INSERT_BELOW) {
+						presenter.moveEntity(dragging, obj.getParent(), getSiblingIndex(obj) + 1);
+					} else {
+						presenter.moveEntity(dragging, obj, -1);
+					}
+					dropState = DropState.NONE;
+				}
+
+				@Override
+				public void reset(DragAndDrop.Source source, DragAndDrop.Payload payload) {
+					dropState = DropState.NONE;
+				}
+			});
+		}
+
+		private int getSiblingIndex(GObject t) {
+			List<GObject> list = (t.getParent() != null) ? t.getParent().getChildren() : GameWorld.inst().getRootEntities();
+			return list.indexOf(t);
+		}
+	}
+
+	private void drawDropLine(Batch batch, float x, float y, float w, float h, DropState state) {
+		Drawable white = VisUI.getSkin().getDrawable("white");
+		Color old = batch.getColor();
+		batch.setColor(Color.CYAN);
+
+		if (state == DropState.INSERT_ABOVE) {
+			white.draw(batch, x, y + h - 2, w, 2);
+		} else if (state == DropState.INSERT_BELOW) {
+			white.draw(batch, x, y, w, 2);
+		} else if (state == DropState.REPARENT) {
+			white.draw(batch, x, y, w, 2); // Bottom
+			white.draw(batch, x, y + h - 2, w, 2); // Top
+			white.draw(batch, x, y, 2, h); // Left
+			white.draw(batch, x + w - 2, y, 2, h); // Right
+		}
+		batch.setColor(old);
+	}
+
+	private void showMenu(GObject target, float x, float y) {
+		PopupMenu menu = new PopupMenu();
+		if (target == null) {
+			menu.addItem(new MenuItem("Create Empty", new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) { presenter.createObject(null); }
+			}));
+		} else {
+			menu.addItem(new MenuItem("Create Child", new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) { presenter.createObject(target); }
+			}));
+			MenuItem del = new MenuItem("Delete");
+			del.getLabel().setColor(Color.RED);
+			del.addListener(new ChangeListener() {
+				@Override public void changed(ChangeEvent event, Actor actor) { presenter.deleteObject(target); }
+			});
+			menu.addItem(del);
+		}
+		menu.showMenu(getStage(), x, y);
+	}
+
+	// --- 状态保存辅助 ---
+	private void saveExpansion(com.badlogic.gdx.utils.Array<GObjectNode> nodes, Set<String> paths) {
+		for(GObjectNode node : nodes) {
+			if(node.isExpanded()) paths.add(node.getValue().getName() + "_" + node.getValue().getGid()); // 用 ID 更稳
+			if(node.getChildren().size > 0) saveExpansion(node.getChildren(), paths);
+		}
+	}
+	private void restoreExpansion(com.badlogic.gdx.utils.Array<GObjectNode> nodes, Set<String> paths) {
+		for(GObjectNode node : nodes) {
+			if(paths.contains(node.getValue().getName() + "_" + node.getValue().getGid())) node.setExpanded(true);
+			if(node.getChildren().size > 0) restoreExpansion(node.getChildren(), paths);
+		}
+	}
+}
