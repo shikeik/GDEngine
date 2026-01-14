@@ -19,10 +19,16 @@ public class EditorEvents {
 	// --- 事件定义 ---
 	private final List<Consumer<GObject>> onSelectionChanged = new ArrayList<>();
 	private final List<Consumer<Void>> onStructureChanged = new ArrayList<>();
+	// [新增] 属性变更 (Inspector 修改了数值，Scene 需要刷新)
+	private final List<Consumer<Void>> onPropertyChanged = new ArrayList<>();
+	// [新增] 场景加载完毕
+	private final List<Consumer<Void>> onSceneLoaded = new ArrayList<>();
 
 	// --- 订阅接口 ---
 	public void subscribeSelection(Consumer<GObject> listener) { onSelectionChanged.add(listener); }
 	public void subscribeStructure(Consumer<Void> listener) { onStructureChanged.add(listener); }
+	public void subscribeProperty(Consumer<Void> listener) { onPropertyChanged.add(listener); }
+	public void subscribeSceneLoaded(Consumer<Void> listener) { onSceneLoaded.add(listener); }
 
 	// --- 发布接口 ---
 	public void emitSelectionChanged(GObject selection) {
@@ -34,8 +40,20 @@ public class EditorEvents {
 		for (var l : onStructureChanged) l.accept(null);
 	}
 
+	/** 当组件属性被修改时调用 (比如拖拽 Gizmo) */
+	public void emitPropertyChanged() {
+		for (var l : onPropertyChanged) l.accept(null);
+	}
+
+	/** 当场景文件加载完毕时调用 */
+	public void emitSceneLoaded() {
+		for (var l : onSceneLoaded) l.accept(null);
+	}
+
 	public void clear() {
 		onSelectionChanged.clear();
 		onStructureChanged.clear();
+		onPropertyChanged.clear();
+		onSceneLoaded.clear();
 	}
 }
