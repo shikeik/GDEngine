@@ -139,6 +139,15 @@ public class EditorController {
 		EditorEvents.inst().subscribeCodeDirty(this::onCodeDirty);
 		EditorEvents.inst().subscribeCodeClean(this::onCodeClean);
 
+		// ---------------------------------------------------------------
+		// [核心修改]
+		// 1. 如果这里之前有 performBuild()，请删除它！
+		// 2. 强制设置初始状态为 DIRTY
+		//    这样进入编辑器后，Preview 视图会黑屏提示 "Please Build"，Build 按钮变红。
+		//    这符合 "未编译不渲染" 的安全逻辑。
+		// ---------------------------------------------------------------
+		updateEditorState(EditorState.DIRTY);
+
 		// 8. 启动初始场景 (延迟一帧以确保 UI 布局就绪)
 		Gdx.app.postRunnable(this::loadInitialScene);
 	}
@@ -148,6 +157,8 @@ public class EditorController {
 		if (currentProj != null) {
 			GameWorld.projectAssetsRoot = currentProj.child("assets");
 			Debug.logT("Editor", "🔗 链接到项目: " + currentProj.name());
+
+			ComponentRegistry.reloadEngineIndex(); // 加载引擎组件索引
 
 			FileHandle indexFile = currentProj.child("project.index");
 			if (indexFile.exists()) {

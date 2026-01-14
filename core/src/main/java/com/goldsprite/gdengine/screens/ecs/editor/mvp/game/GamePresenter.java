@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.FitViewport;
@@ -36,7 +37,7 @@ public class GamePresenter {
 
 		camera = new OrthographicCamera();
 		// 从 Skin 获取字体，或者使用 FontUtils
-		font = FontUtils.generateAutoClarity(45);
+		font = FontUtils.generateAutoClarity(40);
 		reloadViewport();
 	}
 
@@ -60,6 +61,7 @@ public class GamePresenter {
 		});
 	}
 
+	GlyphLayout layout = new GlyphLayout();
 	private void renderWarningOverlay() {
 		// 1. 清屏 (深红色表示 Dirty，深灰色表示 Compiling)
 		float r = (currentState == EditorState.DIRTY) ? 0.2f : 0.1f;
@@ -74,18 +76,15 @@ public class GamePresenter {
 			? "WARNING: Code is Dirty!\nPlease Build Project."
 			: "Compiling Scripts...\nPlease Wait.";
 
+		layout.setText(font, msg);
+
 		Color c = (currentState == EditorState.DIRTY) ? Color.ORANGE : Color.CYAN;
 
 		font.setColor(c);
-		font.getData().setScale(1.5f);
 
-		// 简单的居中计算 (基于相机位置)
-		float x = camera.position.x;
-		float y = camera.position.y;
+		// 居中绘制警告文字
+		font.draw(neonBatch, msg, camera.position.x - layout.width / 2, camera.position.y + layout.height / 2, layout.width, Align.center, true);
 
-		font.draw(neonBatch, msg, x - 200, y + 20, 400, Align.center, true);
-
-		font.getData().setScale(1f); // 还原
 		neonBatch.end();
 	}
 
