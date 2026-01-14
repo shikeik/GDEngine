@@ -11,6 +11,7 @@ import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
+import com.goldsprite.gdengine.ui.widget.FreePanViewer;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisScrollPane;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -77,39 +78,17 @@ public class FileInspectorDrawer implements IInspectorDrawer<FileHandle> {
 		// 如果你喜欢软换行，可以保留 setWrap(true) 并只开启 Y 轴滚动
 		codeLabel.setWrap(false);
 
-		VisScrollPane scroll = new VisScrollPane(codeLabel);
-		scroll.setFadeScrollBars(false);
-		// [优化 1] 允许双向滚动
-		scroll.setScrollingDisabled(false, false);
-		// 允许拖拽滚动 (提升手感)
-		scroll.setFlickScroll(true);
+		// [核心优化] 关闭软换行，代码就是要横向看
+		codeLabel.setWrap(false);
 
-		// [优化 2] 缩放逻辑
-		scroll.addListener(new InputListener() {
-			@Override
-			public boolean scrolled(InputEvent event, float x, float y, float amountX, float amountY) {
-				// 按住 Ctrl 且滚动, TODO: 这里硬编码, 之后需要优化
-				if (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT)) {
-					float scale = codeLabel.getFontScaleX();
-					// amountY: 向上滚是 -1，向下滚是 1 (LibGDX 默认)
-					// 向下滚(缩小) -> scale 减小
-					scale -= amountY * 0.1f;
+		// [核心优化] 使用 FreePanViewer 替代 ScrollPane
+		FreePanViewer viewer = new FreePanViewer(codeLabel);
 
-					// 限制范围
-					if (scale < 0.5f) scale = 0.5f;
-					if (scale > 3.0f) scale = 3.0f;
+		// 给它一个深色背景框，像个显示器
+		VisTable frame = new VisTable();
+		frame.setBackground("list");
+		frame.add(viewer).grow();
 
-					codeLabel.setFontScale(scale);
-					scroll.invalidateHierarchy(); // 触发布局刷新 (Scroll需重新计算范围)
-					return true; // 消费事件，防止 ScrollPane 滚动
-				}
-				return false;
-			}
-
-			// 必须让 ScrollPane 能够接收键盘修饰键，通常需要 Focus
-			// 这里我们偷懒，直接检测 Gdx.input，不需要 Focus
-		});
-
-		container.add(scroll).grow().pad(5);
+		container.add(frame).grow().pad(5);
 	}
 }
