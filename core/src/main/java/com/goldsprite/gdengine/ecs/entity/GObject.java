@@ -1,5 +1,6 @@
 package com.goldsprite.gdengine.ecs.entity;
 
+import com.goldsprite.gdengine.core.annotations.ExecuteInEditMode;
 import com.goldsprite.gdengine.ecs.ComponentManager;
 import com.goldsprite.gdengine.ecs.EcsObject;
 import com.goldsprite.gdengine.ecs.GameWorld;
@@ -214,12 +215,23 @@ public class GObject extends EcsObject {
 		// 执行矩阵乘法
 		this.transform.updateWorldTransform(parentTrans);
 
+		// [新增] 获取当前模式
+		boolean isPlayMode = GameWorld.inst().isPlayMode();
+
 		// 2. 更新组件逻辑 (逻辑可能会修改 transform.local，下一帧生效)
 		for (List<Component> list : components.values()) {
 			for (int i = 0; i < list.size(); i++) {
 				Component c = list.get(i);
 				if (c.isEnable() && !c.isDestroyed()) {
-					c.update(delta);
+					// [核心修改] 生命周期过滤
+					// 如果是 PLAY 模式 -> 执行
+					// 如果是 EDIT 模式 -> 只有带 @ExecuteInEditMode 的才执行
+					// TransformComponent 不需要注解，因为它只是数据，且上面已经手动 update 了矩阵
+					// (注意：TransformComponent 的 update 方法是空的，所以调了也没事，但为了严谨...)
+
+					if (isPlayMode || shouldRunInEditor(c)) {
+						c.update(delta);
+					}
 				}
 			}
 		}
@@ -228,6 +240,12 @@ public class GObject extends EcsObject {
 		for (int i = 0; i < children.size(); i++) {
 			children.get(i).update(delta);
 		}
+	}
+
+	// 辅助判断
+	private boolean shouldRunInEditor(Component c) {
+		// 缓存类的注解检查结果会更快，这里暂用反射
+		return c.getClass().isAnnotationPresent(ExecuteInEditMode.class);
 	}
 
 	public void awake() {

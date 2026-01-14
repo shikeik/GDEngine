@@ -31,7 +31,17 @@ import java.util.stream.Collectors;
  * </p>
  */
 public class GameWorld {
+	// [新增] 世界运行模式
+	public enum Mode {
+		EDIT,   // 编辑态：不跑逻辑，只跑 Gizmo 和 @ExecuteInEditMode
+		PLAY,   // 运行态：全跑
+		PAUSE   // 暂停态：逻辑暂停，渲染继续
+	}
+
 	private static GameWorld instance;
+
+	// [新增] 当前模式
+	private Mode currentMode = Mode.EDIT;
 
 	// ==========================================
 	// 1. 全局配置与时间状态
@@ -239,6 +249,27 @@ public class GameWorld {
 				sys.render(batch, camera);
 			}
 		}
+	}
+	
+	// [新增] 模式控制 API
+	public void setMode(Mode mode) {
+		this.currentMode = mode;
+		// 切换模式时重置一些计时器或状态
+		if (mode == Mode.PLAY) {
+			// 可以在这里重置 timeScale 等
+		}
+	}
+
+	public Mode getMode() {
+		return currentMode;
+	}
+
+	public boolean isPlayMode() {
+		return currentMode == Mode.PLAY;
+	}
+
+	public boolean isEditorMode() {
+		return currentMode == Mode.EDIT;
 	}
 
 

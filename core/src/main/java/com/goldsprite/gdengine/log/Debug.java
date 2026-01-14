@@ -157,6 +157,7 @@ public class Debug {
 
 		String msg = String.format("[%s] %s", tag, formatString(values));
 		msg = String.format("[%s] %s", formatTime("HH:mm:ss:SSS"), msg);// 添加时间戳
+		msg = "[WHITE]" + msg; // 重置颜色标记
 
 		logger.setLevel(Logger.NONE);
 		logger.info(msg);

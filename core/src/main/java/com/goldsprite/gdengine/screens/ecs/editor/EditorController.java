@@ -100,6 +100,10 @@ public class EditorController {
 	// [新增]
 	private EditorState currentEditorState = EditorState.CLEAN;
 
+	// [新增] Run Editor 按钮引用，用于改文字/颜色
+	private VisTextButton btnRunEditor;
+	private FileHandle tempSceneSnapshot; // 临时快照文件
+
 	public EditorController(EditorGameScreen screen) {
 		this.screen = screen;
 	}
@@ -336,13 +340,13 @@ public class EditorController {
 		});
 		bar.add(btnBuild).padRight(10);
 
+
 		// [Run Editor]
-		VisTextButton btnRunEditor = new VisTextButton("Run Editor");
+		btnRunEditor = new VisTextButton("Run Editor");
 		btnRunEditor.setColor(Color.GREEN);
 		btnRunEditor.addListener(new ClickListener() {
 			@Override public void clicked(InputEvent event, float x, float y) {
-				ToastUI.inst().show("Play Mode Starting... (Mock)");
-				// TODO: Phase 3 Implement Play Mode
+				toggleRunEditor();
 			}
 		});
 		bar.add(btnRunEditor).padRight(10);
@@ -359,6 +363,92 @@ public class EditorController {
 		bar.add(btnRunGame);
 
 		return bar;
+	}
+
+	// [核心逻辑] 切换运行/停止状态
+	private void toggleRunEditor() {
+		// 安全检查：代码是否脏了
+		if (currentEditorState == EditorState.DIRTY) {
+			ToastUI.inst().show("Please BUILD code first!");
+			return;
+		}
+
+		GameWorld world = GameWorld.inst();
+		if (world.isEditorMode()) {
+			// >>> 开始运行 (Start)
+			startEditorRun();
+		} else {
+			// >>> 停止运行 (Stop)
+			stopEditorRun();
+		}
+	}
+
+	private void startEditorRun() {
+		Debug.logT("Editor", ">>> Enter PLAY Mode");
+
+		// 1. 保存快照 (Snapshot)
+		// 存到临时目录，避免污染项目
+		tempSceneSnapshot = Gdx.files.local("build/temp_editor_snapshot.scene");
+		SceneLoader.saveCurrentScene(tempSceneSnapshot);
+
+		// 2. 切换模式
+		GameWorld.inst().setMode(GameWorld.Mode.PLAY);
+
+		// 3. 触发 Start 生命周期
+		// SceneSystem 会在下一帧自动处理 pendingStart，或者这里手动触发一次
+		// 注意：现有的 GObject 已经在场景里了，它们不会重新触发 Awake，但如果是刚加载完没 Run 过，Start 也没跑过。
+		// 如果是 Stop 后重置回来的，那是新对象。
+		// 对于已经在场景里的对象，我们需要一种机制触发它们的 onStart。
+		// 目前 SceneSystem 的 executeStartTask 是基于 registerStart 的。
+		// 简单策略：Play 模式下，update 循环会自动跑起来。
+		// 如果组件设计规范 (在 Start 里初始化)，那么对于已存在的组件，它们可能已经 Start 过了？
+		// 不，现在的编辑器逻辑里，Add Component 后立马就 Awake 了。
+		// 我们需要模拟“游戏启动”的感觉。
+		// 实际上，Snapshot 保存再 Load 是最彻底的模拟。但为了性能，我们这里只是切换 Mode？
+		// 不，如果不 Reload，变量状态是脏的。
+		// 比如 Player 移动了位置，Stop 后回不去了。
+
+		// [修正策略] Run 的本质是：保存 -> 重载 -> 运行
+		// 这样才能保证 Run 时的初始状态是当前编辑器看到的状态，且 Stop 能回滚。
+
+		// 2.5 重载场景 (以运行态加载)
+		SceneLoader.load(tempSceneSnapshot);
+		// Load 后，所有物体都是新的，状态重置。
+		// GameWorld 依然是同一个实例，但 Mode 变了。
+
+		// 3. UI 反馈
+		btnRunEditor.setText("Stop");
+		btnRunEditor.setColor(Color.RED);
+		centerTabs.getTabbedPane().switchTab(0); // 确保在 Preview
+		ToastUI.inst().show("Game Started");
+
+		// 刷新 Hierarchy (因为对象全变了)
+		EditorEvents.inst().emitStructureChanged();
+		// 取消选中，防止操作到空引用
+		sceneManager.select(null);
+	}
+
+	private void stopEditorRun() {
+		Debug.logT("Editor", "<<< Exit PLAY Mode");
+
+		// 1. 切换模式
+		GameWorld.inst().setMode(GameWorld.Mode.EDIT);
+
+		// 2. 恢复快照 (Restore)
+		if (tempSceneSnapshot != null && tempSceneSnapshot.exists()) {
+			SceneLoader.load(tempSceneSnapshot);
+		} else {
+			GameWorld.inst().clear(); // 出事了就清空
+		}
+
+		// 3. UI 反馈
+		btnRunEditor.setText("Run Editor");
+		btnRunEditor.setColor(Color.GREEN);
+		ToastUI.inst().show("Game Stopped");
+
+		// 刷新 Hierarchy
+		EditorEvents.inst().emitStructureChanged();
+		sceneManager.select(null);
 	}
 
 	// --- 状态响应 (重写) ---
@@ -492,6 +582,11 @@ public class EditorController {
 		// 2. 恢复干净状态
 		// emitCodeClean 会调用 updateEditorState(CLEAN)
 		EditorEvents.inst().emitCodeClean();
+
+		// 便于测试, 成功也打开 Console 面板
+		if (bottomTabs != null) {
+			bottomTabs.getTabbedPane().switchTab(1); // Console
+		}
 
 		ToastUI.inst().show("Build Success (" + duration + "ms)");
 		Debug.logT("Compiler", "[GREEN]Build finished in " + duration + "ms");
