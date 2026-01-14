@@ -3,7 +3,7 @@ ignored: indentFix codeFormatFix
 ## 待办
 - [ ] 需要更健壮的tabbed面板, 然后完成自由嵌入分离tab操作功能
 - [ ] region assetPath显示重设计
-- [ ] 输一个字符就焦点被取消的bug, 这可能不止是输字符会有bug, 还要检查其他是否有同类情况并修复
+- [ ] 输一个字符就焦点被取消的bug(只有name输入会这样), 这可能不止是输字符会有bug, 还要检查其他是否有同类情况并修复
 - [ ] javadoc 需要up-to-date
 - [ ] FreePanViewer 字体缩放功能无效
 - [ ] undo/redo 架构存在但没有实装，以及需要操作历史面板来可视化调试与跳转到指定操作节点

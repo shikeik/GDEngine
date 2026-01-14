@@ -41,6 +41,8 @@ public class Debug {
 		"Registry Y",
 		"System Y",
 		"SceneLoader Y",
+		"Project Y",
+		"Code Y",
 
 		// Test
 		"TEST Y",

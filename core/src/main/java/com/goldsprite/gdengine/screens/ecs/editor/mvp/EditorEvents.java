@@ -1,5 +1,7 @@
 package com.goldsprite.gdengine.screens.ecs.editor.mvp;
 
+import com.badlogic.gdx.files.FileHandle;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -18,20 +20,23 @@ public class EditorEvents {
     private final List<Consumer<Void>> onPropertyChanged = new ArrayList<>();
     private final List<Consumer<Void>> onSceneLoaded = new ArrayList<>();
 
+	// 打开文件事件 (Project -> Editor/Code)
+	private final List<Consumer<FileHandle>> onOpenFile = new ArrayList<>();
+
     // --- 订阅接口 ---
     public void subscribeSelection(Consumer<Object> listener) { onSelectionChanged.add(listener); }
     public void subscribeStructure(Consumer<Void> listener) { onStructureChanged.add(listener); }
     public void subscribeProperty(Consumer<Void> listener) { onPropertyChanged.add(listener); }
     public void subscribeSceneLoaded(Consumer<Void> listener) { onSceneLoaded.add(listener); }
+	public void subscribeOpenFile(Consumer<FileHandle> listener) { onOpenFile.add(listener); }
 
     // --- 发布接口 ---
-    public void emitSelectionChanged(Object selection) {
-        for (var l : onSelectionChanged) l.accept(selection);
-    }
+    public void emitSelectionChanged(Object selection) { for (var l : onSelectionChanged) l.accept(selection); }
 
     public void emitStructureChanged() { for (var l : onStructureChanged) l.accept(null); }
     public void emitPropertyChanged() { for (var l : onPropertyChanged) l.accept(null); }
     public void emitSceneLoaded() { for (var l : onSceneLoaded) l.accept(null); }
+	public void emitOpenFile(FileHandle file) { for (var l : onOpenFile) l.accept(file); }
 
     public void clear() {
         onSelectionChanged.clear();

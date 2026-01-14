@@ -1,5 +1,6 @@
 package com.goldsprite.gdengine.ui.widget;
 
+import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -49,11 +50,24 @@ public class SmartTabPane extends VisTable {
 	/**
 	 * 添加一个 Tab
 	 * @param title 标题
-	 * @param content 内容 (通常是一个 Table 或 EditorPanel)
+	 * @param content 内容 (可以是任意 Actor，内部会自动包裹)
 	 */
-	public void addTab(String title, Table content) {
-		SimpleTab tab = new SimpleTab(title, content);
-		tabbedPane.add(tab); // 添加时内部自动选中
+	public void addTab(String title, Actor content) {
+		Table wrapper;
+		// 如果本身就是 Table，直接用；否则包一层
+		if (content instanceof Table table) {
+			wrapper = table;
+		} else {
+			wrapper = new VisTable();
+			wrapper.add(content).grow();
+		}
+
+		SimpleTab tab = new SimpleTab(title, wrapper);
+		tabbedPane.add(tab);
+
+		if (tabbedPane.getTabs().size == 1) {
+			tabbedPane.switchTab(tab);
+		}
 	}
 
 	public TabbedPane getTabbedPane() {

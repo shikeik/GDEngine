@@ -309,6 +309,7 @@ public class BioCodeEditor extends VisTable {
 		btnAll.addListener(new ClickListener() { @Override public void clicked(InputEvent event, float x, float y) { textArea.selectAll(); hidePopupMenu(); isSelectionMode = true; }});
 
 		popupMenu.add(btnCopy).pad(5);
+		popupMenu.add(btnCut).pad(5); // Add here
 		popupMenu.add(btnPaste).pad(5);
 		popupMenu.add(btnAll).pad(5);
 		popupMenu.pack();
