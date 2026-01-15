@@ -283,13 +283,11 @@ public class EditorController {
 		rootSplit.setSplitAmount(0.8f);
 
 		root.add(rootSplit).grow();
-		
+
 		VisTable rootWrap = new VisTable();
 		rootWrap.setFillParent(true);
 		rootWrap.add(root).pad(safePad[0], safePad[1], safePad[2], safePad[3]).grow();
 		stage.addActor(rootWrap);
-		
-		stage.addActor(new ToastUI());
 	}
 
 	private void toggleCodeMaximize() {
@@ -310,7 +308,7 @@ public class EditorController {
             topSectionSplit.setSplitAmount(0.0f);
 
             // 4. 确保切到 Code
-            centerTabs.getTabbedPane().switchTab(1); 
+            centerTabs.getTabbedPane().switchTab(1);
 
             ToastUI.inst().show("Code View Expanded");
         } else {

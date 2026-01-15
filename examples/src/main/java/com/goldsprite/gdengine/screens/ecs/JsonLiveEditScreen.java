@@ -163,7 +163,7 @@ public class JsonLiveEditScreen extends ExampleGScreen {
 		root.add().grow();
 
 		// Toast
-		toast = new ToastUI();
+		toast = ToastUI.inst();
 		toast.setPosition(getUIViewport().getWorldWidth()/2, 100);
 		uiStage.addActor(toast);
 	}

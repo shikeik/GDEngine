@@ -134,14 +134,6 @@ public class RichTextLayoutTestScreen extends GScreen {
 			}
 		});
 
-		// Toast
-		if (ToastUI.inst() == null) new ToastUI();
-		if (ToastUI.inst().getParent() == null) {
-			uiStage.addActor(ToastUI.inst());
-		} else {
-			ToastUI.inst().toFront();
-		}
-
 		updateSizeInfo();
 	}
 

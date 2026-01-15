@@ -1,6 +1,25 @@
 ignored: indentFix codeFormatFix  
 
 ## 待办
+
+
+### `1.10.11` 追加修复
+- [x] ToastUI闪退bug
+- [x] 改全横屏
+- [ ] 考虑编辑器新布局，收起式侧栏+多级菜单+单预览视图
+- [ ] android异常捕获界面增加复制按钮
+- [ ] 游戏内logUI文本增加长按复制功能
+- [ ] GameView增加[ ]按钮切换独占与取消状态, (需要预先定义各面板分割参数来重置为取消)
+- [ ] RenderComp增加contains默认实现为sprite大小矩形, 无宽高则默认50x
+- [ ] 创建项目时ToastUI弹NPE错误闪退
+- [ ] 创建项目自动给package打index但多打了一次导致包名/目录不匹配错误
+- [ ] 主界面GDEngineEditor屏加回来，还需要他，主编辑器场景logUi也还需要显示info
+- [ ] RunGame按钮需要继续跳转实机场景
+- [ ] gizmo操作应只响应单指，双指忽略，否则会乱跳
+- [ ] SpriteComp不知道为什么不能显示图像，看一下代码链并修复
+
+
+
 - [ ] 需要更健壮的tabbed面板, 然后完成自由嵌入分离tab操作功能
 - [ ] region assetPath显示重设计
 - [ ] 输一个字符就焦点被取消的bug(只有name输入会这样), 这可能不止是输字符会有bug, 还要检查其他是否有同类情况并修复

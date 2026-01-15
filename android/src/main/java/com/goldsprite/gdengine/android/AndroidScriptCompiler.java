@@ -14,13 +14,13 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.nio.file.Paths;
 
 public class AndroidScriptCompiler implements IScriptCompiler {
 	private final Context context;
@@ -34,7 +34,7 @@ public class AndroidScriptCompiler implements IScriptCompiler {
 
 	public AndroidScriptCompiler(Context context) {
 		this.context = context;
-
+		
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 			this.cacheDir = new File(context.getCodeCacheDir(), "compiler_cache");
 		} else {
