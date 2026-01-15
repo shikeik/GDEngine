@@ -6,12 +6,14 @@ ignored: indentFix codeFormatFix
 ### `1.10.11` 追加修复
 - [x] ToastUI闪退bug
 - [x] 改全横屏
+- [x] pc不需要安全区域padding
+- [ ] game的独占
 - [ ] 考虑编辑器新布局，收起式侧栏+多级菜单+单预览视图
 - [ ] android异常捕获界面增加复制按钮
 - [ ] 游戏内logUI文本增加长按复制功能
 - [ ] GameView增加[ ]按钮切换独占与取消状态, (需要预先定义各面板分割参数来重置为取消)
 - [ ] RenderComp增加contains默认实现为sprite大小矩形, 无宽高则默认50x
-- [ ] 主界面GDEngineEditor屏加回来，还需要他，主编辑器场景logUi也还需要显示info
+- [x] 主界面GDEngineEditor屏加回来，还需要他，主编辑器场景logUi也还需要显示info
 - [ ] RunGame按钮需要继续跳转实机场景
 - [ ] gizmo操作应只响应单指，双指忽略，否则会乱跳
 - [ ] SpriteComp不知道为什么不能显示图像，看一下代码链并修复

@@ -41,7 +41,7 @@ public class BioCodeEditor extends VisTable {
     private Runnable onTextChangedCallback;
 
 	public BioCodeEditor() {
-		this(1f);
+		this(1.3f);
 	}
 	public BioCodeEditor(float baseFntScale) {
 		super();
@@ -51,7 +51,7 @@ public class BioCodeEditor extends VisTable {
 	public void setOnSave(Runnable onSave) {
 		this.onSaveCallback = onSave;
 	}
-	
+
 	// [新增] 设置监听器
     public void setOnTextChanged(Runnable onChange) {
         this.onTextChangedCallback = onChange;

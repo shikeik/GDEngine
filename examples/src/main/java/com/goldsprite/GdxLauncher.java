@@ -4,7 +4,6 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -17,7 +16,6 @@ import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.goldsprite.screens.ExampleSelectScreen;
-import com.goldsprite.gdengine.ecs.GameWorld;
 import com.kotcrab.vis.ui.VisUI;
 
 public class GdxLauncher extends Game {int k60;
@@ -67,6 +65,7 @@ public class GdxLauncher extends Game {int k60;
 		Gd.init(Gd.Mode.RELEASE, Gdx.input, Gdx.graphics, scriptCompiler);
 		Debug.logT("Engine", "[GREEN]Gd initialized. Compiler available: %b", (scriptCompiler != null));
 
+		Debug.logErr("Hello Error!");
 		new ScreenManager()
 			.addScreen(new ExampleSelectScreen())
 			.setLaunchScreen(ExampleSelectScreen.class);

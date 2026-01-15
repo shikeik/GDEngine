@@ -28,4 +28,8 @@ public class PlatformImpl {
 	public static boolean isAndroidUser() {
 		return Gdx.app.getType() == Application.ApplicationType.Android;
 	}
+
+	public static boolean isDesktopUser() {
+		return Gdx.app.getType() == Application.ApplicationType.Desktop;
+	}
 }

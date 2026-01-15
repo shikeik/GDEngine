@@ -14,7 +14,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Payload;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
 import com.badlogic.gdx.utils.Json;
-import com.badlogic.gdx.utils.viewport.ExtendViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.ComponentRegistry;
@@ -31,6 +30,7 @@ import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
+import com.goldsprite.gdengine.neonbatch.NeonStage;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorGizmoSystem;
 import com.goldsprite.gdengine.screens.ecs.editor.core.EditorSceneManager;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorEvents;
@@ -62,7 +62,7 @@ public class EditorController {
 	private IGameScriptEntry currentUserScript;
 
 	private final EditorGameScreen screen;
-	private Stage stage;
+	private NeonStage stage;
 
 	// --- Core Logic Systems (Global) ---
 	private CommandManager commandManager;
@@ -118,7 +118,7 @@ public class EditorController {
 		if (!VisUI.isLoaded()) VisUI.load();
 
 		// 1. 初始化 Stage (UI)
-		stage = new Stage(viewport);
+		stage = new NeonStage(viewport);
 
 		// 2. 加载项目上下文
 		reloadProjectContext();
@@ -286,6 +286,7 @@ public class EditorController {
 
 		VisTable rootWrap = new VisTable();
 		rootWrap.setFillParent(true);
+		if(PlatformImpl.isDesktopUser()) safePad = new float[4];
 		rootWrap.add(root).pad(safePad[0], safePad[1], safePad[2], safePad[3]).grow();
 		stage.addActor(rootWrap);
 	}

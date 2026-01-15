@@ -43,6 +43,7 @@ public class Debug {
 		"SceneLoader Y",
 		"Project Y",
 		"Code Y",
+		"EditorPanel Y",
 
 		// Test
 		"TEST Y",
@@ -166,6 +167,14 @@ public class Debug {
 		logMessages.add(/*"NONE: " + */msg);
 		//打印到控制台
 		System.out.println(msg);
+	}
+
+	public static void logErr(Object... values) {
+		logErrT("Default", values);
+	}
+	public static void logErrT(String tag, Object... values){
+		values[0] = "[RED]" + values[0];
+		logT(tag, values);
 	}
 
 

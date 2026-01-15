@@ -33,10 +33,15 @@ public abstract class BaseSelectionScreen extends ExampleGScreen {
 		return "选择屏";
 	}
 
-	// [新增] 菜单默认竖屏
 	@Override
 	public ScreenManager.Orientation getOrientation() {
 		return ScreenManager.Orientation.Landscape;
+	}
+
+	@Override
+	protected void initViewport() {
+		uiViewportScale = 2f;
+		super.initViewport();
 	}
 
 	// 子类只需实现这个方法来填充列表

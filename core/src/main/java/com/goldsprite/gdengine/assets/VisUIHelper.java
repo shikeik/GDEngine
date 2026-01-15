@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.log.Debug;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
@@ -131,7 +132,7 @@ public class VisUIHelper {
 	private static void fixHandleSize() {
 		Skin skin = VisUI.getSkin();
 		float size = 20f;
-		float splitBarThickness = 15;
+		float splitBarThickness = PlatformImpl.isAndroidUser() ? 15f : 8f;
 		float g = 0.4f;
 		TextureRegionDrawable cDrawable = ColorTextureUtils.createColorDrawable(new Color(g, g, g, 0.4f));
 
