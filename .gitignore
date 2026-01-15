@@ -163,6 +163,7 @@ Thumbs.db
 /outputs/GDEngine*.jar
 outputs/GDEngine.exe4j
 /outputs/error.log
+/outputs/shortcuts.json
 
 changes.diff
 changes.txt

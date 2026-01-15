@@ -182,8 +182,8 @@ public class EditorController {
 		GameWorld.autoDispose();
 		new GameWorld();
 
-		// 初始化逻辑层相机和渲染系统 (用于 Raycast)
-		gameCamera = new OrthographicCamera();
+		// 初始化逻辑层相机和渲染系统 (用于 Ray-cast)
+		gameCamera = new OrthographicCamera(1280, 720);
 		worldRenderSystem = new WorldRenderSystem(neonBatch, gameCamera);
 
 		// 绑定全局引用
