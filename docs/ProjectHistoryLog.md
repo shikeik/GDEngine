@@ -18,30 +18,60 @@
 ---
 
 ## [Current] 当前开发版本
+### `1.10.11.x` 架构重构与模式分离 (Architecture & Modes)
+**核心架构 (Core Architecture)**
+- [x] **[New] 运行模式**: 引入 `GameWorld.Mode` (EDIT/PLAY/PAUSE)，彻底分离编辑器态与运行态逻辑
+- [x] **[New] 编辑态执行**: 新增 `@ExecuteInEditMode` 注解，允许特定组件在编辑器模式下运行
+- [x] **[New] 项目服务**: 引入 `ProjectService` (Model层)，统一管理项目的创建、模板实例化与文件操作
+- [x] **[Refactor] 控制器**: 实现 `EditorController`，协调编辑器各模块 (MVP) 的初始化与交互
+
+**构建与工程 (Build & Engineering)**
+- [x] **[Refactor] 任务管理**: 将引擎构建任务移至 `gradle/engine-tasks.gradle`，实现模块化管理
+- [x] **[New] 自动索引**: 实现 `generateEngineIndex` 构建任务，自动生成组件全类名索引 `engine.index`
+- [x] **[Adj] 模板引擎**: 重构项目创建流程，支持源码包名重构 (Refactoring) 与元数据 (`project.json`) 注入
+
+**编辑器功能 (Editor Features)**
+- [x] **[New] 日志解析**: 实现 `LogParser`，支持 Markdown 风格的更新日志解析与富文本高亮
+- [x] **[Opt] 渲染查询**: `WorldRenderSystem` 新增 `queryRenderables` 接口，解耦渲染循环与点击检测
+- [x] **[Adj] 调试日志**: `Debug` 新增 `logErr` 红色高亮接口，优化日志分类标记
+
+**UI 与组件 (UI & Components)**
+- [x] **[Adj] 样式优化**: 调整 `VisUI` 的 SplitPane 手柄大小 (桌面/移动端适配) 与 CheckBox 尺寸
+- [x] **[Adj] 屏幕适配**: `BaseSelectionScreen` 调整为横屏模式 (Landscape) 并优化视口缩放
+- [x] **[Opt] 变换组件**: `TransformComponent` 移除运行时字符串拼接，关键矩阵字段对 Inspector 隐藏 (`@Hide`)
+
 ### `1.10.7.x` 发布冲刺与体验优化 (Release Prep & UX)
 **构建与流程 (Build & Workflow)**
-- [ ] **[New] 资源同步**: 统一 Gradle 资源同步任务 (Sync Task) 与日志输出，确保构建产物完整性
+- [x] **[New] 资源同步**: 统一 Gradle 资源同步任务 (Sync Task) 与日志输出，确保构建产物完整性
 - [ ] **[Adj] 流程标准化**: 规范化项目的创建、导出与更新流程
 - [x] **[Adj] 测试流程梳理修复**: 无上下文时测试内容逻辑修正
+- [x] **[Adj] 任务优化**: 将耗时的 Javadoc 生成任务从构建中分离，改为手动发布
+- [x] **[Fix] 编译缓存**: 修复编译缓存未清理导致组件清单重复的问题
 
 **编辑器核心 (Editor Core)**
 - [x] **[Fix] 场景初始化**: 修复从主页进场景没有渲染系统问题
 - [x] **[Fix] 场景刷新**: 修复从主页跳转场景编辑器时数据不刷新问题
 - [x] **[Adj] 性能优化**: Hierarchy 树改为 30帧/秒 限制刷新，降低空闲开销
 - [ ] **[Refactor] 代码解耦**: 清理核心大类，提升代码独立性 (Cleanup)
+- [x] **[Fix] 输入映射**: 修复输入映射错误，补回游戏核心代理
+- [x] **[Fix] 相机初始化**: 修复 GameCam 尺寸初始化为 0 的 Bug
+- [x] **[Refactor] 组件接口**: RenderComponent.contains 改为默认实现，降低子类实现成本
 
 **交互手感 (Interaction)**
 - [x] **[Fix] 滚动冲突**: 拖拽数值/手柄按下时，暂时禁用父级滚动视图 (ScrollFocus)
 - [x] **[Adj] 滚动体验**: 禁用 ScrollPane 的横向滚动与超限回弹 (Overscroll)
 - [x] **[New] 统一菜单**: 统一右键(PC)与长按(Mobile)唤出上下文菜单的逻辑
+- [x] **[Fix] 焦点丢失**: 修复 GameObject 名称输入时焦点意外丢失的问题
+- [x] **[Fix] 输入隔离**: 游戏视图输入增加视口范围检测，防止误触
 
 **UI 视觉 (Visual Polish)**
 - [x] **[Adj] 面板背景**: 给组件标题栏(Header)和属性面板(Body)增加差异化背景色
 - [x] **[Adj] 属性条目**: 给每个属性行增加略深色背景，提升可读性
 - [x] **[Fix] 样式修复**: 修复 CheckBox 样式透明度问题
-- [x] **[Adj] 输入控件**: Float 输入框限制最大宽度并右对齐
+- [x] **[Adj] 输入控件**: Float/String 输入框限制最大宽度并右对齐 (统一长度标准)
 - [x] **[Fix] 文本布局**: `toString` 绘制支持 `\n` 自动计算行高
 - [ ] **[New] 适配配置**: 增加分辨率配置与安全边距 (Safe Margin) 配置
+- [x] **[New] 视觉反馈**: 使用 NeonStage 绘制高亮边框，增强选中反馈
 
 ---
 

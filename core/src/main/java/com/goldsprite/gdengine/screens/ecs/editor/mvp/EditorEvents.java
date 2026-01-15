@@ -25,6 +25,7 @@ public class EditorEvents {
     private final List<Consumer<Void>> onSceneLoaded = new ArrayList<>();
 	private final List<Consumer<FileHandle>> onOpenFile = new ArrayList<>(); // 打开文件事件 (Project -> Editor/Code)
 	private final List<Runnable> onToggleMaximizeCode = new ArrayList<>(); // [新增] 切换代码编辑器最大化
+	private final List<Runnable> onToggleMaximizeGame = new ArrayList<>(); // [新增] 切换游戏视图最大化
 
 
     // --- 订阅接口 ---
@@ -35,6 +36,7 @@ public class EditorEvents {
     public void subscribeSceneLoaded(Consumer<Void> listener) { onSceneLoaded.add(listener); }
 	public void subscribeOpenFile(Consumer<FileHandle> listener) { onOpenFile.add(listener); }
 	public void subscribeToggleMaximizeCode(Runnable listener) { onToggleMaximizeCode.add(listener); }
+	public void subscribeToggleMaximizeGame(Runnable listener) { onToggleMaximizeGame.add(listener); }
 	public void subscribeCodeDirty(Runnable listener) { onCodeDirty.add(listener); }
 	public void subscribeCodeClean(Runnable listener) { onCodeClean.add(listener); }
 
@@ -48,6 +50,7 @@ public class EditorEvents {
     public void emitSceneLoaded() { for (var l : onSceneLoaded) l.accept(null); }
 	public void emitOpenFile(FileHandle file) { for (var l : onOpenFile) l.accept(file); }
 	public void emitToggleMaximizeCode() { for (var l : onToggleMaximizeCode) l.run(); }
+	public void emitToggleMaximizeGame() { for (var l : onToggleMaximizeGame) l.run(); }
 	public void emitCodeDirty() { for (var l : onCodeDirty) l.run(); }
 	public void emitCodeClean() { for (var l : onCodeClean) l.run(); }
 
@@ -58,6 +61,7 @@ public class EditorEvents {
         onPropertyChanged.clear();
         onSceneLoaded.clear();
 		onToggleMaximizeCode.clear();
+		onToggleMaximizeGame.clear();
 		onCodeDirty.clear();
 		onCodeClean.clear();
     }

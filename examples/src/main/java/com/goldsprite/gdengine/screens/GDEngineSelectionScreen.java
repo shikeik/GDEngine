@@ -32,6 +32,5 @@ public class GDEngineSelectionScreen extends BaseSelectionScreen {
 		map.put("功能验证 其他", null);
 		map.put("富文本布局测试", RichTextLayoutTestScreen.class);
 		map.put("UI 测试: VisTabbedPane (源码复刻)", com.goldsprite.screens.tests.VisTabTestScreen2.class);
-		map.put("代码编辑器场景(已弃置)", GDEngineEditorScreen.class);
 	}
 }

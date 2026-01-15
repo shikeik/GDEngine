@@ -2,6 +2,7 @@ package com.goldsprite.screens;
 
 import com.goldsprite.gdengine.screens.GScreen;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
+import com.goldsprite.gdengine.screens.ecs.hub.GDEngineEditorScreen;
 import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
 import com.goldsprite.gdengine.screens.ecs.editor.EditorGameScreen;
 import com.goldsprite.gdengine.screens.GDEngineSelectionScreen;
@@ -19,6 +20,7 @@ public class ExampleSelectScreen extends BaseSelectionScreen {
 		// --- 核心开发工具 ---
 		map.put(">>> GDEngine Hub (项目管理) <<<", GDEngineHubScreen.class);
 		map.put(">>> Editor Core (场景编辑器) <<<", EditorGameScreen.class); // 暂时还需要 // 注释掉, 已被 GDEngineHubScreen 取代, 无项目上下文启动没有意义
+		map.put("代码编辑器场景(已弃置)", GDEngineEditorScreen.class);
 
 		map.put("", null); // 分隔线
 

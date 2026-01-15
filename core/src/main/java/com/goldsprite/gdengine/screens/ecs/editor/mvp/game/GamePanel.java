@@ -11,6 +11,10 @@ import com.goldsprite.gdengine.screens.ecs.editor.ViewWidget;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
 import com.kotcrab.vis.ui.widget.VisSelectBox;
 import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorEvents;
 
 public class GamePanel extends EditorPanel {
 
@@ -33,6 +37,8 @@ public class GamePanel extends EditorPanel {
 
 		// Mode Selector (Overlay)
 		VisTable overlay = new VisTable();
+		overlay.top().right();
+
 		VisSelectBox<String> modeBox = new VisSelectBox<>();
 		modeBox.setItems("FIT", "STRETCH", "EXTEND");
 		modeBox.addListener(new ChangeListener() {
@@ -40,7 +46,17 @@ public class GamePanel extends EditorPanel {
 				if(presenter != null) presenter.setViewportMode(modeBox.getSelected());
 			}
 		});
-		overlay.add(modeBox).top().right().expand().pad(5);
+
+		VisTextButton btnMax = new VisTextButton("[ ]");
+		btnMax.addListener(new ClickListener() {
+			@Override
+			public void clicked(InputEvent event, float x, float y) {
+				EditorEvents.inst().emitToggleMaximizeGame();
+			}
+		});
+
+		overlay.add(modeBox).pad(5);
+		overlay.add(btnMax).pad(5);
 		stack.add(overlay);
 
 		addContent(stack);

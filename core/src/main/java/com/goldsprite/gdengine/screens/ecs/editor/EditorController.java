@@ -6,7 +6,6 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
@@ -94,7 +93,9 @@ public class EditorController {
 	private VisSplitPane topSectionSplit;
 	private VisSplitPane leftMainSplit;
 	private VisSplitPane rootSplit;
+	private VisSplitPane previewSplit; // [新增]
 	private boolean isCodeMaximized;
+	private boolean isGameMaximized; // [新增]
 
 	// [新增] 提升为成员变量，以便在编译失败时切换 Tab
 	private SmartTabPane bottomTabs;
@@ -143,6 +144,7 @@ public class EditorController {
 
 		// 监听最大化事件
 		EditorEvents.inst().subscribeToggleMaximizeCode(this::toggleCodeMaximize);
+		EditorEvents.inst().subscribeToggleMaximizeGame(this::toggleGameMaximize); // [新增]
 
 		// [新增] 监听编译状态
 		EditorEvents.inst().subscribeCodeDirty(this::onCodeDirty);
@@ -250,7 +252,7 @@ public class EditorController {
 		// --- 2. Center Area (Preview & Code) ---
 		// Tab 1: Preview (Split: Scene | Game)
 		Stack previewStack = new Stack();
-		VisSplitPane previewSplit = new VisSplitPane(scenePanel, gamePanel, false); // 是否竖排列
+		previewSplit = new VisSplitPane(scenePanel, gamePanel, false); // 是否竖排列
 		previewSplit.setSplitAmount(0.5f);
 		previewStack.add(previewSplit);
 
@@ -325,6 +327,41 @@ public class EditorController {
             leftMainSplit.setSplitAmount(0.7f);
         }
     }
+
+	private void toggleGameMaximize() {
+		isGameMaximized = !isGameMaximized;
+		Debug.log("toggleGameMaximize %s", isGameMaximized);
+
+		if (isGameMaximized) {
+			Debug.log("进入游戏独占");
+			// 1. Hide Inspector (Right)
+			if (rootSplit != null) rootSplit.setSplitAmount(1.0f);
+
+			// 2. Hide Bottom (Console/Project)
+			// leftMainSplit: Top | Bottom. 1.0f means split at bottom -> Top full.
+			if (leftMainSplit != null) leftMainSplit.setSplitAmount(1.0f);
+
+			// 3. Hide Hierarchy (Left)
+			// topSectionSplit: Hierarchy | CenterTabs. 0.0f means split at left -> CenterTabs full.
+			if (topSectionSplit != null) topSectionSplit.setSplitAmount(0.0f);
+
+			// 4. Hide Scene (Left of Preview)
+			// previewSplit: Scene | Game. 0.0f means split at left -> Game full.
+			if (previewSplit != null) previewSplit.setSplitAmount(0.0f);
+
+			// 5. Ensure Preview Tab is selected
+			if (centerTabs != null) centerTabs.getTabbedPane().switchTab(0);
+
+			ToastUI.inst().show("Game View Expanded");
+		} else {
+			Debug.log("恢复 游戏独占");
+			// Restore to default/hardcoded values
+			if (rootSplit != null) rootSplit.setSplitAmount(0.8f);
+			if (leftMainSplit != null) leftMainSplit.setSplitAmount(0.7f);
+			if (topSectionSplit != null) topSectionSplit.setSplitAmount(0.2f);
+			if (previewSplit != null) previewSplit.setSplitAmount(0.5f);
+		}
+	}
 
 	private VisTable createTopToolbar() {
 		VisTable bar = new VisTable();
