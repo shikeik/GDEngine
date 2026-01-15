@@ -11,6 +11,10 @@ import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTree;
 import java.util.Arrays;
 import java.util.function.Consumer;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.scenes.scene2d.ui.Value;
 
 /**
  * 通用文件树控件
@@ -28,6 +32,7 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
 
     public FileTreeWidget() {
         super();
+		//debugAll();
         getSelection().setProgrammaticChangeEvents(false);
         setIndentSpacing(20f);
 
@@ -80,27 +85,32 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
 
             FileNode node = new FileNode(file);
             parentNode.add(node);
-
-            // [新增] 双击监听
-            node.getActor().addListener(new ClickListener() {
+			
+			//这个办法无法整行触发
+			// 菜单与打开
+            node.getActor().addListener(new ContextListener() {
 					@Override
-					public void clicked(InputEvent event, float x, float y) {
-						if (getTapCount() == 2 && onDoubleClicked != null) {
-							onDoubleClicked.accept(file);
+					public void onShowMenu(float stageX, float stageY) {
+						getSelection().choose(node);
+						if (contextMenuProvider != null) {
+							contextMenuProvider.showMenu(file, stageX, stageY);
 						}
 					}
+					@Override public void onLeftClick(InputEvent event, float x, float y, int count) {
+						if (count == 2) {
+							if (file.isDirectory()) {
+								//如果是文件夹：切换展开/折叠
+								node.setExpanded(!node.isExpanded());
+							} else {
+								// 如果是文件：触发回调 (ProjectPresenter 会处理打开逻辑)
+								if (onDoubleClicked != null) {
+									onDoubleClicked.accept(file);
+								}
+							}
+						}
+
+					}
 				});
-			
-            // 右键菜单
-            node.getActor().addListener(new ContextListener() {
-                @Override
-                public void onShowMenu(float stageX, float stageY) {
-                    getSelection().choose(node);
-                    if (contextMenuProvider != null) {
-                        contextMenuProvider.showMenu(file, stageX, stageY);
-                    }
-                }
-            });
 
             if (file.isDirectory()) {
                 recursiveAddNodes(node, file);
@@ -122,15 +132,23 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
     }
 
     // --- Node ---
-    public static class FileNode extends VisTree.Node<FileNode, FileHandle, VisLabel> {
+    public static class FileNode extends VisTree.Node<FileNode, FileHandle, VisTable> {
         public FileNode(FileHandle file) {
-            super(new VisLabel(file.name()));
+            super(new VisTable());
             setValue(file);
 
-            VisLabel lbl = getActor();
+            VisTable table = getActor();
+			//table.debugAll();
+            table.setBackground("button");
+
+            // 名字
+            VisLabel lbl = new VisLabel(file.name());
+			lbl.setTouchable(Touchable.enabled);
+            table.add(lbl).growX().left().padLeft(5);
+			
+			//节点类型染色
             if (file.isDirectory()) {
                 lbl.setColor(Color.GOLD);
-                lbl.setText(file.name());
             } else {
                 String ext = file.extension().toLowerCase();
                 if (ext.equals("java")) lbl.setColor(Color.CYAN);

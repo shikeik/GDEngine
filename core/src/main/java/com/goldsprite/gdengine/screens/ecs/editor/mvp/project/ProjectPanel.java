@@ -29,6 +29,8 @@ public class ProjectPanel extends EditorPanel {
 		fileTree = new FileTreeWidget();
 		VisScrollPane treeScroll = new VisScrollPane(fileTree);
 		treeScroll.setFadeScrollBars(false);
+		VisTable treeScrollContainer = new VisTable();
+		treeScrollContainer.add(treeScroll).grow();
 
 		// 2. 右侧：网格视图
 		VisTable rightContainer = new VisTable();
@@ -67,7 +69,7 @@ public class ProjectPanel extends EditorPanel {
 		rightContainer.add(gridScroll).grow();
 
 		// 3. 分割
-		VisSplitPane split = new VisSplitPane(treeScroll, rightContainer, false);
+		VisSplitPane split = new VisSplitPane(treeScrollContainer, rightContainer, false);
 		split.setSplitAmount(0.25f);
 
 		addContent(split);

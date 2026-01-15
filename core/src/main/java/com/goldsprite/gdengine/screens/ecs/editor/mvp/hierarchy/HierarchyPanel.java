@@ -6,7 +6,6 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
@@ -38,10 +37,12 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 
     public HierarchyPanel() {
         super("Hierarchy");
+//		debugAll();
 
         dragAndDrop = new DragAndDrop();
 
         tree = new VisTree<>();
+		//tree.debugAll();
         tree.setIndentSpacing(20f);
         tree.getSelection().setProgrammaticChangeEvents(false);
 
@@ -161,6 +162,7 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 
         public GObjectNode(GObject obj) {
             super(new VisTable());
+			//debugAll();
             setValue(obj);
 
             VisTable table = getActor();
@@ -197,9 +199,6 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 			});
 			// 修正策略：修改 ContextListener 的判定逻辑比修改这里更稳妥。
 			// 见下方 table 的 ContextListener 修改。
-
-			table.add(handle).right().padRight(10).width(20);
-
 			// [修改] 交互逻辑：排除手柄区域
 			table.addListener(new ContextListener() {
 				@Override public void onShowMenu(float stageX, float stageY) {

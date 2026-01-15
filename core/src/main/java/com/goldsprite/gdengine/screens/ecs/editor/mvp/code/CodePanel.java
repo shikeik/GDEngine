@@ -21,6 +21,11 @@ public class CodePanel extends EditorPanel {
 	private FileHandle currentFile;
 	private PathLabel fileInfoLabel;
 
+    // [新增] 引用 Save 按钮以便改色
+    private VisTextButton btnSave;
+    // [新增] 本地脏状态标记
+    private boolean isLocalDirty = false;
+
 	public CodePanel() {
 		super("Code");
 
@@ -42,11 +47,11 @@ public class CodePanel extends EditorPanel {
         // 使用 Value.percentWidth 限制宽度
         toolbar.add(fileInfoLabel).width(Value.percentWidth(0.5f, toolbar)).left().padLeft(5);
 
-        // 2. 占位符 (挤压右侧按钮)
+        // 1.1 占位符 (挤压右侧按钮)
         toolbar.add().expandX();
 
-        // 3. [新增] Save 按钮
-        VisTextButton btnSave = new VisTextButton("Save");
+        // 2. Save 按钮 [修改: 赋值给成员变量]
+        btnSave = new VisTextButton("Save");
         btnSave.addListener(new ClickListener() {
 				@Override public void clicked(InputEvent event, float x, float y) {
 					saveCurrentFile();
@@ -68,45 +73,83 @@ public class CodePanel extends EditorPanel {
         toolbar.add(btnMax).width(40).height(btnMax.getPrefHeight()).padRight(40); // 微调
 		
         contentTable.add(toolbar).growX().height(contentTable.getPrefHeight()).row();
-		
-		// 编辑器核心
-		codeEditor = new BioCodeEditor();
-		codeEditor.setOnSave(this::saveCurrentFile);
+
+        // 编辑器核心
+        codeEditor = new BioCodeEditor();
+        codeEditor.setOnSave(this::saveCurrentFile);
+
+        // [新增] 监听文字输入
+        codeEditor.setOnTextChanged(this::onContentModified);
 
 		addContent(codeEditor);
 	}
+	
+	// [新增] 内容被修改时的逻辑
+    private void onContentModified() {
+        if (!isLocalDirty && currentFile != null) {
+            isLocalDirty = true;
+            updateUIState();
+        }
+    }
+
+    // [新增] 统一更新 UI 状态
+    private void updateUIState() {
+        if (currentFile == null) return;
+
+        String path = currentFile.path();
+
+        if (isLocalDirty) {
+            // 变脏：加星号，颜色变橙/黄
+            fileInfoLabel.setText(path + " *"); // PathLabel 会自动处理截断，* 号会在末尾
+            fileInfoLabel.setColor(Color.ORANGE);
+            btnSave.setColor(Color.YELLOW);
+        } else {
+            // 干净：恢复原状
+            fileInfoLabel.setText(path);
+            fileInfoLabel.setColor(Color.CYAN);
+            btnSave.setColor(Color.WHITE);
+        }
+    }
 
 	public void openFile(FileHandle file) {
-		if (file == null || !file.exists() || file.isDirectory()) return;
+        if (file == null || !file.exists() || file.isDirectory()) return;
 
-		this.currentFile = file;
-		fileInfoLabel.setText(file.path());
-		fileInfoLabel.setColor(Color.CYAN);
+        this.currentFile = file;
 
-		// 读取内容
-		try {
-			String content = file.readString("UTF-8");
-			codeEditor.setText(content);
-		} catch (Exception e) {
-			com.goldsprite.gdengine.log.Debug.logT("Code", "Error reading file: " + e.getMessage());
-		}
-	}
+        // 读取内容
+        try {
+            String content = file.readString("UTF-8");
+            codeEditor.setText(content); // 这里会触发 ChangeListener
 
-	private void saveCurrentFile() {
-		if (currentFile != null) {
-			try {
-				currentFile.writeString(codeEditor.getText(), false, "UTF-8");
-				ToastUI.inst().show("Saved: " + currentFile.name());
+            // [关键] setText 会触发 changed 事件导致 isLocalDirty 变 true
+            // 所以我们需要在这里强制重置为 false
+            isLocalDirty = false;
+            updateUIState();
 
-				// [Fix] 解决 TODO: 触发脏状态，提示需要编译
-				EditorEvents.inst().emitCodeDirty();
+        } catch (Exception e) {
+            com.goldsprite.gdengine.log.Debug.logT("Code", "Error reading file: " + e.getMessage());
+        }
+    }
 
-			} catch (Exception e) {
-				ToastUI.inst().show("Save Failed!");
-				e.printStackTrace();
-			}
-		}
-	}
+    private void saveCurrentFile() {
+        if (currentFile != null) {
+            try {
+                currentFile.writeString(codeEditor.getText(), false, "UTF-8");
+                ToastUI.inst().show("Saved: " + currentFile.name());
+
+                // [修改] 保存成功，重置本地脏状态
+                isLocalDirty = false;
+                updateUIState();
+
+                // 触发全局编译脏状态 (通知 Toolbar Build 按钮变红)
+                EditorEvents.inst().emitCodeDirty();
+
+            } catch (Exception e) {
+                ToastUI.inst().show("Save Failed!");
+                e.printStackTrace();
+            }
+        }
+    }
 
 	// [新增] 公开保存接口
 	public void save() {

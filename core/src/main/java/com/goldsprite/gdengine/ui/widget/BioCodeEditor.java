@@ -37,6 +37,9 @@ public class BioCodeEditor extends VisTable {
 
 	private Runnable onSaveCallback;
 
+    // [新增] 内容变更回调
+    private Runnable onTextChangedCallback;
+
 	public BioCodeEditor() {
 		this(1f);
 	}
@@ -48,6 +51,11 @@ public class BioCodeEditor extends VisTable {
 	public void setOnSave(Runnable onSave) {
 		this.onSaveCallback = onSave;
 	}
+	
+	// [新增] 设置监听器
+    public void setOnTextChanged(Runnable onChange) {
+        this.onTextChangedCallback = onChange;
+    }
 
 	private void build(float baseFntScale) {
 		setBackground("window-bg");
@@ -128,6 +136,11 @@ public class BioCodeEditor extends VisTable {
 			public void changed(ChangeEvent event, Actor actor) {
 				updateLayoutAndLineNumbers();
 				scrollToCursor(); // 只要内容变了（换行、删除），就尝试跟随光标
+
+                // [新增] 通知外部内容变了
+                if (onTextChangedCallback != null) {
+                    onTextChangedCallback.run();
+                }
 			}
 		});
 

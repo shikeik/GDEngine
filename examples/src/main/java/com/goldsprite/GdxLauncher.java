@@ -17,7 +17,7 @@ import com.goldsprite.screens.ExampleSelectScreen;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.kotcrab.vis.ui.VisUI;
 
-public class GdxLauncher extends Game {int k29;
+public class GdxLauncher extends Game {int k59;
 	private IScriptCompiler scriptCompiler; // 去掉 final，允许后期注入
 	public SpriteBatch batch;
 	public Debug debug;
