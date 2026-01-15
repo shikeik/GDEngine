@@ -36,5 +36,7 @@ public abstract class RenderComponent extends Component {
 	 * @param y 世界坐标 Y
 	 * @return 是否包含该点
 	 */
-	public abstract boolean contains(float x, float y);
+	public boolean contains(float x, float y) {
+		return false; // 默认不响应点击
+	}
 }

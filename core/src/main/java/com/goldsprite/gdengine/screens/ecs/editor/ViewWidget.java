@@ -111,6 +111,15 @@ public class ViewWidget extends Widget {
 	public boolean isInViewport(int screenX, int screenY) {
 		Vector2 local = new Vector2(screenX, screenY);
 		this.screenToLocalCoordinates(local);
+		
+		// 1. Widget 自身边界判定 (必须在 ViewWidget 矩形内)
+		if (local.x < 0 || local.x > getWidth() || local.y < 0 || local.y > getHeight()) {
+			return false;
+		}
+
+		// 2. 绘制内容判定 (必须在 drawnImage 区域内)
+		// 注意：在 COVER 模式下，drawnImage 可能比 Widget 大，但我们已经通过第一步限制了只能点 Widget 内部
+		// 只有在 FIT 模式下，drawnImage 小于 Widget (有黑边)，这步判定才有实际裁剪意义
 		return local.x >= drawnImageX && local.x <= drawnImageX + drawnImageW &&
 				local.y >= drawnImageY && local.y <= drawnImageY + drawnImageH;
 	}

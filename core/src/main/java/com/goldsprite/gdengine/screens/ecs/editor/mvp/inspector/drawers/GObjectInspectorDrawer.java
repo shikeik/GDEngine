@@ -34,6 +34,9 @@ public class GObjectInspectorDrawer implements IInspectorDrawer<GObject> {
         metaContainer.add(new VisLabel("Name:")).left().padLeft(5);
         metaContainer.add(new SmartTextInput(null, selection.getName(), v -> {
             selection.setName(v);
+            // 实时更新数据，但不刷新 UI 结构，防止丢失焦点
+        }, v -> {
+            // 失去焦点或回车确认时，才触发结构刷新
             EditorEvents.inst().emitStructureChanged();
         })).growX().padRight(5).row();
 
