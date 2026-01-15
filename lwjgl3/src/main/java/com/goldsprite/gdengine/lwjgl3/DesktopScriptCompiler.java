@@ -60,7 +60,7 @@ public class DesktopScriptCompiler implements IScriptCompiler {
 			// 3. 准备输出目录
 			File outputDir = new File(cacheDir, "classes");
 			// 这里必须清掉, 否则 project.index会有遗留导致错误信息
-			outputDir.delete();
+			if(outputDir.exists()) deleteRecursive(outputDir);
 			if (!outputDir.exists()) outputDir.mkdirs();
 
 			// 4. 构建 Classpath
@@ -160,5 +160,17 @@ public class DesktopScriptCompiler implements IScriptCompiler {
 			if (f.isDirectory()) recursiveFindJavaFiles(f, list);
 			else if (f.getName().endsWith(".java")) list.add(f);
 		}
+	}
+
+	private void deleteRecursive(File file) {
+		if (file.isDirectory()) {
+			File[] children = file.listFiles();
+			if (children != null) {
+				for (File c : children) {
+					deleteRecursive(c);
+				}
+			}
+		}
+		file.delete();
 	}
 }

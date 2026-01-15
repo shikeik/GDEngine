@@ -16,7 +16,7 @@ ignored: indentFix codeFormatFix
 - [x] 主界面GDEngineEditor屏加回来，还需要他，主编辑器场景logUi也还需要显示info
 - [ ] RunGame按钮需要继续跳转实机场景
 - [ ] gizmo操作应只响应单指，双指忽略，否则会乱跳
-- [ ] SpriteComp不知道为什么不能显示图像，看一下代码链并修复
+- [x] SpriteComp不知道为什么不能显示图像，看一下代码链并修复: 因为游戏相机大小为0所以图像大小也为0
 
 
 

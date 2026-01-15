@@ -108,6 +108,13 @@ public class ViewWidget extends Widget {
 		return local.set(fboPixelX, fboPixelY); // 复用 Vector2 返回
 	}
 
+	public boolean isInViewport(int screenX, int screenY) {
+		Vector2 local = new Vector2(screenX, screenY);
+		this.screenToLocalCoordinates(local);
+		return local.x >= drawnImageX && local.x <= drawnImageX + drawnImageW &&
+				local.y >= drawnImageY && local.y <= drawnImageY + drawnImageH;
+	}
+
 	/**
 	 * [修改后] 原有的 screenToWorld 现在复用上面的逻辑
 	 * 增加参数 OrthographicCamera: 直接使用相机进行坐标转换

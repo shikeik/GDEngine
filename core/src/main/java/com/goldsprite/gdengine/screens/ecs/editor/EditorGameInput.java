@@ -22,6 +22,13 @@ public class EditorGameInput implements Input {
 		this.isTouched = touched;
 	}
 
+	/**
+	 * 判断当前输入是否在视口区域内 (核心过滤逻辑)
+	 */
+	private boolean shouldProcessInput() {
+		return widget.isInViewport(Gdx.input.getX(), Gdx.input.getY());
+	}
+
 	// --- 核心拦截逻辑：坐标映射 ---
 
 	@Override
@@ -49,9 +56,9 @@ public class EditorGameInput implements Input {
 
 	// --- 其他 Input 接口透传 ---
 
-	@Override public boolean isTouched() { return isTouched || Gdx.input.isTouched(); }
-	@Override public boolean isTouched(int pointer) { return Gdx.input.isTouched(pointer); }
-	@Override public boolean justTouched() { return Gdx.input.justTouched(); }
+	@Override public boolean isTouched() { return shouldProcessInput() && (isTouched || Gdx.input.isTouched()); }
+	@Override public boolean isTouched(int pointer) { return shouldProcessInput() && Gdx.input.isTouched(pointer); }
+	@Override public boolean justTouched() { return shouldProcessInput() && Gdx.input.justTouched(); }
 	@Override public InputProcessor getInputProcessor() { return processor; }
 	@Override public void setInputProcessor(InputProcessor processor) { this.processor = processor; }
 	@Override public boolean isPeripheralAvailable(Peripheral peripheral) { return false; }
@@ -66,10 +73,10 @@ public class EditorGameInput implements Input {
 	@Override public int getDeltaY() { return Gdx.input.getDeltaY(); }
 	@Override public int getDeltaY(int pointer) { return Gdx.input.getDeltaY(pointer); }
 
-	@Override public boolean isButtonPressed(int button) { return Gdx.input.isButtonPressed(button); }
-	@Override public boolean isButtonJustPressed(int button) { return Gdx.input.isButtonJustPressed(button); }
-	@Override public boolean isKeyPressed(int key) { return Gdx.input.isKeyPressed(key); }
-	@Override public boolean isKeyJustPressed(int key) { return Gdx.input.isKeyJustPressed(key); }
+	@Override public boolean isButtonPressed(int button) { return shouldProcessInput() && Gdx.input.isButtonPressed(button); }
+	@Override public boolean isButtonJustPressed(int button) { return shouldProcessInput() && Gdx.input.isButtonJustPressed(button); }
+	@Override public boolean isKeyPressed(int key) { return shouldProcessInput() && Gdx.input.isKeyPressed(key); }
+	@Override public boolean isKeyJustPressed(int key) { return shouldProcessInput() && Gdx.input.isKeyJustPressed(key); }
 
 	@Override public void getTextInput(TextInputListener listener, String title, String text, String hint) { Gdx.input.getTextInput(listener, title, text, hint); }
 	@Override public void getTextInput(TextInputListener listener, String title, String text, String hint, OnscreenKeyboardType type) { Gdx.input.getTextInput(listener, title, text, hint, type); }
