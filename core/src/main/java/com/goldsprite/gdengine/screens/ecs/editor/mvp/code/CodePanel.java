@@ -6,15 +6,14 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorEvents;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
 import com.goldsprite.gdengine.ui.widget.BioCodeEditor;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
-import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.goldsprite.gdengine.ui.widget.PathLabel;
+import com.badlogic.gdx.scenes.scene2d.ui.Value;
 
 public class CodePanel extends EditorPanel {
 
@@ -29,31 +28,47 @@ public class CodePanel extends EditorPanel {
 		setBackground((com.badlogic.gdx.scenes.scene2d.utils.Drawable)null);
 		pad(0);
 		contentTable.pad(0); // 确保内容容器也没有 Padding
+		top();
+		defaults().top();
 
 		// --- 顶部工具栏容器 (嵌入在编辑器顶部) ---
 		VisTable toolbar = new VisTable();
 		toolbar.setBackground("button"); // 给工具栏单独加个深色背景区分
 
-		// 1. 文件信息
-		fileInfoLabel = new PathLabel("No file open");
-		fileInfoLabel.setColor(Color.GRAY);
-		toolbar.add(fileInfoLabel).minWidth(0).growX().left().padLeft(5); // 左侧留点空隙
 
-		// 2. 全屏切换按钮
-		VisTextButton btnMax = new VisTextButton("[ ]");
-		btnMax.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				EditorEvents.inst().emitToggleMaximizeCode();
-				if (btnMax.getText().toString().equals("[ ]")) btnMax.setText("><");
-				else btnMax.setText("[ ]");
-			}
-		});
-		toolbar.add(btnMax).width(30).height(25); // 紧贴右边，不要 padRight
+        // 1. Path Label [修改]：只占 1/2 宽度
+        fileInfoLabel = new PathLabel("No file open");
+        fileInfoLabel.setColor(Color.GRAY);
+        // 使用 Value.percentWidth 限制宽度
+        toolbar.add(fileInfoLabel).width(Value.percentWidth(0.5f, toolbar)).left().padLeft(5);
 
-		// 添加工具栏到顶部
-		contentTable.add(toolbar).growX().height(26).row();
+        // 2. 占位符 (挤压右侧按钮)
+        toolbar.add().expandX();
 
+        // 3. [新增] Save 按钮
+        VisTextButton btnSave = new VisTextButton("Save");
+        btnSave.addListener(new ClickListener() {
+				@Override public void clicked(InputEvent event, float x, float y) {
+					saveCurrentFile();
+				}
+			});
+        toolbar.add(btnSave).padRight(5);
+
+        // 4. Maximize 按钮
+        VisTextButton btnMax = new VisTextButton("[ ]");
+        btnMax.addListener(new ClickListener() {
+				@Override
+				public void clicked(InputEvent event, float x, float y) {
+					com.goldsprite.gdengine.log.Debug.log("click []扩展按钮");
+					EditorEvents.inst().emitToggleMaximizeCode();
+					if (btnMax.getText().toString().equals("[ ]")) btnMax.setText("><");
+					else btnMax.setText("[ ]");
+				}
+			});
+        toolbar.add(btnMax).width(40).height(btnMax.getPrefHeight()).padRight(40); // 微调
+		
+        contentTable.add(toolbar).growX().height(contentTable.getPrefHeight()).row();
+		
 		// 编辑器核心
 		codeEditor = new BioCodeEditor();
 		codeEditor.setOnSave(this::saveCurrentFile);

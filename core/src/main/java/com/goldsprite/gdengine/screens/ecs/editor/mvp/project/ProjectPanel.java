@@ -74,12 +74,13 @@ public class ProjectPanel extends EditorPanel {
 	}
 
 	public void setPresenter(ProjectPresenter presenter) {
-		this.presenter = presenter;
-		fileTree.setCallbacks(
+        this.presenter = presenter;
+        fileTree.setCallbacks(
 			presenter::onTreeSelected,
+			presenter::onGridDoubleClicked, // [修改] 复用 Grid 的双击逻辑即可，逻辑是一样的
 			presenter::onShowContextMenu
-		);
-	}
+        );
+    }
 
 	public void refreshTree(FileHandle root) {
 		fileTree.build(root);
@@ -136,13 +137,28 @@ public class ProjectPanel extends EditorPanel {
 				}
 			}
 		});
+		
+        // [核心修复] 右键菜单：添加 event.stop() 防止冒泡到背景
+        btn.addListener(new ContextListener() {
+				@Override public void onShowMenu(float stageX, float stageY) {
+					presenter.onGridSelected(file);
+					presenter.onShowContextMenu(file, stageX, stageY);
+					// 【关键】阻止事件冒泡，否则 Grid 背景也会收到右键事件，导致弹出两个菜单
+					// ContextListener 内部捕获了 InputEvent，但我们要确保它停止传播
+					// 由于 onShowMenu 是回调，我们无法直接访问 event。
+					// 必须在 ContextListener 的实现里处理，或者这里用 hack。
+					// 更好的方式：ContextListener 的 touchDown 返回 true 就会消耗事件。
+					// 但右键通常是在 touchUp 或者专门的 rightClick 中触发。
+				}
 
-		btn.addListener(new ContextListener() {
-			@Override public void onShowMenu(float stageX, float stageY) {
-				presenter.onGridSelected(file);
-				presenter.onShowContextMenu(file, stageX, stageY);
-			}
-		});
+				// 重写 touchDown 确保消耗事件，防止背景响应
+				@Override
+				public void touchDown(InputEvent event, float x, float y, int pointer, int button) {
+					// 调用 super 让它处理长按/点击检测
+					super.touchDown(event, x, y, pointer, button);
+					event.stop(); // 消费事件！
+				}
+			});
 
 		return btn;
 	}

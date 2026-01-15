@@ -292,32 +292,40 @@ public class EditorController {
 		stage.addActor(new ToastUI());
 	}
 
-	// [新增] 核心布局切换逻辑
 	private void toggleCodeMaximize() {
-		isCodeMaximized = !isCodeMaximized;
+        isCodeMaximized = !isCodeMaximized;
+		Debug.log("toggleCodeMaximize %s", isCodeMaximized);
 
-		if (isCodeMaximized) {
-			// 进入独占模式
-			// 1. 隐藏右侧 Inspector (Split -> 1.0)
-			rootSplit.setSplitAmount(1.0f);
+        if (isCodeMaximized) {
+			Debug.log("进入独占");
+            // [进入独占模式]
 
-			// 2. 隐藏底部 Project/Console (Split -> 1.0, 因为是 vertical split, 1.0 意味着上面占满)
-			leftMainSplit.setSplitAmount(1.0f);
+            // 1. 隐藏右侧 Inspector (Split -> 1.0)
+            rootSplit.setSplitAmount(1.0f);
 
-			// 3. 隐藏左侧 Hierarchy (Split -> 0.0)
-			topSectionSplit.setSplitAmount(0.0f);
+            // 2. [修改] 保持底部 Project/Console 可见，不修改 leftMainSplit
+            // leftMainSplit.setSplitAmount(1.0f); // 删掉这行
 
-			// 4. 确保 CenterTabs 切换到 Code 页面
-			centerTabs.getTabbedPane().switchTab(1);
+            // 3. 隐藏左侧 Hierarchy (Split -> 0.0)
+            topSectionSplit.setSplitAmount(0.0f);
 
-			ToastUI.inst().show("Code View Maximized");
-		} else {
-			// 恢复默认布局
-			rootSplit.setSplitAmount(0.8f);
-			leftMainSplit.setSplitAmount(0.7f);
-			topSectionSplit.setSplitAmount(0.2f);
-		}
-	}
+            // 4. 确保切到 Code
+            centerTabs.getTabbedPane().switchTab(1); 
+
+            ToastUI.inst().show("Code View Expanded");
+        } else {
+			Debug.log("恢复 取消独占");
+            // [恢复模式]
+            // 这里恢复到硬编码的默认值。
+            // 进阶做法是记录之前的 splitAmount，但硬编码更稳健，防止恢复到奇怪的状态
+
+            rootSplit.setSplitAmount(0.8f);     // 恢复右侧
+            topSectionSplit.setSplitAmount(0.2f); // 恢复左侧
+
+            // leftMainSplit 之前没动，这里也不用动，或者强制复位一下以防万一
+            leftMainSplit.setSplitAmount(0.7f);
+        }
+    }
 
 	private VisTable createTopToolbar() {
 		VisTable bar = new VisTable();

@@ -1,14 +1,14 @@
 package com.goldsprite.gdengine.ui.widget;
 
 import com.badlogic.gdx.files.FileHandle;
-	import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.ui.event.ContextListener;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTree;
-
 import java.util.Arrays;
 import java.util.function.Consumer;
 
@@ -20,6 +20,8 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
     private Consumer<FileHandle> onFileSelected;
     private ContextMenuProvider contextMenuProvider;
 
+    private Consumer<FileHandle> onDoubleClicked; // [新增]
+	
     public interface ContextMenuProvider {
         void showMenu(FileHandle file, float x, float y);
     }
@@ -41,8 +43,10 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
         });
     }
 
-    public void setCallbacks(Consumer<FileHandle> onSelect, ContextMenuProvider menuProvider) {
+    // [修改] 扩展回调接口
+    public void setCallbacks(Consumer<FileHandle> onSelect, Consumer<FileHandle> onDoubleClick, ContextMenuProvider menuProvider) {
         this.onFileSelected = onSelect;
+        this.onDoubleClicked = onDoubleClick; // [新增]
         this.contextMenuProvider = menuProvider;
     }
 
@@ -77,6 +81,16 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
             FileNode node = new FileNode(file);
             parentNode.add(node);
 
+            // [新增] 双击监听
+            node.getActor().addListener(new ClickListener() {
+					@Override
+					public void clicked(InputEvent event, float x, float y) {
+						if (getTapCount() == 2 && onDoubleClicked != null) {
+							onDoubleClicked.accept(file);
+						}
+					}
+				});
+			
             // 右键菜单
             node.getActor().addListener(new ContextListener() {
                 @Override
