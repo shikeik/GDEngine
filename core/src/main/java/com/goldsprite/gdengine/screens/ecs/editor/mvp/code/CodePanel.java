@@ -14,12 +14,13 @@ import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.goldsprite.gdengine.ui.widget.PathLabel;
 
 public class CodePanel extends EditorPanel {
 
 	private BioCodeEditor codeEditor;
 	private FileHandle currentFile;
-	private VisLabel fileInfoLabel;
+	private PathLabel fileInfoLabel;
 
 	public CodePanel() {
 		super("Code");
@@ -34,9 +35,9 @@ public class CodePanel extends EditorPanel {
 		toolbar.setBackground("button"); // 给工具栏单独加个深色背景区分
 
 		// 1. 文件信息
-		fileInfoLabel = new VisLabel("No file open");
+		fileInfoLabel = new PathLabel("No file open");
 		fileInfoLabel.setColor(Color.GRAY);
-		toolbar.add(fileInfoLabel).expandX().left().padLeft(5); // 左侧留点空隙
+		toolbar.add(fileInfoLabel).minWidth(0).growX().left().padLeft(5); // 左侧留点空隙
 
 		// 2. 全屏切换按钮
 		VisTextButton btnMax = new VisTextButton("[ ]");

@@ -27,6 +27,9 @@ public abstract class EditorPanel extends VisTable {
 	protected boolean hasFocus = false;
 	private final Drawable whitePixel;
 
+	// --- 静态焦点管理器 ---
+	private static EditorPanel currentActivePanel = null;
+
     public EditorPanel(String title) {
         setBackground("window-bg");
 
@@ -65,47 +68,95 @@ public abstract class EditorPanel extends VisTable {
 
 	private void setupFocusListener() {
 		addListener(new InputListener() {
-			@Override
-			public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
-				// 过滤点击，只处理移动
-				if (pointer != -1) return;
-
-				// 鼠标进入：视觉高亮
-				hasFocus = true;
-
-				if (getStage() != null) {
-					// [核心修改] 自动查找肚子里的 ScrollPane
-					ScrollPane target = findChildScrollPane(EditorPanel.this);
-					if (target != null) {
-						// 找到了才设置焦点
-						getStage().setScrollFocus(target);
-//						 com.goldsprite.gdengine.log.Debug.log("自动获取滚轮焦点: " + target);
+				// [适配 PC]: 鼠标移入自动获取焦点
+				@Override
+				public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
+					// pointer == -1 表示纯鼠标移动
+					if (pointer == -1) {
+						requestFocus(EditorPanel.this);
 					}
 				}
-			}
 
-			@Override
-			public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
-				// 1. 过滤点击
-				if (pointer != -1) return;
+				// [适配 手机/PC]: 点击/触摸按下瞬间获取焦点
+				@Override
+				public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+					// 只要点到了这个 Panel 范围内，就请求焦点
+					requestFocus(EditorPanel.this);
 
-				// 2. 过滤子组件：如果鼠标移到了子组件上（包括那个 ScrollPane），不要触发退出
-				if (toActor != null && toActor.isDescendantOf(EditorPanel.this)) {
-					return;
+					// 返回 false，表示我们只监听“被点到了”这件事，
+					// 不消耗事件，让事件继续传递给子控件（比如里面的按钮、列表项）
+					return false; 
 				}
 
-				// 鼠标真正离开：取消高亮
-				hasFocus = false;
+				// [修改]: exit 方法现在主要用于 PC 移出时自动取消（可选）
+				// 手机端通常没有 "移出" 的概念，除非是滑出去了。
+				// 策略：手机端不通过 exit 取消，只通过“点击别的”来取消。
+				// PC端：如果你希望鼠标移开就取消焦点，保留下面逻辑；
+				// 如果希望 PC 端也是“点击锁定焦点”，则删掉 exit 逻辑。
+				@Override
+				public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
+					if (pointer == -1) { // PC 鼠标移出
+						// 只有当移出的目标不是自己的子控件时，才放弃焦点
+						if (toActor == null || !toActor.isDescendantOf(EditorPanel.this)) {
+							// PC端行为选择：
+							// 选项A (保持现状)：移出即失去焦点 -> requestFocus(null);
+							// 选项B (像手机一样)：移出不失去，直到点别的 -> 什么都不写
 
-				// [核心修改] 智能释放焦点
-				// 如果当前的 scrollFocus 是我自己或者我的子孙，说明是我刚才抢的，现在要释放
-				Actor currentFocus = getStage() != null ? getStage().getScrollFocus() : null;
-				if (currentFocus != null && currentFocus.isDescendantOf(EditorPanel.this)) {
+							// 这里保留你原本的逻辑 (选项A):
+							requestFocus(null); 
+						}
+					}
+				}
+			});
+	}
+	
+	// 请求成为焦点（抢占逻辑）
+	public static void requestFocus(EditorPanel panel) {
+		// 如果已经是自己，啥都不做 (或者根据需求刷新一下)
+		if (currentActivePanel == panel) return;
+
+		// 1. 让旧的失去焦点
+		if (currentActivePanel != null) {
+			currentActivePanel.setFocusState(false);
+		}
+
+		// 2. 更新记录
+		currentActivePanel = panel;
+
+		// 3. 让新的获取焦点
+		if (currentActivePanel != null) {
+			currentActivePanel.setFocusState(true);
+		}
+	}
+	
+	// 供外部调用：清空所有焦点（比如点到了背景空白处）
+	public static void clearAllFocus() {
+		requestFocus(null);
+	}
+	
+	// --- 实例方法：执行具体的视觉/逻辑变化 ---
+	private void setFocusState(boolean active) {
+		this.hasFocus = active;
+
+		if (active) {
+			// 获得焦点：视觉高亮 + 滚轮接管
+			if (getStage() != null) {
+				ScrollPane target = findChildScrollPane(this);
+				if (target != null) {
+					getStage().setScrollFocus(target);
+				}
+			}
+		} else {
+			// 失去焦点：取消高亮 + 释放滚轮
+			// 注意：只有当 Stage 的 ScrollFocus 确实是自己内部那个 ScrollPane 时才清空
+			// 防止把别的地方抢过去的焦点给清了
+			if (getStage() != null) {
+				Actor currentScroll = getStage().getScrollFocus();
+				if (currentScroll != null && currentScroll.isDescendantOf(this)) {
 					getStage().setScrollFocus(null);
-//					 com.goldsprite.gdengine.log.Debug.log("自动释放滚轮焦点");
 				}
 			}
-		});
+		}
 	}
 
 	// [新增] 绘制高亮边框

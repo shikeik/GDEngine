@@ -52,6 +52,7 @@ import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisSplitPane;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.badlogic.gdx.utils.ScreenUtils;
 
 public class EditorController {
 	private FileHandle currentProj;
@@ -116,7 +117,7 @@ public class EditorController {
 		if (!VisUI.isLoaded()) VisUI.load();
 
 		// 1. 初始化 Stage (UI)
-		float scl = PlatformImpl.isAndroidUser() ? 1.3f : 2.0f;
+		float scl = PlatformImpl.isAndroidUser() ? 1.65f : 2.1f;
 		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
 
 		// 2. 加载项目上下文
@@ -236,10 +237,10 @@ public class EditorController {
 		setupDragAndDrop();
 	}
 
+	float[] safePad = {20, 40, 20, 20}; // 上左下右
 	// [核心重构] 布局构建
 	private void buildLayout() {
 		VisTable root = new VisTable();
-		root.setFillParent(true);
 		root.setBackground("window-bg");
 
 		// --- 1. Top Toolbar (New) ---
@@ -249,7 +250,7 @@ public class EditorController {
 		// --- 2. Center Area (Preview & Code) ---
 		// Tab 1: Preview (Split: Scene | Game)
 		Stack previewStack = new Stack();
-		VisSplitPane previewSplit = new VisSplitPane(scenePanel, gamePanel, true);
+		VisSplitPane previewSplit = new VisSplitPane(scenePanel, gamePanel, false); // 是否竖排列
 		previewSplit.setSplitAmount(0.5f);
 		previewStack.add(previewSplit);
 
@@ -282,7 +283,12 @@ public class EditorController {
 		rootSplit.setSplitAmount(0.8f);
 
 		root.add(rootSplit).grow();
-		stage.addActor(root);
+		
+		VisTable rootWrap = new VisTable();
+		rootWrap.setFillParent(true);
+		rootWrap.add(root).pad(safePad[0], safePad[1], safePad[2], safePad[3]).grow();
+		stage.addActor(rootWrap);
+		
 		stage.addActor(new ToastUI());
 	}
 
@@ -773,6 +779,7 @@ public class EditorController {
 		scenePresenter.update(delta);
 		gamePresenter.update(delta);
 
+		ScreenUtils.clear(Color.LIGHT_GRAY);
 		// 3. UI 渲染
 		stage.act(delta);
 		stage.draw();
