@@ -56,7 +56,7 @@ public class GamePanel extends EditorPanel {
 		});
 
 		overlay.add(modeBox).pad(5);
-		overlay.add(btnMax).pad(5);
+		overlay.add(btnMax).pad(5).padRight(15);
 		stack.add(overlay);
 
 		addContent(stack);

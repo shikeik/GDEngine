@@ -102,7 +102,23 @@ public class EditorController {
 	// [新增] 引用 Build 按钮以便改色
 	private VisTextButton btnBuild;
 
-	private VisLabel statusLabel; // [新增] 状态标签
+	// [新增] 状态标签
+	private VisLabel statusLabel;
+
+	// [新增] 布局配置
+	private static class LayoutConfig {
+		float rootSplit = 0.8f;
+		float leftMainSplit = 0.7f;
+		float topSectionSplit = 0.2f;
+		float previewSplit = 0.5f;
+
+		public static LayoutConfig createDefault() {
+			return new LayoutConfig();
+		}
+	}
+
+	private final LayoutConfig defaultLayout = LayoutConfig.createDefault();
+	private LayoutConfig currentLayout = LayoutConfig.createDefault();
 
 	// [新增]
 	private EditorState currentEditorState = EditorState.CLEAN;
@@ -253,7 +269,7 @@ public class EditorController {
 		// Tab 1: Preview (Split: Scene | Game)
 		Stack previewStack = new Stack();
 		previewSplit = new VisSplitPane(scenePanel, gamePanel, false); // 是否竖排列
-		previewSplit.setSplitAmount(0.5f);
+		previewSplit.setSplitAmount(defaultLayout.previewSplit);
 		previewStack.add(previewSplit);
 
 		// SmartTabPane: [Preview] [Code]
@@ -265,7 +281,7 @@ public class EditorController {
 		// --- 3. Top Split: Hierarchy (Left) | CenterTabs (Right) ---
 		// [修改] 赋值给成员变量
 		topSectionSplit = new VisSplitPane(hierarchyPanel, centerTabs, false);
-		topSectionSplit.setSplitAmount(0.2f);
+		topSectionSplit.setSplitAmount(defaultLayout.topSectionSplit);
 
 		// --- 4. Bottom Tabs: Project & Console ---
 		// [修改] 赋值给成员变量
@@ -277,12 +293,12 @@ public class EditorController {
 		// --- 5. Main Left Split: Top Section / Bottom Tabs ---
 		// [修改] 赋值给成员变量
 		leftMainSplit = new VisSplitPane(topSectionSplit, bottomTabs, true);
-		leftMainSplit.setSplitAmount(0.7f);
+		leftMainSplit.setSplitAmount(defaultLayout.leftMainSplit);
 
 		// --- 6. Root Split: LeftMain | Inspector (Right) ---
 		// [修改] 赋值给成员变量
 		rootSplit = new VisSplitPane(leftMainSplit, inspectorPanel, false);
-		rootSplit.setSplitAmount(0.8f);
+		rootSplit.setSplitAmount(defaultLayout.rootSplit);
 
 		root.add(rootSplit).grow();
 
@@ -293,40 +309,52 @@ public class EditorController {
 		stage.addActor(rootWrap);
 	}
 
+	private void applyLayout(LayoutConfig config) {
+		if (rootSplit != null) {
+			rootSplit.setSplitAmount(config.rootSplit);
+			if (inspectorPanel != null) inspectorPanel.setVisible(config.rootSplit < 1.0f);
+		}
+		if (leftMainSplit != null) {
+			leftMainSplit.setSplitAmount(config.leftMainSplit);
+			if (bottomTabs != null) bottomTabs.setVisible(config.leftMainSplit < 1.0f);
+		}
+		if (topSectionSplit != null) {
+			topSectionSplit.setSplitAmount(config.topSectionSplit);
+			if (hierarchyPanel != null) hierarchyPanel.setVisible(config.topSectionSplit > 0.0f);
+		}
+		if (previewSplit != null) {
+			previewSplit.setSplitAmount(config.previewSplit);
+			if (scenePanel != null) scenePanel.setVisible(config.previewSplit > 0.0f);
+		}
+	}
+
 	private void toggleCodeMaximize() {
-        isCodeMaximized = !isCodeMaximized;
+		isCodeMaximized = !isCodeMaximized;
 		Debug.log("toggleCodeMaximize %s", isCodeMaximized);
 
-        if (isCodeMaximized) {
+		if (isCodeMaximized) {
 			Debug.log("进入独占");
-            // [进入独占模式]
+			// [进入独占模式]
+			LayoutConfig maxConfig = new LayoutConfig();
+			// 1. 隐藏右侧 Inspector (Split -> 1.0)
+			maxConfig.rootSplit = 1.0f;
+			// 2. 保持底部 Project/Console 可见 (使用默认值)
+			maxConfig.leftMainSplit = defaultLayout.leftMainSplit;
+			// 3. 隐藏左侧 Hierarchy (Split -> 0.0)
+			maxConfig.topSectionSplit = 0.0f;
+			// 4. Preview 不需要变，因为切到 Code Tab 了
+			maxConfig.previewSplit = defaultLayout.previewSplit;
 
-            // 1. 隐藏右侧 Inspector (Split -> 1.0)
-            rootSplit.setSplitAmount(1.0f);
+			applyLayout(maxConfig);
 
-            // 2. [修改] 保持底部 Project/Console 可见，不修改 leftMainSplit
-            // leftMainSplit.setSplitAmount(1.0f); // 删掉这行
-
-            // 3. 隐藏左侧 Hierarchy (Split -> 0.0)
-            topSectionSplit.setSplitAmount(0.0f);
-
-            // 4. 确保切到 Code
-            centerTabs.getTabbedPane().switchTab(1);
-
-            ToastUI.inst().show("Code View Expanded");
-        } else {
+			// 确保切到 Code
+			centerTabs.getTabbedPane().switchTab(1);
+			ToastUI.inst().show("Code View Expanded");
+		} else {
 			Debug.log("恢复 取消独占");
-            // [恢复模式]
-            // 这里恢复到硬编码的默认值。
-            // 进阶做法是记录之前的 splitAmount，但硬编码更稳健，防止恢复到奇怪的状态
-
-            rootSplit.setSplitAmount(0.8f);     // 恢复右侧
-            topSectionSplit.setSplitAmount(0.2f); // 恢复左侧
-
-            // leftMainSplit 之前没动，这里也不用动，或者强制复位一下以防万一
-            leftMainSplit.setSplitAmount(0.7f);
-        }
-    }
+			applyLayout(defaultLayout);
+		}
+	}
 
 	private void toggleGameMaximize() {
 		isGameMaximized = !isGameMaximized;
@@ -334,32 +362,24 @@ public class EditorController {
 
 		if (isGameMaximized) {
 			Debug.log("进入游戏独占");
+			LayoutConfig maxConfig = new LayoutConfig();
 			// 1. Hide Inspector (Right)
-			if (rootSplit != null) rootSplit.setSplitAmount(1.0f);
+			maxConfig.rootSplit = 1.0f;
+			// 2. Hide Bottom (Console/Project) -> Top full
+			maxConfig.leftMainSplit = 1.0f;
+			// 3. Hide Hierarchy (Left) -> CenterTabs full
+			maxConfig.topSectionSplit = 0.0f;
+			// 4. Hide Scene (Left of Preview) -> Game full
+			maxConfig.previewSplit = 0.0f;
 
-			// 2. Hide Bottom (Console/Project)
-			// leftMainSplit: Top | Bottom. 1.0f means split at bottom -> Top full.
-			if (leftMainSplit != null) leftMainSplit.setSplitAmount(1.0f);
-
-			// 3. Hide Hierarchy (Left)
-			// topSectionSplit: Hierarchy | CenterTabs. 0.0f means split at left -> CenterTabs full.
-			if (topSectionSplit != null) topSectionSplit.setSplitAmount(0.0f);
-
-			// 4. Hide Scene (Left of Preview)
-			// previewSplit: Scene | Game. 0.0f means split at left -> Game full.
-			if (previewSplit != null) previewSplit.setSplitAmount(0.0f);
+			applyLayout(maxConfig);
 
 			// 5. Ensure Preview Tab is selected
 			if (centerTabs != null) centerTabs.getTabbedPane().switchTab(0);
-
 			ToastUI.inst().show("Game View Expanded");
 		} else {
 			Debug.log("恢复 游戏独占");
-			// Restore to default/hardcoded values
-			if (rootSplit != null) rootSplit.setSplitAmount(0.8f);
-			if (leftMainSplit != null) leftMainSplit.setSplitAmount(0.7f);
-			if (topSectionSplit != null) topSectionSplit.setSplitAmount(0.2f);
-			if (previewSplit != null) previewSplit.setSplitAmount(0.5f);
+			applyLayout(defaultLayout);
 		}
 	}
 

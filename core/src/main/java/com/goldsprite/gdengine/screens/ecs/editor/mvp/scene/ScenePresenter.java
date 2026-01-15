@@ -191,6 +191,8 @@ public class ScenePresenter {
 
 		@Override
 		public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+			// [Fix] Gizmo 操作只响应单指 (pointer == 0)
+			// 同时忽略右键和中键
 			if (pointer > 0 || button == Input.Buttons.RIGHT || button == Input.Buttons.MIDDLE) return false;
 			if (!view.isMouseOver()) return false;
 
@@ -245,6 +247,8 @@ public class ScenePresenter {
 
 		@Override
 		public boolean touchDragged(int screenX, int screenY, int pointer) {
+			// [Fix] 严格限制拖拽只响应主指针 (pointer 0)
+			if (pointer > 0) return false;
 			if (currentDragMode == DragMode.NONE || sceneManager.getSelection() == null) return false;
 
 			Vector2 wPos = view.screenToWorld(screenX, screenY, camera);
@@ -263,6 +267,9 @@ public class ScenePresenter {
 
 		@Override
 		public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+			// [Fix] 严格限制抬起只响应主指针 (pointer 0)
+			// 否则如果多指同时操作，第二根手指抬起可能会意外中断主指的拖拽
+			if (pointer > 0) return false;
 			if (currentDragMode != DragMode.NONE) {
 				currentDragMode = DragMode.NONE;
 				gizmoSystem.activeHandle = EditorGizmoSystem.HANDLE_NONE;

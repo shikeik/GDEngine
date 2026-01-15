@@ -7,15 +7,9 @@ ignored: indentFix codeFormatFix
 - [x] ToastUI闪退bug
 - [x] 改全横屏
 - [x] pc不需要安全区域padding
-- [ ] game的独占
-- [ ] 考虑编辑器新布局，收起式侧栏+多级菜单+单预览视图
-- [ ] android异常捕获界面增加复制按钮
-- [ ] 游戏内logUI文本增加长按复制功能
-- [ ] GameView增加[ ]按钮切换独占与取消状态, (需要预先定义各面板分割参数来重置为取消)
-- [ ] RenderComp增加contains默认实现为sprite大小矩形, 无宽高则默认50x
+- [x] GameView增加[ ]按钮切换独占与取消状态, (需要预先定义各面板分割参数来重置为取消)
 - [x] 主界面GDEngineEditor屏加回来，还需要他，主编辑器场景logUi也还需要显示info
-- [ ] RunGame按钮需要继续跳转实机场景
-- [ ] gizmo操作应只响应单指，双指忽略，否则会乱跳
+- [x] gizmo操作应只响应单指，双指忽略，否则会乱跳
 - [x] SpriteComp不知道为什么不能显示图像，看一下代码链并修复: 因为游戏相机大小为0所以图像大小也为0
 
 
@@ -35,6 +29,11 @@ ignored: indentFix codeFormatFix
 - - [ ] (标准化可以解决)assets/下gd_icon.png老是提示没有, 这块之后应该做一个公用的默认资源目录, 在创建脚本项目时自动复制到项目资源目录中, 或者就简单的复制一张gd_icon.png进去也行
 
 
+- [ ] 考虑编辑器新布局，收起式侧栏+多级菜单+单预览视图
+- [ ] android异常捕获界面增加复制按钮
+- [ ] 游戏内logUI文本增加长按复制功能
+- [ ] RenderComp增加contains默认实现为sprite大小矩形, 无宽高则默认50x
+- [ ] RunGame按钮需要继续跳转实机场景
 
 
 #### 大项功能
