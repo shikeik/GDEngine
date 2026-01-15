@@ -1,0 +1,193 @@
+// ============================================================
+// GDEngine 自动化构建与任务管理
+// 包含: 模板同步, 资源清单生成, 核心库打包, 文档生成等
+// ============================================================
+
+// 1. Root Project 任务 (资源与模板)
+// ============================================================
+
+// 任务A: 同步模板代码 (使用白名单模式)
+tasks.register('syncEngineTemplates', Sync) {
+    group = "gdengine"
+    // 使用 rootProject.file 确保路径正确
+    from rootProject.file("GDEngine/InternalProjectTemplates")
+    into rootProject.file("assets/engine/templates")
+
+    include "*/template.json"
+    include "*/project.json"
+    include "*/preview.png"
+    include "*/assets/**"
+    include "*/src/**"
+    include "build.gradle"
+    include "settings.gradle"
+
+    exclude "**/.DS_Store", "**/Thumbs.db"
+
+    doFirst { println ">>> 同步本地项目模板 (Whitelist Mode)..." }
+}
+
+// 任务B: 生成资源清单 (assets.txt)
+tasks.register('generateAssetList') {
+    group = "gdengine"
+    inputs.dir("${rootProject.rootDir}/assets/")
+    File assetsFolder = new File("${rootProject.rootDir}/assets/")
+    File assetsFile = new File(assetsFolder, "assets.txt")
+
+    doLast {
+        assetsFile.delete()
+        fileTree(assetsFolder).collect { assetsFolder.relativePath(it) }.sort().each {
+            if (it != "assets.txt") assetsFile.append(it + "\n")
+        }
+        println ">>> 资源清单 assets.txt 已更新"
+    }
+}
+
+// 任务C: 同步更新日志
+tasks.register('copyChangeLogToAssets') {
+    group = "gdengine"
+    doLast {
+        def sourceFile = rootProject.file('docs/ProjectHistoryLog.md')
+        def targetFile = rootProject.file('assets/docs/ProjectHistoryLog.md')
+
+        if (sourceFile.exists()) {
+            targetFile.parentFile.mkdirs()
+            copy {
+                from sourceFile
+                into targetFile.parentFile
+            }
+            println "✅ ProjectHistoryLog.md 已成功复制到 assets 目录"
+        } else {
+            println "❌ 源文件 docs/ProjectHistoryLog.md 不存在"
+        }
+    }
+}
+
+
+// 2. Core Project 任务 (编译与打包)
+// ============================================================
+project(':core') {
+    // 变量定义
+    def exposedLibs = ["gdx", "gdx-tools", "gdx-freetype", "vis-ui"]
+    def assetsLibsDir = file("${rootProject.rootDir}/assets/engine/libs/")
+
+    // 任务D: 第三方库打包
+    tasks.register('copyEngineLibs', Copy) {
+        group = "gdengine"
+        description = "复制第三方包到 assets/engine/libs"
+        from configurations.compileClasspath
+        into assetsLibsDir
+        include { details ->
+            def name = details.file.name
+            if (name.contains("natives") || name.contains("sources")) return false
+            return exposedLibs.any { key -> name.matches(/^$key-\d+.*\.jar$/) }
+        }
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+
+    // 任务E: 引擎核心库打包 (快速, 无Javadoc)
+    tasks.register('packageEngineCore', Jar) {
+        group = "gdengine"
+        description = "仅打包引擎核心库 (无文档, 快速)"
+        outputs.upToDateWhen { false }
+
+        from sourceSets.main.java.classesDirectory
+        dependsOn compileJava
+        // [核心优化] 移除 javadocJar 依赖, 解决构建耗时问题
+
+        archiveFileName = "gdengine.jar"
+        destinationDirectory = assetsLibsDir
+        exclude "**/*.html", "**/*.gwt.xml"
+
+        doLast {
+             println "✅ [Engine] 引擎核心库已打包 (assets/engine/libs/gdengine.jar)"
+        }
+    }
+    
+    // 任务F: 引擎文档生成与更新 (耗时, 手动触发)
+    tasks.register('updateEngineDocs') {
+        group = "gdengine"
+        description = "生成并更新引擎 Javadoc (耗时)"
+        dependsOn javadocJar
+        
+        doLast {
+            def javadocJarFile = tasks.javadocJar.archiveFile.get().asFile
+            def targetDir = file("${rootProject.rootDir}/assets/engine/libs/")
+            
+            copy {
+                from javadocJarFile
+                into targetDir
+                rename { "gdengine-javadoc.jar" }
+            }
+            println "✅ [Engine] 文档库 (Javadoc) 已发布到 assets/engine/libs/gdengine-javadoc.jar"
+        }
+    }
+
+    // 任务G: 自动生成引擎类索引
+    tasks.register('generateEngineIndex') {
+        def outputDir = file("${rootProject.rootDir}/assets/")
+        def indexFile = file("${outputDir}/engine.index")
+
+        inputs.files(sourceSets.main.allJava)
+        outputs.file(indexFile)
+
+        doLast {
+            if (!outputDir.exists()) outputDir.mkdirs()
+            def classNames = new TreeSet()
+
+            sourceSets.main.allJava.each { File file ->
+                if (file.name.endsWith(".java") && !file.name.equals("package-info.java")) {
+                    sourceSets.main.java.srcDirs.each { File srcDir ->
+                        if (file.absolutePath.startsWith(srcDir.absolutePath)) {
+                            def relPath = file.absolutePath.substring(srcDir.absolutePath.length() + 1)
+                            def className = relPath.replace(File.separator, ".").replace(".java", "")
+                            classNames.add(className)
+                        }
+                    }
+                }
+            }
+            indexFile.text = classNames.join("\n")
+            println ">>> [AutoIndex] 生成所有引擎类路径到 engine.index, 共 ${classNames.size()} 个类."
+        }
+    }
+    
+    // 挂钩 processResources
+    // 使用 afterEvaluate 确保 Java 插件已加载且任务已创建
+    afterEvaluate {
+        if (tasks.findByName('processResources')) {
+            tasks.named('processResources').configure {
+                dependsOn 'generateEngineIndex'
+            }
+        }
+    }
+}
+
+// 3. 依赖关系绑定
+// ============================================================
+tasks.named('generateAssetList') {
+    dependsOn 'syncEngineTemplates'
+    dependsOn ':core:copyEngineLibs'
+    dependsOn ':core:packageEngineCore' // 依赖快速打包任务
+    dependsOn 'copyChangeLogToAssets'
+    // [修复] 确保在生成资源列表前，engine.index 已生成
+    dependsOn ':core:generateEngineIndex'
+}
+
+// 绑定消费者任务
+project(':lwjgl3') {
+    afterEvaluate { p ->
+        if (p.tasks.findByName('run')) p.tasks.named('run').configure { dependsOn rootProject.tasks.named('generateAssetList') }
+        if (p.tasks.findByName('processResources')) p.tasks.named('processResources').configure { dependsOn rootProject.tasks.named('generateAssetList') }
+    }
+}
+
+project(':android') {
+    afterEvaluate { p ->
+        if (p.tasks.findByName('preBuild')) p.tasks.named('preBuild').configure { dependsOn rootProject.tasks.named('generateAssetList') }
+    }
+}
+
+project(':examples') {
+    afterEvaluate { p ->
+        if (p.tasks.findByName('processResources')) p.tasks.named('processResources').configure { dependsOn rootProject.tasks.named('generateAssetList') }
+    }
+}
