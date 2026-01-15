@@ -4,6 +4,8 @@ import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.ui.Stack;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.goldsprite.gdengine.core.Gd;
+import com.goldsprite.gdengine.screens.ecs.editor.EditorGameGraphics;
+import com.goldsprite.gdengine.screens.ecs.editor.EditorGameInput;
 import com.goldsprite.gdengine.screens.ecs.editor.ViewTarget;
 import com.goldsprite.gdengine.screens.ecs.editor.ViewWidget;
 import com.goldsprite.gdengine.screens.ecs.editor.mvp.EditorPanel;
@@ -22,6 +24,9 @@ public class GamePanel extends EditorPanel {
 		renderTarget = new ViewTarget(1280, 720);
 		gameWidget = new ViewWidget(renderTarget);
 		gameWidget.setDisplayMode(ViewWidget.DisplayMode.FIT); // Default
+
+		// 补回游戏核心代理
+		Gd.init(Gd.Mode.EDITOR, new EditorGameInput(gameWidget), new EditorGameGraphics(renderTarget), Gd.compiler);
 
 		Stack stack = new Stack();
 		stack.add(gameWidget);
