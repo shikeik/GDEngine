@@ -11,8 +11,6 @@ ignored: indentFix codeFormatFix
 - [ ] 游戏内logUI文本增加长按复制功能
 - [ ] GameView增加[ ]按钮切换独占与取消状态, (需要预先定义各面板分割参数来重置为取消)
 - [ ] RenderComp增加contains默认实现为sprite大小矩形, 无宽高则默认50x
-- [ ] 创建项目时ToastUI弹NPE错误闪退
-- [ ] 创建项目自动给package打index但多打了一次导致包名/目录不匹配错误
 - [ ] 主界面GDEngineEditor屏加回来，还需要他，主编辑器场景logUi也还需要显示info
 - [ ] RunGame按钮需要继续跳转实机场景
 - [ ] gizmo操作应只响应单指，双指忽略，否则会乱跳

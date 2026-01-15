@@ -15,6 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Source;
 import com.badlogic.gdx.scenes.scene2d.utils.DragAndDrop.Target;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.ComponentRegistry;
 import com.goldsprite.gdengine.core.Gd;
@@ -113,12 +114,11 @@ public class EditorController {
 		this.screen = screen;
 	}
 
-	public void create() {
+	public void create(Viewport viewport) {
 		if (!VisUI.isLoaded()) VisUI.load();
 
 		// 1. 初始化 Stage (UI)
-		float scl = PlatformImpl.isAndroidUser() ? 1.65f : 2.1f;
-		stage = new Stage(new ExtendViewport(960 * scl, 540 * scl));
+		stage = new Stage(viewport);
 
 		// 2. 加载项目上下文
 		reloadProjectContext();
