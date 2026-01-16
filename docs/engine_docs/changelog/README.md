@@ -74,14 +74,41 @@ ul { list-style: none; padding-left: 5px; margin: 0; }
 .commit-head { display: flex; justify-content: space-between; align-items: baseline; }
 .commit-summary { font-weight: 500; color: #ddd; }
 .commit-hash { font-family: monospace; color: #444; font-size: 0.8em; margin-left: 10px; }
-.commit-details { 
-    margin-top: 4px; 
-    font-size: 0.9em; 
-    color: #999; 
-    line-height: 1.4;
-    background: rgba(0,0,0,0.2);
-    padding: 5px;
-    border-radius: 3px;
+
+/* [修改] 详情样式: 使用 pre-wrap 保留原始换行和缩进 */
+.commit-details {
+	margin-top: 6px;
+	font-size: 0.9em;
+	color: #bbb;
+	line-height: 1.5;
+	background: rgba(0,0,0,0.25);
+	padding: 10px;
+	border-radius: 4px;
+	white-space: pre-wrap; /* 【关键】自动处理换行，不需要<br> */
+	font-family: 'Segoe UI', sans-serif; /* 默认字体 */
+}
+
+/* [新增] 代码块样式 (对应 ```) */
+.code-block {
+	display: block;
+	background: rgba(0, 0, 0, 0.4);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 4px;
+	padding: 8px;
+	margin: 5px 0;
+	font-family: 'Consolas', 'Monaco', monospace;
+	color: #aaddff; /* 浅蓝色代码 */
+	overflow-x: auto; /*过长自动滚动*/
+}
+
+/* [新增] 行内代码样式 (对应 `) */
+.inline-code {
+	background: rgba(255, 255, 255, 0.15);
+	border-radius: 3px;
+	padding: 1px 4px;
+	font-family: 'Consolas', monospace;
+	color: #ffcc00; /* 亮黄色高亮 */
+	font-size: 0.95em;
 }
 </style>
 

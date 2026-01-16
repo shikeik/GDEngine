@@ -1,5 +1,5 @@
 {
-    "lastUpdated": "2026-01-17 03:29:30",
+    "lastUpdated": "2026-01-17 03:31:12",
     "versions": [
         {
             "id": "Dev-Build",
@@ -7,6 +7,13 @@
             "date": "In Progress",
             "type": "future",
             "commits": [
+                {
+                    "hash": "2e862c3343164c458ab21bc75ae09d683d1f71a1",
+                    "date": "2026-01-17",
+                    "type": "fix",
+                    "summary": "\u4fee\u590dWeb\u9875\u9762\u8df3\u8f6c\u7248\u672c\u53f7\u53c2\u6570\u4e22\u5931\u95ee\u9898",
+                    "details": "[\u5173\u952e] \u8fdb\u5165Web\u65f6\u5c06\u5e26\u7684\u7248\u672c\u53f7\u53c2\u6570\u5b58\u50a8\u4e3a`sessionStorage`, \u4e4b\u540e\u65e0\u53c2\u5219\u4ece\u7f13\u5b58\u8bfb\u53d6\u5373\u53ef"
+                },
                 {
                     "hash": "3fcbc219051c41d6c8aa91f2fa40900c5049ff60",
                     "date": "2026-01-17",

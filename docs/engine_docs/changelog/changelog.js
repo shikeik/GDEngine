@@ -60,8 +60,12 @@ function renderChangelog(data, currentVersion) {
                                 <span class="type-label ${type}">${type.toUpperCase()}</span>
                              <ul>`;
 					groups[type].forEach(c => {
-						// 处理多行 details，将其转换为换行符
-						let safeDetails = c.details ? c.details.replace(/\n/g, '<br>') : '';
+						// [核心修改] 使用 formatContent 处理文本
+						// 1. 转义 HTML 标签 (防止 <script> 消失)
+						// 2. 解析反引号代码块
+						// 3. 处理换行
+						let safeSummary = formatContent(c.summary);
+						let safeDetails = c.details ? formatContent(c.details) : '';
 
 						html += `
                         <li class="commit-item">
@@ -82,6 +86,35 @@ function renderChangelog(data, currentVersion) {
 
 	html += `</div>`;
 	return html;
+}
+
+// --- [核心修复] 内容格式化工具 v2.0 ---
+function formatContent(text) {
+	if (!text) return "";
+
+	// 1. HTML 转义 (安全第一)
+	let safe = text
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
+
+	// 2. 处理代码块 (```code```) - 优先级最高
+	// 匹配 ``` ... ``` (包括换行符)
+	safe = safe.replace(/```([\s\S]*?)```/g, function(match, code) {
+		// 既然是代码块，去掉首尾可能多余的换行，并包在 div 里
+		return `<div class="code-block">${code.trim()}</div>`;
+	});
+
+	// 3. 处理行内代码 (`code`) - 优先级次之
+	// 匹配 ` ... `
+	safe = safe.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+
+	// 4. [移除] 不再手动替换 \n 为 <br>
+	// 因为 CSS 里的 white-space: pre-wrap 会自动处理
+
+	return safe;
 }
 
 // --- Helpers ---
