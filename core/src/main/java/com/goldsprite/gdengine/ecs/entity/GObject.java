@@ -220,8 +220,7 @@ public class GObject extends EcsObject {
 
 		// 2. 更新组件逻辑 (逻辑可能会修改 transform.local，下一帧生效)
 		for (List<Component> list : components.values()) {
-			for (int i = 0; i < list.size(); i++) {
-				Component c = list.get(i);
+			for (Component c : list) {
 				if (c.isEnable() && !c.isDestroyed()) {
 					// [核心修改] 生命周期过滤
 					// 如果是 PLAY 模式 -> 执行

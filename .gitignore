@@ -182,3 +182,5 @@ assets/assets.txt
 assets/docs/ProjectHistoryLog.md
 
 .temp/
+ProjectGradle.txt
+genetateAllGradle.bat
