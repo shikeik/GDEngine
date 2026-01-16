@@ -7,11 +7,15 @@
 	<!-- [新增] 读写权限 -->
 	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-
 	<!-- Android 11+ 需要此权限才能像电脑一样访问 SD 卡所有文件 (IDE 必备) -->
 	<!-- 注意：上架 Google Play 需要特殊审核，但自己用没问题 -->
 	<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
+	<!-- [新增] 网络权限 -->
+	<uses-permission android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+	<!-- usesCleartextTraffic 允许明文流量 (可选，为了本地调试方便建议加上), 用处是连接本地 HTTP 测试服务器（如 http://10.0.2.2:8080） -->
 	<application
 			android:allowBackup="true"
 			android:fullBackupContent="true"
@@ -21,7 +25,8 @@
 			android:label="@string/app_name"
 			tools:ignore="UnusedAttribute"
 			android:theme="@style/GdxTheme"
-			android:requestLegacyExternalStorage="true"> <!-- [新增] 兼容旧版存储策略 -->
+			android:usesCleartextTraffic="true"
+			android:requestLegacyExternalStorage="true"> <!-- 兼容旧版存储策略 -->
 
 		<activity
 				android:name=".AndroidGdxLauncher"

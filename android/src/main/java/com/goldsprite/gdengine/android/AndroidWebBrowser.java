@@ -11,8 +11,6 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -59,8 +57,41 @@ public class AndroidWebBrowser implements IWebBrowser {
 	}
 
 	private void initDialog() {
+		// 使用全屏 Theme
 		webDialog = new Dialog(activity, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
 		webDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+		// --- [Fix 2 & 3] 窗口层级配置 (刘海屏 + 全屏) ---
+		Window window = webDialog.getWindow();
+		if (window != null) {
+			// 1. 允许延伸到刘海区域 (解决左侧黑边)
+			if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+				WindowManager.LayoutParams lp = window.getAttributes();
+				lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+				window.setAttributes(lp);
+			}
+
+			// 2. 强制全屏布局
+			window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+
+			// 3. 恢复沉浸式模式 (隐藏导航栏和状态栏)
+			// 注意：Dialog 默认有自己的 Window，需要单独设置 Flag，否则会弹出状态栏
+			int immersiveFlags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+				| View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+				| View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+				| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // hide nav bar
+				| View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
+				| View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+
+			window.getDecorView().setSystemUiVisibility(immersiveFlags);
+
+			// 监听焦点变化，防止键盘弹出/收起后沉浸式失效
+			window.getDecorView().setOnSystemUiVisibilityChangeListener(visibility -> {
+				if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
+					window.getDecorView().setSystemUiVisibility(immersiveFlags);
+				}
+			});
+		}
 
 		// 根布局
 		LinearLayout root = new LinearLayout(activity);
