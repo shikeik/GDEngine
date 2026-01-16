@@ -29,12 +29,14 @@ public class Vector2Drawer implements IPropertyDrawer {
             SmartNumInput inputX = new SmartNumInput("X", val.x, 0.1f, v -> {
                val.x = v;
             });
+            inputX.bind(() -> val.x); // [New] Data Binding
             inputX.setReadOnly(isReadOnly);
 
             // Y 分量
             SmartNumInput inputY = new SmartNumInput("Y", val.y, 0.1f, v -> {
                val.y = v;
             });
+            inputY.bind(() -> val.y); // [New] Data Binding
             inputY.setReadOnly(isReadOnly);
 
             // 布局：一行显示

@@ -25,6 +25,10 @@ public class PrimitiveDrawer implements IPropertyDrawer {
                 SmartBooleanInput input = new SmartBooleanInput(name, (Boolean) val, v -> {
                     try { field.set(target, v); } catch (Exception e) {}
                 });
+                // [New] Data Binding
+                input.bind(() -> {
+                    try { return (Boolean) field.get(target); } catch (Exception e) { return false; }
+                });
                 input.setReadOnly(isReadOnly);
                 return input;
             } 
@@ -32,12 +36,20 @@ public class PrimitiveDrawer implements IPropertyDrawer {
                 SmartNumInput input = new SmartNumInput(name, ((Number)val).floatValue(), 1f, v -> {
                     try { field.set(target, v.intValue()); } catch (Exception e) {}
                 });
+                // [New] Data Binding
+                input.bind(() -> {
+                    try { return ((Number) field.get(target)).floatValue(); } catch (Exception e) { return 0f; }
+                });
                 input.setReadOnly(isReadOnly);
                 return input;
             } 
             else { // float
                 SmartNumInput input = new SmartNumInput(name, ((Number)val).floatValue(), 0.1f, v -> {
                     try { field.set(target, v.floatValue()); } catch (Exception e) {}
+                });
+                // [New] Data Binding
+                input.bind(() -> {
+                    try { return ((Number) field.get(target)).floatValue(); } catch (Exception e) { return 0f; }
                 });
                 input.setReadOnly(isReadOnly);
                 return input;

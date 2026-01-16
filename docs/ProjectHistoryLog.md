@@ -31,6 +31,9 @@
 - [x] **[Adj] 模板引擎**: 重构项目创建流程，支持源码包名重构 (Refactoring) 与元数据 (`project.json`) 注入
 
 **编辑器功能 (Editor Features)**
+- [x] **[Fix] Inspector交互**: 修复修改 GameObject 名称时焦点丢失的问题 (移除结构变更事件)
+- [x] **[New] 数据双向绑定**: 实现 `SmartInput` 被动轮询机制，支持运行时数据实时反向同步到 UI
+- [x] **[Opt] 性能优化**: Inspector 面板引入 30FPS 节流阀 (Throttling)，大幅降低高频刷新开销
 - [x] **[New] 日志解析**: 实现 `LogParser`，支持 Markdown 风格的更新日志解析与富文本高亮
 - [x] **[Opt] 渲染查询**: `WorldRenderSystem` 新增 `queryRenderables` 接口，解耦渲染循环与点击检测
 - [x] **[Adj] 调试日志**: `Debug` 新增 `logErr` 红色高亮接口，优化日志分类标记

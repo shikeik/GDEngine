@@ -17,6 +17,9 @@ public class InspectorPanel extends EditorPanel implements IInspectorView { // I
     private InspectorPresenter presenter;
     private VisTable bodyTable;
 
+    private static final float REFRESH_RATE = 1f / 30f;
+    private float timer = 0f;
+
     public InspectorPanel() {
         super("Inspector");
         bodyTable = new VisTable();
@@ -72,7 +75,8 @@ public class InspectorPanel extends EditorPanel implements IInspectorView { // I
 
     private void recursiveUpdate(Actor actor) {
         if (actor instanceof SmartInput) {
-            ((SmartInput<?>) actor).updateUI();
+            // [Fix] 调用新的 sync 方法，从数据源拉取最新值
+            ((SmartInput<?>) actor).sync();
         } else if (actor instanceof Group) {
             for (Actor child : ((Group) actor).getChildren()) {
                 recursiveUpdate(child);
@@ -83,6 +87,12 @@ public class InspectorPanel extends EditorPanel implements IInspectorView { // I
     @Override
     public void act(float delta) {
         super.act(delta);
-        updateValues();
+        
+        // [New] 30 FPS Throttling
+        timer += delta;
+        if (timer >= REFRESH_RATE) {
+            updateValues();
+            timer = 0f;
+        }
     }
 }

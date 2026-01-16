@@ -21,6 +21,10 @@ public class StringDrawer implements IPropertyDrawer {
                     }
                 } catch (Exception e) {}
             });
+            // [New] Data Binding
+            input.bind(() -> {
+                try { return (String) field.get(target); } catch (Exception e) { return ""; }
+            });
             input.setReadOnly(isReadOnly);
             return input;
         } catch (Exception e) { return null; }

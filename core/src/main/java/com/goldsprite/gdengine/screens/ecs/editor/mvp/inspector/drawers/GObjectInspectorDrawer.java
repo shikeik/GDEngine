@@ -32,17 +32,18 @@ public class GObjectInspectorDrawer implements IInspectorDrawer<GObject> {
         metaContainer.setBackground("panel1");
 
         metaContainer.add(new VisLabel("Name:")).left().padLeft(5);
-        metaContainer.add(new SmartTextInput(null, selection.getName(), v -> {
+        SmartTextInput nameInput = new SmartTextInput(null, selection.getName(), v -> {
             selection.setName(v);
-            // 实时更新数据，但不刷新 UI 结构，防止丢失焦点
-        }, v -> {
-            // 失去焦点或回车确认时，才触发结构刷新
-            EditorEvents.inst().emitStructureChanged();
-        })).growX().padRight(5).row();
+            // [Fix] 移除 emitStructureChanged()，防止焦点丢失。
+            // 数据已绑定，Inspector 会自动刷新；Hierarchy 刷新由其自身逻辑控制。
+        });
+        nameInput.bind(selection::getName); // [New] Data Binding
+        metaContainer.add(nameInput).growX().padRight(5).row();
 
         metaContainer.add(new VisLabel("Tag:")).left().padLeft(5);
-        metaContainer.add(new SmartTextInput(null, selection.getTag(), selection::setTag))
-		.growX().padRight(5).row();
+        SmartTextInput tagInput = new SmartTextInput(null, selection.getTag(), selection::setTag);
+        tagInput.bind(selection::getTag); // [New] Data Binding
+        metaContainer.add(tagInput).growX().padRight(5).row();
 
         container.add(metaContainer).growX().pad(pad).row();
 

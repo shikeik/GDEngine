@@ -19,6 +19,10 @@ public class EnumDrawer implements IPropertyDrawer {
             SmartSelectInput input = new SmartSelectInput(field.getName(), current, items, v -> {
                 try { field.set(target, v); } catch (Exception e) {}
             });
+            // [New] Data Binding
+            input.bind(() -> {
+                try { return field.get(target); } catch (Exception e) { return null; }
+            });
             input.setReadOnly(isReadOnly);
             return input;
         } catch (Exception e) { return null; }

@@ -10,14 +10,17 @@ import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
 import com.goldsprite.gdengine.ui.widget.ToastUI; // 现在引用的是 Core 里的 ToastUI
 
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public abstract class SmartInput<T> extends VisTable {
 
     protected T value;
     protected Consumer<T> onChange;
     protected BiConsumer<T, T> onCommand;
+    protected Supplier<T> binding;
 
     // [修复] 确保这个成员变量存在
     protected VisLabel labelActor;
@@ -67,6 +70,28 @@ public abstract class SmartInput<T> extends VisTable {
 
     public void setOnCommand(BiConsumer<T, T> onCommand) {
         this.onCommand = onCommand;
+    }
+
+    /**
+     * 绑定数据源 (Polling)
+     */
+    public void bind(Supplier<T> provider) {
+        this.binding = provider;
+    }
+
+    /**
+     * 同步数据并刷新 UI (由 InspectorPanel 定时调用)
+     */
+    public void sync() {
+        if (binding != null) {
+            T newVal = binding.get();
+            // 如果数据源变了 (且不是 null)
+            if (newVal != null && !Objects.equals(this.value, newVal)) {
+                this.value = newVal;
+                // 注意：这里我们只更新 value，不触发 onChange (那是 UI -> Data 的)
+            }
+        }
+        updateUI();
     }
 
     protected void addContent(Actor actor) {
