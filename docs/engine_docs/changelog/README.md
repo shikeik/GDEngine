@@ -1,100 +1,175 @@
 # 版本更新日志
 
 <div id="changelog-app">
-	<div class="loading">正在初始化...</div>
+	<div class="loading">正在初始化文档引擎...</div>
 </div>
 
-<details style="margin-top:30px; border:1px solid #eee; background:#fafafa; border-radius:4px;">
-	<summary style="padding:8px; cursor:pointer; color:#999; font-size:0.8em; font-family:monospace;">🛠️ Debug Console</summary>
-	<div id="debug-output" style="padding:10px; background:#222; color:#0f0; font-family:Consolas; font-size:12px; height:100px; overflow-y:auto; white-space:pre-wrap;"></div>
+<!-- 可视化探针控制台 -->
+<details style="margin-top:30px; border:1px solid #e0e0e0; background:#f9f9f9; border-radius:4px;">
+	<summary style="padding:8px; cursor:pointer; color:#999; font-size:0.8em; font-family:monospace;">
+		🛠️ Debug Console
+	</summary>
+	<div id="debug-output" style="padding:10px; background:#2b2b2b; color:#ccc; font-family:Consolas,monospace; font-size:12px; height:100px; overflow-y:auto; white-space:pre-wrap;"></div>
 </details>
 
 <style>
+	/* =========================================
+	   Module: Theme Variables (Unity Light)
+	   ========================================= */
 	:root {
-		--bg-panel: #FFFFFF;
-		--border-color: #E5E5E5;
-		--accent-teal: #09D2B8;
+		--bg-page:      #FFFFFF;
+		--bg-panel:     #FAFAFA;
+		--bg-header:    #F5F5F5;
+		--bg-hover:     #EFEFEF;
+		--bg-code:      #F3F4F4;
+
+		--border-light: #F0F0F0;
+		--border-med:   #E5E5E5;
+		--border-dark:  #DDDDDD;
+
+		--accent-teal:  #09D2B8;
+		--accent-warn:  #FBC02D;
+
+		--text-main:    #333333;
+		--text-sub:     #555555;
+		--text-dim:     #999999;
+		--text-code:    #C7254E;
 	}
 
+	/* =========================================
+	   Module: Layout & Containers
+	   ========================================= */
 	.changelog-container {
 		max-width: 100%;
 		padding-top: 10px;
 		font-family: "Segoe UI", "Inter", sans-serif;
+		color: var(--text-main);
 	}
 
 	.log-meta {
 		font-size: 0.85em;
-		color: #888;
+		color: var(--text-dim);
 		border-bottom: 2px solid var(--accent-teal);
 		padding-bottom: 10px;
 		margin-bottom: 25px;
 		font-weight: 600;
 	}
 
-	/* Group Block */
+	.meta-version {
+		color: white;
+		background: var(--accent-teal);
+		padding: 2px 6px;
+		border-radius: 4px;
+	}
+
+	/* =========================================
+	   Module: Group Block (Level 1)
+	   ========================================= */
 	.group-block {
 		margin-bottom: 15px;
-		border: 1px solid var(--border-color);
-		background: #FAFAFA;
+		border: 1px solid var(--border-med);
+		background: var(--bg-panel);
 		border-radius: 4px;
+		box-shadow: 0 2px 5px rgba(0,0,0,0.02);
 	}
 
 	.group-header {
 		padding: 10px 15px;
 		cursor: pointer;
-		background: #F5F5F5;
+		background: var(--bg-header);
 		display: flex;
 		align-items: center;
 		border-left: 4px solid transparent;
+		transition: background 0.2s;
 	}
-	.group-header:hover { background: #EEE; }
+	.group-header:hover { background: var(--bg-hover); }
 
+	/* Active State */
 	.group-block[open] .group-header {
 		background: #E8E8E8;
 		border-left: 4px solid var(--accent-teal);
-		border-bottom: 1px solid var(--border-color);
+		border-bottom: 1px solid var(--border-med);
 	}
 
-	.g-title { font-size: 1.1em; font-weight: bold; color: #333; display: flex; align-items: center; gap: 10px; }
+	.g-title {
+		font-size: 1.1em;
+		font-weight: bold;
+		color: var(--text-main);
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
 
-	/* Badges */
-	.badge { padding: 2px 8px; border-radius: 10px; font-size: 0.75em; color: white; font-weight:normal; }
+	/* =========================================
+	   Module: Badges
+	   ========================================= */
+	.badge {
+		padding: 2px 8px;
+		border-radius: 10px;
+		font-size: 0.75em;
+		color: white;
+		font-weight: normal;
+	}
 	.badge.current { background: var(--accent-teal); }
-	.badge.future { background: #FBC02D; color: #333; }
+	.badge.future { background: var(--accent-warn); color: #333; }
 
-	/* Content */
+	/* =========================================
+	   Module: Patch Content (Level 2)
+	   ========================================= */
 	.group-body { padding: 0; background: #FFF; }
 
 	.patch-block {
 		padding: 20px;
-		border-bottom: 1px solid #F0F0F0;
+		border-bottom: 1px solid var(--border-light);
 	}
 	.patch-block:last-child { border-bottom: none; }
 
-	.p-tag-chip { font-size: 1.3em; font-weight: 700; color: #222; margin-right: 10px; }
-	.p-date { color: #999; font-size: 0.9em; font-family: Consolas, monospace; }
-
-	.p-summary { font-size: 1.1em; color: #222; margin: 8px 0; font-weight: 500; line-height: 1.5; }
-
-	/* [修改] 移除 pre-wrap，依靠 <br> */
-	.p-details {
-		/* ...之前的样式保持不变... */
-		background: #F9F9F9;
-		padding: 10px 15px;
-		border-left: 3px solid #DDD;
-		/* ↓↓↓ 请添加或确保有这一行 ↓↓↓ */
-		white-space: pre-wrap;
-		font-family: Consolas, "Segoe UI", sans-serif; /* 可选：加上等宽字体对齐更整齐 */
+	.p-tag-chip {
+		font-size: 1.3em;
+		font-weight: 700;
+		color: #222;
+		margin-right: 10px;
+	}
+	.p-date {
+		color: var(--text-dim);
+		font-size: 0.9em;
+		font-family: Consolas, monospace;
 	}
 
-	/* Commits */
+	.p-summary {
+		font-size: 1.1em;
+		color: #222;
+		margin: 8px 0;
+		font-weight: 500;
+		line-height: 1.5;
+	}
+
+	/* Tag Details with Pre-Wrap */
+	.p-details {
+		background: #F9F9F9;
+		padding: 10px 15px;
+		border-left: 3px solid var(--border-dark);
+		color: var(--text-sub);
+		font-size: 0.95em;
+		margin-bottom: 15px;
+		white-space: pre-wrap; /* 关键：保留换行和缩进 */
+		font-family: Consolas, "Segoe UI", sans-serif;
+		line-height: 1.6;
+	}
+
+	/* =========================================
+	   Module: Commit List (Level 3)
+	   ========================================= */
 	.commit-row {
 		display: flex;
 		align-items: baseline;
 		gap: 12px;
-		padding: 6px 0;
-		border-bottom: 1px dashed #F0F0F0;
+		padding: 5px 0;
+		border-bottom: 1px dashed var(--border-light);
 	}
+	.commit-row:last-child { border-bottom: none; }
+
+	/* Type Labels */
 	.c-type {
 		font-family: Consolas, monospace;
 		font-size: 0.75em;
@@ -111,24 +186,29 @@
 	.perf { background: #F57C00; }
 	.docs { background: #1976D2; }
 	.chore { background: #607D8B; }
+	.refactor { background: #7B1FA2; }
 
 	.c-hash { color: #CCC; font-family: Consolas, monospace; font-size: 0.85em; }
 	.c-content { flex: 1; }
 	.c-subject { color: #444; font-size: 0.95em; }
 
+	/* Commit Details with Pre-Wrap */
 	.c-body {
-		/* ...之前的样式保持不变... */
 		font-size: 0.85em;
 		color: #888;
 		margin-top: 4px;
-		/* ↓↓↓ 请添加或确保有这一行 ↓↓↓ */
-		white-space: pre-wrap;
+		line-height: 1.5;
+		white-space: pre-wrap; /* 关键：保留换行和缩进 */
 	}
 
-	/* [核心修复] 单行代码样式 - 强制覆盖 Docsify 默认样式 */
+	.empty-commits { color: #BBB; font-style: italic; }
+
+	/* =========================================
+	   Module: Code Highlighting
+	   ========================================= */
 	.inline-code {
-		background-color: #F3F4F4 !important; /* 浅灰背景 */
-		color: #C7254E !important;            /* 玫红文字 */
+		background-color: var(--bg-code) !important;
+		color: var(--text-code) !important;
 		border: 1px solid #E8E8E8 !important;
 		padding: 2px 5px !important;
 		border-radius: 3px !important;
@@ -138,7 +218,7 @@
 
 	.code-block {
 		background: #F8F8F8;
-		border: 1px solid #EEE;
+		border: 1px solid var(--border-dark);
 		padding: 10px;
 		margin: 8px 0;
 		border-radius: 4px;
@@ -148,60 +228,41 @@
 	}
 </style>
 
+<!-- 启动引导脚本 -->
 <script>
 	(function() {
-		function logProbe(msg) {
+		// 1. 立即获取 Console DOM，保证一旦运行就能看到日志
+		const debugOut = document.getElementById('debug-output');
+		function logBoot(msg) {
 			console.log(msg);
-			const out = document.getElementById('debug-output');
-			if(out) out.innerText += msg + "\n";
+			if(debugOut) debugOut.innerText += msg + "\n";
 		}
 
-		logProbe(">>> Init Script");
+		logBoot(">>> [Boot] 引导脚本启动");
 
-		const params = new URLSearchParams(window.location.search);
-		let localVer = params.get('v');
-		if (localVer) sessionStorage.setItem('gd_local_version', localVer);
-		else localVer = sessionStorage.getItem('gd_local_version') || '0.0.0';
+		// 2. 动态加载核心逻辑库
+		const jsUrl = '/changelog/changelog.js'; // 绝对路径
 
-		// [Key Fix] 使用绝对路径
-		const jsonUrl = '/changelog/changelog.json';
-		const jsUrl = '/changelog/changelog.js';
+		// 防缓存策略 (可选，开发期很有用)
+		const timestamp = new Date().getTime();
+		const finalUrl = jsUrl + "?t=" + timestamp;
 
-		logProbe(">>> Fetching: " + jsonUrl);
+		logBoot(">>> [Boot] 请求核心库: " + finalUrl);
 
-		fetch(jsonUrl)
-			.then(res => {
-				if(!res.ok) throw new Error("HTTP " + res.status);
-				return res.json();
-			})
-			.then(data => {
-				logProbe(">>> Data Loaded");
-				loadRenderer(data, localVer);
-			})
-			.catch(err => {
-				logProbe("!!! Error: " + err.message);
-				document.getElementById('changelog-app').innerHTML = `<div style="color:red;">Error: ${err.message}</div>`;
-			});
+		let script = document.createElement('script');
+		script.src = finalUrl;
 
-		function loadRenderer(data, ver) {
-			if (window.renderChangelog) {
-				doRender(data, ver);
-				return;
-			}
-			let script = document.createElement('script');
-			script.src = jsUrl;
-			script.onload = () => doRender(data, ver);
-			script.onerror = () => logProbe("!!! Script Load Failed");
-			document.body.appendChild(script);
-		}
+		script.onload = () => {
+			logBoot(">>> [Boot] 核心库加载成功，逻辑移交...");
+			// changelog.js 内部有 App.run()，加载完会自动接管
+		};
 
-		function doRender(data, ver) {
-			try {
-				document.getElementById('changelog-app').innerHTML = window.renderChangelog(data, ver);
-				logProbe(">>> Render Success");
-			} catch(e) {
-				logProbe("!!! Render Error: " + e.message);
-			}
-		}
+		script.onerror = (e) => {
+			logBoot("!!! [Boot] 核心库加载失败 (404/Network Error)");
+			document.getElementById('changelog-app').innerHTML =
+				"<div style='color:red'>核心脚本加载失败，请检查路径: " + jsUrl + "</div>";
+		};
+
+		document.body.appendChild(script);
 	})();
 </script>
