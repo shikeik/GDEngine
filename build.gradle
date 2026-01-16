@@ -61,10 +61,12 @@ subprojects {
 		maven { url "https://clojars.org/repo/" }
 	}
 
-	plugins.withType(JavaPlugin) {
-		java {
-			sourceCompatibility = JavaVersion.toVersion(project.jdkVersion)
-			targetCompatibility = JavaVersion.toVersion(project.jdkVersion)
+	plugins.withType(JavaPlugin).tap {
+		configureEach {
+			java {
+				sourceCompatibility = JavaVersion.toVersion(project.jdkVersion)
+				targetCompatibility = JavaVersion.toVersion(project.jdkVersion)
+			}
 		}
 	}
 }
@@ -77,4 +79,5 @@ eclipse.project.name = 'GDEngine' + '-parent'
 
 // 引入独立的引擎任务管理脚本
 apply from: 'gradle/engine-tasks.gradle'
+apply from: 'gradle/changelog-generator.gradle'
 

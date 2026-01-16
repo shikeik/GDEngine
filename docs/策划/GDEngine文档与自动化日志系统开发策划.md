@@ -1213,3 +1213,205 @@ import com.goldsprite.gdengine.core.web.DocServer; // [New]
 **完成后，请 Commit 并告诉我测试结果，我们就可以向最终的自动化 JSON 生成进发了！**
 
 
+
+
+
+
+
+
+
+
+
+
+### 下一阶段
+老师，收到。代码检阅完毕。
+
+您对 `AndroidWebBrowser` 的按键拦截修复非常标准，`PlatformImpl` 的路径修正也符合 Android 实际文件系统规律（`Gdx.files.external` 在新版安卓确实由于沙盒机制变得难以预测，使用 `absolute` 配合确定的路径是正解）。
+
+**⚠️ 唯一的一个技术隐患（请确认）：**
+
+在 `DocServer.java` 中：
+```java
+// 2. 其次检查内部 Assets (assets/docs/engine_docs/...)
+FileHandle localFile = Gdx.files.local(RELATIVE_PATH + "/" + uri); 
+// ...
+} else if (localFile.exists() ...) {
+    target = localFile;
+    Debug.logT("DocServer", "Found in Internal: " + target.path()); 
+}
+```
+*   **问题**：您代码里写的是 `Gdx.files.local`，但日志打印的是 "Found in Internal"。
+*   **Android 端差异**：
+	*   `Gdx.files.internal`: 读取 **APK 包内 `assets` 文件夹**（只读）。
+	*   `Gdx.files.local`: 读取 **App 私有数据目录** (`/data/user/0/...`)。
+*   **风险**：如果您没有编写代码在启动时将 assets 复制到 local，那么 `Gdx.files.local` 默认是空的。**如果您希望兜底读取包体自带的文档，这里应该用 `Gdx.files.internal`。**
+
+---
+
+### 下一步讨论：Phase 3 —— “数据源与自动化”
+
+既然“容器”（浏览器+服务器）已经就绪，现在的核心问题是**“内容从哪来”**。
+
+我们需要讨论并确定以下 **3 个环节** 的实现细节，请您决策：
+
+#### 议题 1：版本日志的数据源格式 (JSON生成)
+
+我们要编写 Gradle 脚本读取 Git Log。为了支持您想要的“树形结构 + 逆序 + 时空折叠”，我们需要确定 JSON 的结构。
+
+**方案 A (推荐)：**
+```json
+{
+  "updateTime": "2026-01-16",
+  "versions": [
+    {
+      "id": "1.10.12",       // 版本号
+      "tag": "v1.10.12",     // Git Tag
+      "date": "Unreleased",  // 日期
+      "type": "future",      // 标记：future/current/history (由Gradle生成时判断? 还是前端判断?) -> 建议前端判断
+      "commits": [           // 具体的提交列表
+        { "type": "feat", "title": "...", "details": "..." },
+        { "type": "fix", "title": "...", "details": "..." }
+      ]
+    }
+  ]
+}
+```
+*   **讨论点**：您是希望 Gradle 脚本在生成 JSON 时就根据当前环境标记好 `future/history`，还是只负责输出原始数据，让 HTML 里的 JS 根据 `BuildConfig.VERSION` 动态计算？
+	*   *建议*：让 **JS 动态计算**。因为 JSON 是一份静态文件，托管在云端。不同版本的客户端（1.0 和 1.1）看到的 JSON 是同一个，但对他们来说“未来”和“过去”是不同的。
+
+#### 议题 2：HTML 前端模板的设计
+
+现在的 `index.html` 还是空的 Docsify 模板。我们需要定制它。
+
+*   **需求**：
+	1.  进入页面时，自动读取 URL 参数（例如 `?v=1.10.11`，这个参数由 Android/Desktop 端打开浏览器时拼接）。
+	2.  读取 `changelog.json`。
+	3.  渲染成手风琴（Accordion）样式的列表。
+*   **技术栈**：是直接用原生 JS + CSS 手撸一个简单的页面（体积最小，几KB），还是继续依赖 Docsify 的 Markdown 渲染插件？
+	*   *建议*：版本日志页面建议 **手撸 HTML/JS** 嵌入到 Docsify 中，或者直接作为一个独立页面。因为 Docsify 渲染大量折叠列表性能一般，且难以定制复杂的“红点/高亮”逻辑。
+
+#### 3. 议题 3：云端部署与下载策略 (Docsify vs Raw)
+
+*   **现状**：我们有 `docs/engine_docs` 目录。
+*   **问题**：用户点击“更新”时，是下载整个 `engine_docs` 文件夹（包含 html, js, css, md），还是只下载 `changelog.json`？
+*   **方案**：
+	*   **全量同步**：为了离线看文档，必须把整个站点下载下来。需要一个 `zip` 包或者文件清单。
+	*   **轻量同步**：只下载 `changelog.json`，文档正文在线看（就像 Unity 手册）。
+*   **您的倾向**：您之前提到支持“下载离线看”。
+	*   这意味着我们需要在 CI/CD 流程中，把 `docs/engine_docs` 打包成一个 `docs.zip` 发布。
+	*   客户端下载 `docs.zip` -> 解压到 `AndroidExternalStoragePath/GDEngine/docs`。
+
+---
+
+**请针对以上 3 点给出您的想法，或者我们先从最简单的“Gradle 生成 JSON”开始？**
+
+
+
+
+### User
+然后是对于下阶段的讨论:
+1. currentVersion标记: 这个可以放到请求参数吧老师, 只需要获取下用户BuildConfig的当前版本号就知道了, 不需要其他操作
+2. 版本日志渲染方式: 你说大量折叠列表对于Docsify性能一般, 
+   - 但是我们真的有大量折叠列表吗, 我看看, 我们未来/现在/过去算一级, 
+   - 然后未来过去都可能有多个(或0个)版本比如1.10.10, 这算1级, 
+   - 然后里面是一堆commits信息, 这就没了吧.还有吗?
+   - 不过, 我们手册的话可能会有多级标题嵌套, #, ##, ###, ####, 很多但是不用Docsify, 咱们咋把md转过去呢, 
+   - 哦! 那是手册啊, log又不需要. 对啊所以, 手册很多嵌套啊, 不管了, 先用着试试呗, 总不可能卡爆吧, 
+   - 咱们都用Docsify的md渲染了, 就统一这个方式呗, 
+   - 毕竟commit-info也是md格式的, 
+   - 对了, github的README.md默认显示为页面不也是md转html吗, gitee这些代码托管平台都是啊
+3. 云端部署与下载策略: 
+   - 下载: 肯定全量下载啊, 
+   - 下载zip再解压然后离线查看, 光下载个log干嘛呀, 
+     - 那个甚至都不是主要查看内容, 只是给那些已经熟悉引擎的老手,
+     - 看一下版本变动, api变动啥的的汇总, 因为有commits信息, 还有tag提交时的总结信息这样
+4. 然后是CI/CD流程: 
+   - 我们现在只有commit格式检查, 
+   - 之后需要tag检查?
+   - 总之我需要有一个发布手段: 
+     - 我可以发布一个版本1.10.11(也许是tag?), 
+       - 然后会自动更新项目中的gradle.properties的版本号, 
+       - 以及BuildConfig信息, 还有README.md显示版本号
+     - 我们还要写提交信息来汇总这个大版本的更新日志总结等.
+   - 这个手段具体怎么弄, 
+     - 怎么自动压缩engine_docs为zip上传
+     - 以及怎么自动托管到github-pages(这个我现在都没想好, 一定要托管在github-pages吗, 感觉访问很慢)
+     - 我知道github-actions可以自动托管但那是很久之前做过了现在都忘了
+   - 都还不太清楚
+5. 版本日志的数据源格式 (JSON生成): 
+   - 哦这个我都忘了我一直在疑惑为啥要生成json, 但现在想来json适合解析吧, 他是标准数据结构可以自由使用
+以上, 老师, 再讨论讨论吧
+
+
+
+
+
+
+
+
+
+
+### 修正
+老师，您的 `DocServer` 路径修复逻辑非常严谨，涵盖了 **配置路径 -> 默认路径 -> 开发环境Local** 三级回退，这是非常健壮的工程实践。**Commit 通过！**
+
+针对您提出的 **5点核心讨论**，我的技术评估和决策建议如下。这里有一些逻辑必须理顺，尤其是 **“静态文档”与“动态折叠”的冲突**。
+
+---
+
+### 1. 关于 CurrentVersion 标记 (URL 参数)
+*   **结论**：✅ **完全可行**。
+*   **实现**：
+	*   **Java端**：`Gd.browser.openUrl(DocServer.getIndexUrl() + "?v=" + BuildConfig.DEV_VERSION, ...)`
+	*   **Web端**：JS 通过 `new URLSearchParams(window.location.search).get('v')` 获取。
+	*   这是最标准、最解耦的做法。
+
+### 2. 关于版本日志渲染 (Docsify vs 手撸)
+*   **核心冲突**：您希望 **“未来/过去 默认收起，当前版本 自动展开”**。
+	*   **纯 Markdown (静态)**：做不到。服务器上的 `README.md` 是写死的，它不知道客户端是谁。如果你在 MD 里写死了 "1.10.12 是未来版本"，那么当用户升级到 1.10.12 后，看到的文档依然写着它是“未来”。
+	*   **Docsify + JS (动态)**：**必须走这条路**。
+*   **解决方案**：
+	*   我们依然使用 Docsify 的框架（侧边栏、主题）。
+	*   但是在 `changelog/README.md` 里，我们不写死内容，而是写一段 `<script>` 标签。
+	*   这段 JS 负责：读取 `changelog.json` -> 获取 URL 中的 `v` -> 比较版本 -> **动态生成 HTML 插入页面**。
+	*   **性能**：完全没问题。几百条 Commit 的 JSON 解析对现代浏览器/WebView 来说是毫秒级的。
+
+### 3. 关于下载策略 (Full ZIP)
+*   **结论**：✅ **全量下载 ZIP**。
+*   **理由**：
+	1.  Docsify 依赖很多小文件 (`.md`, `.js`, `.css`, 图片)。一个个下载 HTTP 请求太慢且易失败。
+	2.  **版本原子性**：ZIP 包能保证文档和引擎版本严格对应，不会出现“文档更新了但图片还没下载下来”的破碎感。
+
+### 4. 关于 CI/CD 与发布流程 (自动化蓝图)
+您想要的“一键发布”流程，其实可以拆解为 **本地发布脚本** 和 **云端托管** 两部分。
+
+**推荐流程 (Release Workflow):**
+
+1.  **触发**：您在本地运行 `gradlew releaseVersion -PnewVersion=1.10.12 -Psummary="本次更新重点..."`
+2.  **Gradle 脚本自动执行**：
+	*   **VerUp**: 修改 `gradle.properties`，`BuildConfig`。
+	*   **GenLog**: 抓取 `git log v1.10.11..HEAD` -> 生成/追加 `changelog.json`。
+	*   **Commit**: 自动 Git Commit & Tag (`v1.10.12`)。
+	*   **Build**: 构建 `docs` 目录结构 -> 压缩为 `engine_docs.zip`。
+	*   **Push**: 推送代码和 Tag 到远程仓库。
+3.  **云端托管 (GitHub Actions)**:
+	*   监测到 Tag 推送。
+	*   将 `engine_docs` 目录部署到 `gh-pages` 分支 (提供在线浏览)。
+	*   将 `engine_docs.zip` 上传到 **GitHub Releases** (提供下载)。
+	*   *(关于速度：GitHub Pages 国内确实慢。如果受不了，我们可以把 ZIP 上传到 Gitee 或者您的私有服务器，但那是后话，先跑通流程)*。
+
+### 5. 关于 JSON 数据源
+*   **结论**：**必须生成 JSON**。
+*   **理由**：正如第2点所述，为了实现“时空折叠”的动态判断，前端必须拿到结构化数据（版本号、日期、Commit列表），而不是一段死的 Markdown 文本。JSON 是前后端（Gradle -> WebView）交互的最佳标准。
+
+---
+
+### 下一步行动：Phase 3 - 编写日志生成器
+
+既然逻辑通了，我们现在必须造出“数据”。没有 `changelog.json`，前端页面也没法写。
+
+我们需要编写一个 Gradle 任务，它能：
+1.  执行 `git log` 命令。
+2.  正则解析 `feat: xxx \n details`。
+3.  输出标准 JSON。
+
+**请确认：我们现在开始编写 `gradle/changelog-generator.gradle` 脚本吗？**

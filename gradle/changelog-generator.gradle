@@ -1,0 +1,157 @@
+import groovy.json.JsonOutput
+
+// TODO: 项目大了(commits几万个)之后可以做增量生成, 不过那是几年后的事了, 如果我没弃坑的话
+// ============================================================
+// [配置区] 全局参数设置
+// ============================================================
+ext {
+	// 回溯多少个版本 (Tag)？设大一点以包含旧历史
+	MAX_VERSIONS = 100
+
+	// 每个版本最多抓取多少条 Commit？(防止巨型合并撑爆内存)
+	MAX_COMMITS_PER_VER = 500
+}
+
+tasks.register('generateChangelog') {
+	group = "gdengine"
+	description = "Generate structured changelog.json from Git history"
+
+	doLast {
+		def jsonFile = rootProject.file("docs/engine_docs/changelog/changelog.json")
+		jsonFile.parentFile.mkdirs()
+
+		println "⏳ [Changelog] Reading Git Tags..."
+		def tags = getGitOutput("git tag --sort=-creatordate").readLines()
+
+		// 1. 版本数量限制
+		if (tags.size() > MAX_VERSIONS) {
+			tags = tags.subList(0, MAX_VERSIONS)
+			println "⚠️ [Changelog] History limited to latest ${MAX_VERSIONS} versions."
+		}
+
+		def changelogData = [
+			lastUpdated: new Date().format("yyyy-MM-dd HH:mm:ss"),
+			versions   : []
+		]
+
+		// 2. Unreleased (HEAD -> Latest Tag)
+		if (!tags.isEmpty()) {
+			println "⏳ [Changelog] Processing Unreleased..."
+			// 传入配置的 Commit 数量限制
+			def unreleased = getCommitsBetween(tags[0], "HEAD", MAX_COMMITS_PER_VER)
+			if (!unreleased.isEmpty()) {
+				changelogData.versions << [
+					id     : "Dev-Build",
+					tag    : "HEAD",
+					date   : "In Progress",
+					type   : "future",
+					commits: unreleased
+				]
+			}
+		}
+
+		// 3. Released Versions (Tag -> Previous Tag)
+		for (int i = 0; i < tags.size(); i++) {
+			def currentTag = tags[i]
+			def prevTag = (i == tags.size() - 1) ? "" : tags[i + 1]
+
+			println "⏳ [Changelog] Processing ${currentTag}..."
+
+			def tagDate = getGitOutput("git log -1 --format=%ad --date=short ${currentTag}")
+			def commits = getCommitsBetween(prevTag, currentTag, MAX_COMMITS_PER_VER)
+
+			changelogData.versions << [
+				id     : currentTag.replace("v", ""),
+				tag    : currentTag,
+				date   : tagDate,
+				type   : "released",
+				commits: commits
+			]
+		}
+
+		def jsonString = JsonOutput.prettyPrint(JsonOutput.toJson(changelogData))
+		jsonFile.write(jsonString, "UTF-8")
+
+		println "✅ Changelog Generated: ${jsonFile.absolutePath}"
+		println "   Versions: ${changelogData.versions.size()}"
+	}
+}
+
+// --- Helpers ---
+
+def getCommitsBetween(String fromRef, String toRef, int maxCount) {
+	def range = fromRef.isEmpty() ? toRef : "${fromRef}..${toRef}"
+
+	// 使用 maxCount 限制查询数量
+	def rawLog = getGitOutput("git log ${range} -n ${maxCount} --pretty=format:%H|%ad|%an|%B[END_C] --date=short")
+
+	def commits = []
+	if (rawLog == null || rawLog.trim().isEmpty()) return commits
+
+	rawLog.split("\\[END_C\\]").each { rawEntry ->
+		if (rawEntry.trim().isEmpty()) return
+
+		def parts = rawEntry.split("\\|", 4)
+		if (parts.length < 4) return
+
+		def hash = parts[0].trim()
+		def date = parts[1].trim()
+		def author = parts[2].trim()
+		def fullMessage = parts[3].trim()
+
+		// 正则匹配标准格式
+		def matcher = (fullMessage =~ /^(feat|fix|perf|docs|refactor|chore|test)(\((.+)\))?: (.+)/)
+
+		if (matcher.find()) {
+			// --- [情况 A] 标准格式 ---
+			def type = matcher.group(1)
+			def summary = matcher.group(4)
+			def lines = fullMessage.readLines()
+			def details = (lines.size() > 1) ? lines.subList(1, lines.size()).join("\n").trim() : ""
+
+			// 过滤掉 test/chore 这种通常用户不关心的类型？
+			// 这里我暂时全部保留，由前端 JS 决定是否渲染，您可以根据喜好注释掉下面这行过滤
+			// if (type != 'test') {
+			commits << [
+				hash: hash,
+				date: date,
+				type: type,
+				summary: summary,
+				details: details
+			]
+			// }
+		} else {
+			// --- [情况 B] 旧格式/不规范格式 (兼容模式) ---
+			// 直接将第一行作为 summary，其余作为 details
+			def lines = fullMessage.readLines()
+			def summary = lines.isEmpty() ? "No Description" : lines[0].trim()
+			// 过滤掉 Merge 信息的噪音
+			if (!summary.startsWith("Merge branch") && !summary.startsWith("Merge remote-tracking")) {
+				def details = (lines.size() > 1) ? lines.subList(1, lines.size()).join("\n").trim() : ""
+
+				commits << [
+					hash: hash,
+					date: date,
+					type: "legacy", // 【关键】标记为历史遗留类型
+					summary: summary,
+					details: details
+				]
+			}
+		}
+	}
+	return commits
+}
+
+def getGitOutput(String command) {
+	try {
+		def proc = command.execute(null, rootProject.rootDir)
+		def out = new StringBuilder()
+		def err = new StringBuilder()
+		proc.consumeProcessOutput(out, err)
+		proc.waitFor()
+		if (out.length() > 0) return out.toString().trim()
+		return ""
+	} catch (Exception e) {
+		return ""
+	}
+}
