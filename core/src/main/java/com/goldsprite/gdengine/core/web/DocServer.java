@@ -113,8 +113,8 @@ public class DocServer extends NanoHTTPD {
 	public static String getMimeTypeForFile(String uri) {
 		if (uri.endsWith(".html")) return MIME_HTML;
 		if (uri.endsWith(".css")) return "text/css";
-		if (uri.endsWith(".js")) return "application/javascript";
-		if (uri.endsWith(".json")) return "application/json";
+		if (uri.endsWith(".js")) return "application/javascript; charset=UTF-8"; // 关键！
+		if (uri.endsWith(".json")) return "application/json; charset=UTF-8";     // 关键！
 		if (uri.endsWith(".png")) return "image/png";
 		if (uri.endsWith(".jpg") || uri.endsWith(".jpeg")) return "image/jpeg";
 		if (uri.endsWith(".md")) return "text/markdown"; // Docsify 核心文件

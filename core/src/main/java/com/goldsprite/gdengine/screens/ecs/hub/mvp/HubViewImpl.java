@@ -13,6 +13,7 @@ import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Timer;
+import com.goldsprite.gdengine.BuildConfig;
 import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.project.ProjectService;
 import com.goldsprite.gdengine.core.project.model.ProjectConfig;
@@ -118,9 +119,14 @@ public class HubViewImpl extends VisTable implements IHubView {
 					// 1. 启动本地服务器
 					DocServer.startServer();
 
-					// 2. 调用浏览器打开 http://localhost:8899/index.html
+					// [核心修改] 拼接当前引擎开发版本号
+					// URL 示例: http://localhost:8899/index.html?v=1.10.11
+					// 注意：Docsify 是单页应用，参数通常加在 # 之前，或者由 index.html 里的 JS 全局捕获
+					// 这里我们传给 index.html，里面的 Docsify 会保留 query string
+					String url = DocServer.getIndexUrl() + "?v=" + BuildConfig.DEV_VERSION;
+
 					if (Gd.browser != null) {
-						Gd.browser.openUrl(DocServer.getIndexUrl(), "GDEngine Docs");
+						Gd.browser.openUrl(url, "GDEngine Docs");
 					}
 				}
 			}

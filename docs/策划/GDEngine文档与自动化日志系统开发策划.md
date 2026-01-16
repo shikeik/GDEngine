@@ -1415,3 +1415,38 @@ FileHandle localFile = Gdx.files.local(RELATIVE_PATH + "/" + uri);
 3.  输出标准 JSON。
 
 **请确认：我们现在开始编写 `gradle/changelog-generator.gradle` 脚本吗？**
+
+
+
+feat: 实现版本日志的Web前端渲染架构
+
+[功能实现]  
+1. 增加`changelog/README.md`用于渲染显示版本历史页面
+2. 增加`changelog.js`用于将changelog.json转为格式化html形式
+3. 修改`HubViewImpl.java`将版本号加进url传递给浏览器以实现展开用户当前版本而折叠其他版本的功能
+
+[关键配置与修复]  
+1. js与json可能的编码问题:
+   - `DocServer.java`line-116 
+   - 增加编码指定UTF-8
+2. 找不到`changelog/_sidebar.md`问题 
+   - 主`index.html`增加别名来全部指向主`_sidebar.md`解决
+   - ```
+        // 别名映射：强制所有子目录的 sidebar/navbar 都指向根目录文件
+        alias: {
+            '/.*/_sidebar.md': '/_sidebar.md',
+            '/.*/_navbar.md': '/_navbar.md'
+        }
+     ```
+3. Docsify相对路径问题, 解决:
+   - `index.html`开启相对路径支持(这个办法发现无效)
+   - ```
+        relativePath: true, // 开启相对路径支持
+     ```
+   - 所有引用改为基于`index.html`根的绝对式相对路径(这个办法证明有效)
+4. 页面一直显示正在解析不动的问题:
+   - 原因: 脚本没有真正执行
+   - 解决: 在`index.html`开启md的`<script>`标签执行
+   - ```
+     	executeScript: true
+     ```

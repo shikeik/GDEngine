@@ -15,7 +15,13 @@
 		repo: '',
 		loadSidebar: true,
 		subMaxLevel: 2,
-		relativePath: true // 关键：开启相对路径支持
+		relativePath: true, // 开启相对路径支持
+		executeScript: true, // 允许执行 Markdown 中的 <script> 标签
+		// 别名映射：强制所有子目录的 sidebar/navbar 都指向根目录文件
+		alias: {
+			'/.*/_sidebar.md': '/_sidebar.md',
+			'/.*/_navbar.md': '/_navbar.md'
+		}
 	}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
