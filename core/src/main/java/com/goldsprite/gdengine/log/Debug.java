@@ -45,6 +45,7 @@ public class Debug {
 		"Code Y",
 		"EditorPanel Y",
 		"WebBrowser Y",
+		"DocServer Y",
 
 		// Test
 		"TEST Y",

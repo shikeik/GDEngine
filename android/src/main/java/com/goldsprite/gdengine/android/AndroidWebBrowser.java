@@ -171,14 +171,23 @@ public class AndroidWebBrowser implements IWebBrowser {
 
 		webDialog.setContentView(root);
 
-		// 物理返回键：能回退网页就回退，回退不了就关闭窗口
-		webDialog.setOnCancelListener(dialog -> {
-			if (webView.canGoBack()) {
-				webView.goBack();
-			} else {
-				close(); // 调用 close() 确保触发切回横屏的逻辑
+		// [修复] 使用 OnKeyListener 拦截物理按键
+		// 必须返回 true 才能阻止 Dialog 默认的关闭行为
+		webDialog.setOnKeyListener((dialog, keyCode, event) -> {
+			if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
+				if (webView.canGoBack()) {
+					webView.goBack(); // 网页回退
+					return true;      // 消费事件，Dialog 不关闭
+				}
+				// 网页没法回退了，关闭 Dialog (并触发 close() 里的切横屏逻辑)
+				close();
+				return true;
 			}
+			return false;
 		});
+
+		// 移除旧的 OnCancelListener，防止冲突
+		webDialog.setOnCancelListener(null);
 	}
 
 	private int getImmersiveFlags() {

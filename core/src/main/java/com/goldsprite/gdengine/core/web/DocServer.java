@@ -2,6 +2,7 @@ package com.goldsprite.gdengine.core.web;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
+import com.goldsprite.gdengine.core.config.GDEngineConfig;
 import com.goldsprite.gdengine.log.Debug;
 
 import fi.iki.elonen.NanoHTTPD;
@@ -19,8 +20,8 @@ public class DocServer extends NanoHTTPD {
 	private static DocServer instance;
 
 	// 文档在文件系统中的相对根路径
-	// 对应 Gdx.files.local("docs/engine_docs") 或 internal("docs/engine_docs")
-	private static final String DOC_ROOT = "docs/engine_docs";
+	// [修改] 相对路径，不包含 GDEngine 前缀，因为我们会动态拼
+	private static final String RELATIVE_PATH = "engine_docs";
 
 	private DocServer() {
 		super(PORT);
@@ -64,25 +65,48 @@ public class DocServer extends NanoHTTPD {
 		// 防止路径遍历攻击 (简单的防御)
 		if (uri.contains("..")) return newFixedLengthResponse(Response.Status.FORBIDDEN, MIME_PLAINTEXT, "Forbidden");
 
-		String path = DOC_ROOT + "/" + uri;
+		// [修改] 详细调试日志
+		Debug.logT("DocServer", "Request: " + uri);
 
-		// 3. 资源查找策略: 优先 Local (下载的), 其次 Internal (自带的)
-		FileHandle file = Gdx.files.local(path);
+		// 1. 优先检查配置好的引擎根
+		// GDEngineConfig.activeEngineRoot 在进入GDEngineHub时必须初始化设置, 然后打开日志, 此时应当已存在
+		FileHandle gdConfigFile = Gdx.files.absolute(GDEngineConfig.getInstance().getActiveEngineRoot() + "/" + RELATIVE_PATH + "/" + uri);
 
-		if (!file.exists()) {
-			file = Gdx.files.internal(path);
+		// 2. 未找到则检查默认引擎根
+		FileHandle gdDefaultFile = Gdx.files.absolute(GDEngineConfig.getRecommendedRoot() + RELATIVE_PATH + "/" + uri);
+
+		// 3. 最后检查local (这里是为了兼容idea运行时直接对文档源位置访问)
+		FileHandle localFile = Gdx.files.local("docs/" + RELATIVE_PATH + "/" + uri);
+
+		FileHandle target = null;
+		if (gdConfigFile.exists() && !gdConfigFile.isDirectory()) {
+			target = gdConfigFile;
+			Debug.logT("DocServer", "Found in gdConfigFile: " + target.file().getAbsolutePath());
+		}
+		else if (gdDefaultFile.exists() && !gdDefaultFile.isDirectory()) {
+			target = gdDefaultFile;
+			Debug.logT("DocServer", "Found in default gdConfigFile: " + target.file().getAbsolutePath());
+		}
+		else if (localFile.exists() && !localFile.isDirectory()) {
+			target = localFile;
+			Debug.logT("DocServer", "Found in localFile: " + target.file().getAbsolutePath());
 		}
 
-		// 4. 响应文件的内容
-		if (file.exists() && !file.isDirectory()) {
+		if (target != null) {
 			String mime = getMimeTypeForFile(uri);
 			try {
-				return newChunkedResponse(Response.Status.OK, mime, file.read());
+				return newChunkedResponse(Response.Status.OK, mime, target.read());
 			} catch (Exception e) {
-				return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "File Read Error");
+				Debug.logErrT("DocServer", "Read Error: " + e.getMessage());
+				return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Read Error");
 			}
 		} else {
-			return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "404 Not Found: " + uri);
+			Debug.logErrT("DocServer",
+				"404 Not Found. Checked:"
+					+ "\n  gdConfigFile: " + gdConfigFile.file().getAbsolutePath()
+					+ "\n  gdDefaultFile: " + gdDefaultFile.file().getAbsolutePath()
+					+ "\n  localFile: " + localFile.file().getAbsolutePath());
+			return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "404 Not Found");
 		}
 	}
 

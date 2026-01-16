@@ -73,7 +73,7 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		PlatformImpl.AndroidExternalStoragePath = Environment.getExternalStorageDirectory().getAbsolutePath();
 
 		boolean isPortrait = getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT;
-		PlatformImpl.defaultOrientaion = isPortrait ? ScreenManager.Orientation.Portrait : ScreenManager.Orientation.Landscape;
+		PlatformImpl.defaultOrientation = isPortrait ? ScreenManager.Orientation.Portrait : ScreenManager.Orientation.Landscape;
 
 		setupViewportListener();
 		initKeyMap();

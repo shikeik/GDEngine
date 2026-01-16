@@ -10,7 +10,7 @@ public class PlatformImpl {
 	public static Consumer<Boolean> showSoftInputKeyBoard;
 	public static Consumer<Boolean> fullScreenEvent;
 
-	public static ScreenManager.Orientation defaultOrientaion = ScreenManager.Orientation.Portrait;
+	public static ScreenManager.Orientation defaultOrientation = ScreenManager.Orientation.Portrait;
 
 	public static String AndroidExternalStoragePath = "";
 

@@ -9,11 +9,9 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.ExtendViewport;
-import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import com.badlogic.gdx.math.Vector2;
 import com.goldsprite.gdengine.PlatformImpl;
-import com.goldsprite.gdengine.log.Debug;
 
 
 /**
@@ -57,7 +55,7 @@ public abstract class GScreen extends ScreenAdapter {
 	protected float viewSizeLong = 960f;
 
 	public ScreenManager.Orientation getOrientation() {
-		return PlatformImpl.defaultOrientaion;
+		return PlatformImpl.defaultOrientation;
 	}
 
 	public GScreen() {
