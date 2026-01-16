@@ -90,8 +90,23 @@ ul { list-style: none; padding-left: 5px; margin: 0; }
   (function() {
       console.log(">>> [Changelog] Script Started"); // 探针 1
 
+      // --- [核心修复] 版本号持久化逻辑 ---
+      
+      // 1. 尝试从 URL 获取
       const params = new URLSearchParams(window.location.search);
-      const localVer = params.get('v') || '0.0.0';
+      let localVer = params.get('v');
+
+      // 2. 如果 URL 里有，存入 SessionStorage (持久化)
+      if (localVer) {
+          sessionStorage.setItem('gd_local_version', localVer);
+          console.log("[Changelog] Version cached:", localVer);
+      } 
+      // 3. 如果 URL 里没有，尝试从 Storage 取 (防止路由跳转丢失)
+      else {
+          localVer = sessionStorage.getItem('gd_local_version') || '0.0.0';
+          console.log("[Changelog] Version restored from cache:", localVer);
+      }
+
       const jsonUrl = '/changelog/changelog.json'; 
       const jsUrl = '/changelog/changelog.js';
 

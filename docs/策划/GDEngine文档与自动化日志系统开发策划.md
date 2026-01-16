@@ -1445,8 +1445,11 @@ feat: 实现版本日志的Web前端渲染架构
      ```
    - 所有引用改为基于`index.html`根的绝对式相对路径(这个办法证明有效)
 4. 页面一直显示正在解析不动的问题:
-   - 原因: 脚本没有真正执行
-   - 解决: 在`index.html`开启md的`<script>`标签执行
-   - ```
-     	executeScript: true
-     ```
+  - 原因: 脚本没有真正执行
+    - 解决: 在`index.html`开启md的`<script>`标签执行
+    - ```
+      	executeScript: true
+      ```
+fix: 修复Web页面跳转版本号参数丢失问题
+
+[关键] 进入Web时将带的版本号参数存储为`sessionStorage`, 之后无参则从缓存读取即可
