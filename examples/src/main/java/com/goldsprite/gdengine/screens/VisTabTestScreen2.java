@@ -1,9 +1,7 @@
-package com.goldsprite.screens.tests;
+package com.goldsprite.gdengine.screens;
 
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.goldsprite.gdengine.screens.GScreen;
-import com.goldsprite.gdengine.screens.ScreenManager;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.util.TableUtils;
 import com.kotcrab.vis.ui.widget.VisLabel;

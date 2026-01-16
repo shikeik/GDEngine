@@ -1,19 +1,16 @@
-package com.goldsprite.gdengine.screens;
+package com.goldsprite.screens;
 
-import com.goldsprite.gdengine.core.Gd;
-import com.goldsprite.gdengine.core.config.GDEngineConfig;
+import com.goldsprite.gdengine.screens.GScreen;
+import com.goldsprite.gdengine.screens.RichTextLayoutTestScreen;
+import com.goldsprite.gdengine.screens.VisTabTestScreen2;
 import com.goldsprite.gdengine.screens.basics.BaseSelectionScreen;
 import com.goldsprite.gdengine.screens.ecs.EcsVisualTestScreen;
 import com.goldsprite.gdengine.screens.ecs.JsonLiveEditScreen;
 import com.goldsprite.gdengine.screens.ecs.SpriteVisualScreen;
-import com.goldsprite.gdengine.screens.ecs.editor.EditorGameScreen;
-import com.goldsprite.gdengine.screens.ecs.hub.GDEngineHubScreen;
-import com.goldsprite.gdengine.screens.ecs.hub.SetupDialog;
 import com.goldsprite.gdengine.screens.ecs.skeleton.SkeletonVisualScreen;
-import com.goldsprite.screens.tests.RichTextLayoutTestScreen;
+import com.goldsprite.screens.tests.OneWayPlatformSystemWrapper;
 
 import java.util.Map;
-import com.goldsprite.gdengine.screens.ecs.hub.GDEngineEditorScreen;
 
 public class GDEngineSelectionScreen extends BaseSelectionScreen {
 	@Override
@@ -31,6 +28,9 @@ public class GDEngineSelectionScreen extends BaseSelectionScreen {
 
 		map.put("功能验证 其他", null);
 		map.put("富文本布局测试", RichTextLayoutTestScreen.class);
-		map.put("UI 测试: VisTabbedPane (源码复刻)", com.goldsprite.screens.tests.VisTabTestScreen2.class);
+		map.put("UI 测试: VisTabbedPane (源码复刻)", VisTabTestScreen2.class);
+
+		map.put("临时观测测试(用完即删)", null);
+		map.put("单项平台测试", OneWayPlatformSystemWrapper.class);
 	}
 }

@@ -1,15 +1,12 @@
-package com.goldsprite.screens.tests;
+package com.goldsprite.gdengine.screens;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.ecs.GameWorld;
 import com.goldsprite.gdengine.ecs.component.SpriteComponent;
-import com.goldsprite.gdengine.ecs.component.TransformComponent;
 import com.goldsprite.gdengine.ecs.entity.GObject;
 import com.goldsprite.gdengine.neonbatch.NeonBatch;
-import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.screens.basics.ExampleGScreen;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.ecs.system.WorldRenderSystem;
