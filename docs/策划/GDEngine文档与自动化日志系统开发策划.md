@@ -908,3 +908,306 @@ private static Lwjgl3Application createApplication() {
 3.  **验证通过后**：我们进入 **Phase 2** —— 引入 `NanoHTTPD` 并编写 HTML 模板，实现真正的“引擎文档结构”。
 
 您同意先执行这第一阶段的代码吗？
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 已执行完成
+
+### 下一阶段
+老师，您的理解完全正确！我们确实是在构建一个**“双模引擎”**。
+
+关于您问的 **3. DocServer 的具体工作方式**，它是这样运作的：
+
+### DocServer 核心机制图解
+
+```mermaid
+graph LR
+    A[WebView] -- 1. 请求 http://localhost:8899/intro.md --> B(DocServer)
+    B -- 2. 检查本地下载 --> C{Gdx.files.local 有吗?}
+    C -- Yes (离线模式) --> D[读取 Local 存储的最新文档]
+    C -- No (兜底模式) --> E{Gdx.files.internal 有吗?}
+    E -- Yes (包体自带) --> F[读取 Assets 里的旧文档]
+    D --> G[返回文件流]
+    F --> G
+    G -- 3. 响应数据 --> A
+```
+
+**简单说**：它就是一个“翻译官”。WebView 听不懂 `Gdx.files` 的语言，只听得懂 `HTTP`。`DocServer` 把本地文件“伪装”成网络数据流喂给 WebView。
+
+---
+
+### 开始行动：Phase 2 - 本地服务与文档架构
+
+我们将分四步走。请按顺序操作。
+
+#### 第一步：引入 NanoHTTPD 依赖
+
+修改 **`core/build.gradle`**，在 `dependencies` 块中添加：
+
+```groovy
+dependencies {
+    // ... 原有依赖 ...
+    
+    // [New] 轻量级 HTTP 服务器 (用于本地文档预览)
+    api 'org.nanohttpd:nanohttpd:2.3.1'
+}
+```
+
+*操作后请 Sync Gradle。*
+
+#### 第二步：配置 Android 网络安全策略
+
+这是为了替换掉那个不安全的 `usesCleartextTraffic="true"`。
+
+1.  **新建文件**：`android/src/main/res/xml/network_security_config.xml` (如果没有 xml 目录请新建)
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 1. 默认策略：禁止明文 HTTP，强制 HTTPS -->
+    <base-config cleartextTrafficPermitted="false" />
+
+    <!-- 2. 例外策略：允许 Localhost 使用 HTTP (为了 DocServer) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
+```
+
+2.  **修改清单**：`android/src/main/AndroidManifest.xml`
+
+```xml
+<application
+    ...
+    android:name="com.goldsprite.gdengine.android.AndroidGdxLauncher"
+    android:label="@string/app_name"
+    android:icon="@drawable/ic_launcher"
+    
+    <!-- [修改] 移除 android:usesCleartextTraffic="true" -->
+    <!-- [新增] 引用安全配置文件 -->
+    android:networkSecurityConfig="@xml/network_security_config"
+    ...>
+```
+
+#### 第三步：实现 DocServer 逻辑
+
+新建文件 **`core/src/main/java/com/goldsprite/gdengine/core/web/DocServer.java`**
+
+```java
+package com.goldsprite.gdengine.core.web;
+
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
+import com.goldsprite.gdengine.log.Debug;
+
+import fi.iki.elonen.NanoHTTPD;
+
+import java.io.IOException;
+import java.io.InputStream;
+
+/**
+ * 本地文档服务器 (Micro HTTP Server)
+ * 职责：将 Gdx.files 本地文件映射为 HTTP 流，供 WebView 访问。
+ */
+public class DocServer extends NanoHTTPD {
+
+    private static final int PORT = 8899;
+    private static DocServer instance;
+    
+    // 文档在文件系统中的相对根路径
+    // 对应 Gdx.files.local("docs/engine_docs") 或 internal("docs/engine_docs")
+    private static final String DOC_ROOT = "docs/engine_docs";
+
+    private DocServer() {
+        super(PORT);
+    }
+
+    public static void startServer() {
+        if (instance == null) {
+            instance = new DocServer();
+            try {
+                instance.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+                Debug.logT("DocServer", "✅ 服务启动: " + getIndexUrl());
+            } catch (IOException e) {
+                Debug.logErrT("DocServer", "启动失败: " + e.getMessage());
+            }
+        }
+    }
+
+    public static void stopServer() {
+        if (instance != null) {
+            instance.stop();
+            instance = null;
+            Debug.logT("DocServer", "服务已停止");
+        }
+    }
+    
+    public static String getIndexUrl() {
+        return "http://localhost:" + PORT + "/index.html";
+    }
+
+    @Override
+    public Response serve(IHTTPSession session) {
+        String uri = session.getUri();
+        
+        // 1. 默认页处理
+        if (uri.equals("/") || uri.isEmpty()) {
+            uri = "/index.html";
+        }
+        
+        // 2. 路径清洗
+        if (uri.startsWith("/")) uri = uri.substring(1);
+        // 防止路径遍历攻击 (简单的防御)
+        if (uri.contains("..")) return newFixedLengthResponse(Response.Status.FORBIDDEN, MIME_PLAINTEXT, "Forbidden");
+
+        String path = DOC_ROOT + "/" + uri;
+        
+        // 3. 资源查找策略: 优先 Local (下载的), 其次 Internal (自带的)
+        FileHandle file = Gdx.files.local(path);
+        
+        if (!file.exists()) {
+            file = Gdx.files.internal(path);
+        }
+
+        // 4. 响应文件的内容
+        if (file.exists() && !file.isDirectory()) {
+            String mime = getMimeTypeForFile(uri);
+            try {
+                return newChunkedResponse(Response.Status.OK, mime, file.read());
+            } catch (Exception e) {
+                return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "File Read Error");
+            }
+        } else {
+            return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "404 Not Found: " + uri);
+        }
+    }
+    
+    private String getMimeTypeForFile(String uri) {
+        if (uri.endsWith(".html")) return MIME_HTML;
+        if (uri.endsWith(".css")) return "text/css";
+        if (uri.endsWith(".js")) return "application/javascript";
+        if (uri.endsWith(".json")) return "application/json";
+        if (uri.endsWith(".png")) return "image/png";
+        if (uri.endsWith(".jpg") || uri.endsWith(".jpeg")) return "image/jpeg";
+        if (uri.endsWith(".md")) return "text/markdown"; // Docsify 核心文件
+        return MIME_PLAINTEXT;
+    }
+}
+```
+
+#### 第四步：建立文档骨架 (Skeleton)
+
+为了让 Server 有东西可展示，我们需要在项目根目录创建真实的文档结构。
+
+请在项目根目录下（与 `core`, `android` 同级）创建目录 `docs/engine_docs`，并新建以下 3 个文件：
+
+**1. `docs/engine_docs/index.html`** (Docsify 入口)
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>GDEngine Docs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <!-- 暂时使用 CDN，后续可下载到本地实现真离线 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css">
+</head>
+<body>
+  <div id="app">正在加载文档引擎...</div>
+  <script>
+    window.$docsify = {
+      name: 'GDEngine',
+      repo: '',
+      loadSidebar: true,
+      subMaxLevel: 2,
+      relativePath: true // 关键：开启相对路径支持
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+</body>
+</html>
+```
+
+**2. `docs/engine_docs/README.md`** (默认首页)
+```markdown
+# GDEngine 开发者中心
+
+欢迎使用 GDEngine！这是本地离线文档服务。
+
+- [快速开始](general/intro.md)
+- [API 参考](api/index.md)
+- [版本日志](changelog/README.md)
+```
+
+**3. `docs/engine_docs/_sidebar.md`** (侧边栏导航)
+```markdown
+* 概览
+  * [简介](README.md)
+
+* 开发者手册
+  * [待补充](manual/placeholder.md)
+
+* 更新日志
+  * [版本历史](changelog/README.md)
+```
+
+---
+
+### 第五步：联调验证 (Verification)
+
+最后，我们在 Hub 界面把那个按钮接上，进行一次完整的跑通测试。
+
+修改 **`core/src/main/java/com/goldsprite/gdengine/screens/ecs/hub/mvp/HubViewImpl.java`**：
+
+```java
+// ... imports ...
+import com.goldsprite.gdengine.core.web.DocServer; // [New]
+
+// 在 initMainLayout() 方法中：
+
+        VisTextButton btnLog = new VisTextButton("📅 文档中心");
+        btnLog.setColor(Color.SKY);
+        btnLog.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                // 1. 启动本地服务器
+                DocServer.startServer();
+                
+                // 2. 调用浏览器打开 http://localhost:8899/index.html
+                if (Gd.browser != null) {
+                    Gd.browser.openUrl(DocServer.getIndexUrl(), "GDEngine Docs");
+                }
+            }
+        });
+```
+
+---
+
+### 请执行
+
+1.  按上述步骤修改代码和创建文件。
+2.  运行 Desktop 版：点击按钮，应该会调用 Chrome 打开 `localhost:8899`，显示 Docsify 的黑色主题界面。
+3.  运行 Android 版：点击按钮，应该会弹出全屏 WebView，竖屏显示同样的文档界面。
+
+**完成后，请 Commit 并告诉我测试结果，我们就可以向最终的自动化 JSON 生成进发了！**

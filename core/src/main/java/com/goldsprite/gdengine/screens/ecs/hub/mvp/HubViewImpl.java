@@ -17,6 +17,7 @@ import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.project.ProjectService;
 import com.goldsprite.gdengine.core.project.model.ProjectConfig;
 import com.goldsprite.gdengine.core.project.model.TemplateInfo;
+import com.goldsprite.gdengine.core.web.DocServer;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.ui.event.ContextListener;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
@@ -113,8 +114,15 @@ public class HubViewImpl extends VisTable implements IHubView {
 //				new ChangeLogDialog().show(getStage()); // 注释原内置解析式日志查看器
 
 				// 使用新WebView接口方式
-				// 暂时测试百度，看 Android 端是否弹出 Dialog，PC 端是否弹出 Chrome
-				Gd.browser.openUrl("https://www.baidu.com", "测试浏览器");
+				{
+					// 1. 启动本地服务器
+					DocServer.startServer();
+
+					// 2. 调用浏览器打开 http://localhost:8899/index.html
+					if (Gd.browser != null) {
+						Gd.browser.openUrl(DocServer.getIndexUrl(), "GDEngine Docs");
+					}
+				}
 			}
 		});
 

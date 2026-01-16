@@ -15,7 +15,7 @@
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-	<!-- usesCleartextTraffic 允许明文流量 (可选，为了本地调试方便建议加上), 用处是连接本地 HTTP 测试服务器（如 http://10.0.2.2:8080） -->
+	<!-- networkSecurityConfig="@xml/network_security_config 允许仅localhost和127.0.0.1的明文流量 -->
 	<application
 			android:allowBackup="true"
 			android:fullBackupContent="true"
@@ -25,7 +25,7 @@
 			android:label="@string/app_name"
 			tools:ignore="UnusedAttribute"
 			android:theme="@style/GdxTheme"
-			android:usesCleartextTraffic="true"
+			android:networkSecurityConfig="@xml/network_security_config"
 			android:requestLegacyExternalStorage="true"> <!-- 兼容旧版存储策略 -->
 
 		<activity

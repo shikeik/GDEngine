@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+	<!-- 1. 默认策略：禁止明文 HTTP，强制 HTTPS -->
+	<base-config cleartextTrafficPermitted="false" />
+
+	<!-- 2. 例外策略：允许 Localhost 使用 HTTP (为了 DocServer) -->
+	<domain-config cleartextTrafficPermitted="true">
+		<domain includeSubdomains="true">localhost</domain>
+		<domain includeSubdomains="true">127.0.0.1</domain>
+	</domain-config>
+</network-security-config>
