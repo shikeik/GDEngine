@@ -2,3 +2,8 @@
 ```
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; git log --pretty=format:"%h - %an, %ar : %s" -n 50 | Out-File -Encoding utf8 logs/git_log.txt
 ```
+
+高度密集显示logs
+```
+git log --graph --oneline --decorate --all
+```

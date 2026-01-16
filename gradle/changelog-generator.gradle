@@ -14,14 +14,14 @@ ext {
 
 tasks.register('generateChangelog') {
 	group = "gdengine"
-	description = "Generate structured changelog.json from Git history"
+	description = "Generate hierarchical changelog.json with Tag Messages"
 
 	doLast {
 		def jsonFile = rootProject.file("docs/engine_docs/changelog/changelog.json")
 		jsonFile.parentFile.mkdirs()
 
 		println "⏳ [Changelog] Reading Git Tags..."
-		def tags = getGitOutput("git tag --sort=-creatordate").readLines()
+		def tags = getGitOutput("git tag --sort=-version:refname").readLines()
 
 		// 1. 版本数量限制
 		if (tags.size() > MAX_VERSIONS) {
@@ -29,51 +29,106 @@ tasks.register('generateChangelog') {
 			println "⚠️ [Changelog] History limited to latest ${MAX_VERSIONS} versions."
 		}
 
-		def changelogData = [
-			lastUpdated: new Date().format("yyyy-MM-dd HH:mm:ss"),
-			versions   : []
-		]
+		// 分组容器
+		def groupedData = [:] as LinkedHashMap
 
-		// 2. Unreleased (HEAD -> Latest Tag)
+		// 1. 处理 Unreleased (HEAD)
 		if (!tags.isEmpty()) {
-			println "⏳ [Changelog] Processing Unreleased..."
-			// 传入配置的 Commit 数量限制
 			def unreleased = getCommitsBetween(tags[0], "HEAD", MAX_COMMITS_PER_VER)
 			if (!unreleased.isEmpty()) {
-				changelogData.versions << [
-					id     : "Dev-Build",
-					tag    : "HEAD",
-					date   : "In Progress",
-					type   : "future",
+				def devKey = "In Development"
+				groupedData[devKey] = []
+				groupedData[devKey] << [
+					tag: "HEAD",
+					fullVersion: "HEAD",
+					date: new Date().format("yyyy-MM-dd"),
+					// HEAD 没有 Tag Message，给个默认的
+					tagSummary: "正在开发中...",
+					tagDetails: "包含自上个版本以来的最新改动。",
+					isSnapshot: true,
 					commits: unreleased
 				]
 			}
 		}
 
-		// 3. Released Versions (Tag -> Previous Tag)
+		// 2. 处理 Tag 列表
 		for (int i = 0; i < tags.size(); i++) {
 			def currentTag = tags[i]
-			def prevTag = (i == tags.size() - 1) ? "" : tags[i + 1]
+			def prevTag = (i == tags.size() - 1) ? "" : tags[i+1]
 
-			println "⏳ [Changelog] Processing ${currentTag}..."
+			// --- [新增] 获取 Tag Message ---
+			// %(contents) 会获取完整的附注信息
+			def rawTagMsg = getGitOutput("git for-each-ref refs/tags/${currentTag} --format='%(contents)'")
+			def tagSummary = ""
+			def tagDetails = ""
+
+			if (rawTagMsg && !rawTagMsg.trim().isEmpty()) {
+				def lines = rawTagMsg.readLines()
+				// 第一行是总结
+				if (!lines.isEmpty()) {
+					tagSummary = lines[0].trim()
+					// 剩余行是细节 (如果有的话)
+					if (lines.size() > 1) {
+						tagDetails = lines.subList(1, lines.size()).join("\n").trim()
+					}
+				}
+			} else {
+				// 如果没有附注(轻量标签)，默认用 Tag 名
+				tagSummary = "Release ${currentTag}"
+			}
+
+			// --- 版本号解析 ---
+			def cleanTag = currentTag.replace("v", "")
+			def mainVersion = cleanTag
+
+			// 匹配 x.y.z 作为主版本
+			def matcher = (cleanTag =~ /^(\d+\.\d+\.\d+)/)
+			if (matcher.find()) {
+				mainVersion = matcher.group(1)
+			} else {
+				mainVersion = cleanTag // 比如 HappyNewYear
+			}
+
+			if (!groupedData.containsKey(mainVersion)) {
+				groupedData[mainVersion] = []
+			}
+
+			println "⏳ Processing ${currentTag} -> Group: ${mainVersion}"
 
 			def tagDate = getGitOutput("git log -1 --format=%ad --date=short ${currentTag}")
 			def commits = getCommitsBetween(prevTag, currentTag, MAX_COMMITS_PER_VER)
 
-			changelogData.versions << [
-				id     : currentTag.replace("v", ""),
-				tag    : currentTag,
-				date   : tagDate,
-				type   : "released",
+			// 添加到组
+			groupedData[mainVersion] << [
+				tag: currentTag,
+				fullVersion: cleanTag,
+				date: tagDate,
+				// [新增] 写入 Tag 信息
+				tagSummary: tagSummary,
+				tagDetails: tagDetails,
+				isSnapshot: false,
 				commits: commits
 			]
 		}
 
-		def jsonString = JsonOutput.prettyPrint(JsonOutput.toJson(changelogData))
+		// 3. 构建最终 JSON
+		def finalGroups = []
+		groupedData.each { key, patches ->
+			finalGroups << [
+				id: key,
+				patches: patches
+			]
+		}
+
+		def finalJson = [
+			lastUpdated: new Date().format("yyyy-MM-dd HH:mm:ss"),
+			groups: finalGroups
+		]
+
+		def jsonString = JsonOutput.prettyPrint(JsonOutput.toJson(finalJson))
 		jsonFile.write(jsonString, "UTF-8")
 
-		println "✅ Changelog Generated: ${jsonFile.absolutePath}"
-		println "   Versions: ${changelogData.versions.size()}"
+		println "✅ Changelog Generated: ${finalGroups.size()} groups."
 	}
 }
 
@@ -90,51 +145,31 @@ def getCommitsBetween(String fromRef, String toRef, int maxCount) {
 
 	rawLog.split("\\[END_C\\]").each { rawEntry ->
 		if (rawEntry.trim().isEmpty()) return
-
 		def parts = rawEntry.split("\\|", 4)
 		if (parts.length < 4) return
 
 		def hash = parts[0].trim()
 		def date = parts[1].trim()
-		def author = parts[2].trim()
 		def fullMessage = parts[3].trim()
 
-		// 正则匹配标准格式
 		def matcher = (fullMessage =~ /^(feat|fix|perf|docs|refactor|chore|test)(\((.+)\))?: (.+)/)
 
 		if (matcher.find()) {
-			// --- [情况 A] 标准格式 ---
 			def type = matcher.group(1)
 			def summary = matcher.group(4)
 			def lines = fullMessage.readLines()
 			def details = (lines.size() > 1) ? lines.subList(1, lines.size()).join("\n").trim() : ""
 
-			// 过滤掉 test/chore 这种通常用户不关心的类型？
-			// 这里我暂时全部保留，由前端 JS 决定是否渲染，您可以根据喜好注释掉下面这行过滤
-			// if (type != 'test') {
 			commits << [
-				hash: hash,
-				date: date,
-				type: type,
-				summary: summary,
-				details: details
+				hash: hash, date: date, type: type, summary: summary, details: details
 			]
-			// }
 		} else {
-			// --- [情况 B] 旧格式/不规范格式 (兼容模式) ---
-			// 直接将第一行作为 summary，其余作为 details
 			def lines = fullMessage.readLines()
 			def summary = lines.isEmpty() ? "No Description" : lines[0].trim()
-			// 过滤掉 Merge 信息的噪音
 			if (!summary.startsWith("Merge branch") && !summary.startsWith("Merge remote-tracking")) {
 				def details = (lines.size() > 1) ? lines.subList(1, lines.size()).join("\n").trim() : ""
-
 				commits << [
-					hash: hash,
-					date: date,
-					type: "legacy", // 【关键】标记为历史遗留类型
-					summary: summary,
-					details: details
+					hash: hash, date: date, type: "legacy", summary: summary, details: details
 				]
 			}
 		}
@@ -151,7 +186,5 @@ def getGitOutput(String command) {
 		proc.waitFor()
 		if (out.length() > 0) return out.toString().trim()
 		return ""
-	} catch (Exception e) {
-		return ""
-	}
+	} catch (Exception ignored) { return "" }
 }

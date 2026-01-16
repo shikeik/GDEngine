@@ -183,5 +183,5 @@ assets/docs/ProjectHistoryLog.md
 
 .temp/
 /ProjectGradle.txt
-/genetateAllGradle.bat
 /logs.txt
+docs/engine_docs/changelog/changelog.json
