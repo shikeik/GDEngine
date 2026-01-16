@@ -1,188 +1,207 @@
 # 版本更新日志
 
-<!-- 挂载点 -->
 <div id="changelog-app">
-  <div class="loading">正在分析版本历史...</div>
+	<div class="loading">正在初始化...</div>
 </div>
 
-<!-- 样式定义 -->
+<details style="margin-top:30px; border:1px solid #eee; background:#fafafa; border-radius:4px;">
+	<summary style="padding:8px; cursor:pointer; color:#999; font-size:0.8em; font-family:monospace;">🛠️ Debug Console</summary>
+	<div id="debug-output" style="padding:10px; background:#222; color:#0f0; font-family:Consolas; font-size:12px; height:100px; overflow-y:auto; white-space:pre-wrap;"></div>
+</details>
+
 <style>
-/* 容器 */
-.changelog-container { font-family: 'Segoe UI', sans-serif; max-width: 800px; }
-.log-meta { color: #666; font-size: 0.85em; margin-bottom: 20px; text-align: right; }
+	:root {
+		--bg-panel: #FFFFFF;
+		--border-color: #E5E5E5;
+		--accent-teal: #09D2B8;
+	}
 
-/* 版本块 */
-.version-block { 
-    margin-bottom: 15px; 
-    border: 1px solid rgba(255,255,255,0.1); 
-    border-radius: 6px; 
-    background: rgba(255,255,255,0.02);
-    transition: all 0.2s;
-}
-/* 状态色 */
-.version-block.current { border: 1px solid #00eaff; box-shadow: 0 0 15px rgba(0, 234, 255, 0.1); }
-.version-block.future { border: 1px dashed #ffcc00; opacity: 0.8; }
-.version-block.history { border-color: #333; }
+	.changelog-container {
+		max-width: 100%;
+		padding-top: 10px;
+		font-family: "Segoe UI", "Inter", sans-serif;
+	}
 
-/* 标题栏 */
-.version-header { 
-    padding: 12px 15px; 
-    cursor: pointer; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    user-select: none;
-    background: rgba(0,0,0,0.2);
-    border-radius: 6px;
-}
-.version-block[open] .version-header {
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-}
+	.log-meta {
+		font-size: 0.85em;
+		color: #888;
+		border-bottom: 2px solid var(--accent-teal);
+		padding-bottom: 10px;
+		margin-bottom: 25px;
+		font-weight: 600;
+	}
 
-.v-title { display: flex; align-items: center; gap: 10px; }
-.v-tag { font-size: 1.3em; font-weight: bold; color: #fff; }
-.v-date { font-family: monospace; color: #888; font-size: 0.9em; }
+	/* Group Block */
+	.group-block {
+		margin-bottom: 15px;
+		border: 1px solid var(--border-color);
+		background: #FAFAFA;
+		border-radius: 4px;
+	}
 
-/* 徽章 */
-.badge { padding: 2px 8px; border-radius: 4px; font-size: 0.75em; font-weight: bold; color: #000; }
-.badge.current { background: #00eaff; }
-.badge.future { background: #ffcc00; }
+	.group-header {
+		padding: 10px 15px;
+		cursor: pointer;
+		background: #F5F5F5;
+		display: flex;
+		align-items: center;
+		border-left: 4px solid transparent;
+	}
+	.group-header:hover { background: #EEE; }
 
-/* 内容区 */
-.version-body { padding: 15px; }
-.type-section { margin-bottom: 15px; }
-.type-label { 
-    display: inline-block; 
-    font-size: 0.75em; 
-    font-weight: bold; 
-    padding: 2px 6px; 
-    border-radius: 3px; 
-    margin-bottom: 8px;
-    color: #000;
-}
-/* 类型配色 */
-.feat { background: #4caf50; }
-.fix { background: #f44336; color: white; }
-.perf { background: #ff9800; }
-.docs { background: #2196f3; }
-.legacy { background: #607d8b; }
+	.group-block[open] .group-header {
+		background: #E8E8E8;
+		border-left: 4px solid var(--accent-teal);
+		border-bottom: 1px solid var(--border-color);
+	}
 
-ul { list-style: none; padding-left: 5px; margin: 0; }
-.commit-item { margin-bottom: 10px; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.1); }
-.commit-head { display: flex; justify-content: space-between; align-items: baseline; }
-.commit-summary { font-weight: 500; color: #ddd; }
-.commit-hash { font-family: monospace; color: #444; font-size: 0.8em; margin-left: 10px; }
+	.g-title { font-size: 1.1em; font-weight: bold; color: #333; display: flex; align-items: center; gap: 10px; }
 
-/* [修改] 详情样式: 使用 pre-wrap 保留原始换行和缩进 */
-.commit-details {
-	margin-top: 6px;
-	font-size: 0.9em;
-	color: #bbb;
-	line-height: 1.5;
-	background: rgba(0,0,0,0.25);
-	padding: 10px;
-	border-radius: 4px;
-	white-space: pre-wrap; /* 【关键】自动处理换行，不需要<br> */
-	font-family: 'Segoe UI', sans-serif; /* 默认字体 */
-}
+	/* Badges */
+	.badge { padding: 2px 8px; border-radius: 10px; font-size: 0.75em; color: white; font-weight:normal; }
+	.badge.current { background: var(--accent-teal); }
+	.badge.future { background: #FBC02D; color: #333; }
 
-/* [新增] 代码块样式 (对应 ```) */
-.code-block {
-	display: block;
-	background: rgba(0, 0, 0, 0.4);
-	border: 1px solid rgba(255, 255, 255, 0.1);
-	border-radius: 4px;
-	padding: 8px;
-	margin: 5px 0;
-	font-family: 'Consolas', 'Monaco', monospace;
-	color: #aaddff; /* 浅蓝色代码 */
-	overflow-x: auto; /*过长自动滚动*/
-}
+	/* Content */
+	.group-body { padding: 0; background: #FFF; }
 
-/* [新增] 行内代码样式 (对应 `) */
-.inline-code {
-	background: rgba(255, 255, 255, 0.15);
-	border-radius: 3px;
-	padding: 1px 4px;
-	font-family: 'Consolas', monospace;
-	color: #ffcc00; /* 亮黄色高亮 */
-	font-size: 0.95em;
-}
+	.patch-block {
+		padding: 20px;
+		border-bottom: 1px solid #F0F0F0;
+	}
+	.patch-block:last-child { border-bottom: none; }
+
+	.p-tag-chip { font-size: 1.3em; font-weight: 700; color: #222; margin-right: 10px; }
+	.p-date { color: #999; font-size: 0.9em; font-family: Consolas, monospace; }
+
+	.p-summary { font-size: 1.1em; color: #222; margin: 8px 0; font-weight: 500; line-height: 1.5; }
+
+	/* [修改] 移除 pre-wrap，依靠 <br> */
+	.p-details {
+		/* ...之前的样式保持不变... */
+		background: #F9F9F9;
+		padding: 10px 15px;
+		border-left: 3px solid #DDD;
+		/* ↓↓↓ 请添加或确保有这一行 ↓↓↓ */
+		white-space: pre-wrap;
+		font-family: Consolas, "Segoe UI", sans-serif; /* 可选：加上等宽字体对齐更整齐 */
+	}
+
+	/* Commits */
+	.commit-row {
+		display: flex;
+		align-items: baseline;
+		gap: 12px;
+		padding: 6px 0;
+		border-bottom: 1px dashed #F0F0F0;
+	}
+	.c-type {
+		font-family: Consolas, monospace;
+		font-size: 0.75em;
+		padding: 2px 6px;
+		border-radius: 3px;
+		color: white;
+		font-weight: bold;
+		text-transform: uppercase;
+		min-width: 55px;
+		text-align: center;
+	}
+	.feat { background: #369947; }
+	.fix { background: #D32F2F; }
+	.perf { background: #F57C00; }
+	.docs { background: #1976D2; }
+	.chore { background: #607D8B; }
+
+	.c-hash { color: #CCC; font-family: Consolas, monospace; font-size: 0.85em; }
+	.c-content { flex: 1; }
+	.c-subject { color: #444; font-size: 0.95em; }
+
+	.c-body {
+		/* ...之前的样式保持不变... */
+		font-size: 0.85em;
+		color: #888;
+		margin-top: 4px;
+		/* ↓↓↓ 请添加或确保有这一行 ↓↓↓ */
+		white-space: pre-wrap;
+	}
+
+	/* [核心修复] 单行代码样式 - 强制覆盖 Docsify 默认样式 */
+	.inline-code {
+		background-color: #F3F4F4 !important; /* 浅灰背景 */
+		color: #C7254E !important;            /* 玫红文字 */
+		border: 1px solid #E8E8E8 !important;
+		padding: 2px 5px !important;
+		border-radius: 3px !important;
+		font-family: Consolas, monospace !important;
+		font-size: 0.9em !important;
+	}
+
+	.code-block {
+		background: #F8F8F8;
+		border: 1px solid #EEE;
+		padding: 10px;
+		margin: 8px 0;
+		border-radius: 4px;
+		font-family: Consolas, monospace;
+		color: #333;
+		overflow-x: auto;
+	}
 </style>
 
-<!-- 逻辑加载 -->
 <script>
-  (function() {
-      console.log(">>> [Changelog] Script Started"); // 探针 1
+	(function() {
+		function logProbe(msg) {
+			console.log(msg);
+			const out = document.getElementById('debug-output');
+			if(out) out.innerText += msg + "\n";
+		}
 
-      // --- [核心修复] 版本号持久化逻辑 ---
-      
-      // 1. 尝试从 URL 获取
-      const params = new URLSearchParams(window.location.search);
-      let localVer = params.get('v');
+		logProbe(">>> Init Script");
 
-      // 2. 如果 URL 里有，存入 SessionStorage (持久化)
-      if (localVer) {
-          sessionStorage.setItem('gd_local_version', localVer);
-          console.log("[Changelog] Version cached:", localVer);
-      } 
-      // 3. 如果 URL 里没有，尝试从 Storage 取 (防止路由跳转丢失)
-      else {
-          localVer = sessionStorage.getItem('gd_local_version') || '0.0.0';
-          console.log("[Changelog] Version restored from cache:", localVer);
-      }
+		const params = new URLSearchParams(window.location.search);
+		let localVer = params.get('v');
+		if (localVer) sessionStorage.setItem('gd_local_version', localVer);
+		else localVer = sessionStorage.getItem('gd_local_version') || '0.0.0';
 
-      const jsonUrl = '/changelog/changelog.json'; 
-      const jsUrl = '/changelog/changelog.js';
+		// [Key Fix] 使用绝对路径
+		const jsonUrl = '/changelog/changelog.json';
+		const jsUrl = '/changelog/changelog.js';
 
-      fetch(jsonUrl)
-        .then(res => {
-            console.log(">>> [Changelog] JSON Response:", res.status); // 探针 2
-            if(!res.ok) throw new Error("JSON 404: " + res.status);
-            return res.json();
-        })
-        .then(data => {
-            console.log(">>> [Changelog] JSON Loaded, Versions:", data.versions.length); // 探针 3
-            loadRenderer(data, localVer);
-        })
-        .catch(err => {
-            console.error(">>> [Changelog] Error:", err);
-            document.getElementById('changelog-app').innerHTML = 
-                `<div style="color:red; padding:10px;">加载失败: ${err.message}</div>`;
-        });
+		logProbe(">>> Fetching: " + jsonUrl);
 
-      function loadRenderer(data, ver) {
-          if (window.renderChangelog) {
-              console.log(">>> [Changelog] Renderer already exists, running...");
-              render();
-              return;
-          }
+		fetch(jsonUrl)
+			.then(res => {
+				if(!res.ok) throw new Error("HTTP " + res.status);
+				return res.json();
+			})
+			.then(data => {
+				logProbe(">>> Data Loaded");
+				loadRenderer(data, localVer);
+			})
+			.catch(err => {
+				logProbe("!!! Error: " + err.message);
+				document.getElementById('changelog-app').innerHTML = `<div style="color:red;">Error: ${err.message}</div>`;
+			});
 
-          console.log(">>> [Changelog] Loading JS from:", jsUrl);
-          let script = document.createElement('script');
-          script.src = jsUrl;
-          script.onload = () => {
-              console.log(">>> [Changelog] JS Loaded successfully"); // 探针 4
-              render();
-          };
-          script.onerror = (e) => {
-              console.error(">>> [Changelog] JS Load Failed", e);
-              document.getElementById('changelog-app').innerHTML = "脚本加载失败";
-          };
-          document.body.appendChild(script);
+		function loadRenderer(data, ver) {
+			if (window.renderChangelog) {
+				doRender(data, ver);
+				return;
+			}
+			let script = document.createElement('script');
+			script.src = jsUrl;
+			script.onload = () => doRender(data, ver);
+			script.onerror = () => logProbe("!!! Script Load Failed");
+			document.body.appendChild(script);
+		}
 
-          function render() {
-              try {
-                  const html = window.renderChangelog(data, ver);
-                  document.getElementById('changelog-app').innerHTML = html;
-                  console.log(">>> [Changelog] Render Complete"); // 探针 5
-              } catch (e) {
-                  console.error(">>> [Changelog] Render Logic Error:", e);
-                  document.getElementById('changelog-app').innerHTML = "渲染逻辑错误: " + e.message;
-              }
-          }
-      }
-  })();
+		function doRender(data, ver) {
+			try {
+				document.getElementById('changelog-app').innerHTML = window.renderChangelog(data, ver);
+				logProbe(">>> Render Success");
+			} catch(e) {
+				logProbe("!!! Render Error: " + e.message);
+			}
+		}
+	})();
 </script>

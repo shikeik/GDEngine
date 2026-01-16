@@ -4,8 +4,85 @@
 	<meta charset="UTF-8">
 	<title>GDEngine Docs</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-	<!-- 暂时使用 CDN，后续可下载到本地实现真离线 -->
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css">
+	<!-- [核心修改] 切换为 vue (亮色) 主题作为基底 -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+
+	<!-- [新增] Unity Documentation Global Style Override -->
+	<style>
+		:root {
+			--theme-color: #09D2B8;       /* Unity Teal */
+			--sidebar-width: 280px;
+			--base-font-size: 15px;
+		}
+
+		/* 1. 全局字体与背景 */
+		body {
+			font-family: "Segoe UI", "Inter", sans-serif;
+			background-color: #FFFFFF;
+			color: #333;
+		}
+
+		/* 2. 侧边栏 (Sidebar) 风格 */
+		.sidebar {
+			background-color: #F8F8F8; /* 浅灰底色 */
+			border-right: 1px solid #E0E0E0;
+			color: #444;
+		}
+
+		/* 侧边栏链接 */
+		.sidebar-nav li { margin: 0; }
+		.sidebar-nav a {
+			color: #555;
+			font-weight: 500;
+			border-left: 4px solid transparent; /* 预留选中条位置 */
+			transition: all 0.2s;
+			padding-left: 15px;
+		}
+		.sidebar-nav a:hover {
+			color: #000;
+			background-color: #EDEDED;
+		}
+
+		/* 侧边栏选中态 (Unity Teal 竖条) */
+		.sidebar-nav li.active > a {
+			border-left: 4px solid var(--theme-color);
+			background-color: #E8E8E8;
+			color: #000;
+			font-weight: bold;
+		}
+
+		/* 3. 内容区 (Main Content) */
+		.content {
+			padding-top: 20px;
+			max-width: 1000px; /* 限制阅读宽度 */
+			margin: 0 auto;
+		}
+
+		.markdown-section h1, .markdown-section h2, .markdown-section h3 {
+			font-weight: 600;
+			color: #222;
+		}
+
+		/* 链接颜色 */
+		.markdown-section a {
+			color: #0984e3;
+			font-weight: 500;
+			text-decoration: none;
+		}
+
+		/* 4. 代码块全局样式 (覆盖默认) */
+		.markdown-section code {
+			color: #C7254E;
+			background-color: #F9F2F4;
+			border-radius: 3px;
+			padding: 2px 4px;
+			font-family: Consolas, monospace;
+		}
+		.markdown-section pre {
+			background-color: #F5F5F5;
+			border: 1px solid #EEE;
+		}
+	</style>
 </head>
 <body>
 <div id="app">正在加载文档引擎...</div>
@@ -15,13 +92,16 @@
 		repo: '',
 		loadSidebar: true,
 		subMaxLevel: 2,
-		relativePath: true, // 开启相对路径支持
-		executeScript: true, // 允许执行 Markdown 中的 <script> 标签
-		// 别名映射：强制所有子目录的 sidebar/navbar 都指向根目录文件
+		relativePath: true,
+		executeScript: true,
 		alias: {
 			'/.*/_sidebar.md': '/_sidebar.md',
 			'/.*/_navbar.md': '/_navbar.md'
-		}
+		},
+		// 自动滚动到顶部
+		auto2top: true,
+		// 主题色配置
+		themeColor: '#09D2B8'
 	}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
