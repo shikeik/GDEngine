@@ -65,7 +65,6 @@ public class GdxLauncher extends Game {int k60;
 		Gd.init(Gd.Mode.RELEASE, Gdx.input, Gdx.graphics, scriptCompiler);
 		Debug.logT("Engine", "[GREEN]Gd initialized. Compiler available: %b", (scriptCompiler != null));
 
-		Debug.logErr("Hello Error!");
 		new ScreenManager()
 			.addScreen(new ExampleSelectScreen())
 			.setLaunchScreen(ExampleSelectScreen.class);
