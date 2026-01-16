@@ -110,7 +110,11 @@ public class HubViewImpl extends VisTable implements IHubView {
 		btnLog.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				new ChangeLogDialog().show(getStage());
+//				new ChangeLogDialog().show(getStage()); // 注释原内置解析式日志查看器
+
+				// 使用新WebView接口方式
+				// 暂时测试百度，看 Android 端是否弹出 Dialog，PC 端是否弹出 Chrome
+				Gd.browser.openUrl("https://www.baidu.com", "测试浏览器");
 			}
 		});
 

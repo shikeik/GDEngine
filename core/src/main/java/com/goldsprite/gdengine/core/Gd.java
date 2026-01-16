@@ -10,6 +10,7 @@ import com.goldsprite.gdengine.PlatformImpl;
 import com.goldsprite.gdengine.core.config.GDEngineConfig;
 import com.goldsprite.gdengine.core.platform.DesktopFiles;
 import com.goldsprite.gdengine.core.scripting.IScriptCompiler;
+import com.goldsprite.gdengine.core.web.IWebBrowser;
 
 /**
  * 引擎核心 API 入口 (GDEngine Facade)
@@ -75,6 +76,9 @@ public class Gd {
 	 */
 	public static ClassLoader scriptClassLoader = ClassLoader.getSystemClassLoader();
 
+	/** 全局浏览器服务 */
+	public static IWebBrowser browser; // [New]
+
 	/**
 	 * 初始化引擎环境 (依赖注入)
 	 * <p>
@@ -106,6 +110,20 @@ public class Gd {
 		if (GDEngineConfig.tryLoad()) {
 			engineConfig = GDEngineConfig.getInstance();
 		}
+
+		// 默认实现：兜底使用 Gdx.net.openURI (防空指针)
+		if (browser == null) {
+			browser = new IWebBrowser() {
+				@Override public void openUrl(String url, String title) { Gdx.net.openURI(url); }
+				@Override public void close() {}
+				@Override public boolean isEmbedded() { return false; }
+			};
+		}
+	}
+
+	// [新增] 允许平台层注入实现
+	public static void setWebBrowser(IWebBrowser browserImpl) {
+		browser = browserImpl;
 	}
 
 	// =============================================================

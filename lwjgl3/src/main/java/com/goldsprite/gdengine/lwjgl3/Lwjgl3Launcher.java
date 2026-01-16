@@ -5,6 +5,7 @@ import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.BuildConfig;
 import com.goldsprite.GdxLauncher;
@@ -27,6 +28,9 @@ public class Lwjgl3Launcher {
 		// [修改] 创建 PC 端编译器实例
 		DesktopScriptCompiler compiler = new DesktopScriptCompiler();
 
+		// [新增] 注入浏览器实现
+		Gd.setWebBrowser(new DesktopWebBrowser());
+		
 		// [修改] 注入到游戏主入口
 		return new Lwjgl3Application(new GdxLauncher(compiler), getDefaultConfiguration());
 	}

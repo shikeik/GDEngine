@@ -25,6 +25,7 @@ import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration;
 import com.goldsprite.GdxLauncher;
 import com.goldsprite.gdengine.PlatformImpl;
+import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.screens.ScreenManager;
 
 import java.util.HashMap;
@@ -77,16 +78,18 @@ public class AndroidGdxLauncher extends AndroidApplication {
 		setupViewportListener();
 		initKeyMap();
 
+		// 在 onCreate 里的 injectCompilerAndStart() 或 startEngine() 调用之前：
+ 		Gd.setWebBrowser(new AndroidWebBrowser(this));
+
+		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
+		cfg.useImmersiveMode = true;
+		cfg.numSamples = 2;
 		// ---------------------------------------------------------
 		// 1. 立即初始化 GDX (传入 null compiler)
 		// 这样 AndroidApplication 内部的 input/graphics 就会被创建
 		// onResume 就不会崩了
 		// ---------------------------------------------------------
 		gdxLauncher = new GdxLauncher(null);
-
-		AndroidApplicationConfiguration cfg = new AndroidApplicationConfiguration();
-		cfg.useImmersiveMode = true;
-		cfg.numSamples = 2;
 
 		gameView = initializeForView(gdxLauncher, cfg);
 
