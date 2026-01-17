@@ -17,6 +17,7 @@ import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.goldsprite.screens.ExampleSelectScreen;
 import com.kotcrab.vis.ui.VisUI;
+import com.goldsprite.gdengine.utils.ThreadedDownload;
 
 public class GdxLauncher extends Game {int k60;
 	private IScriptCompiler scriptCompiler; // 去掉 final，允许后期注入
@@ -70,6 +71,11 @@ public class GdxLauncher extends Game {int k60;
 			.setLaunchScreen(ExampleSelectScreen.class);
 
 		isInitialized = true;
+		
+		ToastUI.inst().show("开始自动下载引擎文档");
+		ThreadedDownload.download(()->{
+			ToastUI.inst().show("完成引擎文档下载");
+		});
 	}
 
 	@Override
