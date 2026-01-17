@@ -25,8 +25,8 @@
 			}
 		},
 		paths: {
-			json: '/changelog/changelog.json',
-			js:   '/changelog/changelog.js'
+			json: 'changelog/changelog.json',
+			js:   'changelog/changelog.js'
 		}
 	};
 

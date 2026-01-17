@@ -206,7 +206,7 @@
 	// ============================================================
 	const ChangelogService = {
 		// 目标挂载点的链接特征 (对应 _sidebar.md 里的链接)
-		ANCHOR_LINK: '/changelog/README',
+		ANCHOR_LINK: 'changelog/README',
 
 		// 1. 转换: JSON -> Sidebar Node Structure
 		transform: function(data) {
@@ -516,7 +516,7 @@
 		plugins: [
 			function(hook, vm) {
 				const SIDEBAR_URL = '_sidebar.md';
-				const JSON_URL = '/changelog/changelog.json';
+				const JSON_URL = 'changelog/changelog.json';
 
 				hook.mounted(function() {
 					SidebarBuilder.init(SIDEBAR_URL, JSON_URL).then(() => {

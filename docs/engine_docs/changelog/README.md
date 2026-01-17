@@ -254,7 +254,7 @@
 		logBoot(">>> [Boot] 引导脚本启动");
 
 		// 2. 动态加载核心逻辑库
-		const jsUrl = '/changelog/changelog.js'; // 绝对路径
+		const jsUrl = 'changelog/changelog.js'; // 相对路径
 
 		// 防缓存策略 (可选，开发期很有用)
 		const timestamp = new Date().getTime();
