@@ -105,6 +105,44 @@
 		}
 
 		.content { max-width: 1000px; margin: 0 auto; padding-top: 20px; }
+
+		/* [Fix] 侧边栏开关按钮：移至左上角 + 去除背景 */
+		.sidebar-toggle {
+			position: fixed;
+			top: 15px !important;       /* 移到顶部 */
+			left: 15px !important;      /* 靠左 */
+			bottom: auto !important;    /* 取消底部定位 */
+			right: auto !important;
+
+			background-color: transparent !important; /* 去除背景色 */
+			border: none !important;    /* 去除边框 */
+			outline: none !important;
+
+			padding: 10px !important;   /* 增加点击区域 */
+			width: auto !important;
+			z-index: 100 !important;    /* 确保最上层 */
+			cursor: pointer;
+			transition: opacity 0.2s;
+		}
+
+		/* 汉堡菜单的三条线颜色 */
+		.sidebar-toggle span {
+			background-color: var(--theme-color) !important; /* 使用青色 */
+			height: 2px !important;     /*稍微细一点更精致*/
+			width: 22px !important;
+			margin-bottom: 5px !important;
+		}
+
+		/* 悬停效果 */
+		.sidebar-toggle:hover {
+			background: transparent !important;
+			opacity: 0.7;
+		}
+
+		/* [可选] 为了防止按钮盖住 "GDEngine" 大标题，让侧边栏内容稍微下移一点点 */
+		#custom-sidebar {
+			padding-top: 20px;
+		}
 	</style>
 </head>
 <body>
@@ -477,14 +515,19 @@
 
 		plugins: [
 			function(hook, vm) {
-				// [Config] 资源路径配置
 				const SIDEBAR_URL = '_sidebar.md';
-				// 注意：这里使用绝对路径，确保从任何页面都能加载到
 				const JSON_URL = '/changelog/changelog.json';
 
 				hook.mounted(function() {
 					SidebarBuilder.init(SIDEBAR_URL, JSON_URL).then(() => {
 						SidebarBuilder.updateState();
+					});
+
+					// [Fix] 监听 Hash 变化，确保同页面的参数切换也能触发侧边栏高亮更新
+					window.addEventListener('hashchange', function() {
+						setTimeout(() => {
+							SidebarBuilder.updateState();
+						}, 100); // 稍微延时等待路由稳定
 					});
 				});
 

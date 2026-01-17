@@ -1,5 +1,5 @@
 /**
- * GDEngine Changelog System v4.1 (Deep Linking Support)
+ * GDEngine Changelog System v4.2 (Live Navigation Fix)
  */
 
 (function(global) {
@@ -10,6 +10,8 @@
 	// ============================================================
 	const Config = {
 		debug: true,
+		// 定义顶部滚动的偏移量 (px)，留出呼吸空间
+		scrollOffset: 20,
 		theme: {
 			badges: {
 				dev:     { text: "DEV",     className: "badge dev" },
@@ -110,12 +112,11 @@
 		renderGroup: function(group, localVer) {
 			const groupId = group.id;
 			const status = Utils.getVersionStatus(groupId, localVer);
-			const isOpen = (status === 'current') ? 'open' : ''; // 只有当前版本默认展开
+			const isOpen = (status === 'current') ? 'open' : '';
 
 			const badgeConfig = Config.theme.badges[status] || Config.theme.badges.history;
 			const badgeHtml = badgeConfig.text ? `<span class="${badgeConfig.className}">${badgeConfig.text}</span>` : '';
 
-			// [Update] 添加 ID: group-{id}
 			let html = `
 			<details ${isOpen} id="group-${groupId}" class="group-block ${status}">
 				<summary class="group-header">
@@ -139,7 +140,6 @@
 			const summary = Utils.cleanString(patch.tagSummary || patch.tag);
 			const details = Utils.cleanString(patch.tagDetails || "");
 
-			// [Update] 添加 ID: patch-{tag}
 			let html = `
 			<div id="patch-${patch.tag}" class="patch-block">
 				<div class="patch-header">
@@ -184,11 +184,26 @@
 	// [Module 5] App
 	// ============================================================
 	const App = {
+		// 防抖计时器
+		_hashTimer: null,
+
 		run: function() {
 			Logger.init();
 			Logger.info("Application Started");
 			const localVer = this.getLocalVersion();
 			this.fetchData(localVer);
+			this.setupListeners();
+		},
+
+		// [Fix 1] 监听 Hash 变化，实现不刷新跳转
+		setupListeners: function() {
+			window.addEventListener('hashchange', () => {
+				// 使用防抖，防止 Docsify 内部路由冲突
+				if (this._hashTimer) clearTimeout(this._hashTimer);
+				this._hashTimer = setTimeout(() => {
+					this.handleDeepLink();
+				}, 100);
+			});
 		},
 
 		getLocalVersion: function() {
@@ -223,8 +238,8 @@
 				document.getElementById('changelog-app').innerHTML = html;
 				Logger.info("DOM Updated");
 
-				// [New] 渲染完成后处理深度链接
-				this.handleDeepLink();
+				// 首次加载也检查一次链接
+				setTimeout(() => this.handleDeepLink(), 200);
 
 			} catch (e) {
 				Logger.error("Render Error: " + e.message);
@@ -232,10 +247,9 @@
 			}
 		},
 
-		// [New] 处理 ?target=... 参数
+		// [Fix 3] 滚动到 Group (红框)，高亮 Patch (蓝框)
+		// [Fix 4] 自动收起其他组 (手风琴效果)
 		handleDeepLink: function() {
-			// 1. 获取 Target (从 Hash Query 获取)
-			// Docsify URL: #/changelog/README?target=v1.10.12.0
 			const hash = window.location.hash;
 			const queryPart = hash.split('?')[1];
 			if (!queryPart) return;
@@ -247,28 +261,60 @@
 
 			Logger.info("Deep linking to: " + targetTag);
 
-			// 2. 查找 DOM 元素
 			const elementId = `patch-${targetTag}`;
-			const targetEl = document.getElementById(elementId);
+			const targetPatchEl = document.getElementById(elementId);
 
-			if (targetEl) {
-				// 3. 展开父级 (找到最近的 details)
-				let parent = targetEl.parentElement;
-				while (parent) {
-					if (parent.tagName.toLowerCase() === 'details') {
-						parent.open = true;
-						break;
+			if (targetPatchEl) {
+				// 2. 向上寻找所在的 Group (红框)
+				let groupEl = targetPatchEl.closest('.group-block');
+
+				// [New] 遍历所有 Group，除了目标组，其他的全部收起
+				const allGroups = document.querySelectorAll('details.group-block');
+				allGroups.forEach(g => {
+					if (g !== groupEl) {
+						g.open = false;
 					}
-					parent = parent.parentElement;
+				});
+
+				// 3. 确保目标 Group 展开
+				if (groupEl && groupEl.tagName.toLowerCase() === 'details') {
+					groupEl.open = true;
+				} else {
+					// 兜底逻辑
+					let p = targetPatchEl.parentElement;
+					while (p) {
+						if (p.tagName.toLowerCase() === 'details') {
+							p.open = true;
+							groupEl = p; // 修正引用
+							// 同样要关掉其他的
+							allGroups.forEach(g => { if(g !== p) g.open = false; });
+							break;
+						}
+						p = p.parentElement;
+					}
 				}
 
-				// 4. 滚动与高亮
+				// 4. 执行定位与高亮
 				setTimeout(() => {
-					targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-					targetEl.classList.add('target-highlight');
-					// 动画结束后移除类 (可选)
-					// setTimeout(() => targetEl.classList.remove('target-highlight'), 2000);
-				}, 100); // 延时一小会儿确保 DOM 稳定
+					// A. 滚动目标：优先使用 Group (红框)
+					const scrollTarget = groupEl || targetPatchEl;
+
+					const rect = scrollTarget.getBoundingClientRect();
+					const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+					const finalY = scrollTop + rect.top - Config.scrollOffset;
+
+					window.scrollTo({
+						top: finalY,
+						behavior: 'smooth'
+					});
+
+					// B. 高亮目标：Patch (蓝框)
+					targetPatchEl.classList.remove('target-highlight');
+					void targetPatchEl.offsetWidth;
+					targetPatchEl.classList.add('target-highlight');
+
+				}, 100);
 			} else {
 				Logger.info("Target element not found: " + elementId);
 			}
