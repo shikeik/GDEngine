@@ -1,5 +1,5 @@
 {
-    "lastUpdated": "2026-01-17 10:14:20",
+    "lastUpdated": "2026-01-17 10:34:47",
     "groups": [
         {
             "id": "In Development",
@@ -12,6 +12,34 @@
                     "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
                     "isSnapshot": true,
                     "commits": [
+                        {
+                            "hash": "139b55c7fee862adab1d9b0a74bd18b5678e5097",
+                            "date": "2026-01-17",
+                            "type": "fix",
+                            "summary": "unignore changelog.json and update docs",
+                            "details": ""
+                        },
+                        {
+                            "hash": "006432b55fff277ce98e9e66f178f416a4bad7f0",
+                            "date": "2026-01-17",
+                            "type": "fix",
+                            "summary": "\u591a\u7ea7\u5b58\u50a8\u7b56\u7565\u4ee5\u5e94\u5bf9\u7f13\u5b58\u6743\u9650\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "734e732c36c6762b90cb0138620b75bb6c9cfff7",
+                            "date": "2026-01-17",
+                            "type": "feat",
+                            "summary": "\u589e\u52a0github-pages\u53d1\u5e03\u6d41\u914d\u7f6e",
+                            "details": ""
+                        },
+                        {
+                            "hash": "cdefe3e7252a70775e495e902ea2523410309864",
+                            "date": "2026-01-17",
+                            "type": "fix",
+                            "summary": "\u6240\u6709\u8def\u5f84\u6539\u4e3a\u76f8\u5bf9\u76ee\u5f55\u4ee5\u652f\u6301github-pages",
+                            "details": ""
+                        },
                         {
                             "hash": "99b77577758895f3fa055665cff58ac9638c7554",
                             "date": "2026-01-17",
