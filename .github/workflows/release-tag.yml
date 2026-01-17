@@ -1,0 +1,36 @@
+name: Create Release and Upload Docs
+
+on:
+  push:
+    tags:
+      # 匹配所有 tag (包括 v1.0.0 和 1.0.0)
+      - '*' 
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 需要写权限来创建 Release
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Archive engine docs
+        run: |
+          # 进入 docs 目录打包 engine_docs 文件夹
+          cd docs
+          zip -r ../engine_docs.zip engine_docs
+          cd ..
+          echo "✅ engine_docs.zip created"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: engine_docs.zip
+          generate_release_notes: true # 自动根据 commit 生成更新日志
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
