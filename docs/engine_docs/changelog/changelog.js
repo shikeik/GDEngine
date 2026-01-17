@@ -17,7 +17,8 @@
 		// CSS 类名映射
 		theme: {
 			badges: {
-				future:  { text: "DEV / PREVIEW", className: "badge future" },
+				dev:  { text: "DEV", className: "badge dev" },
+				preview:  { text: "PREVIEW", className: "badge preview" },
 				current: { text: "CURRENT",       className: "badge current" },
 				history: { text: "",              className: "" } // 历史版本不显示 Badge
 			},
@@ -141,10 +142,10 @@
 		 * 获取版本状态 (Future/Current/History)
 		 */
 		getVersionStatus: function(versionId, localVersion) {
-			if (versionId === "In Development") return 'future';
+			if (versionId === "In Development") return 'dev';
 
 			const diff = this.compareVersions(versionId, localVersion);
-			if (diff > 0) return 'future';
+			if (diff > 0) return 'preview';
 			if (diff === 0) return 'current';
 			return 'history';
 		}

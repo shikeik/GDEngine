@@ -29,6 +29,7 @@
 
 		--accent-teal:  #09D2B8;
 		--accent-warn:  #FBC02D;
+		--accent-purple:#ca50d9;
 
 		--text-main:    #333333;
 		--text-sub:     #555555;
@@ -111,7 +112,8 @@
 		font-weight: normal;
 	}
 	.badge.current { background: var(--accent-teal); }
-	.badge.future { background: var(--accent-warn); color: #333; }
+	.badge.dev { background: var(--accent-purple); color: #FFF; }
+	.badge.preview { background: var(--accent-warn); color: #333; }
 
 	/* =========================================
 	   Module: Patch Content (Level 2)
