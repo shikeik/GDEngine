@@ -228,6 +228,17 @@
 		color: #333;
 		overflow-x: auto;
 	}
+
+	/* [New] Deep Link Highlighting */
+	@keyframes targetFlash {
+		0% { background-color: rgba(9, 210, 184, 0.3); box-shadow: 0 0 10px rgba(9, 210, 184, 0.3); }
+		100% { background-color: transparent; box-shadow: none; }
+	}
+
+	.target-highlight {
+		animation: targetFlash 2s ease-out forwards;
+		border-left: 4px solid var(--accent-teal) !important; /* 强制加上左侧青条 */
+	}
 </style>
 
 <!-- 启动引导脚本 -->
