@@ -1,0 +1,45 @@
+name: Deploy Docs to Pages
+
+on:
+  push:
+    branches: ["main"]
+    # 仅当文档目录或本流程文件变更时触发
+    paths:
+      - 'docs/engine_docs/**'
+      - '.github/workflows/deploy-docs.yml'
+  # 允许手动触发
+  workflow_dispatch:
+
+# 设置 GITHUB_TOKEN 的权限，允许部署 Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 允许并发部署，但在新部署开始时取消正在进行的部署（可选）
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # 指定上传的目录 (您的文档根目录)
+          path: 'docs/engine_docs'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
