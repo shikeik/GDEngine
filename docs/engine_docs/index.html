@@ -4,104 +4,342 @@
 	<meta charset="UTF-8">
 	<title>GDEngine Docs</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-	<!-- [核心修改] 切换为 vue (亮色) 主题作为基底 -->
+	<!-- 基础样式: Vue (亮色) -->
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
 
-	<!-- [新增] Unity Documentation Global Style Override -->
+	<!-- [核心] 自定义 Unity 风格侧边栏样式 -->
 	<style>
 		:root {
 			--theme-color: #09D2B8;       /* Unity Teal */
 			--sidebar-width: 280px;
-			--base-font-size: 15px;
+			--folder-icon-color: #5f5f5f;
+			--folder-bg-hover: #e0e0e0;
+			--item-height: 30px;
 		}
 
-		/* 1. 全局字体与背景 */
-		body {
-			font-family: "Segoe UI", "Inter", sans-serif;
-			background-color: #FFFFFF;
+		/* 1. 全局重置 */
+		body { font-family: "Segoe UI", "Inter", sans-serif; background: #fff; }
+		.sidebar { background-color: #f0f0f0; border-right: 1px solid #ccc; width: var(--sidebar-width); }
+
+		/* 2. 隐藏 Docsify 默认生成的乱七八糟的列表 */
+		.sidebar-nav { padding: 0 !important; margin: 0 !important; }
+		.sidebar-nav > ul { display: none !important; } /* 隐藏 Markdown 生成的内容 */
+
+		/* 3. 自定义侧边栏容器 */
+		#custom-sidebar {
+			padding: 10px 0;
+			overflow-y: auto;
+			height: 100%;
+			box-sizing: border-box;
+			font-size: 14px;
+		}
+
+		/* --- 节点通用样式 --- */
+		.tree-node {
+			display: flex;
+			align-items: center;
+			cursor: pointer;
+			user-select: none;
+			padding-right: 10px;
+			transition: background 0.1s;
+			height: var(--item-height);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
 			color: #333;
 		}
+		.tree-node:hover { background-color: #e8e8e8; }
 
-		/* 2. 侧边栏 (Sidebar) 风格 */
-		.sidebar {
-			background-color: #F8F8F8; /* 浅灰底色 */
-			border-right: 1px solid #E0E0E0;
-			color: #444;
-		}
+		/* --- 文件夹 (Parent) --- */
+		.folder-row { font-weight: 600; color: #222; }
 
-		/* 侧边栏链接 */
-		.sidebar-nav li { margin: 0; }
-		.sidebar-nav a {
-			color: #555;
-			font-weight: 500;
-			border-left: 4px solid transparent; /* 预留选中条位置 */
-			transition: all 0.2s;
-			padding-left: 15px;
-		}
-		.sidebar-nav a:hover {
-			color: #000;
-			background-color: #EDEDED;
-		}
-
-		/* 侧边栏选中态 (Unity Teal 竖条) */
-		.sidebar-nav li.active > a {
-			border-left: 4px solid var(--theme-color);
-			background-color: #E8E8E8;
-			color: #000;
+		/* 方块图标 [+] [-] */
+		.toggle-icon {
+			display: inline-flex;
+			justify-content: center;
+			align-items: center;
+			width: 14px;
+			height: 14px;
+			margin-right: 8px;
+			background: #e0e0e0;
+			border: 1px solid #999;
+			border-radius: 2px;
+			font-family: monospace;
+			font-size: 12px;
+			line-height: 10px;
+			color: #333;
 			font-weight: bold;
 		}
-
-		/* 3. 内容区 (Main Content) */
-		.content {
-			padding-top: 20px;
-			max-width: 1000px; /* 限制阅读宽度 */
-			margin: 0 auto;
+		/* 展开状态的图标样式 */
+		.folder-open > .folder-row .toggle-icon {
+			background: #ccc;
+			color: #000;
 		}
 
-		.markdown-section h1, .markdown-section h2, .markdown-section h3 {
+		/* 子容器 (递归缩进) */
+		.children-container {
+			display: none; /* 默认折叠 */
+			padding-left: 22px; /* 缩进量 */
+			border-left: 1px solid rgba(0,0,0,0.05); /* 可选：层级引导线 */
+		}
+		.folder-open > .children-container { display: block; }
+
+		/* --- 文件 (Leaf) --- */
+		.file-row { font-weight: 400; color: #555; }
+
+		/* 小圆点 */
+		.file-dot {
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background-color: #999;
+			margin-right: 10px;
+			margin-left: 4px; /* 微调对齐 */
+		}
+
+		/* --- 选中高亮 (Unity Style) --- */
+		.file-row.active {
+			background-color: #dbebe9; /* 浅青背景 */
+			color: #000;
 			font-weight: 600;
-			color: #222;
+			border-left: 4px solid var(--theme-color); /* 左侧青条 */
+			padding-left: calc(var(--indent, 0px) - 4px); /* 修正 padding 以容纳 border */
+		}
+		.file-row.active .file-dot {
+			background-color: var(--theme-color); /* 点变青色 */
+			box-shadow: 0 0 4px var(--theme-color);
 		}
 
-		/* 链接颜色 */
-		.markdown-section a {
-			color: #0984e3;
-			font-weight: 500;
-			text-decoration: none;
-		}
-
-		/* 4. 代码块全局样式 (覆盖默认) */
-		.markdown-section code {
-			color: #C7254E;
-			background-color: #F9F2F4;
-			border-radius: 3px;
-			padding: 2px 4px;
-			font-family: Consolas, monospace;
-		}
-		.markdown-section pre {
-			background-color: #F5F5F5;
-			border: 1px solid #EEE;
-		}
+		/* 4. 内容区修正 */
+		.content { max-width: 1000px; margin: 0 auto; padding-top: 20px; }
 	</style>
 </head>
 <body>
-<div id="app">正在加载文档引擎...</div>
+<div id="app">正在初始化引擎文档...</div>
+
 <script>
+	// ============================================================
+	// [Config] 侧边栏数据定义 (JSON Tree)
+	// 在这里配置所有的菜单结构，无需再写 _sidebar.md
+	// ============================================================
+	const SIDEBAR_DATA = [
+		{
+			title: "GDEngine 概览",
+			link: "/",
+			isHome: true
+		},
+		{
+			title: "快速入门",
+			children: [
+				{ title: "安装引擎", link: "/manual/install" },
+				{ title: "创建第一个项目", link: "/manual/hello_world" }
+			]
+		},
+		{
+			title: "核心系统",
+			children: [
+				{ title: "ECS 架构", link: "/manual/ecs/overview" },
+				{ title: "资源管理", link: "/manual/assets/manager" },
+				{
+					title: "脚本系统",
+					children: [
+						{ title: "Lua 脚本指南", link: "/manual/scripting/lua" },
+						{ title: "Java 脚本指南", link: "/manual/scripting/java" }
+					]
+				}
+			]
+		},
+		{
+			title: "更新日志",
+			// 注意：这里指向我们做好的 changelog 页面
+			children: [
+				{ title: "版本历史", link: "/changelog/README" }
+			]
+		}
+	];
+
+	// ============================================================
+	// [Controller] 侧边栏构建逻辑
+	// ============================================================
+	const SidebarBuilder = {
+
+		// 主入口：构建并挂载
+		mount: function() {
+			const nav = document.querySelector('.sidebar-nav');
+			if (!nav) return;
+
+			// 1. 清理 Docsify 默认内容
+			nav.innerHTML = '';
+
+			// 2. 创建自定义容器
+			let container = document.getElementById('custom-sidebar');
+			if (!container) {
+				container = document.createElement('div');
+				container.id = 'custom-sidebar';
+				nav.appendChild(container);
+			} else {
+				container.innerHTML = ''; // 重新渲染清空
+			}
+
+			// 3. 递归构建 DOM
+			this.renderNodes(SIDEBAR_DATA, container);
+
+			// 4. 根据当前 URL 自动高亮和展开
+			this.syncState();
+		},
+
+		// 递归渲染节点
+		renderNodes: function(nodes, parentEl) {
+			nodes.forEach(node => {
+				if (node.children) {
+					// --- 文件夹 (Parent) ---
+					const wrapper = document.createElement('div');
+					wrapper.className = 'folder-wrapper'; // 用于控制开关 class
+
+					// 标题行
+					const row = document.createElement('div');
+					row.className = 'tree-node folder-row';
+					row.onclick = (e) => {
+						e.stopPropagation();
+						this.toggleFolder(wrapper);
+					};
+
+					// 图标 [+][-]
+					const icon = document.createElement('span');
+					icon.className = 'toggle-icon';
+					icon.innerText = '+'; // 默认收起
+
+					const text = document.createTextNode(node.title);
+
+					row.appendChild(icon);
+					row.appendChild(text);
+					wrapper.appendChild(row);
+
+					// 子容器
+					const childContainer = document.createElement('div');
+					childContainer.className = 'children-container';
+					this.renderNodes(node.children, childContainer);
+
+					wrapper.appendChild(childContainer);
+					parentEl.appendChild(wrapper);
+
+					// 将数据绑定到 DOM 方便后续查找
+					wrapper.dataset.hasActiveChild = "false";
+
+				} else {
+					// --- 文件 (Leaf) ---
+					const row = document.createElement('div');
+					row.className = 'tree-node file-row';
+
+					// 小圆点
+					const dot = document.createElement('span');
+					dot.className = 'file-dot';
+
+					const text = document.createTextNode(node.title);
+
+					row.appendChild(dot);
+					row.appendChild(text);
+
+					// 点击跳转事件
+					row.onclick = (e) => {
+						e.stopPropagation();
+						// Docsify 路由跳转 (Hash模式)
+						const targetPath = node.link.startsWith('/') ? node.link : '/' + node.link;
+						// 保留查询参数 (例如版本号 ?v=...)
+						const currentQuery = window.location.hash.split('?')[1];
+						let finalHash = '#' + targetPath;
+						if(currentQuery) finalHash += '?' + currentQuery;
+
+						window.location.hash = finalHash;
+					};
+
+					// 存储 Link 用于比对高亮
+					row.dataset.link = node.link;
+
+					parentEl.appendChild(row);
+				}
+			});
+		},
+
+		// 切换文件夹开合
+		toggleFolder: function(wrapper) {
+			const isOpen = wrapper.classList.contains('folder-open');
+			const icon = wrapper.querySelector('.toggle-icon');
+
+			if (isOpen) {
+				wrapper.classList.remove('folder-open');
+				icon.innerText = '+';
+			} else {
+				wrapper.classList.add('folder-open');
+				icon.innerText = '-';
+			}
+		},
+
+		// 状态同步：高亮当前页并展开父级
+		syncState: function() {
+			// 1. 获取当前纯净路径 (去除 # 和 ?)
+			let currentPath = location.hash.split('?')[0].replace('#', '');
+			if (currentPath === '') currentPath = '/';
+			// 移除末尾 .md (如果配置里写了的话)
+			currentPath = currentPath.replace('.md', '');
+
+			// 2. 找到所有文件节点
+			const fileRows = document.querySelectorAll('.file-row');
+			fileRows.forEach(row => {
+				const link = row.dataset.link;
+
+				// 匹配逻辑
+				if (link === currentPath || (link + '.md') === currentPath || (link + '/README') === currentPath) {
+					// 命中！
+					this.highlightNode(row);
+				} else {
+					row.classList.remove('active');
+				}
+			});
+		},
+
+		// 执行高亮并递归展开父级
+		highlightNode: function(row) {
+			row.classList.add('active');
+
+			// 向上查找所有 .folder-wrapper 并展开
+			let parent = row.parentElement;
+			while (parent && parent.id !== 'custom-sidebar') {
+				if (parent.classList.contains('folder-wrapper')) {
+					// 展开
+					if (!parent.classList.contains('folder-open')) {
+						parent.classList.add('folder-open');
+						const icon = parent.querySelector('.toggle-icon');
+						if(icon) icon.innerText = '-';
+					}
+				}
+				parent = parent.parentElement;
+			}
+		}
+	};
+
+	// ============================================================
+	// Docsify 配置
+	// ============================================================
 	window.$docsify = {
 		name: 'GDEngine',
 		repo: '',
-		loadSidebar: true,
+		loadSidebar: false, // 【关键】关闭默认 Markdown 侧边栏
 		subMaxLevel: 2,
 		relativePath: true,
 		executeScript: true,
-		alias: {
-			'/.*/_sidebar.md': '/_sidebar.md',
-			'/.*/_navbar.md': '/_navbar.md'
-		},
-		// 自动滚动到顶部
 		auto2top: true,
-		// 主题色配置
-		themeColor: '#09D2B8'
+		themeColor: '#09D2B8',
+
+		// 插件钩子
+		plugins: [
+			function(hook, vm) {
+				// 每次页面渲染完成后，重建侧边栏并同步状态
+				hook.doneEach(function() {
+					SidebarBuilder.mount();
+				});
+			}
+		]
 	}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
