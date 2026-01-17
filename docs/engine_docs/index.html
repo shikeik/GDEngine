@@ -112,20 +112,17 @@
 
 <script>
 	// ============================================================
-	// [Logic] Markdown 解析器 (增强版：清洗语法)
+	// [Logic] Markdown 解析器
 	// ============================================================
 	const SidebarParser = {
 		parse: function(mdContent) {
 			const lines = mdContent.split('\n');
 			const root = { children: [] };
 			const stack = [{ level: -1, node: root }];
-
-			// 匹配列表行
 			const regex = /^(\s*)([*+-])\s+(.*)$/;
 
 			lines.forEach(line => {
 				if (!line.trim()) return;
-
 				const match = regex.exec(line);
 				if (!match) return;
 
@@ -133,21 +130,16 @@
 				const contentRaw = match[3];
 				const level = indentRaw.replace(/\t/g, '  ').length;
 
-				// 解析链接与标题
 				const linkMatch = /\[(.*?)\]\((.*?)\)/.exec(contentRaw);
-
 				let rawTitle = linkMatch ? linkMatch[1] : contentRaw;
 				const link = linkMatch ? linkMatch[2] : null;
 
-				// --- [Fix 1] 清洗 Markdown 语法 ---
-				// 1. 去除加粗/斜体 (**Text** -> Text)
+				// 清洗语法
 				rawTitle = rawTitle.replace(/[*_]{1,2}(.*?)[*_]{1,2}/g, '$1');
-				// 2. 去除 HTML 注释 (<!-- ... -->)
 				rawTitle = rawTitle.replace(/<!--[\s\S]*?-->/g, '');
-				// 3. 去除首尾空格
 				const cleanTitle = rawTitle.trim();
 
-				if (!cleanTitle) return; // 如果清洗完没字了(纯注释)，跳过
+				if (!cleanTitle) return;
 
 				const node = {
 					title: cleanTitle,
@@ -155,7 +147,6 @@
 					children: null
 				};
 
-				// 栈操作：找爸爸
 				while (stack.length > 1 && level <= stack[stack.length - 1].level) {
 					stack.pop();
 				}
@@ -172,34 +163,130 @@
 	};
 
 	// ============================================================
-	// [View] DOM 构建与状态管理 (增强版：防消失)
+	// [Logic] 版本历史注入服务 (新增模块)
+	// 职责: 获取 json -> 转为 Tree Node -> 嫁接到 Sidebar Tree
+	// ============================================================
+	const ChangelogService = {
+		// 目标挂载点的链接特征 (对应 _sidebar.md 里的链接)
+		ANCHOR_LINK: '/changelog/README',
+
+		// 1. 转换: JSON -> Sidebar Node Structure
+		transform: function(data) {
+			if (!data.groups) return [];
+
+			const nodes = [];
+
+			// A. 添加 "Overview" 节点 (总览)
+			// 用户点击父级文件夹只会展开，所以需要一个子节点来看总览
+			nodes.push({
+				title: "Overview (总览)",
+				link: this.ANCHOR_LINK, // 不带参数
+				children: null
+			});
+
+			// B. 转换 Groups
+			data.groups.forEach(group => {
+				const groupNode = {
+					title: group.id, // e.g. "1.10.12"
+					children: []     // 文件夹
+				};
+
+				if (group.patches) {
+					group.patches.forEach(patch => {
+						// 构造带参数的链接，用于定位
+						const targetLink = `${this.ANCHOR_LINK}?target=${patch.tag}`;
+
+						groupNode.children.push({
+							title: patch.tag, // e.g. "v1.10.12.1"
+							link: targetLink,
+							children: null    // 文件
+						});
+					});
+				}
+				nodes.push(groupNode);
+			});
+
+			return nodes;
+		},
+
+		// 2. 嫁接: 找到锚点并将新树挂载上去
+		graft: function(sidebarRoots, jsonRoots) {
+			// 深度优先查找
+			const findAndGraft = (nodes) => {
+				for (let i = 0; i < nodes.length; i++) {
+					const node = nodes[i];
+
+					// 匹配锚点 (忽略 .md 后缀差异)
+					const nodeLink = node.link ? node.link.replace('.md', '') : '';
+					const anchor = this.ANCHOR_LINK.replace('.md', '');
+
+					if (nodeLink === anchor) {
+						// 找到目标！
+						// 1. 清空它的 link (可选: 如果希望点击父级不跳转，只展开)
+						// node.link = null; // Unity风格：父级通常不可点，但为了兼容性保留也行
+
+						// 2. 挂载子节点
+						node.children = jsonRoots;
+						return true; // 停止查找
+					}
+
+					if (node.children) {
+						if (findAndGraft(node.children)) return true;
+					}
+				}
+				return false;
+			};
+
+			findAndGraft(sidebarRoots);
+		}
+	};
+
+	// ============================================================
+	// [View] DOM 构建与状态管理
 	// ============================================================
 	const SidebarBuilder = {
 		isBuilt: false,
-		cachedDOM: null, // [Fix 2] 缓存构建好的 DOM 树
+		cachedDOM: null,
 
-		init: function(fileUrl) {
+		// 初始化 (并行加载)
+		init: function(sidebarUrl, jsonUrl) {
 			if (this.isBuilt) return Promise.resolve();
 
-			return fetch(fileUrl)
-				.then(res => {
-					if (!res.ok) throw new Error("Sidebar 404");
-					return res.text();
-				})
-				.then(md => {
-					const treeData = SidebarParser.parse(md);
-					// 构建 DOM 并缓存起来，不直接 append
-					this.cachedDOM = this.buildDOM(treeData);
-					this.isBuilt = true;
-					// 首次挂载
-					this.ensureMounted();
-				})
-				.catch(err => {
-					console.error("Sidebar error:", err);
-				});
+			// 并行请求：Sidebar 和 Changelog
+			// 使用 allSettled 防止 Changelog 失败导致整个菜单挂掉
+			return Promise.allSettled([
+				fetch(sidebarUrl).then(r => { if(!r.ok) throw 404; return r.text(); }),
+				fetch(jsonUrl).then(r => { if(!r.ok) throw 404; return r.json(); })
+			]).then(results => {
+				const sidebarResult = results[0];
+				const jsonResult = results[1];
+
+				// 1. 解析主干
+				let treeData = [];
+				if (sidebarResult.status === 'fulfilled') {
+					treeData = SidebarParser.parse(sidebarResult.value);
+				} else {
+					console.error("Sidebar load failed");
+					return;
+				}
+
+				// 2. 嫁接分支 (如果获取成功)
+				if (jsonResult.status === 'fulfilled') {
+					try {
+						const logNodes = ChangelogService.transform(jsonResult.value);
+						ChangelogService.graft(treeData, logNodes);
+					} catch (e) {
+						console.error("Changelog graft failed:", e);
+					}
+				}
+
+				// 3. 构建并缓存 DOM
+				this.cachedDOM = this.buildDOM(treeData);
+				this.isBuilt = true;
+				this.ensureMounted();
+			});
 		},
 
-		// 构建 DOM 结构 (返回 Element)
 		buildDOM: function(nodes) {
 			const container = document.createElement('div');
 			container.id = 'custom-sidebar';
@@ -207,16 +294,12 @@
 			return container;
 		},
 
-		// [Fix 2] 确保 DOM 存在于页面上 (路由切换后重新挂载)
 		ensureMounted: function() {
 			if (!this.cachedDOM) return;
-
 			const nav = document.querySelector('.sidebar-nav');
 			if (!nav) return;
-
-			// 检查是否被 Docsify 擦除了
 			if (!document.getElementById('custom-sidebar')) {
-				nav.innerHTML = ''; //以此为准
+				nav.innerHTML = '';
 				nav.appendChild(this.cachedDOM);
 			}
 		},
@@ -227,7 +310,7 @@
 				const hasChildren = node.children && node.children.length > 0;
 
 				if (hasChildren) {
-					// --- 文件夹 ---
+					// --- Folder ---
 					const wrapper = document.createElement('div');
 					wrapper.className = 'folder-wrapper';
 
@@ -255,7 +338,7 @@
 					wrapper.appendChild(childContainer);
 					parentEl.appendChild(wrapper);
 				} else {
-					// --- 文件 ---
+					// --- File ---
 					const row = document.createElement('div');
 					row.className = 'tree-node file-row';
 
@@ -267,15 +350,22 @@
 					row.appendChild(text);
 
 					if (node.link) {
+						// 存储完整链接 (包含 query params)
 						row.dataset.link = node.link;
+
 						row.onclick = (e) => {
 							e.stopPropagation();
-							const targetPath = node.link.startsWith('/') ? node.link : '/' + node.link;
 
-							const currentQuery = window.location.hash.split('?')[1];
-							let finalHash = '#' + targetPath;
-							if(currentQuery) finalHash += '?' + currentQuery;
-							window.location.hash = finalHash;
+							// 构造目标 Hash
+							// node.link 可能是 "/manual/a" 或 "/manual/a?t=1"
+							// 我们需要处理当前的 base path
+
+							let target = node.link;
+							if (!target.startsWith('/')) target = '/' + target;
+
+							// 直接设置 Hash，Docsify 会处理路由
+							// 这里不再保留旧的 Query，而是使用 Link 自带的 Query (如果有)
+							window.location.hash = '#' + target;
 						};
 					}
 					parentEl.appendChild(row);
@@ -295,28 +385,59 @@
 			}
 		},
 
-		// 更新高亮和展开状态
+		// [核心升级] 状态匹配逻辑
 		updateState: function() {
 			if (!this.isBuilt) return;
-			// 每次更新状态前，先确保 DOM 还在
 			this.ensureMounted();
 
-			let currentPath = location.hash.split('?')[0].replace('#', '');
-			if (currentPath === '') currentPath = '/';
+			// 1. 解析当前 URL
+			// Hash: #/changelog/README?target=v1.0
+			const hash = location.hash;
+			// Path: /changelog/README
+			const currentPath = hash.split('?')[0].replace('#', '');
+			// Query: target=v1.0
+			const currentQuery = hash.split('?')[1] || '';
 
+			// 2. 清理旧状态
 			const allFiles = document.querySelectorAll('.file-row');
 			allFiles.forEach(row => row.classList.remove('active'));
 
 			let activeRow = null;
+
+			// 3. 查找匹配 (优先级匹配)
 			for (let row of allFiles) {
 				const link = row.dataset.link;
 				if (!link) continue;
-				const cleanLink = link.replace('.md', '');
-				const cleanCurr = currentPath.replace('.md', '');
 
-				if (cleanLink === cleanCurr || cleanLink + '/README' === cleanCurr) {
-					activeRow = row;
-					break;
+				// 拆分 Link 的 Path 和 Query
+				const linkPath = link.split('?')[0].replace('.md', '');
+				const linkQuery = link.split('?')[1] || '';
+				const cleanCurrPath = currentPath.replace('.md', '');
+
+				// 匹配 Path
+				const pathMatch = (linkPath === cleanCurrPath || linkPath + '/README' === cleanCurrPath);
+
+				if (pathMatch) {
+					// 如果 Sidebar Link 带有 Query (例如具体的版本 v1.0)
+					if (linkQuery) {
+						// 必须 Query 也匹配才算选中
+						if (linkQuery === currentQuery) {
+							activeRow = row;
+							break; // 完美匹配，直接退出
+						}
+					} else {
+						// Sidebar Link 没有 Query (例如 Overview 或普通页面)
+						// 只有当当前 URL 也没有 Query (或者我们允许 Overview 匹配带参 URL?)
+						// Unity风格：如果选了具体版本，Overview 不应该高亮。
+						// 所以：如果 CurrentQuery 存在，而 LinkQuery 为空，则不匹配 (除非没找到更好的)
+						if (!currentQuery) {
+							activeRow = row;
+							// 不 break，继续找有没有更精确的带 Query 的匹配
+						} else {
+							// 暂存，如果后面没找到精确匹配，可以用这个兜底
+							if (!activeRow) activeRow = row;
+						}
+					}
 				}
 			}
 
@@ -356,14 +477,17 @@
 
 		plugins: [
 			function(hook, vm) {
-				// 首次加载
+				// [Config] 资源路径配置
+				const SIDEBAR_URL = '_sidebar.md';
+				// 注意：这里使用绝对路径，确保从任何页面都能加载到
+				const JSON_URL = '/changelog/changelog.json';
+
 				hook.mounted(function() {
-					SidebarBuilder.init('_sidebar.md').then(() => {
+					SidebarBuilder.init(SIDEBAR_URL, JSON_URL).then(() => {
 						SidebarBuilder.updateState();
 					});
 				});
 
-				// [Fix 2] 每次路由切换完，检查DOM是否还在，不在就挂上去，然后同步状态
 				hook.doneEach(function() {
 					SidebarBuilder.updateState();
 				});
