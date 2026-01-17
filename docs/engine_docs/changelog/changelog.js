@@ -209,12 +209,33 @@
 		getLocalVersion: function() {
 			const params = new URLSearchParams(window.location.search);
 			let ver = params.get('v');
+			
+			// 策略 1: 如果 URL 有，优先用 URL，并尝试写入所有可能的缓存
 			if (ver) {
-				sessionStorage.setItem('gd_local_version', ver);
-			} else {
-				ver = sessionStorage.getItem('gd_local_version') || '0.0.0';
+				try { sessionStorage.setItem('gd_local_version', ver); } catch(e){}
+				try { localStorage.setItem('gd_local_version', ver); } catch(e){}
+				// 如果是本地 file:// 协议，cookie 可能无效，但还是试一下
+				document.cookie = `gd_local_version=${ver}; path=/; max-age=31536000`; 
+				return ver;
 			}
-			return ver;
+			
+			// 策略 2: 如果 URL 没有，依次尝试 sessionStorage -> localStorage -> Cookie
+			try {
+				ver = sessionStorage.getItem('gd_local_version');
+				if (ver) return ver;
+			} catch(e){}
+
+			try {
+				ver = localStorage.getItem('gd_local_version');
+				if (ver) return ver;
+			} catch(e){}
+
+			// 尝试从 Cookie 读取
+			const match = document.cookie.match(new RegExp('(^| )gd_local_version=([^;]+)'));
+			if (match) return match[2];
+
+			// 策略 3: 实在没有，回退到默认
+			return '0.0.0';
 		},
 
 		fetchData: function(localVer) {
