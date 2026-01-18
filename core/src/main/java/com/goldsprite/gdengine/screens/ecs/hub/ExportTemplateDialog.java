@@ -1,3 +1,4 @@
+// 文件: core/src/main/java/com/goldsprite/gdengine/screens/ecs/hub/ExportTemplateDialog.java
 package com.goldsprite.gdengine.screens.ecs.hub;
 
 import com.badlogic.gdx.Gdx;
@@ -5,7 +6,9 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.goldsprite.gdengine.core.project.ProjectService;
 import com.goldsprite.gdengine.core.project.model.TemplateInfo;
+import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.kotcrab.vis.ui.widget.VisLabel;
 import com.kotcrab.vis.ui.widget.VisTable;
@@ -13,9 +16,6 @@ import com.kotcrab.vis.ui.widget.VisTextArea;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 
-/**
- * 导出模板对话框 (从 GDEngineHubScreen 提取)
- */
 public class ExportTemplateDialog extends BaseDialog {
 	private final VisTextField idField, nameField, versionField;
 	private final VisTextArea descArea;
@@ -23,12 +23,13 @@ public class ExportTemplateDialog extends BaseDialog {
 	private final FileHandle projectDir;
 
 	public ExportTemplateDialog(FileHandle projectDir) {
-		super("Export Template (Dev Only)");
+		super("Export Template"); // 移除了 Dev Only 标记，现在是正式功能
 		this.projectDir = projectDir;
 
 		VisTable content = new VisTable();
 		content.defaults().pad(5).left();
 
+		// Auto-fill ID from folder name
 		content.add(new VisLabel("Template ID (Folder Name):"));
 		idField = new VisTextField(projectDir.name());
 		content.add(idField).width(300).row();
@@ -42,7 +43,7 @@ public class ExportTemplateDialog extends BaseDialog {
 		content.add(versionField).width(100).row();
 
 		content.add(new VisLabel("Description:")).top();
-		descArea = new VisTextArea("Auto-exported template.");
+		descArea = new VisTextArea("User exported template.");
 		descArea.setPrefRows(3);
 		content.add(descArea).width(300).row();
 
@@ -53,7 +54,7 @@ public class ExportTemplateDialog extends BaseDialog {
 		errorLabel.setWrap(true);
 		add(errorLabel).width(400).padBottom(10).row();
 
-		VisTextButton btnExport = new VisTextButton("Review & Export");
+		VisTextButton btnExport = new VisTextButton("Export to Local");
 		btnExport.setColor(Color.ORANGE);
 		btnExport.addListener(new ClickListener() {
 			@Override public void clicked(InputEvent event, float x, float y) {
@@ -62,6 +63,7 @@ public class ExportTemplateDialog extends BaseDialog {
 		});
 
 		add(btnExport).growX().height(40);
+
 		pack();
 		centerWindow();
 	}
@@ -78,27 +80,23 @@ public class ExportTemplateDialog extends BaseDialog {
 		meta.displayName = nameField.getText();
 		meta.description = descArea.getText();
 		meta.version = versionField.getText();
-		// 自动注入当前引擎版本 (假设 BuildConfig 可访问)
+		// 自动注入引擎版本
 		meta.engineVersion = com.goldsprite.gdengine.BuildConfig.DEV_VERSION;
 
-		errorLabel.setText("Reviewing...");
+		errorLabel.setText("Exporting...");
 		errorLabel.setColor(Color.YELLOW);
 
+		// 异步执行
 		new Thread(() -> {
-			// 这里我们还没有把 TemplateExporter 搬到 Service，为简化流程，
-			// 建议把 TemplateExporter 的逻辑也放到 ProjectService 里，或者作为一个 Utils。
-			// 鉴于它是 Dev 工具，我们暂时假设它还是个独立的工具类，或者你可以把它的逻辑内联到这里。
-			// *为了保证代码不报错，请确保 GDEngineHubScreen 里原来的 TemplateExporter 还在，或者你已经把它移到了别处*
-			// *最佳实践：我们暂且不调用具体逻辑，只打印 Log，因为这是 Dev 功能*
-
-			// String err = TemplateExporter.exportProject(projectDir, meta);
-			String err = null;
-			com.goldsprite.gdengine.log.Debug.logT("Exporter", "Export logic needs to be moved to ProjectService fully.");
+			// [修复] 使用 Service 接口
+			String err = ProjectService.inst().exportProjectAsTemplate(projectDir, meta);
 
 			Gdx.app.postRunnable(() -> {
 				if (err == null) {
 					fadeOut();
-					com.goldsprite.gdengine.log.Debug.logT("Exporter", "Export Completed (Mock)!");
+					com.goldsprite.gdengine.log.Debug.logT("Exporter", "✅ Export Completed: " + id);
+					// 提示用户
+					com.goldsprite.gdengine.ui.widget.ToastUI.inst().show("Template Exported!");
 				} else {
 					errorLabel.setText(err);
 					errorLabel.setColor(Color.RED);

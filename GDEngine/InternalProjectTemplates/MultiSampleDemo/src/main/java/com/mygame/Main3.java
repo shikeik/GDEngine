@@ -19,8 +19,7 @@ import com.goldsprite.gdengine.core.Gd;
  *
  */
 public class Main3 implements IGameScriptEntry {
-	private NeonBatch neonBatch;
-	private Texture tex_gd_icon, tex_role_sheet;
+	private Texture tex_role_sheet;
 
 	private GObject role;
 	private NeonAnimatorComponent roleAnim;
@@ -29,8 +28,6 @@ public class Main3 implements IGameScriptEntry {
 
 	//
 	@Override public void onStart(GameWorld world) {
-		neonBatch = new NeonBatch();
-		tex_gd_icon = new Texture(GameWorld.getAsset("gd_icon.png"));
 		tex_role_sheet = new Texture("sprites/roles/enma/enma01.png");
 
 
@@ -42,11 +39,24 @@ public class Main3 implements IGameScriptEntry {
 		Debug.logT("Script", "RotCube onStart(). \ninfo: \n%s", info);
 
 
+		GObject gridObj = new GObject("WorldGrid");
+		gridObj.addComponent(new RenderComponent(){
+				@Override public void render(NeonBatch batch, Camera cam) {
+					drawGrid(batch, cam);
+				}
+				// 简化处理
+				@Override public boolean contains(float x, float y) {
+					return false;
+				}
+		});
+
 		float size = worldHeight*0.15f;
+
 		// Cube x y size color animSpeed
 		createRotCube(-worldHeight*0.2f, worldHeight*0.3f, size, Color.RED, 0.3f);
 
 		GObject p = createRotGdIcon(worldHeight*0.2f, worldHeight*0.3f, size, Color.WHITE, -0.3f);
+
 		GObject c = createRotCube(0, 0, size*0.5f, Color.YELLOW, 0.3f);
 		c.setParent(p);
 		c.transform.position.set(worldHeight* 0.2f, 0);
@@ -58,20 +68,22 @@ public class Main3 implements IGameScriptEntry {
 	// ?
 	@Override public void onUpdate(float delta) {
 		logic(delta);
-		drawGrid();
 	}
 
 	String lastAnimName = "";
 	private void logic(float delta) {
 		int dir = 0;
 		boolean right = Gd.input.getX() > Gd.graphics.getWidth()/2f;
-		boolean isTouch = Gdx.input.isTouched();
+
+		Debug.infoT("TEST", "inputX: %.1f, Gd.width: %.1f, gameCamWidth: %.1f", Gd.input.getX(), Gd.graphics.getWidth(), GameWorld.worldCamera.viewportWidth);
+
+		boolean isTouch = Gd.input.isTouched();
 		if(Gd.input.isKeyPressed(Input.Keys.A) || (isTouch&&!right)) dir -= 1;
 		if(Gd.input.isKeyPressed(Input.Keys.D) || (isTouch&&right)) dir += 1;
-		String animName = (Gdx.input.isTouched() || dir != 0) ? "Run" : "Idle";
+		String animName = (Gd.input.isTouched() || dir != 0) ? "Run" : "Idle";
 		float vel = worldHeight * 0.3f;
 		Debug.info("right : $s, %s, %s", right, dir, isTouch);
-		if(Gdx.input.isTouched() || dir != 0) role.getComponent(SpriteComponent.class).flipX = dir < 0;
+		if(Gd.input.isTouched() || dir != 0) role.getComponent(SpriteComponent.class).flipX = dir < 0;
 		role.transform.position.add(vel * dir * delta, 0);
 		role.getComponent(NeonAnimatorComponent.class).play(animName);
 	}
@@ -81,23 +93,21 @@ public class Main3 implements IGameScriptEntry {
 		obj.transform.setPosition(x, y);
 		obj.transform.setScale(1f);
 
-		obj.addComponent(new Component(){
-			private NeonBatch neonBatch;
-
-			@Override public void onAwake() {
-				neonBatch = new NeonBatch();
-			}
-			@Override public void update(float delta) {
+		obj.addComponent(new RenderComponent(){
+			@Override public void render(NeonBatch batch, Camera cam) {
 				float angle = 360f * GameWorld.getTotalTime() * animSpeed;
 				obj.transform.rotation = angle;
-				neonBatch.setProjectionMatrix(GameWorld.worldCamera.combined);
-				neonBatch.begin();
 				float lineWidth = 6;
-				neonBatch.drawRect(
+
+				batch.drawRect(
 					obj.transform.worldPosition.x - size/2f,
 					obj.transform.worldPosition.y - size/2f,
 					size, size, angle, lineWidth, c, false);
-				neonBatch.end();
+			}
+
+			// 简化处理
+			@Override public boolean contains(float x, float y) {
+				return false;
 			}
 		});
 
@@ -110,16 +120,23 @@ public class Main3 implements IGameScriptEntry {
 		obj.transform.setScale(1f);
 
 		SpriteComponent sprite = obj.addComponent(SpriteComponent.class);
-		sprite.setRegion(new TextureRegion(tex_gd_icon));
+		sprite.assetPath = "gd_icon.png";
+		sprite.reloadRegion();
+		sprite.sortingLayer = "Effect";
 		sprite.color.set(c);
 		sprite.width = size;
 		sprite.height = size;
 
-		obj.addComponent(new Component(){
-			@Override public void update(float delta) {
+		obj.addComponent(new RenderComponent(){
+				@Override public void render(NeonBatch batch, Camera cam) {
 				float angle = 360f * GameWorld.getTotalTime() * animSpeed;
 				obj.transform.rotation = angle;
-			}
+				}
+
+				// 简化处理
+				@Override public boolean contains(float x, float y) {
+					return false;
+				}
 		});
 
 		return obj;
@@ -134,6 +151,7 @@ public class Main3 implements IGameScriptEntry {
 
 		SpriteComponent sprite = obj.addComponent(SpriteComponent.class);
 		sprite.setRegion(idleFrames.get(0));
+		sprite.sortingLayer = "Effect";
 		sprite.width = size;
 		sprite.height = size;
 
@@ -185,12 +203,9 @@ public class Main3 implements IGameScriptEntry {
 		return anim;
 	}
 
-	private void drawGrid() {
+	private void drawGrid(NeonBatch batch, Camera cam) {
 		// Grid
-		neonBatch.setProjectionMatrix(GameWorld.worldCamera.combined);
-		neonBatch.begin();
-		neonBatch.drawLine(-200, 0, 200, 0, 1, Color.GRAY);
-		neonBatch.drawLine(0, -200, 0, 200, 1, Color.GRAY);
-		neonBatch.end();
+		batch.drawLine(-200, 0, 200, 0, 1, Color.GRAY);
+		batch.drawLine(0, -200, 0, 200, 1, Color.GRAY);
 	}
 }

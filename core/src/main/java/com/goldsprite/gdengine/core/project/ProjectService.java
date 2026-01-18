@@ -70,44 +70,53 @@ public class ProjectService {
 	}
 
 	/**
-	 * 扫描引擎内置模板目录 (assets/engine/templates)
+	 * 扫描模板 (合并 内置模板 + 用户导出模板)
 	 */
 	public Array<TemplateInfo> listTemplates() {
 		Array<TemplateInfo> list = new Array<>();
-		FileHandle templatesRoot = Gd.files.internal("engine/templates");
 
-		if (!templatesRoot.exists()) return list;
+		// 1. 内置模板 (Internal)
+		scanTemplates(Gd.files.internal("engine/templates"), list);
 
-		for (FileHandle dir : templatesRoot.list()) {
+		// 2. [新增] 用户导出模板 (Local)
+		// 对应 TemplateExporter 导出的位置
+		FileHandle localTpl = Gd.files.local("LocalTemplates");
+		if (localTpl.exists()) {
+			scanTemplates(localTpl, list);
+		}
+
+		return list;
+	}
+
+	// 提取公共扫描逻辑
+	private void scanTemplates(FileHandle root, Array<TemplateInfo> list) {
+		if (!root.exists()) return;
+
+		for (FileHandle dir : root.list()) {
 			if (!dir.isDirectory()) continue;
 
 			TemplateInfo info = new TemplateInfo();
 			info.id = dir.name();
-			info.dirHandle = dir; // 暂存 Handle，用于后续复制
+			info.dirHandle = dir;
 
-			// 尝试读取 template.json 元数据
 			FileHandle metaFile = dir.child("template.json");
 			if (metaFile.exists()) {
 				try {
-					TemplateInfo meta = json.fromJson(TemplateInfo.class, metaFile);
+					TemplateInfo meta = new Json().fromJson(TemplateInfo.class, metaFile);
 					info.displayName = meta.displayName;
 					info.description = meta.description;
 					info.originEntry = meta.originEntry;
 					info.version = meta.version;
 					info.engineVersion = meta.engineVersion;
 				} catch (Exception e) {
-					Debug.logT("ProjectService", "Template parse error: " + dir.name());
 					info.displayName = info.id + " (Error)";
 				}
 			} else {
-				// 没有元数据时的兜底逻辑
 				info.displayName = info.id;
-				info.description = "No description.";
-				info.originEntry = "com.game.Main"; // 默认入口
+				info.originEntry = "com.game.Main";
 			}
 			list.add(info);
 		}
-		return list;
 	}
 
 	// =========================================================================================
@@ -192,6 +201,11 @@ public class ProjectService {
 			projectDir.deleteDirectory();
 			Debug.logT("ProjectService", "Deleted project: " + projectDir.name());
 		}
+	}
+
+	// [新增] 导出接口
+	public String exportProjectAsTemplate(FileHandle projectDir, TemplateInfo meta) {
+		return TemplateExporter.exportProject(projectDir, meta);
 	}
 
 	// =========================================================================================
