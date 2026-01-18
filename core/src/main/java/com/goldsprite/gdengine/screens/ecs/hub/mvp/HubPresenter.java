@@ -7,7 +7,6 @@ import com.goldsprite.gdengine.core.project.model.TemplateInfo;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.screens.ScreenManager;
 import com.goldsprite.gdengine.screens.ecs.editor.EditorGameScreen;
-import com.goldsprite.gdengine.screens.ecs.hub.GDEngineEditorScreen;
 
 /**
  * Hub 逻辑控制器 (Presenter)

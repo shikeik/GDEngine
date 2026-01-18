@@ -168,8 +168,8 @@ public class ProjectService {
 
 			// 5. [新增] 注入引擎依赖库 (libs/)
 			// 自动探测：开发环境(assets/engine/libs) vs 发布环境(engine/libs)
-			FileHandle libsSource = Gdx.files.internal("engine/libs");
-			if (!libsSource.exists()) libsSource = Gdx.files.internal("assets/engine/libs");
+			FileHandle libsSource = Gd.files.internal("engine/libs");
+			if (!libsSource.exists()) libsSource = Gd.files.internal("assets/engine/libs");
 
 			FileHandle libsTarget = tempRoot.child("libs");
 			libsTarget.mkdirs();
@@ -201,11 +201,6 @@ public class ProjectService {
 			projectDir.deleteDirectory();
 			Debug.logT("ProjectService", "Deleted project: " + projectDir.name());
 		}
-	}
-
-	// [新增] 导出接口
-	public String exportProjectAsTemplate(FileHandle projectDir, TemplateInfo meta) {
-		return TemplateExporter.exportProject(projectDir, meta);
 	}
 
 	// =========================================================================================

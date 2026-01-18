@@ -8,7 +8,6 @@ import com.goldsprite.gdengine.screens.ecs.EcsVisualTestScreen;
 import com.goldsprite.gdengine.screens.ecs.JsonLiveEditScreen;
 import com.goldsprite.gdengine.screens.ecs.SpriteVisualScreen;
 import com.goldsprite.gdengine.screens.ecs.skeleton.SkeletonVisualScreen;
-import com.goldsprite.screens.tests.OneWayPlatformSystemWrapper;
 
 import java.util.Map;
 
@@ -31,6 +30,5 @@ public class GDEngineSelectionScreen extends BaseSelectionScreen {
 		map.put("UI 测试: VisTabbedPane (源码复刻)", VisTabTestScreen2.class);
 
 		map.put("临时观测测试(用完即删)", null);
-		map.put("单项平台测试", OneWayPlatformSystemWrapper.class);
 	}
 }

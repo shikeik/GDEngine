@@ -46,8 +46,9 @@ public class Debug {
 		"EditorPanel Y",
 		"WebBrowser Y",
 		"DocServer Y",
-		"ZipDownLoader Y", 
-		"ToastUI Y", 
+		"ZipDownLoader Y",
+		"ToastUI Y",
+		"ProjectService Y",
 
 		// Test
 		"TEST Y",
