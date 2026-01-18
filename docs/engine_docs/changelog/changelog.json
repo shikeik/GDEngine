@@ -1,5 +1,5 @@
 {
-    "lastUpdated": "2026-01-19 01:59:37",
+    "lastUpdated": "2026-01-19 02:32:14",
     "groups": [
         {
             "id": "In Development",
@@ -13,7 +13,14 @@
                     "isSnapshot": true,
                     "commits": [
                         {
-                            "hash": "1580f6808f46564a5e421c052c4be92a70346e39",
+                            "hash": "eea230749fef6c72d99ed212e63a1f51070b8501",
+                            "date": "2026-01-19",
+                            "type": "fix",
+                            "summary": "\u672c\u5730\u670d\u52a1\u529f\u80fd\u79fb\u9664, \u91c7\u7528cloudflare\u7ebf\u4e0a\u7f51\u7ad9\u7684\u5728\u7ebf\u6587\u6863\u65b9\u5f0f",
+                            "details": ""
+                        },
+                        {
+                            "hash": "11e5192ef73193c9f80cb46afd4321e3d51a82f6",
                             "date": "2026-01-19",
                             "type": "fix",
                             "summary": "\u4fee\u6b63changelog\u751f\u6210\u903b\u8f91",
