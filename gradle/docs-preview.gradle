@@ -46,7 +46,7 @@ tasks.register('previewDocs') {
 			server.setExecutor(null)
 			server.start()
 
-			String url = "http://localhost:${port}/#/?v=${rootProject.version}"
+			String url = "http://localhost:${port}/#/?v=${projectVersion}"
 
 			println ""
 			println "========================================================"

@@ -789,7 +789,7 @@ public class EditorController {
 			EditorEvents.inst().emitStructureChanged();
 			EditorEvents.inst().emitSceneLoaded();
 		} else {
-			initTestScene();
+//			initTestScene(); // 现在不需要了
 			EditorEvents.inst().emitStructureChanged();
 		}
 	}
