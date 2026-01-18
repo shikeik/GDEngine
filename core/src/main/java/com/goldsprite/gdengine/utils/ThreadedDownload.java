@@ -13,7 +13,6 @@ import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import com.goldsprite.gdengine.core.web.DocServer;
 import com.goldsprite.gdengine.log.Debug;
 // import com.goldsprite.gdengine.ui.widget.ToastUI; // 你的代码里好像没用到
 // import com.goldsprite.gdengine.core.Gd;
@@ -197,12 +196,13 @@ public class ThreadedDownload {
 	}
 
 	public static void download(Runnable onFinish) {
+		if(true) return; // 这个类暂时用不上了, 后面下载模板时再改造和启用
 		// ... (保持原本的 URL 设置) ...
 //        String DOWNLOAD_URL = "https://github.com/shikeik/GDEngine/releases/download/"+BuildConfig.DEV_VERSION+"/engine_docs.zip";
 		String DOWNLOAD_URL = "https://edgeone.gh-proxy.org/https://github.com/shikeik/GDEngine/releases/download/1.10.12.10/engine_docs.zip";
 //        String DOWNLOAD_URL = "https://cdn.gh-proxy.org/https://github.com/shikeik/GDEngine/releases/download/1.10.12.10/engine_docs.zip";
 //        String DOWNLOAD_URL = "https://bgithub.xyz/shikeik/GDEngine/releases/download/1.10.12.10/engine_docs.zip";
-		String SAVE_PATH = DocServer.getEngineDocPath();
+		String SAVE_PATH = ""/*DocServer.getEngineDocPath()*/;
 
 		ProgressListener listener = (percentage, message) -> {
 			String progressBar = (percentage >= 0) ? "=".repeat(Math.max(0, percentage / 2)) + ">" : "ERROR";

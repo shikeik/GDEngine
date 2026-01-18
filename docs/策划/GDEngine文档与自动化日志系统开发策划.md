@@ -1182,24 +1182,27 @@ public class DocServer extends NanoHTTPD {
 
 ```java
 // ... imports ...
-import com.goldsprite.gdengine.core.web.DocServer; // [New]
 
 // 在 initMainLayout() 方法中：
 
-        VisTextButton btnLog = new VisTextButton("📅 文档中心");
-        btnLog.setColor(Color.SKY);
-        btnLog.addListener(new ClickListener() {
-            @Override
-            public void clicked(InputEvent event, float x, float y) {
-                // 1. 启动本地服务器
-                DocServer.startServer();
-                
-                // 2. 调用浏览器打开 http://localhost:8899/index.html
-                if (Gd.browser != null) {
-                    Gd.browser.openUrl(DocServer.getIndexUrl(), "GDEngine Docs");
-                }
-            }
-        });
+VisTextButton btnLog = new VisTextButton("📅 文档中心");
+        btnLog.
+
+setColor(Color.SKY);
+        btnLog.
+
+addListener(new ClickListener() {
+    @Override
+    public void clicked (InputEvent event,float x, float y){
+        // 1. 启动本地服务器
+        DocServer.startServer();
+
+        // 2. 调用浏览器打开 http://localhost:8899/index.html
+        if (Gd.browser != null) {
+            Gd.browser.openUrl(DocServer.getIndexUrl(), "GDEngine Docs");
+        }
+    }
+});
 ```
 
 ---

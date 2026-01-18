@@ -4,7 +4,6 @@ import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -18,11 +17,9 @@ import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.project.ProjectService;
 import com.goldsprite.gdengine.core.project.model.ProjectConfig;
 import com.goldsprite.gdengine.core.project.model.TemplateInfo;
-import com.goldsprite.gdengine.core.web.DocServer;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.ui.event.ContextListener;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
-import com.goldsprite.gdengine.ui.widget.ChangeLogDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.goldsprite.gdengine.screens.ecs.hub.SettingsWindow;
@@ -108,30 +105,22 @@ public class HubViewImpl extends VisTable implements IHubView {
 		VisTable bottomBar = new VisTable();
 		bottomBar.left();
 
-		VisTextButton btnLog = new VisTextButton("📅 更新日志");
+		VisTextButton btnLog = new VisTextButton("📅 在线文档");
 		btnLog.setColor(Color.SKY);
 		btnLog.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-//				new ChangeLogDialog().show(getStage()); // 注释原内置解析式日志查看器
+				// [核心修改] 直接跳转 Cloudflare Pages
+				// Docsify 默认使用 Hash 路由，通过 query 参数传递版本号
+				String url = "https://gdengine.pages.dev/#/?v=" + BuildConfig.DEV_VERSION;
 
-				// 使用新WebView接口方式
-				ToastUI.inst().show("开始自动下载引擎文档");
-				ThreadedDownload.download(() -> {
-					ToastUI.inst().show("完成引擎文档下载");
-					// 1. 启动本地服务器
-					DocServer.startServer();
+				com.goldsprite.gdengine.log.Debug.logT("Hub", "Opening Docs: " + url);
 
-					// [核心修改] 拼接当前引擎开发版本号
-					// URL 示例: http://localhost:8899/index.html?v=1.10.11
-					// 注意：Docsify 是单页应用，参数通常加在 # 之前，或者由 index.html 里的 JS 全局捕获
-					// 这里我们传给 index.html，里面的 Docsify 会保留 query string
-					String url = DocServer.getIndexUrl() + "?v=" + BuildConfig.DEV_VERSION;
-
-					if (Gd.browser != null) {
-						Gd.browser.openUrl(url, "GDEngine Docs");
-					}
-				});
+				if (Gd.browser != null) {
+					Gd.browser.openUrl(url, "GDEngine Docs");
+				} else {
+					ToastUI.inst().show("Error: WebBrowser not initialized.");
+				}
 			}
 		});
 
