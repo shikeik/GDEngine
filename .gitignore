@@ -174,8 +174,7 @@ saves/
 docs/tmp/
 
 # GDEngine Config (Local Preferences)
-GDEngine/engine_config.json
-GDEngine/UserProjects/
+GDEngine/
 assets/engine.index
 assets/engine/libs/
 assets/assets.txt

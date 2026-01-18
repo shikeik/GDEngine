@@ -1,6 +1,6 @@
 {
 displayName: 你好游戏!
-description: Auto-exported template.这是GD引擎的HelloWorld.
-originEntry: com.hellogame.Main
+description: 这是GD引擎的HelloWorld.
+originEntry: ${MAIN_CLASS}
 version: 1.3
 }

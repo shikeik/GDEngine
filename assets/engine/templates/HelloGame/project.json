@@ -1,5 +1,5 @@
 {
-name: HelloGame
-entryClass: com.hellogame.Main
-engineVersion: 1.10.6.1-alpha
+name: ${PROJECT_NAME}
+entryClass: ${MAIN_CLASS}
+engineVersion: ${ENGINE_VERSION}
 }
