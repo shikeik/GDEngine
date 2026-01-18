@@ -1,5 +1,5 @@
 {
-    "lastUpdated": "2026-01-18 22:53:45",
+    "lastUpdated": "2026-01-19 01:38:51",
     "groups": [
         {
             "id": "In Development",
@@ -7,13 +7,41 @@
                 {
                     "tag": "HEAD",
                     "fullVersion": "HEAD",
-                    "date": "2026-01-18",
+                    "date": "2026-01-19",
                     "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
                     "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
                     "isSnapshot": true,
                     "commits": [
                         {
-                            "hash": "4d73f767459d896690022401443e655ca277ca63",
+                            "hash": "a655a08607b5dca2ef8613dffd9cb96ab23e28d4",
+                            "date": "2026-01-19",
+                            "type": "refactor",
+                            "summary": "\u521b\u5efa\u9879\u76ee\u6d41\u7a0b\u91cd\u8bbe\u8ba1",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ce2c8a7dc491aceda0d2c8e7dc6eafafe3174151",
+                            "date": "2026-01-19",
+                            "type": "refactor",
+                            "summary": "\u6e05\u7406\u6240\u6709\u591a\u4f59\u6a21\u677f(\u7248\u672c\u4e0d\u53ef\u7528)",
+                            "details": ""
+                        },
+                        {
+                            "hash": "b4c021caddca428f09e004ef6df40cee7e64f775",
+                            "date": "2026-01-19",
+                            "type": "refactor",
+                            "summary": "\u6e05\u7406\u591a\u4f59\u4ee3\u7801, \u4ee5\u53ca\u79fb\u9664\u8bbe\u8ba1\u9519\u8bef\u7684\u6a21\u677f\u5bfc\u51fa\u529f\u80fd",
+                            "details": ""
+                        },
+                        {
+                            "hash": "011c1aded44437d047ea6a964a440645f7eb42e4",
+                            "date": "2026-01-18",
+                            "type": "fix",
+                            "summary": "\u91cd\u65b0\u52a0\u56de\u6a21\u677f\u5bfc\u51fa(\u95ee\u9898\u7248\u672c\u4e0d\u53ef\u4f7f\u7528)",
+                            "details": ""
+                        },
+                        {
+                            "hash": "fcff94e51965f45896ba329ff343c9f65a91fa7b",
                             "date": "2026-01-18",
                             "type": "fix",
                             "summary": "\u4f18\u5316\u4e86\u6587\u6863\u4e0b\u8f7d\u76f8\u5173\u529f\u80fd",
@@ -2254,6 +2282,51 @@
         {
             "id": "1.10.12",
             "patches": [
+                {
+                    "tag": "1.10.12.13",
+                    "fullVersion": "1.10.12.13",
+                    "date": "2026-01-19",
+                    "tagSummary": "'refactor: \u521b\u5efa\u9879\u76ee\u6d41\u7a0b\u91cd\u8bbe\u8ba1",
+                    "tagDetails": "'",
+                    "isSnapshot": false,
+                    "commits": [
+                        {
+                            "hash": "a655a08607b5dca2ef8613dffd9cb96ab23e28d4",
+                            "date": "2026-01-19",
+                            "type": "refactor",
+                            "summary": "\u521b\u5efa\u9879\u76ee\u6d41\u7a0b\u91cd\u8bbe\u8ba1",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ce2c8a7dc491aceda0d2c8e7dc6eafafe3174151",
+                            "date": "2026-01-19",
+                            "type": "refactor",
+                            "summary": "\u6e05\u7406\u6240\u6709\u591a\u4f59\u6a21\u677f(\u7248\u672c\u4e0d\u53ef\u7528)",
+                            "details": ""
+                        },
+                        {
+                            "hash": "b4c021caddca428f09e004ef6df40cee7e64f775",
+                            "date": "2026-01-19",
+                            "type": "refactor",
+                            "summary": "\u6e05\u7406\u591a\u4f59\u4ee3\u7801, \u4ee5\u53ca\u79fb\u9664\u8bbe\u8ba1\u9519\u8bef\u7684\u6a21\u677f\u5bfc\u51fa\u529f\u80fd",
+                            "details": ""
+                        },
+                        {
+                            "hash": "011c1aded44437d047ea6a964a440645f7eb42e4",
+                            "date": "2026-01-18",
+                            "type": "fix",
+                            "summary": "\u91cd\u65b0\u52a0\u56de\u6a21\u677f\u5bfc\u51fa(\u95ee\u9898\u7248\u672c\u4e0d\u53ef\u4f7f\u7528)",
+                            "details": ""
+                        },
+                        {
+                            "hash": "fcff94e51965f45896ba329ff343c9f65a91fa7b",
+                            "date": "2026-01-18",
+                            "type": "fix",
+                            "summary": "\u4f18\u5316\u4e86\u6587\u6863\u4e0b\u8f7d\u76f8\u5173\u529f\u80fd",
+                            "details": ""
+                        }
+                    ]
+                },
                 {
                     "tag": "1.10.12.11",
                     "fullVersion": "1.10.12.11",
