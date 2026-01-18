@@ -81,3 +81,6 @@ eclipse.project.name = 'GDEngine' + '-parent'
 apply from: 'gradle/engine-tasks.gradle'
 apply from: 'gradle/changelog-generator.gradle'
 
+// [新增] 引入本地文档预览任务
+apply from: 'gradle/docs-preview.gradle'
+

@@ -394,6 +394,13 @@
 						row.onclick = (e) => {
 							e.stopPropagation();
 
+							// [核心修改] Javadoc 直连白名单
+							// 如果链接指向 javadoc 目录，在新标签页打开，且不走 Docsify 路由
+							if (node.link.indexOf('javadoc/') !== -1) {
+								window.open(node.link, '_blank');
+								return;
+							}
+
 							// 构造目标 Hash
 							// node.link 可能是 "/manual/a" 或 "/manual/a?t=1"
 							// 我们需要处理当前的 base path
@@ -402,7 +409,6 @@
 							if (!target.startsWith('/')) target = '/' + target;
 
 							// 直接设置 Hash，Docsify 会处理路由
-							// 这里不再保留旧的 Query，而是使用 Link 自带的 Query (如果有)
 							window.location.hash = '#' + target;
 						};
 					}
