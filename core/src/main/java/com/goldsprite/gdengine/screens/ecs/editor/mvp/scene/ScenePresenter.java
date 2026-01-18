@@ -142,7 +142,6 @@ public class ScenePresenter {
 			List<GObject> roots = GameWorld.inst().getRootEntities();
 			String text = json.prettyPrint(roots);
 
-			// 这里为了简化，直接用硬编码路径演示，实际应从 ProjectService 获取
 			FileHandle file = com.goldsprite.gdengine.core.project.ProjectService.inst().getCurrentProject().child("scenes/main.scene");
 			file.writeString(text, false);
 

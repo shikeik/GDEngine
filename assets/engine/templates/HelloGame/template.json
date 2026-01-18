@@ -1,6 +1,5 @@
 {
-displayName: 你好游戏!
-description: 这是GD引擎的HelloWorld.
-originEntry: ${MAIN_CLASS}
-version: 1.3
+	"displayName": "你好游戏!",
+	"description": "这是GD引擎的HelloWorld.",
+	"version": "1.3"
 }

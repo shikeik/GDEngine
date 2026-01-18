@@ -44,7 +44,6 @@ public class EditorEvents {
     // --- 发布接口 ---
 
     public void emitSelectionChanged(Object selection) { for (var l : onSelectionChanged) l.accept(selection); }
-
     public void emitStructureChanged() { for (var l : onStructureChanged) l.accept(null); }
     public void emitPropertyChanged() { for (var l : onPropertyChanged) l.accept(null); }
     public void emitSceneLoaded() { for (var l : onSceneLoaded) l.accept(null); }
@@ -59,7 +58,7 @@ public class EditorEvents {
         onSelectionChanged.clear();
         onStructureChanged.clear();
         onPropertyChanged.clear();
-        onSceneLoaded.clear();
+		onSceneLoaded.clear();
 		onToggleMaximizeCode.clear();
 		onToggleMaximizeGame.clear();
 		onCodeDirty.clear();

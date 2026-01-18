@@ -1,33 +1,57 @@
+// 文件: core/src/main/java/com/goldsprite/gdengine/core/project/ProjectService.java
 package com.goldsprite.gdengine.core.project;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
+import com.goldsprite.gdengine.BuildConfig;
 import com.goldsprite.gdengine.core.Gd;
-import com.goldsprite.gdengine.core.project.model.ProjectConfig;
 import com.goldsprite.gdengine.core.project.model.TemplateInfo;
 import com.goldsprite.gdengine.log.Debug;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 项目管理服务 (Model 层核心)
  * <p>
- * 职责：负责所有与文件系统交互、项目增删改查的逻辑。
- * 架构：单例模式 (Singleton)，供 Presenter 层调用。
- * 原则：绝对不包含任何 UI 代码 (VisUI/Scene2D)。
+ * 负责项目的增删改查以及**基于标准模板的项目生成**。
  * </p>
  */
 public class ProjectService {
 	private static ProjectService instance;
-	// 当前打开的项目 (运行时状态)
 	private FileHandle currentProject;
 	private final Json json;
 
-	// 私有构造，单例模式
+	// =================================================================================
+	//  [Centralized Configuration] 标准模板规则集
+	//  所有占位符和路径映射都在这里定义，修改规则只需改这里。
+	// =================================================================================
+	private static final class TemplateRules {
+		// --- 占位符定义 ---
+		static final String KEY_PROJECT_NAME = "${PROJECT_NAME}";
+		static final String KEY_PACKAGE = "${PACKAGE}";
+		static final String KEY_MAIN_CLASS = "${MAIN_CLASS}";     // SimpleName (e.g. "Main")
+		static final String KEY_ENGINE_VERSION = "${ENGINE_VERSION}";
+
+		// --- 路径定义 ---
+		// 引擎内部资源路径 (Release模式下位于 assets/engine/...)
+		static final String INTERNAL_LIBS = "engine/libs";
+		static final String INTERNAL_TEMPLATES_ROOT = "engine/templates";
+
+		// 模板内部特殊目录
+		static final String TPL_SCRIPTS_DIR = "scripts"; // 存放源码的目录
+
+		// 目标项目结构
+		static final String TARGET_SRC_ROOT = "src/main/java";
+		static final String TARGET_ASSETS = "assets";
+		static final String TARGET_LIBS = "libs";
+	}
+
 	private ProjectService() {
 		json = new Json();
-		json.setIgnoreUnknownFields(true); // 忽略未知的 JSON 字段，防止版本差异导致崩溃
+		json.setIgnoreUnknownFields(true);
 		json.setOutputType(JsonWriter.OutputType.json);
 	}
 
@@ -36,31 +60,20 @@ public class ProjectService {
 		return instance;
 	}
 
-	public FileHandle getCurrentProject() {
-		return currentProject;
-	}
-
-	public void setCurrentProject(FileHandle project) {
-		this.currentProject = project;
-	}
+	public FileHandle getCurrentProject() { return currentProject; }
+	public void setCurrentProject(FileHandle project) { this.currentProject = project; }
 
 	// =========================================================================================
 	// 查询逻辑 (Read)
 	// =========================================================================================
 
-	/**
-	 * 扫描用户项目目录，返回所有项目文件夹
-	 */
 	public Array<FileHandle> listProjects() {
-		// 防御性检查：如果引擎配置未加载，返回空列表而不是抛异常
-		if (Gd.engineConfig == null) {
-			return new Array<>();
-		}
-
+		if (Gd.engineConfig == null) return new Array<>();
 		FileHandle root = Gd.engineConfig.getProjectsDir();
+		if (!root.exists()) root.mkdirs();
+
 		FileHandle[] files = root.list();
 		Array<FileHandle> projects = new Array<>();
-
 		if (files != null) {
 			for (FileHandle f : files) {
 				if (f.isDirectory()) projects.add(f);
@@ -70,39 +83,35 @@ public class ProjectService {
 	}
 
 	/**
-	 * 扫描模板 (合并 内置模板 + 用户导出模板)
+	 * 扫描引擎内置模板 (engine/templates)
 	 */
 	public Array<TemplateInfo> listTemplates() {
 		Array<TemplateInfo> list = new Array<>();
 
-		// 1. 内置模板 (Internal)
-		scanTemplates(Gd.files.internal("engine/templates"), list);
-
-		// 2. [新增] 用户导出模板 (Local)
-		// 对应 TemplateExporter 导出的位置
-		FileHandle localTpl = Gd.files.local("LocalTemplates");
-		if (localTpl.exists()) {
-			scanTemplates(localTpl, list);
+		// 尝试定位模板根目录 (兼容 Dev 和 Release 路径)
+		FileHandle templatesRoot = Gd.files.internal(TemplateRules.INTERNAL_TEMPLATES_ROOT);
+		if (!templatesRoot.exists()) {
+			// Fallback: assets/engine/templates
+			templatesRoot = Gd.files.internal("assets/" + TemplateRules.INTERNAL_TEMPLATES_ROOT);
 		}
 
-		return list;
-	}
+		if (!templatesRoot.exists()) {
+			Debug.logT("ProjectService", "❌ Templates root not found: " + templatesRoot.path());
+			return list;
+		}
 
-	// 提取公共扫描逻辑
-	private void scanTemplates(FileHandle root, Array<TemplateInfo> list) {
-		if (!root.exists()) return;
-
-		for (FileHandle dir : root.list()) {
+		for (FileHandle dir : templatesRoot.list()) {
 			if (!dir.isDirectory()) continue;
 
 			TemplateInfo info = new TemplateInfo();
 			info.id = dir.name();
-			info.dirHandle = dir;
+			info.dirHandle = dir; // 暂存 Handle 用于复制
 
+			// 读取元数据
 			FileHandle metaFile = dir.child("template.json");
 			if (metaFile.exists()) {
 				try {
-					TemplateInfo meta = new Json().fromJson(TemplateInfo.class, metaFile);
+					TemplateInfo meta = json.fromJson(TemplateInfo.class, metaFile);
 					info.displayName = meta.displayName;
 					info.description = meta.description;
 					info.originEntry = meta.originEntry;
@@ -113,243 +122,196 @@ public class ProjectService {
 				}
 			} else {
 				info.displayName = info.id;
-				info.originEntry = "com.game.Main";
 			}
 			list.add(info);
 		}
+		return list;
 	}
 
 	// =========================================================================================
-	// 操作逻辑 (Write)
+	// 核心创建逻辑 (Create)
 	// =========================================================================================
 
 	/**
-	 * 创建新项目
-	 * 核心流程：验证 -> 创建临时目录 -> 复制模板并重构代码 -> 注入依赖 -> 移动到最终目录
-	 *
-	 * @param tmpl 选中的模板
-	 * @param name 项目名称
-	 * @param packageName 目标包名 (如 com.user.game)
-	 * @return 错误信息字符串，成功则返回 null
+	 * 基于标准模板创建新项目
 	 */
 	public String createProject(TemplateInfo tmpl, String name, String packageName) {
 		// 1. 基础校验
 		if (name == null || name.trim().isEmpty()) return "Name cannot be empty.";
-		if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name (Alphanumeric only).";
+		if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
 		if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
 
-		FileHandle finalTarget = Gd.engineConfig.getProjectsDir().child(name);
-		if (finalTarget.exists()) return "Project already exists!";
+		FileHandle targetDir = Gd.engineConfig.getProjectsDir().child(name);
+		if (targetDir.exists()) return "Project already exists!";
 
-		// 解析原始包名 (用于代码重构替换)
-		String originPkg = "";
-		if (tmpl.originEntry != null && tmpl.originEntry.contains(".")) {
-			originPkg = tmpl.originEntry.substring(0, tmpl.originEntry.lastIndexOf('.'));
-		}
-		String targetPkg = packageName;
+		Debug.logT("ProjectService", "Creating '%s' from template '%s'...", name, tmpl.id);
 
-		Debug.logT("ProjectService", "Creating project '%s' from template '%s'", name, tmpl.id);
+		// 2. 准备替换字典 (Replacements)
+		Map<String, String> replacements = new HashMap<>();
+		replacements.put(TemplateRules.KEY_PROJECT_NAME, name);
+		replacements.put(TemplateRules.KEY_PACKAGE, packageName);
+		replacements.put(TemplateRules.KEY_ENGINE_VERSION, BuildConfig.DEV_VERSION);
+		// KEY_MAIN_CLASS 会在处理 scripts 时动态获取
 
-		// 2. 创建临时构建目录 (原子操作保证：要么全成功，要么全失败不留垃圾)
-		FileHandle tempRoot = Gdx.files.local("build/tmp_creation").child(name);
-		if (tempRoot.exists()) tempRoot.deleteDirectory();
-		tempRoot.mkdirs();
-
+		// 3. 开始构建流程
 		try {
-			// 3. 处理模板核心文件 (src, assets, project.json)
-			processRootDirectory(tmpl.dirHandle, tempRoot, originPkg, targetPkg, name, tmpl);
+			targetDir.mkdirs();
 
-			// 4. [新增] 注入通用构建脚本 (来自模板根目录的上一级，即 engine/templates/)
-			// 这样所有模板共享一套 build.gradle，便于引擎维护
+			// Step A: 复制模板根目录下的通用配置 (build.gradle, settings.gradle)
+			// 这些文件位于 engine/templates/ 下，与具体模板同级
 			FileHandle templatesRoot = tmpl.dirHandle.parent();
-			copyIfExists(templatesRoot.child("build.gradle"), tempRoot.child("build.gradle"), null);
-			copyIfExists(templatesRoot.child("settings.gradle"), tempRoot.child("settings.gradle"),
-				content -> content.replace("${PROJECT_NAME}", name));
+			processFile(templatesRoot.child("build.gradle"), targetDir.child("build.gradle"), replacements);
+			processFile(templatesRoot.child("settings.gradle"), targetDir.child("settings.gradle"), replacements);
 
-			// 5. [新增] 注入引擎依赖库 (libs/)
-			// 自动探测：开发环境(assets/engine/libs) vs 发布环境(engine/libs)
-			FileHandle libsSource = Gd.files.internal("engine/libs");
-			if (!libsSource.exists()) libsSource = Gd.files.internal("assets/engine/libs");
+			// Step B: 处理具体模板内容 (HelloGame/...)
+			processTemplateContent(tmpl.dirHandle, targetDir, replacements);
 
-			FileHandle libsTarget = tempRoot.child("libs");
-			libsTarget.mkdirs();
-			// 复制所有 jar 包
-			if (libsSource.exists()) {
-				for (FileHandle jar : libsSource.list(".jar")) {
-					jar.copyTo(libsTarget);
-				}
-			}
+			// Step C: 注入引擎库 (Libs)
+			injectEngineLibs(targetDir);
 
-			// 6. 交付：将准备好的临时目录移动到 UserProjects
-			tempRoot.copyTo(finalTarget.parent()); // copyTo 的参数是目标父目录
-			tempRoot.deleteDirectory(); // 清理临时区
+			// Step D: 创建标准目录结构 & [新增] 注入默认资源 (gd_icon.png)
+			FileHandle assetsDir = targetDir.child(TemplateRules.TARGET_ASSETS);
+			assetsDir.mkdirs();
+			injectDefaultAssets(assetsDir);
 
-			return null; // 成功
+			return null; // Success
+
 		} catch (Exception e) {
 			e.printStackTrace();
-			// 失败回滚：清理临时目录
-			if (tempRoot.exists()) tempRoot.deleteDirectory();
-			return "Error: " + e.getMessage();
+			// 回滚：清理失败的目录
+			if (targetDir.exists()) targetDir.deleteDirectory();
+			return "Creation Failed: " + e.getMessage();
+		}
+	}
+
+	private void processTemplateContent(FileHandle sourceDir, FileHandle targetDir, Map<String, String> replacements) {
+		for (FileHandle file : sourceDir.list()) {
+			String fileName = file.name();
+
+			// 忽略元数据文件
+			if (fileName.equals("template.json") || fileName.equals("preview.png")) continue;
+
+			// 特殊处理 1: scripts 目录 -> src/main/java/package/
+			if (file.isDirectory() && fileName.equals(TemplateRules.TPL_SCRIPTS_DIR)) {
+				processScriptsDir(file, targetDir, replacements);
+				continue;
+			}
+
+			// 特殊处理 2: project.json (需要替换内容)
+			if (!file.isDirectory() && fileName.equals("project.json")) {
+				// 【关键】确保 MAIN_CLASS 有默认值
+				// 因为 scripts 目录的扫描可能在 project.json 之后，或者文件名为 GameEntry.java 等
+				// 简单起见，我们强制约定模板的入口文件名必须是 Main.java，或者在这里给个默认值
+				replacements.put(TemplateRules.KEY_MAIN_CLASS, "Main");
+
+				processFile(file, targetDir.child(fileName), replacements);
+				continue;
+			}
+
+			// 普通文件/目录：递归复制
+			if (file.isDirectory()) {
+				// 递归暂不支持普通文件夹内的文本替换，直接拷贝
+				file.copyTo(targetDir.child(fileName));
+			} else {
+				// 如果是文本文件，尝试替换；否则直接拷贝
+				// 这里假设模板里的根文件都是文本配置
+				processFile(file, targetDir.child(fileName), replacements);
+			}
 		}
 	}
 
 	/**
-	 * 删除项目
+	 * 处理源码目录迁移
+	 * source: HelloGame/scripts/
+	 * target: MyGame/src/main/java/com/my/game/
 	 */
+	private void processScriptsDir(FileHandle scriptsDir, FileHandle projectRoot, Map<String, String> replacements) {
+		String pkgPath = replacements.get(TemplateRules.KEY_PACKAGE).replace('.', '/');
+		FileHandle javaRoot = projectRoot.child(TemplateRules.TARGET_SRC_ROOT).child(pkgPath);
+		javaRoot.mkdirs();
+
+		for (FileHandle srcFile : scriptsDir.list()) {
+			if (srcFile.isDirectory()) continue; // 暂不处理脚本内的子文件夹，保持简单
+
+			// 动态注入 MAIN_CLASS 变量 (以文件名为主)
+			String className = srcFile.nameWithoutExtension();
+			// 创建一个临时的 map 副本，针对当前文件注入类名
+			Map<String, String> localReplacements = new HashMap<>(replacements);
+			localReplacements.put(TemplateRules.KEY_MAIN_CLASS, className);
+
+			processFile(srcFile, javaRoot.child(srcFile.name()), localReplacements);
+		}
+	}
+
+	/**
+	 * 注入引擎依赖库 (engine/libs -> project/libs)
+	 */
+	private void injectEngineLibs(FileHandle projectRoot) {
+		// 寻找源
+		FileHandle sourceLibs = Gd.files.internal(TemplateRules.INTERNAL_LIBS);
+		if (!sourceLibs.exists()) sourceLibs = Gd.files.internal("assets/" + TemplateRules.INTERNAL_LIBS);
+
+		if (sourceLibs.exists()) {
+			FileHandle targetLibs = projectRoot.child(TemplateRules.TARGET_LIBS);
+			targetLibs.mkdirs();
+			for (FileHandle jar : sourceLibs.list(".jar")) {
+				jar.copyTo(targetLibs);
+			}
+		} else {
+			Debug.logT("ProjectService", "⚠️ Engine libs not found at " + TemplateRules.INTERNAL_LIBS);
+		}
+	}
+
+	/**
+	 * 注入默认资源 (如图标) 到用户项目的 assets 目录
+	 */
+	private void injectDefaultAssets(FileHandle targetAssetsDir) {
+		// 定义需要默认拷贝的文件列表
+		String[] defaultAssets = {
+			"gd_icon.png"
+			// 未来如果有其他默认图（如 default_font.fnt），加在这里
+		};
+
+		for (String path : defaultAssets) {
+			// 从引擎内部资源寻找
+			FileHandle src = Gd.files.internal(path);
+			if (src.exists()) {
+				try {
+					src.copyTo(targetAssetsDir.child(path));
+				} catch (Exception e) {
+					Debug.logT("ProjectService", "⚠️ Failed to copy default asset: " + path);
+				}
+			} else {
+				Debug.logT("ProjectService", "⚠️ Default asset source not found: " + path);
+			}
+		}
+	}
+
+	/**
+	 * 文本替换与写入
+	 */
+	private void processFile(FileHandle source, FileHandle target, Map<String, String> replacements) {
+		if (!source.exists()) return;
+
+		try {
+			String content = source.readString("UTF-8");
+
+			// 执行所有替换
+			for (Map.Entry<String, String> entry : replacements.entrySet()) {
+				// 使用 replace (非 regex) 提高性能且避免转义问题
+				content = content.replace(entry.getKey(), entry.getValue());
+			}
+
+			target.writeString(content, false, "UTF-8");
+		} catch (Exception e) {
+			Debug.logT("ProjectService", "Error processing file " + source.name() + ": " + e.getMessage());
+		}
+	}
+
 	public void deleteProject(FileHandle projectDir) {
 		if (projectDir.exists()) {
 			projectDir.deleteDirectory();
 			Debug.logT("ProjectService", "Deleted project: " + projectDir.name());
-		}
-	}
-
-	// =========================================================================================
-	// 内部辅助逻辑 (Private Helpers)
-	// =========================================================================================
-
-	/** 辅助复制：如果源文件存在则复制，并支持文本处理 */
-	private void copyIfExists(FileHandle source, FileHandle target, StringProcessor processor) {
-		if (source.exists()) {
-			String content = source.readString("UTF-8");
-			if (processor != null) content = processor.process(content);
-			target.writeString(content, false, "UTF-8");
-		}
-	}
-
-	private interface StringProcessor { String process(String input); }
-
-	/**
-	 * 递归处理模板根目录
-	 * 区分对待 src 源码目录和其他资源文件
-	 */
-	private void processRootDirectory(FileHandle sourceDir, FileHandle destDir, String originPkg, String targetPkg, String projName, TemplateInfo tmpl) {
-		for (FileHandle file : sourceDir.list()) {
-			// 跳过元数据和预览图，不复制到用户项目
-			if (file.name().equals("template.json") || file.name().equals("preview.png")) continue;
-
-			if (file.isDirectory()) {
-				if (file.name().equals("src")) {
-					// [核心] 源码目录：进入重构模式
-					// 假设标准结构 src/main/java
-					FileHandle srcJavaSource = file.child("main").child("java");
-					if (srcJavaSource.exists()) {
-						FileHandle srcJavaTarget = destDir.child("src").child("main").child("java");
-						processSourceCode(srcJavaSource, srcJavaTarget, originPkg, targetPkg);
-					} else {
-						// 非标准结构？直接复制整个 src
-						file.copyTo(destDir);
-					}
-				} else {
-					// 其他目录 (如 assets)，直接复制
-					file.copyTo(destDir);
-				}
-			} else {
-				// 根目录下的文件处理
-				if (file.name().equals("project.json")) {
-					// 配置文件需特殊处理（注入模板信息）
-					processProjectConfig(file, destDir.child("project.json"), targetPkg, projName, tmpl);
-				} else if (file.name().equals("settings.gradle") || file.name().equals("build.gradle")) {
-					// 如果模板自带构建脚本，替换其中的占位符
-					String content = file.readString("UTF-8");
-					content = content.replace("${PROJECT_NAME}", projName);
-					if (!originPkg.isEmpty()) content = content.replace(originPkg, targetPkg);
-					destDir.child(file.name()).writeString(content, false, "UTF-8");
-				} else {
-					// 其他文件原样复制
-					file.copyTo(destDir);
-				}
-			}
-		}
-	}
-
-	/**
-	 * 核心源码处理：递归查找 .java 文件，重构目录结构并替换包名
-	 * @param sourceRoot 模板源码根 (e.g. templates/MyGame/src/main/java)
-	 * @param targetRoot 目标源码根 (e.g. UserProjects/NewGame/src/main/java)
-	 */
-	private void processSourceCode(FileHandle sourceRoot, FileHandle targetRoot, String originPkg, String targetPkg) {
-		// 1. 递归收集所有 .java 文件
-		Array<FileHandle> javaFiles = new Array<>();
-		findJavaFiles(sourceRoot, javaFiles);
-
-		// 准备路径替换前缀 (如 com/mygame -> com/user/newgame)
-		String originPathPrefix = originPkg.replace('.', '/');
-		String targetPathPrefix = targetPkg.replace('.', '/');
-
-		for (FileHandle javaFile : javaFiles) {
-			// 2. 计算相对路径
-			String fullPath = javaFile.path();
-			String rootPath = sourceRoot.path();
-			String relativePath = fullPath.substring(rootPath.length());
-
-			// 统一去头部的斜杠
-			if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
-				relativePath = relativePath.substring(1);
-			}
-
-			// 3. 路径重构 (Package Directory Refactoring)
-			// 如果文件位于原始包路径下，将其移动到新包路径下
-			String newRelativePath = relativePath;
-			String checkPath = relativePath.replace('\\', '/'); // 统一分隔符比较
-
-			if (!originPathPrefix.isEmpty() && checkPath.startsWith(originPathPrefix)) {
-				newRelativePath = checkPath.replaceFirst(originPathPrefix, targetPathPrefix);
-			}
-
-			FileHandle targetFile = targetRoot.child(newRelativePath);
-
-			// 4. 内容重构 (File Content Replacement)
-			String content = javaFile.readString("UTF-8");
-			if (!originPkg.isEmpty()) {
-				// 替换 package 声明
-				content = content.replace("package " + originPkg, "package " + targetPkg);
-				// 替换 import 语句
-				content = content.replace("import " + originPkg, "import " + targetPkg);
-				// 替换代码中的其他引用
-				content = content.replace(originPkg, targetPkg);
-			}
-
-			targetFile.writeString(content, false, "UTF-8");
-		}
-	}
-
-	private void findJavaFiles(FileHandle dir, Array<FileHandle> out) {
-		for (FileHandle f : dir.list()) {
-			if (f.isDirectory()) findJavaFiles(f, out);
-			else if (f.extension().equals("java")) out.add(f);
-		}
-	}
-
-	/**
-	 * 处理 project.json 配置文件
-	 */
-	private void processProjectConfig(FileHandle source, FileHandle target, String targetPkg, String projName, TemplateInfo tmpl) {
-		try {
-			String content = source.readString("UTF-8");
-
-			// 1. 文本替换：先做通用包名替换
-			if (tmpl.originEntry != null && tmpl.originEntry.contains(".")) {
-				String originPkg = tmpl.originEntry.substring(0, tmpl.originEntry.lastIndexOf('.'));
-				content = content.replace(originPkg, targetPkg);
-			}
-
-			// 2. JSON 对象修改：注入项目元数据
-			ProjectConfig cfg = json.fromJson(ProjectConfig.class, content);
-			cfg.name = projName;
-			cfg.engineVersion = tmpl.engineVersion;
-
-			// 记录使用了哪个模板 (便于后续追溯)
-			ProjectConfig.TemplateRef ref = new ProjectConfig.TemplateRef();
-			ref.sourceName = tmpl.id;
-			ref.version = tmpl.version;
-			ref.engineVersion = tmpl.engineVersion;
-			cfg.template = ref;
-
-			target.writeString(json.prettyPrint(cfg), false, "UTF-8");
-		} catch (Exception e) {
-			Debug.logT("ProjectService", "Config process failed, fallback copy: " + e.getMessage());
-			// 如果解析失败，至少保证文件过去了
-			source.copyTo(target);
 		}
 	}
 }

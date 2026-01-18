@@ -18,7 +18,7 @@ public class Debug {
 	private static Debug instance;
 
 	public static final String passStr = "Y";
-	public static final boolean singleMode = false;
+	public static boolean singleMode = false;
 	public static String singleTag = "Default";
 	public static String[] showTags = {
 		"Default Y",
@@ -49,6 +49,7 @@ public class Debug {
 		"ZipDownLoader Y",
 		"ToastUI Y",
 		"ProjectService Y",
+		"UserProject Y",
 
 		// Test
 		"TEST Y",
@@ -163,6 +164,7 @@ public class Debug {
 
 		String msg = String.format("[%s] %s", tag, formatString(values));
 		msg = String.format("[%s] %s", formatTime("HH:mm:ss:SSS"), msg);// 添加时间戳
+		if (tag.equals("UserProject")) msg = "[ORANGE]" + msg; // (临时代码, 便于用户区分日志) 橙色标记用户项目日志
 		msg = "[WHITE]" + msg; // 重置颜色标记
 
 		logger.setLevel(Logger.NONE);
