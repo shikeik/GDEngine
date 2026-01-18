@@ -28,6 +28,7 @@ import com.goldsprite.gdengine.ui.widget.ToastUI;
 import com.goldsprite.gdengine.screens.ecs.hub.SettingsWindow;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.goldsprite.gdengine.utils.ThreadedDownload;
 import com.kotcrab.vis.ui.VisUI;
 import com.kotcrab.vis.ui.widget.*;
 
@@ -115,7 +116,9 @@ public class HubViewImpl extends VisTable implements IHubView {
 //				new ChangeLogDialog().show(getStage()); // 注释原内置解析式日志查看器
 
 				// 使用新WebView接口方式
-				{
+				ToastUI.inst().show("开始自动下载引擎文档");
+				ThreadedDownload.download(() -> {
+					ToastUI.inst().show("完成引擎文档下载");
 					// 1. 启动本地服务器
 					DocServer.startServer();
 
@@ -128,7 +131,7 @@ public class HubViewImpl extends VisTable implements IHubView {
 					if (Gd.browser != null) {
 						Gd.browser.openUrl(url, "GDEngine Docs");
 					}
-				}
+				});
 			}
 		});
 

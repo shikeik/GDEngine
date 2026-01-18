@@ -9,7 +9,7 @@ set "TARGET_EXT=*.gradle"
 REM 2. 设置排除的目录或文件名关键词 (使用空格分隔)
 REM 注意：脚本会自动排除自身和输出文件，无需在此重复添加
 REM 示例: \build\ \.git\ \node_modules\ \target\
-set "EXCLUDE_PATTERN=\build\ \bin\ \.git\ \target\ \.idea\ \out\ \GDEngine\"
+set "EXCLUDE_PATTERN=\build\ \bin\ \.git\ \target\ \.idea\ \out\ \GDEngine\GDEngine\  \ig这个会被忽略是个bug\"
 
 REM 3. 输出文件名
 set "OUTPUT_FILE=ProjectGradle.txt"

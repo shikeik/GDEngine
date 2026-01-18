@@ -22,6 +22,7 @@ public class DocServer extends NanoHTTPD {
 	// 文档在文件系统中的相对根路径
 	// [修改] 相对路径，不包含 GDEngine 前缀，因为我们会动态拼
 	private static final String RELATIVE_PATH = "engine_docs";
+	private boolean enableLocal = false;
 
 	private DocServer() {
 		super(PORT);
@@ -51,6 +52,12 @@ public class DocServer extends NanoHTTPD {
 		return "http://localhost:" + PORT + "/index.html";
 	}
 
+	/**
+	 * 路由处理
+	 * 定义本地文档路径位置以及如何映射
+	 * @param session The HTTP session
+	 * @return
+	 */
 	@Override
 	public Response serve(IHTTPSession session) {
 		String uri = session.getUri();
@@ -70,24 +77,19 @@ public class DocServer extends NanoHTTPD {
 
 		// 1. 优先检查配置好的引擎根
 		// GDEngineConfig.activeEngineRoot 在进入GDEngineHub时必须初始化设置, 然后打开日志, 此时应当已存在
-		FileHandle gdConfigFile = Gdx.files.absolute(GDEngineConfig.getInstance().getActiveEngineRoot() + "/" + RELATIVE_PATH + "/" + uri);
-
-		// 2. 未找到则检查默认引擎根
-		FileHandle gdDefaultFile = Gdx.files.absolute(GDEngineConfig.getRecommendedRoot() + RELATIVE_PATH + "/" + uri);
+		// 这里更新为未激活则回退到默认引擎根
+		FileHandle gdConfigFile = Gdx.files.absolute(getEngineDocPath() + "/" + uri);
 
 		// 3. 最后检查local (这里是为了兼容idea运行时直接对文档源位置访问)
 		FileHandle localFile = Gdx.files.local("docs/" + RELATIVE_PATH + "/" + uri);
+		boolean enableLocal = this.enableLocal; // 这里用于调试生产环境时必须获取到gdConfigFile路径故取消local保底
 
 		FileHandle target = null;
 		if (gdConfigFile.exists() && !gdConfigFile.isDirectory()) {
 			target = gdConfigFile;
 			Debug.logT("DocServer", "Found in gdConfigFile: " + target.file().getAbsolutePath());
 		}
-		else if (gdDefaultFile.exists() && !gdDefaultFile.isDirectory()) {
-			target = gdDefaultFile;
-			Debug.logT("DocServer", "Found in default gdConfigFile: " + target.file().getAbsolutePath());
-		}
-		else if (localFile.exists() && !localFile.isDirectory()) {
+		else if (enableLocal && localFile.exists() && !localFile.isDirectory()) {
 			target = localFile;
 			Debug.logT("DocServer", "Found in localFile: " + target.file().getAbsolutePath());
 		}
@@ -104,10 +106,18 @@ public class DocServer extends NanoHTTPD {
 			Debug.logErrT("DocServer",
 				"404 Not Found. Checked:"
 					+ "\n  gdConfigFile: " + gdConfigFile.file().getAbsolutePath()
-					+ "\n  gdDefaultFile: " + gdDefaultFile.file().getAbsolutePath()
 					+ "\n  localFile: " + localFile.file().getAbsolutePath());
 			return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "404 Not Found");
 		}
+	}
+
+	public static String getEngineDocPath() {
+		String activeEngineRoot = GDEngineConfig.getInstance().getActiveEngineRoot();
+		if (activeEngineRoot == null || activeEngineRoot.isEmpty()) {
+			activeEngineRoot = GDEngineConfig.getRecommendedRoot();
+		}
+
+		return activeEngineRoot + "/" + RELATIVE_PATH + "/";
 	}
 
 	public static String getMimeTypeForFile(String uri) {

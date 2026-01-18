@@ -1,5 +1,5 @@
 {
-    "lastUpdated": "2026-01-17 04:48:54",
+    "lastUpdated": "2026-01-18 22:53:45",
     "groups": [
         {
             "id": "In Development",
@@ -7,11 +7,32 @@
                 {
                     "tag": "HEAD",
                     "fullVersion": "HEAD",
-                    "date": "2026-01-17",
+                    "date": "2026-01-18",
                     "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
                     "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
                     "isSnapshot": true,
                     "commits": [
+                        {
+                            "hash": "4d73f767459d896690022401443e655ca277ca63",
+                            "date": "2026-01-18",
+                            "type": "fix",
+                            "summary": "\u4f18\u5316\u4e86\u6587\u6863\u4e0b\u8f7d\u76f8\u5173\u529f\u80fd",
+                            "details": ""
+                        },
+                        {
+                            "hash": "545b4e636d7f3d8cfd0e150b163d055040c15032",
+                            "date": "2026-01-17",
+                            "type": "chore",
+                            "summary": "\u7248\u672c\u53f7\u66f4\u65b0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "98db95f0c8e5b1ea91f19bbc1f6d819ecb10902e",
+                            "date": "2026-01-17",
+                            "type": "feat",
+                            "summary": "\u589e\u52a0\u7a0b\u5e8f\u521d\u59cb\u5316\u540e\u81ea\u52a8\u4e0b\u8f7d\u5f53\u524d\u7248\u672c\u79bb\u7ebf\u6587\u6863\u7684\u529f\u80fd",
+                            "details": ""
+                        },
                         {
                             "hash": "4663a37403d6ad6f93602f1553729470d75b8e9a",
                             "date": "2026-01-17",
@@ -2233,6 +2254,30 @@
         {
             "id": "1.10.12",
             "patches": [
+                {
+                    "tag": "1.10.12.11",
+                    "fullVersion": "1.10.12.11",
+                    "date": "2026-01-17",
+                    "tagSummary": "'chore: \u7248\u672c\u53f7\u66f4\u65b0",
+                    "tagDetails": "'",
+                    "isSnapshot": false,
+                    "commits": [
+                        {
+                            "hash": "545b4e636d7f3d8cfd0e150b163d055040c15032",
+                            "date": "2026-01-17",
+                            "type": "chore",
+                            "summary": "\u7248\u672c\u53f7\u66f4\u65b0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "98db95f0c8e5b1ea91f19bbc1f6d819ecb10902e",
+                            "date": "2026-01-17",
+                            "type": "feat",
+                            "summary": "\u589e\u52a0\u7a0b\u5e8f\u521d\u59cb\u5316\u540e\u81ea\u52a8\u4e0b\u8f7d\u5f53\u524d\u7248\u672c\u79bb\u7ebf\u6587\u6863\u7684\u529f\u80fd",
+                            "details": ""
+                        }
+                    ]
+                },
                 {
                     "tag": "1.10.12.10",
                     "fullVersion": "1.10.12.10",

@@ -1,5 +1,6 @@
 package com.goldsprite.gdengine.ui.widget;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -67,28 +68,30 @@ public class ToastUI extends Label {
 	}
 
 	public void show(String msg) {
-		Debug.logT("ToastUI", msg);
-		setText(msg);
-		pack(); // 重新计算尺寸
+		Gdx.app.postRunnable(()->{
+			Debug.logT("ToastUI", msg);
+			setText(msg);
+			pack(); // 重新计算尺寸
 
-		if (getStage() != null) {
-			// 居中显示在屏幕下方 20% 处
-			float stageW = getStage().getWidth();
-			float stageH = getStage().getHeight();
-			setPosition((stageW - getWidth()) / 2, stageH * 0.025f);
-		}
+			if (getStage() != null) {
+				// 居中显示在屏幕下方 20% 处
+				float stageW = getStage().getWidth();
+				float stageH = getStage().getHeight();
+				setPosition((stageW - getWidth()) / 2, stageH * 0.025f);
+			}
 
-		clearActions();
+			clearActions();
 
-		// Reset state
-		getColor().a = 0;
+			// Reset state
+			getColor().a = 0;
 
-		// H5: transition: opacity 0.5s.
-		// Logic: Set text -> Opacity 1 (fast) -> Wait -> Opacity 0 (0.5s)
-		addAction(Actions.sequence(
-			Actions.fadeIn(0.05f),
-			Actions.delay(0.5f),
-			Actions.fadeOut(0.5f)
-		));
+			// H5: transition: opacity 0.5s.
+			// Logic: Set text -> Opacity 1 (fast) -> Wait -> Opacity 0 (0.5s)
+			addAction(Actions.sequence(
+				Actions.fadeIn(0.05f),
+				Actions.delay(0.5f),
+				Actions.fadeOut(0.5f)
+			));
+		});
 	}
 }

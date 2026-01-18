@@ -7,9 +7,13 @@ REM 如果想要所有文件，请设置为 *.*
 set "TARGET_EXT=*.java"
 
 REM 2. 设置排除的目录或文件名关键词 (使用空格分隔)
-REM 注意：脚本会自动排除自身和输出文件，无需在此重复添加
-REM 示例: \build\ \.git\ \node_modules\ \target\
-set "EXCLUDE_PATTERN=\build\ \bin\ \.git\ \target\ \.idea\ \out\ \GDEngine\"
+REM 修改点：
+REM 1. 添加了 \assets\
+REM 2. 将 \GDEngine\ 修改为 \GDEngine\GDEngine\ (如果是为了排除子目录)
+REM    或者如果不改名，必须小心根目录重名问题。
+REM 3. 删除了整个字符串末尾的反斜杠，或者在末尾加个空格，防止转义最后一个引号。
+
+set "EXCLUDE_PATTERN=\GDEngine\GDEngine\ \build\ \bin\ \.git\ \target\ \.idea\ \out\ \assets\ \ig这个会被忽略是个bug\"
 
 REM 3. 输出文件名
 set "OUTPUT_FILE=ProjectCode.txt"

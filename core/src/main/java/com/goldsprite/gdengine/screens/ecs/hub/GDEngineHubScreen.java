@@ -53,10 +53,16 @@ public class GDEngineHubScreen extends GScreen {
 	@Override
 	public void show() {
 		super.show();
-		Debug.showDebugUI = false; // 进入 Hub 隐藏全局调试条
+//		Debug.showDebugUI = false; // 进入 Hub 隐藏全局调试条
 
 		// 检查环境配置，准备就绪后启动 Presenter
 		checkEnvironment();
+	}
+
+	@Override
+	public void hide() {
+		super.hide();
+//		Debug.showDebugUI = true;
 	}
 
 	private void checkEnvironment() {
@@ -74,12 +80,6 @@ public class GDEngineHubScreen extends GScreen {
 		} else {
 			presenter.start();
 		}
-	}
-
-	@Override
-	public void hide() {
-		super.hide();
-		Debug.showDebugUI = true;
 	}
 
 	@Override

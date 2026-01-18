@@ -2,6 +2,12 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
+- [ ] 引擎打包apk/exe还未实现
+
+- [ ] 文档/模板完全云端化
+
+- [ ] 用户的jar的支持
+
 - [ ] 项目创建, 导出/更新, 流程需要标准化
 
 - [ ] 加mainCamera组件
