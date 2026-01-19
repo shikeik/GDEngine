@@ -41,6 +41,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Value;
 import com.goldsprite.gdengine.core.config.GDEngineConfig;
 import com.badlogic.gdx.Preferences;
 
+import java.util.Locale;
+
 /**
  * Hub 视图的具体实现 (View Implementation)
  * 职责：负责所有的 UI 布局、控件初始化和用户交互监听。
@@ -184,7 +186,7 @@ public class HubViewImpl extends VisTable implements IHubView {
         // 对比时间戳
         if (!localTime.equals(cloudManifest.updatedAt)) {
             // 版本不一致 (有更新)
-            String sizeStr = String.format("%.2f MB", cloudManifest.totalSize / 1024f / 1024f);
+            String sizeStr = String.format(Locale.CHINESE, "%.2f MB", cloudManifest.totalSize / 1024f / 1024f);
 
             new BaseDialog("文档更新") {
                 @Override

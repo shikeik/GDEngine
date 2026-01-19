@@ -56,11 +56,11 @@ public class MultiPartDownloader {
     /**
      * 仅获取清单 (自动绕过缓存)
      */
-    public static void fetchManifest(String url, ManifestCallback callback) {int k;
+    public static void fetchManifest(String url, ManifestCallback callback) {
         new Thread(() -> {
             try {
                 // [封装] 自动添加随机时间戳，强制获取最新清单
-                String noCacheUrl = appendParam(url, "t", "1295"+ System.currentTimeMillis());
+                String noCacheUrl = appendParam(url, "t", ""+System.currentTimeMillis());
 
                 String jsonStr = fetchString(noCacheUrl);
 

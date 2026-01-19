@@ -36,11 +36,11 @@ tasks.register('buildDocsDist') {
 	group = 'gdengine-publish'
 	description = 'Step 2: Split zip and generate manifest.json'
 	dependsOn 'packageDocs'
-	
+
 	// [核心修复] 强制任务每次都执行，不使用缓存
     // 这样才能保证 updatedAt 时间戳每次都是最新的
     outputs.upToDateWhen { false }
-    
+
 	doLast {
 		def sourceZip = file("${BUILD_TMP}/docs_full.zip")
 		if (!sourceZip.exists()) throw new GradleException("Source zip missing!")
@@ -48,7 +48,7 @@ tasks.register('buildDocsDist') {
 		// [修复] 使用 String.format 替代 .format() 方法
 		def sizeMb = sourceZip.length() / (1024.0 * 1024.0)
 		println "📦 Source Zip Size: ${String.format('%.2f', sizeMb)} MB"
-		
+
 		// [修复] 智能清理：只删除文档相关文件，保留 templates 目录
         if (!DIST_DIR.exists()) {
             DIST_DIR.mkdirs()
@@ -116,11 +116,24 @@ tasks.register('buildDocsDist') {
 		println "✅ Build Complete in: ${DIST_DIR}"
 		println "📜 Manifest created with ${partsList.size()} parts."
 		println "🚀 Action: Please Commit & Push 'dist/' folder to GitHub!"
+
+		// [新增] 提示用户手动刷新 CDN 的链接 (或者你可以尝试用代码自动请求)
+		def user = "shikeik"
+		def repo = "GDEngine"
+		def branch = "main"
+
+		// 构造刷新链接
+		def purgeUrl = "https://purge.jsdelivr.net/gh/${user}/${repo}@${branch}/dist/docs_manifest.json"
+
+		println ""
+		println "🔥 [重要提示] Push 到 GitHub 后，请点击下方链接强制刷新 CDN 缓存 (否则会下载到旧版):"
+		println "👉 ${purgeUrl}"
+		println ""
 	}
 }
 
 // 辅助: MD5 计算
-def generateMD5(File file) {
+static def generateMD5(File file) {
 	MessageDigest digest = MessageDigest.getInstance("MD5")
 	file.withInputStream { is ->
 		byte[] buffer = new byte[8192]
