@@ -16,6 +16,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -60,30 +62,46 @@ public class MultiPartDownloader {
 	public static void fetchLatestSha(ShaCallback callback) {
 		new Thread(() -> {
 			try {
-				// 1. 建立连接
+				// 1. 建立连接 (保持使用 git/refs 接口，因为它最快)
 				URL url = new URL(com.goldsprite.gdengine.core.config.CloudConstants.API_LATEST_SHA);
 				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-				conn.setConnectTimeout(10000);
-				conn.setReadTimeout(10000);
+				conn.setConnectTimeout(5000); // 5秒超时足够了
+				conn.setReadTimeout(5000);
 				conn.setRequestMethod("GET");
 
-				// [核心] 只要 SHA 字符串，不要 JSON
-				conn.setRequestProperty("Accept", "application/vnd.github.sha");
-				// 额外防止 API 缓存
+				// [修改] 移除无效的 Accept 头，它对 refs 接口没用
 				conn.setRequestProperty("Cache-Control", "no-cache");
 
 				int status = conn.getResponseCode();
 				if (status != 200) throw new IOException("API HTTP " + status);
 
-				// 2. 直接读取 SHA 字符串
-				String sha;
+				// 2. 读取 JSON 字符串
+				StringBuilder sb = new StringBuilder();
 				try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-					sha = reader.readLine();
+					String line;
+					while ((line = reader.readLine()) != null) {
+						sb.append(line);
+					}
+				}
+				String jsonResponse = sb.toString();
+
+				// 3. [核心] 简单粗暴提取 SHA
+				// JSON 结构是: { ... "object": { "sha": "xxxxxxxx...", ... } ... }
+				// 我们直接找 "sha": "..." 这种模式
+				// 这种 regex 查找在几百字节的字符串里是纳秒级的，完全不影响性能
+
+				String sha = null;
+				// 正则匹配 40位 Hex 字符串
+				Pattern pattern = Pattern.compile("\"sha\"\\s*:\\s*\"([a-f0-9]{40})\"");
+				Matcher matcher = pattern.matcher(jsonResponse);
+
+				if (matcher.find()) {
+					sha = matcher.group(1);
 				}
 
-				if (sha == null || sha.length() < 7) throw new IOException("Invalid SHA response");
+				if (sha == null) throw new IOException("SHA not found in response");
 
-				final String finalSha = sha.trim();
+				final String finalSha = sha;
 				Debug.logT("Downloader", "Got SHA: " + finalSha);
 
 				Gdx.app.postRunnable(() -> callback.onSuccess(finalSha));
