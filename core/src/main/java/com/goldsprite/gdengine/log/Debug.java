@@ -50,6 +50,7 @@ public class Debug {
 		"ToastUI Y",
 		"ProjectService Y",
 		"UserProject Y",
+		"Downloader Y", 
 
 		// Test
 		"TEST Y",
