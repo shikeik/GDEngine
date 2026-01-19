@@ -84,3 +84,4 @@ apply from: 'gradle/changelog-generator.gradle'
 // [新增] 引入本地文档预览任务
 apply from: 'gradle/docs-preview.gradle'
 
+apply from: 'gradle/publish-docs.gradle'

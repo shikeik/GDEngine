@@ -1,0 +1,119 @@
+// 文件: gradle/publish-docs.gradle
+import java.security.MessageDigest
+import groovy.json.JsonOutput
+
+// ============================================================
+// 文档发布流水线 (Production Pipeline)
+// 1. Zip -> 2. Split -> 3. Manifest -> 4. Dist
+// ============================================================
+
+ext {
+	CHUNK_SIZE = 18 * 1024 * 1024 // 18 MB (留2MB安全余量给JsDelivr)
+	DOCS_ROOT = file("docs")      // 源目录的父级
+	BUILD_TMP = file("build/tmp_publish")
+	DIST_DIR = file("dist")       // 最终产物目录 (需提交到Git)
+}
+
+// 步骤 1: 打包 (保留目录结构 engine_docs/...)
+tasks.register('packageDocs', Zip) {
+	group = 'gdengine-publish'
+	description = 'Step 1: Package engine_docs into a single zip'
+
+	// 从 docs 目录打包，包含 engine_docs 文件夹本身
+	from DOCS_ROOT
+	include 'engine_docs/**'
+
+	archiveFileName = 'docs_full.zip'
+	destinationDirectory = BUILD_TMP
+
+	doFirst {
+		BUILD_TMP.mkdirs()
+	}
+}
+
+// 步骤 2 & 3: 切分与生成清单
+tasks.register('buildDocsDist') {
+	group = 'gdengine-publish'
+	description = 'Step 2: Split zip and generate manifest.json'
+	dependsOn 'packageDocs'
+
+	doLast {
+		def sourceZip = file("${BUILD_TMP}/docs_full.zip")
+		if (!sourceZip.exists()) throw new GradleException("Source zip missing!")
+
+		// [修复] 使用 String.format 替代 .format() 方法
+		def sizeMb = sourceZip.length() / (1024.0 * 1024.0)
+		println "📦 Source Zip Size: ${String.format('%.2f', sizeMb)} MB"
+
+		// 清理旧产物
+		if (DIST_DIR.exists()) DIST_DIR.deleteDir()
+		DIST_DIR.mkdirs()
+
+		def partsList = []
+		def buffer = new byte[CHUNK_SIZE]
+		int partIndex = 0
+		long totalBytesWritten = 0
+
+		// 二进制流切分
+		sourceZip.withInputStream { ins ->
+			while (true) {
+				int bytesRead = ins.read(buffer)
+				if (bytesRead <= 0) break
+
+				// 命名格式: docs.part000.zip
+				String partName = String.format("docs.part%03d.zip", partIndex)
+				File partFile = new File(DIST_DIR, partName)
+
+				partFile.withOutputStream { outs ->
+					outs.write(buffer, 0, bytesRead)
+				}
+
+				// 计算 MD5
+				def md5 = generateMD5(partFile)
+
+				partsList << [
+					index: partIndex,
+					file: partName,
+					md5: md5,
+					size: partFile.length()
+				]
+
+				// [修复] 使用 String.format
+				def partSizeMb = partFile.length() / (1024.0 * 1024.0)
+				println "   -> Generated: ${partName} (${String.format('%.2f', partSizeMb)} MB)"
+
+				partIndex++
+				totalBytesWritten += bytesRead
+			}
+		}
+
+		// 生成 Manifest
+		def manifest = [
+			name: "engine_docs.zip",
+			totalSize: sourceZip.length(),
+			version: rootProject.version,
+			updatedAt: new Date().format("yyyy-MM-dd HH:mm:ss"),
+			parts: partsList
+		]
+
+		File jsonFile = new File(DIST_DIR, "docs_manifest.json")
+		jsonFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(manifest))
+
+		println "✅ Build Complete in: ${DIST_DIR}"
+		println "📜 Manifest created with ${partsList.size()} parts."
+		println "🚀 Action: Please Commit & Push 'dist/' folder to GitHub!"
+	}
+}
+
+// 辅助: MD5 计算
+def generateMD5(File file) {
+	MessageDigest digest = MessageDigest.getInstance("MD5")
+	file.withInputStream { is ->
+		byte[] buffer = new byte[8192]
+		int read
+		while ((read = is.read(buffer)) > 0) {
+			digest.update(buffer, 0, read)
+		}
+	}
+	return digest.digest().encodeHex().toString()
+}
