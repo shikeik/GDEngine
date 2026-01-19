@@ -60,7 +60,8 @@ public class MultiPartDownloader {
         new Thread(() -> {
             try {
                 // [封装] 自动添加随机时间戳，强制获取最新清单
-                String noCacheUrl = appendParam(url, "t", ""+System.currentTimeMillis());
+//                String noCacheUrl = appendParam(url, "t", ""+System.currentTimeMillis());
+                String noCacheUrl = url;
 
                 String jsonStr = fetchString(noCacheUrl);
 
@@ -86,7 +87,8 @@ public class MultiPartDownloader {
             try {
                 // 1. 获取清单 (强制刷新)
                 callback.onProgress(0, "正在获取清单...");
-                String noCacheManifestUrl = appendParam(manifestUrl, "t", String.valueOf(System.currentTimeMillis()));
+//                String noCacheManifestUrl = appendParam(manifestUrl, "t", String.valueOf(System.currentTimeMillis()));
+                String noCacheManifestUrl = manifestUrl;
                 String jsonStr = fetchString(noCacheManifestUrl);
 
                 Debug.logT("Downloader", "Manifest fetched: " + jsonStr.substring(0, Math.min(50, jsonStr.length())) + "...");
