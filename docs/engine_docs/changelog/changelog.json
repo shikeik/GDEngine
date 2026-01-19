@@ -1,5 +1,5 @@
 {
-    "lastUpdated": "2026-01-20 00:50:44",
+    "lastUpdated": "2026-01-20 04:25:12",
     "groups": [
         {
             "id": "In Development",
@@ -7,11 +7,103 @@
                 {
                     "tag": "HEAD",
                     "fullVersion": "HEAD",
-                    "date": "2026-01-19",
+                    "date": "2026-01-20",
                     "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
                     "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
                     "isSnapshot": true,
                     "commits": [
+                        {
+                            "hash": "6cc1226ec83d3118b03be07820a131f618c9d97a",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u518d\u6765\u4e00\u6b21\u6d4b\u8bd5: \u66f4\u65b0\u6587\u6863",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e77ae6654bff523923a6d10ad0bf8cfb0778fbb2",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u6d4b\u8bd51\u901a\u8fc7: \u786e\u5b9e\u66f4\u65b0\u4e86",
+                            "details": ""
+                        },
+                        {
+                            "hash": "9d9481880836c57ea89ffa31d052bc1a21ff02c3",
+                            "date": "2026-01-20",
+                            "type": "fix",
+                            "summary": "\u62a5\u9519\u4fee\u590d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "b7f216b25de5000a2cf67a7bc045e57091dcae10",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u6d4b\u8bd5\u6587\u6863",
+                            "details": ""
+                        },
+                        {
+                            "hash": "752e06b79c734dd390d6f4218a64464542d71814",
+                            "date": "2026-01-20",
+                            "type": "refactor",
+                            "summary": "\u91cd\u6784\u5f15\u64ce\u6587\u6863\u83b7\u53d6/\u66f4\u65b0\u6d41",
+                            "details": ""
+                        },
+                        {
+                            "hash": "63eb630e0f8ff4543118216f7497de19dc75d94e",
+                            "date": "2026-01-20",
+                            "type": "fix",
+                            "summary": "tmp, \u5f00\u59cb\u5f7b\u5e95\u91cd\u6784",
+                            "details": ""
+                        },
+                        {
+                            "hash": "95138b4c3d32441195b90cd59ac9d8d2b4e985e2",
+                            "date": "2026-01-20",
+                            "type": "fix",
+                            "summary": "\u65b0\u65b9\u6cd5-\u6bcf\u6b21\u6307\u5b9a\u65b0\u540d\u5b57\u6765\u89e3\u51b3\u7f13\u5b58\u95ee\u9898",
+                            "details": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "1.10.12",
+            "patches": [
+                {
+                    "tag": "1.10.12.17",
+                    "fullVersion": "1.10.12.17",
+                    "date": "2026-01-20",
+                    "tagSummary": "'fix: gradle\u589e\u52a0\u5237\u65b0CDN\u7f13\u5b58\u6309\u94ae",
+                    "tagDetails": "'",
+                    "isSnapshot": false,
+                    "commits": [
+                        {
+                            "hash": "653b9fe212b7ef052498093c45c7dbd738ebef05",
+                            "date": "2026-01-20",
+                            "type": "fix",
+                            "summary": "gradle\u589e\u52a0\u5237\u65b0CDN\u7f13\u5b58\u6309\u94ae",
+                            "details": ""
+                        },
+                        {
+                            "hash": "7ad76016797c085b726d73128c5b8666ec0afce9",
+                            "date": "2026-01-20",
+                            "type": "chore",
+                            "summary": "\u5168\u9650\u5b9a\u540d\u4ee3\u7801\u6e05\u7406",
+                            "details": ""
+                        },
+                        {
+                            "hash": "edcc76d59ecfc3e7f8490406c3efe012800a39b1",
+                            "date": "2026-01-20",
+                            "type": "fix",
+                            "summary": "\u6301\u7eed\u4fee\u590d\u6587\u6863\u66f4\u65b0\u68c0\u67e5\u903b\u8f91\u4e2d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ed58bf75bd721d2f057585009da4569d65ce8997",
+                            "date": "2026-01-20",
+                            "type": "chore",
+                            "summary": "changelog update.",
+                            "details": ""
+                        },
                         {
                             "hash": "ff861411b76c8f228eb9eb73f10349fa5b765c6b",
                             "date": "2026-01-20",
@@ -48,12 +140,7 @@
                             "details": ""
                         }
                     ]
-                }
-            ]
-        },
-        {
-            "id": "1.10.12",
-            "patches": [
+                },
                 {
                     "tag": "1.10.12.16",
                     "fullVersion": "1.10.12.16",
@@ -194,7 +281,17 @@
                             "type": "test",
                             "summary": "\u6d4b\u8bd5\u5927\u6587\u4ef6\u97f3\u9891\u80fd\u5426\u4e0b\u8f7d",
                             "details": ""
-                        },
+                        }
+                    ]
+                },
+                {
+                    "tag": "1.10.12.14",
+                    "fullVersion": "1.10.12.14",
+                    "date": "2026-01-19",
+                    "tagSummary": "'docs: \u6d4b\u8bd5\u5927\u6e38\u620f(41mb)\u80fd\u5426\u8bbf\u95ee",
+                    "tagDetails": "'",
+                    "isSnapshot": false,
+                    "commits": [
                         {
                             "hash": "5a064d9e747c3cb8da45da146ba7b02346bb8524",
                             "date": "2026-01-19",
@@ -208,17 +305,7 @@
                             "type": "fix",
                             "summary": "website address update.",
                             "details": ""
-                        }
-                    ]
-                },
-                {
-                    "tag": "1.10.12.14",
-                    "fullVersion": "1.10.12.14",
-                    "date": "2026-01-19",
-                    "tagSummary": "'chore: projectVersion=1.10.12.14",
-                    "tagDetails": "'",
-                    "isSnapshot": false,
-                    "commits": [
+                        },
                         {
                             "hash": "524a14a19f5fc774c7ac3c4ff22d47156f5bfc20",
                             "date": "2026-01-19",
