@@ -17,6 +17,7 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.Timer;
 import com.goldsprite.gdengine.BuildConfig;
 import com.goldsprite.gdengine.core.Gd;
+import com.goldsprite.gdengine.core.config.CloudConstants;
 import com.goldsprite.gdengine.core.project.ProjectService;
 import com.goldsprite.gdengine.core.project.model.ProjectConfig;
 import com.goldsprite.gdengine.core.project.model.TemplateInfo;
@@ -148,37 +149,35 @@ public class HubViewImpl extends VisTable implements IHubView {
 	private static final String DOC_MANIFEST_URL = "https://gh-proxy.com/https://raw.githubusercontent.com/shikeik/GDEngine/refs/heads/main/dist/docs_manifest.json";
 
 	private void openLocalDocs() {
-        String activeRoot = GDEngineConfig.getInstance().getActiveEngineRoot();
-        if (activeRoot == null) activeRoot = GDEngineConfig.getRecommendedRoot();
+		String activeRoot = GDEngineConfig.getInstance().getActiveEngineRoot();
+		if (activeRoot == null) activeRoot = GDEngineConfig.getRecommendedRoot();
 
-        FileHandle docEntry = Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
-        boolean localExists = docEntry.exists();
+		FileHandle docEntry = Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
+		boolean localExists = docEntry.exists();
 
-        // 1. 如果本地完全没有，直接下载
-        if (!localExists) {
-            startDocsDownload(activeRoot, null); // null 表示强制下载
-            return;
-        }
+		if (!localExists) {
+			startDocsDownload(activeRoot, null);
+			return;
+		}
 
-        // 2. 如果本地有，先提示“正在检查更新...”，同时异步去取云端清单
-        ToastUI.inst().show("正在检查文档更新...");
+		ToastUI.inst().show("正在检查文档更新...");
 
-        String finalRoot = activeRoot;
-		// [修改] 直接传原始 URL，内部会自动处理缓存
-        MultiPartDownloader.fetchManifest(DOC_MANIFEST_URL, new MultiPartDownloader.ManifestCallback() {
-				@Override
-				public void onSuccess(MultiPartDownloader.Manifest cloudManifest) {
-					checkDocVersion(finalRoot, cloudManifest);
-				}
+		String finalRoot = activeRoot;
 
-				@Override
-				public void onError(String err) {
-					// 网络失败，但本地有文件，直接打开旧版
-					ToastUI.inst().show("无法连接更新服务器，打开本地缓存...");
-					launchDocServer();
-				}
-			});
-    }
+		// [修改] 使用 CloudConstants.getDocsManifestUrl() (走反代)
+		MultiPartDownloader.fetchManifest(CloudConstants.getDocsManifestUrl(), new MultiPartDownloader.ManifestCallback() {
+			@Override
+			public void onSuccess(MultiPartDownloader.Manifest cloudManifest) {
+				checkDocVersion(finalRoot, cloudManifest);
+			}
+
+			@Override
+			public void onError(String err) {
+				ToastUI.inst().show("无法连接更新服务器，打开本地缓存...");
+				launchDocServer();
+			}
+		});
+	}
 
 	private void checkDocVersion(String rootPath, MultiPartDownloader.Manifest cloudManifest) {
         Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
@@ -214,58 +213,49 @@ public class HubViewImpl extends VisTable implements IHubView {
     }
 
 	// 复用下载逻辑，增加 updateTime 参数用于更新 Prefs
-    private void startDocsDownload(String rootPath, String newUpdateTime) {
-        String SAVE_DIR = rootPath;
+	private void startDocsDownload(String rootPath, String newUpdateTime) {
+		String SAVE_DIR = rootPath;
 
-        ToastUI.inst().show("开始下载文档...");
+		ToastUI.inst().show("开始下载文档...");
 
-        MultiPartDownloader.download(
-            DOC_MANIFEST_URL,
-            SAVE_DIR,
-            (progress, msg) -> {
-			Gdx.app.postRunnable(() -> {
-				if (progress < 0) showError("下载失败: " + msg);
-				else if (progress % 10 == 0) ToastUI.inst().show(msg);
-			});
-		},
-		() -> {
-			Gdx.app.postRunnable(() -> {
-				ToastUI.inst().show("文档更新完毕！");
+		// [核心修改] 传入 Manifest URL (Proxy) 和 CDN Base URL (CDN)
+		// 实现了双通道下载：清单保鲜，分卷保速
+		MultiPartDownloader.download(
+			CloudConstants.getDocsManifestUrl(),  // 参数1: 清单地址
+			CloudConstants.getDocsCdnBaseUrl(),   // 参数2: 资源基准地址
+			SAVE_DIR,
+			(progress, msg) -> {
+				Gdx.app.postRunnable(() -> {
+					if (progress < 0) showError("下载失败: " + msg);
+					else if (progress % 10 == 0) ToastUI.inst().show(msg);
+				});
+			},
+			() -> {
+				Gdx.app.postRunnable(() -> {
+					ToastUI.inst().show("文档更新完毕！");
 
-				// [核心] 下载成功后，更新本地记录的时间戳
-				// 如果 newUpdateTime 为 null (首次下载)，我们需要从刚才下载的 manifest 里拿
-				// 但 MultiPartDownloader.download 内部没把 manifest 传出来。
-				// 简单做法：我们再从云端拿一次？不，这太蠢了。
-				// 优化做法：MultiPartDownloader.download 的 onFinish 回调如果能把 Manifest 传回来最好。
-				// 既然现在不想改 Downloader 接口，我们可以在这里偷个懒：
-				// 如果 newUpdateTime 是 null，说明是首次下载，我们假设它是最新的（或者可以在 download 内部存）。
+					// 保存时间戳逻辑
+					if (newUpdateTime != null) {
+						com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
+						prefs.putString(KEY_DOC_TIME, newUpdateTime);
+						prefs.flush();
+					} else {
+						// 首次下载，再拿一次清单存时间戳
+						MultiPartDownloader.fetchManifest(CloudConstants.getDocsManifestUrl(), new MultiPartDownloader.ManifestCallback() {
+							@Override public void onSuccess(MultiPartDownloader.Manifest m) {
+								com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
+								prefs.putString(KEY_DOC_TIME, m.updatedAt);
+								prefs.flush();
+							}
+							@Override public void onError(String e) {}
+						});
+					}
 
-				// 为了严谨，建议修改一下 MultiPartDownloader.download 的 onFinish 签名
-				// 但为了不改动太大，我们这里如果是首次下载，就先不存 Prefs (下次打开会再次检查，然后存入)
-				// 或者，我们可以再次 fetch 一次 manifest (有缓存，很快)
-
-				if (newUpdateTime != null) {
-					com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
-					prefs.putString(KEY_DOC_TIME, newUpdateTime);
-					prefs.flush();
-				} else {
-					// 首次下载完，为了防止下次误报更新，我们应该保存。
-					// 这里再调一次 fetch 拿最新的时间存起来
-					MultiPartDownloader.fetchManifest(DOC_MANIFEST_URL, new MultiPartDownloader.ManifestCallback() {
-                            @Override public void onSuccess(MultiPartDownloader.Manifest m) {
-                                com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
-                                prefs.putString(KEY_DOC_TIME, m.updatedAt);
-                                prefs.flush();
-                            }
-                            @Override public void onError(String e) {}
-                        });
-				}
-
-				launchDocServer();
-			});
-		}
-        );
-    }
+					launchDocServer();
+				});
+			}
+		);
+	}
 
 	private void launchDocServer() {
         try {

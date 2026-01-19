@@ -1,16 +1,12 @@
-// 文件: gradle/publish-docs.gradle
 import java.security.MessageDigest
 import groovy.json.JsonOutput
+import java.text.SimpleDateFormat
 
 ext {
 	CHUNK_SIZE = 18 * 1024 * 1024
 	DOCS_ROOT = file("docs")
 	BUILD_TMP = file("build/tmp_publish")
 	DIST_DIR = file("dist")
-
-	// [核心] 定义 JsDelivr 的绝对路径前缀
-	// 格式: https://gcore.jsdelivr.net/gh/<User>/<Repo>@<Branch>/dist/
-	CDN_PREFIX = "https://gcore.jsdelivr.net/gh/shikeik/GDEngine@main/dist/"
 }
 
 tasks.register('packageDocs', Zip) {
@@ -31,10 +27,19 @@ tasks.register('buildDocsDist') {
 		def sourceZip = file("${BUILD_TMP}/docs_full.zip")
 		if (!sourceZip.exists()) throw new GradleException("Source zip missing!")
 
-		// 1. 清理 dist 目录下的旧文档文件 (保留 templates)
+		// 1. 生成构建 ID (时间戳: yyyyMMdd_HHmmss)
+		// 这将作为文件名的一部分，强制穿透 CDN 缓存
+		def dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss")
+		dateFormat.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
+		def buildID = dateFormat.format(new Date())
+
+		println "🚀 Starting Docs Build. ID: ${buildID}"
+
+		// 2. 清理 dist 目录下的旧文档文件
 		if (!DIST_DIR.exists()) DIST_DIR.mkdirs()
 		DIST_DIR.listFiles().each { f ->
-			if (f.isFile() && (f.name == "docs_manifest.json" || f.name.startsWith("docs.part"))) {
+			// 删除旧的清单和分卷 (匹配 docs.*.p*.zip)
+			if (f.isFile() && (f.name == "docs_manifest.json" || f.name.startsWith("docs."))) {
 				f.delete()
 			}
 		}
@@ -48,26 +53,28 @@ tasks.register('buildDocsDist') {
 				int bytesRead = ins.read(buffer)
 				if (bytesRead <= 0) break
 
-				// A. 先生成临时文件计算 MD5
+				// A. 临时文件计算 MD5 (仅用于校验，不再用于文件名)
 				File tempPart = new File(DIST_DIR, "temp_part_${partIndex}")
 				tempPart.withOutputStream { it.write(buffer, 0, bytesRead) }
 				String md5 = generateMD5(tempPart)
 
-				// B. [核心] 重命名为带 Hash 的文件名
-				// 例如: docs.part000.a1b2c3d4.zip
-				String finalName = String.format("docs.part%03d.%s.zip", partIndex, md5.substring(0, 8))
+				// B. [核心] 生成带 BuildID 的文件名
+				// 格式: docs.{BuildID}.p{Index}.zip
+				// 例如: docs.20240120_123000.p0.zip
+				String finalName = String.format("docs.%s.p%d.zip", buildID, partIndex)
 				File finalFile = new File(DIST_DIR, finalName)
 				tempPart.renameTo(finalFile)
 
-				// C. [核心] 写入绝对 CDN 路径
+				// C. [核心] 写入相对路径 (纯文件名)
+				// 不包含 https 前缀，由客户端自由组装 CDN 地址
 				partsList << [
 					index: partIndex,
-					file: CDN_PREFIX + finalName, // 这里写入了 gcore 的绝对路径
+					file: finalName,
 					md5: md5,
 					size: finalFile.length()
 				]
 
-				println "   -> Generated: ${finalName}"
+				println "   -> Generated: ${finalName} (Size: ${finalFile.length()})"
 				partIndex++
 			}
 		}
@@ -76,6 +83,7 @@ tasks.register('buildDocsDist') {
 			name: "engine_docs.zip",
 			totalSize: sourceZip.length(),
 			version: projectVersion,
+			buildId: buildID, // 记录 ID 方便调试
 			updatedAt: new Date().format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("Asia/Shanghai")),
 			parts: partsList
 		]
@@ -83,7 +91,7 @@ tasks.register('buildDocsDist') {
 		File jsonFile = new File(DIST_DIR, "docs_manifest.json")
 		jsonFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(manifest))
 
-		println "✅ Build Complete. Manifest uses CDN prefix: ${CDN_PREFIX}"
+		println "✅ Docs Build Complete. Manifest generated at dist/docs_manifest.json"
 	}
 }
 
