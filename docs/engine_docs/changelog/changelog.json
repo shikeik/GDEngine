@@ -1,17 +1,90 @@
 {
-    "lastUpdated": "2026-01-20 04:25:12",
+    "lastUpdated": "2026-01-20 05:09:00",
     "groups": [
         {
-            "id": "In Development",
+            "id": "1.10.12",
             "patches": [
                 {
-                    "tag": "HEAD",
-                    "fullVersion": "HEAD",
+                    "tag": "1.10.12.19",
+                    "fullVersion": "1.10.12.19",
                     "date": "2026-01-20",
-                    "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
-                    "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
-                    "isSnapshot": true,
+                    "tagSummary": "'test: \u6d4b\u8bd52\u901a\u8fc7, \u4e91\u7aef\u4e0b\u8f7d\u529f\u80fd\u6536\u5b98",
+                    "tagDetails": "'",
+                    "isSnapshot": false,
                     "commits": [
+                        {
+                            "hash": "fccccdbf47d3b9839e8914d762a62c5f6b8e047f",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u6d4b\u8bd52\u901a\u8fc7, \u4e91\u7aef\u4e0b\u8f7d\u529f\u80fd\u6536\u5b98",
+                            "details": ""
+                        },
+                        {
+                            "hash": "0b5cd6b681c1499767569b1c6fbe1da9f41a9228",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u6d4b\u8bd51\u901a\u8fc7, \u5173\u6389\u68af\u5b50\u518d\u6b21\u6d4b\u8bd5\u66f4\u5927\u7684102mb",
+                            "details": ""
+                        },
+                        {
+                            "hash": "166e58865de75cfab903f8d734ad83bd9406680c",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u66f4\u65b0\u65b0\u6a21\u677f\u4ee5\u4fbf\u6d4b\u8bd5\u6a21\u677f\u7684\u6297\u7f13\u5b58\u6027",
+                            "details": ""
+                        },
+                        {
+                            "hash": "f8c8d2f8b641851ecbefdebfe7ecbb12d31f58c1",
+                            "date": "2026-01-20",
+                            "type": "refactor",
+                            "summary": "\u9002\u914d\u6a21\u677f\u4e0b\u8f7ddialog",
+                            "details": ""
+                        },
+                        {
+                            "hash": "3c84b320e926b9d50b93c154adbbc524fd10a93f",
+                            "date": "2026-01-20",
+                            "type": "refactor",
+                            "summary": "\u91cd\u6784\u6a21\u677f\u53d1\u5e03gradle\u811a\u672c",
+                            "details": ""
+                        }
+                    ]
+                },
+                {
+                    "tag": "1.10.12.18",
+                    "fullVersion": "1.10.12.18",
+                    "date": "2026-01-20",
+                    "tagSummary": "'test: \u6d4b\u8bd53\u901a\u8fc7, \u7f13\u5b58\u95ee\u9898\u89e3\u51b3\u65b9\u6848\u786e\u5b9a, projectVersion=1.10.12.18",
+                    "tagDetails": "'",
+                    "isSnapshot": false,
+                    "commits": [
+                        {
+                            "hash": "b6634331c9f8b9f72193dd652dfcafaf9c104aa1",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u6d4b\u8bd53\u901a\u8fc7, \u7f13\u5b58\u95ee\u9898\u89e3\u51b3\u65b9\u6848\u786e\u5b9a, projectVersion=1.10.12.18",
+                            "details": ""
+                        },
+                        {
+                            "hash": "f380467215339ff460314a58a58acf8d0eec75bc",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u6d4b\u8bd52\u901a\u8fc7, \u518d\u6b21\u6253\u5305\u7f51\u7ad9, \u5173\u95ed\u68af\u5b50\u518d\u6d4b\u4e00\u6b21",
+                            "details": ""
+                        },
+                        {
+                            "hash": "631bbf7ad9bdf09558bc8965031c4d1246922b39",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u66f4\u65b0\u5f15\u64ce\u6587\u6863dist",
+                            "details": ""
+                        },
+                        {
+                            "hash": "dab975d76fa4c1029a7297b4022ed89dbd963b09",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u66f4\u65b0changelog",
+                            "details": ""
+                        },
                         {
                             "hash": "6cc1226ec83d3118b03be07820a131f618c9d97a",
                             "date": "2026-01-20",
@@ -62,12 +135,7 @@
                             "details": ""
                         }
                     ]
-                }
-            ]
-        },
-        {
-            "id": "1.10.12",
-            "patches": [
+                },
                 {
                     "tag": "1.10.12.17",
                     "fullVersion": "1.10.12.17",
