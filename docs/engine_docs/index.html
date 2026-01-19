@@ -400,6 +400,10 @@
 								window.open(node.link, '_blank');
 								return;
 							}
+							if (node.link.indexOf('godot-first-game-web/') !== -1) {
+								window.open(node.link, '_blank');
+								return;
+							}
 
 							// 构造目标 Hash
 							// node.link 可能是 "/manual/a" 或 "/manual/a?t=1"
