@@ -1,28 +1,27 @@
-// 文件: gradle/publish-template.gradle
 import java.security.MessageDigest
 import groovy.json.JsonOutput
+import java.text.SimpleDateFormat // 新增
 
 // ============================================================
-// 模板发布流水线
+// 模板发布流水线 (v2.0: 动静分离版)
 // 用法: gradlew publishTemplate -Ptarget=BigDemo
 // ============================================================
 
 ext {
 	CHUNK_SIZE = 18 * 1024 * 1024 // 18 MB
-	// 源位置：开发环境的模板目录
 	TEMPLATES_ROOT = file("GDEngine/InternalProjectTemplates")
 	BUILD_TMP = file("build/tmp_tpl_publish")
-	DIST_ROOT = file("dist/templates") // 产物存放: dist/templates/<TemplateName>/
+	DIST_ROOT = file("dist/templates")
 }
 
 tasks.register('publishTemplate') {
 	group = 'gdengine-publish'
-	description = 'Package, Split and Manifest a specific template. Usage: -Ptarget=TemplateName'
+	description = 'Package, Split and Manifest a specific template.'
 
 	doLast {
 		// 1. 获取目标参数
 		if (!project.hasProperty('target')) {
-			throw new GradleException("请指定目标模板! 用法: gradlew publishTemplate -Ptarget=TemplateName")
+			throw new GradleException("请指定目标模板! 用法: -Ptarget=TemplateName")
 		}
 		String targetName = project.property('target')
 		File sourceDir = new File(TEMPLATES_ROOT, targetName)
@@ -31,28 +30,38 @@ tasks.register('publishTemplate') {
 			throw new GradleException("模板目录不存在: ${sourceDir.absolutePath}")
 		}
 
-		println "📦 正在处理模板: ${targetName}"
+		// 2. 生成 BuildID (强制刷新缓存的关键)
+		def dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss")
+		dateFormat.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
+		def buildID = dateFormat.format(new Date())
 
-		// 2. 准备目录
+		println "📦 正在处理模板: ${targetName} (ID: ${buildID})"
+
+		// 3. 准备目录
 		BUILD_TMP.deleteDir()
 		BUILD_TMP.mkdirs()
 
 		File targetDistDir = new File(DIST_ROOT, targetName)
-		if (targetDistDir.exists()) targetDistDir.deleteDir()
-		targetDistDir.mkdirs()
+		if (!targetDistDir.exists()) targetDistDir.mkdirs()
 
-		// 3. 打包 Zip
+		// [清理旧文件] 删除 manifest.json 和 该模板的所有旧分卷
+		// 匹配规则: manifest.json 或 targetName.* (防止误删其他文件)
+		targetDistDir.listFiles().each { f ->
+			if (f.isFile() && (f.name == "manifest.json" || f.name.startsWith("${targetName}."))) {
+				f.delete()
+			}
+		}
+
+		// 4. 打包 Zip
 		println "   -> 正在压缩..."
 		File zipFile = new File(BUILD_TMP, "${targetName}.zip")
-
 		ant.zip(destfile: zipFile, basedir: sourceDir)
 
-		// [修复] 使用 String.format 替代 BigDecimal.format()
 		def sizeMb = zipFile.length() / (1024.0 * 1024.0)
 		println "   -> 压缩完成: ${String.format('%.2f', sizeMb)} MB"
 
-		// 4. 切分
-		println "   -> 正在切分 (每卷 18MB)..."
+		// 5. 切分
+		println "   -> 正在切分 (每卷 ${CHUNK_SIZE/1024/1024}MB)..."
 		def partsList = []
 		def buffer = new byte[CHUNK_SIZE]
 		int partIndex = 0
@@ -62,17 +71,18 @@ tasks.register('publishTemplate') {
 				int bytesRead = ins.read(buffer)
 				if (bytesRead <= 0) break
 
-				// 命名: BigDemo.part000.zip (保留 .zip 后缀以适配 CDN)
-				String partName = String.format("${targetName}.part%03d.zip", partIndex)
+				// [核心] 命名规则: Name.BuildID.pIndex.zip
+				// 例如: BigDemo.20260120_120000.p0.zip
+				String partName = String.format("${targetName}.%s.p%d.zip", buildID, partIndex)
 				File partFile = new File(targetDistDir, partName)
 
 				partFile.withOutputStream { outs ->
 					outs.write(buffer, 0, bytesRead)
 				}
 
-				// MD5
 				String md5 = generateMD5(partFile)
 
+				// Manifest 只存相对文件名
 				partsList << [
 					index: partIndex,
 					file: partName,
@@ -86,12 +96,13 @@ tasks.register('publishTemplate') {
 			}
 		}
 
-		// 5. 生成 Manifest
+		// 6. 生成 Manifest
 		def manifest = [
-			id: targetName, // 模板ID
-			name: "${targetName}.zip", // 合并后的文件名
+			id: targetName,
+			name: "${targetName}.zip",
 			totalSize: zipFile.length(),
-			version: "1.0",
+			version: "1.0", // 模板自身的版本逻辑暂时保留
+			buildId: buildID, // 写入 ID
 			updatedAt: new Date().format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("Asia/Shanghai")),
 			parts: partsList
 		]
