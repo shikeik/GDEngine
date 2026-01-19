@@ -48,9 +48,18 @@ tasks.register('buildDocsDist') {
 		// [修复] 使用 String.format 替代 .format() 方法
 		def sizeMb = sourceZip.length() / (1024.0 * 1024.0)
 		println "📦 Source Zip Size: ${String.format('%.2f', sizeMb)} MB"
-
-		// 清理旧产物
-		if (DIST_DIR.exists()) DIST_DIR.deleteDir()
+		
+		// [修复] 智能清理：只删除文档相关文件，保留 templates 目录
+        if (!DIST_DIR.exists()) {
+            DIST_DIR.mkdirs()
+        } else {
+            DIST_DIR.listFiles().each { f ->
+                // 只删除 docs_manifest.json 和 docs.partX.zip
+                if (f.isFile() && (f.name == "docs_manifest.json" || f.name.startsWith("docs.part"))) {
+                    f.delete()
+                }
+            }
+        }
 		DIST_DIR.mkdirs()
 
 		def partsList = []
