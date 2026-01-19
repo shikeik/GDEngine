@@ -1,7 +1,10 @@
 package com.goldsprite.gdengine.screens.ecs.hub.mvp;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -17,17 +20,22 @@ import com.goldsprite.gdengine.core.Gd;
 import com.goldsprite.gdengine.core.project.ProjectService;
 import com.goldsprite.gdengine.core.project.model.ProjectConfig;
 import com.goldsprite.gdengine.core.project.model.TemplateInfo;
-import com.goldsprite.gdengine.log.Debug;
+import com.goldsprite.gdengine.screens.ecs.hub.SettingsWindow;
 import com.goldsprite.gdengine.ui.event.ContextListener;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.IDEConsole;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
-import com.goldsprite.gdengine.screens.ecs.hub.SettingsWindow;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.goldsprite.gdengine.utils.ThreadedDownload;
 import com.kotcrab.vis.ui.VisUI;
-import com.kotcrab.vis.ui.widget.*;
+import com.kotcrab.vis.ui.widget.MenuItem;
+import com.kotcrab.vis.ui.widget.PopupMenu;
+import com.kotcrab.vis.ui.widget.VisImage;
+import com.kotcrab.vis.ui.widget.VisLabel;
+import com.kotcrab.vis.ui.widget.VisScrollPane;
+import com.kotcrab.vis.ui.widget.VisSelectBox;
+import com.kotcrab.vis.ui.widget.VisTable;
+import com.kotcrab.vis.ui.widget.VisTextButton;
+import com.kotcrab.vis.ui.widget.VisTextField;
+import com.goldsprite.gdengine.utils.MultiPartDownloader;
 
 /**
  * Hub 视图的具体实现 (View Implementation)
@@ -105,28 +113,82 @@ public class HubViewImpl extends VisTable implements IHubView {
 		VisTable bottomBar = new VisTable();
 		bottomBar.left();
 
-		VisTextButton btnLog = new VisTextButton("📅 在线文档");
+		VisTextButton btnLog = new VisTextButton("📅 引擎文档(下载查看)");
 		btnLog.setColor(Color.SKY);
-		btnLog.addListener(new ClickListener() {int k3;
+		btnLog.addListener(new ClickListener() {
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
-				// [核心修改] 直接跳转 Cloudflare Pages
-				// Docsify 默认使用 Hash 路由，通过 query 参数传递版本号
-				String url = "https://shikeik.fan/#/?v=" + BuildConfig.DEV_VERSION;
-
-				com.goldsprite.gdengine.log.Debug.logT("Hub", "Opening Docs: " + url);
-
-				if (Gd.browser != null) {
-					Gd.browser.openUrl(url, "GDEngine Docs");
-				} else {
-					ToastUI.inst().show("Error: WebBrowser not initialized.");
-				}
+				openLocalDocs();
 			}
 		});
 
 		bottomBar.add(btnLog).pad(5).left();
 		add(bottomBar).growX().left();
 	}
+	
+	private void openLocalDocs() {
+        String activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getInstance().getActiveEngineRoot();
+        if (activeRoot == null) activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getRecommendedRoot();
+
+        // 检查入口文件是否存在
+        FileHandle docEntry = Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
+
+        if (docEntry.exists()) {
+            // A. 存在：直接启动
+            launchDocServer();
+        } else {
+            // B. 不存在：启动分卷下载流程
+            startMultiPartDownload(activeRoot);
+        }
+    }
+	
+	private void launchDocServer() {
+        try {
+            com.goldsprite.gdengine.core.web.DocServer.startServer(
+                Gdx.files.absolute(com.goldsprite.gdengine.core.config.GDEngineConfig.getInstance().getActiveEngineRoot())
+				.child("engine_docs").file().getAbsolutePath()
+            );
+
+            String url = com.goldsprite.gdengine.core.web.DocServer.getIndexUrl() + "?v=" + BuildConfig.DEV_VERSION;
+            ToastUI.inst().show("文档服务已启动");
+
+            if (Gd.browser != null) {
+                Gd.browser.openUrl(url, "GDEngine Docs");
+            }
+        } catch (Exception e) {
+            showError("Server Start Failed: " + e.getMessage());
+        }
+    }
+
+    private void startMultiPartDownload(String rootPath) {
+        // 定义云端清单地址 (假设我们稍后会上传到这里)
+        // 使用 JsDelivr 加速 GitHub
+        String MANIFEST_URL = "https://cdn.jsdelivr.net/gh/shikeik/GDEngine@main/dist/docs_manifest.json";
+        String SAVE_DIR = rootPath; // 下载到根目录，解压出 engine_docs
+
+        ToastUI.inst().show("未检测到本地文档，准备从云端获取...");
+
+        // 调用分卷下载器 (MultiPartDownloader)
+        // 注意：这里我们马上就要创建这个类
+       	MultiPartDownloader.download(
+            MANIFEST_URL, 
+            SAVE_DIR,
+            (progress, msg) -> {
+			// UI 线程回调
+			Gdx.app.postRunnable(() -> {
+				if (progress < 0) showError("下载失败: " + msg);
+				else if (progress % 10 == 0) ToastUI.inst().show(msg);
+			});
+		},
+		() -> {
+			// 完成回调
+			Gdx.app.postRunnable(() -> {
+				ToastUI.inst().show("文档下载解压完毕！");
+				launchDocServer();
+			});
+		}
+        );
+    }
 
 	@Override
 	public void showProjects(Array<FileHandle> projects) {

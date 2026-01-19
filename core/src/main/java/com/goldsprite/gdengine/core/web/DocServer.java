@@ -93,7 +93,7 @@ public class DocServer extends NanoHTTPD {
 
             // 尝试自动打开浏览器
             try {
-                java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
+                //java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
             } catch (Exception ignored) {}
 
             System.in.read(); // 阻塞等待回车
