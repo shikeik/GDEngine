@@ -14,3 +14,17 @@
 *   [💀 骨骼动画](manual/systems/neon_animation.md)
 *   [📚 API 参考](javadoc/index.html)
 *   [📅 更新日志](changelog/README.md)
+
+## 网络测试
+
+这是一个 19MB 的音频文件，用于测试 Cloudflare CDN 的下载速度。
+
+<!-- 方式 B：强制下载 (推荐，HTML 写法) -->
+<a href="SFX_Ambience_Forest_Day_Loop.wav" download="Test_Audio_19MB.wav">
+    <button style="padding:10px; background:#09D2B8; color:white; border:none; border-radius:4px; cursor:pointer;">
+        📥 强制下载测试 (19MB)
+    </button>
+</a>
+
+<!-- 方式 C：直接嵌入播放器 (如果你想在线听) -->
+<audio controls src="SFX_Ambience_Forest_Day_Loop.wav"></audio>
