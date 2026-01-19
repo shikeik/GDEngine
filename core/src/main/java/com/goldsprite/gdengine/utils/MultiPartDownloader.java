@@ -227,7 +227,7 @@ public class MultiPartDownloader {
 	}
 
 	private static void mergeParts(File workDir, List<Part> parts, File dest) throws IOException {
-		Collections.sort(parts, (a, b) -> Integer.compare(a.index, b.index));
+		parts.sort((a, b) -> Integer.compare(a.index, b.index));
 		try (FileOutputStream fos = new FileOutputStream(dest);
 			 BufferedOutputStream out = new BufferedOutputStream(fos)) {
 			byte[] buf = new byte[8192];
