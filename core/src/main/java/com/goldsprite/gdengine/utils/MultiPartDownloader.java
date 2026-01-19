@@ -106,9 +106,10 @@ public class MultiPartDownloader {
 
                 // [核心修复] 准备缓存穿透参数 (使用 manifest 的更新时间)
                 // 这样既能利用 CDN (相同版本缓存)，又能保证更新后立即刷新
-                String cacheBuster;
+                String cacheBuster;int k;
                 try {
-                    cacheBuster = "?v=" + URLEncoder.encode(manifest.updatedAt, StandardCharsets.UTF_8.name());
+                    cacheBuster = "?t=" + System.currentTimeMillis();
+                    //cacheBuster = "?v=" + URLEncoder.encode(manifest.updatedAt, StandardCharsets.UTF_8.name());
                 } catch (Exception e) {
                     cacheBuster = "?t=" + System.currentTimeMillis();
                 }
