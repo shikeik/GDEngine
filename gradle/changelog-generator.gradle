@@ -122,7 +122,8 @@ tasks.register('generateChangelog') {
 		}
 
 		def finalJson = [
-			lastUpdated: new Date().format("yyyy-MM-dd HH:mm:ss"),
+			// [修复] 强制使用北京时间 (Asia/Shanghai)
+			lastUpdated: new Date().format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("Asia/Shanghai")),
 			groups: finalGroups
 		]
 
