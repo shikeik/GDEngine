@@ -2,11 +2,12 @@
     "name": "engine_docs.zip",
     "totalSize": 1140053,
     "version": "1.10.12.16",
-    "updatedAt": "2026-01-20 03:23:17",
+    "buildId": "20260120_040350",
+    "updatedAt": "2026-01-20 04:03:50",
     "parts": [
         {
             "index": 0,
-            "file": "https://gcore.jsdelivr.net/gh/shikeik/GDEngine@main/dist/docs.part000.0f8767ae.zip",
+            "file": "docs.20260120_040350.p0.zip",
             "md5": "0f8767ae2d6aa7669aadcc751cf3d676",
             "size": 1140053
         }
