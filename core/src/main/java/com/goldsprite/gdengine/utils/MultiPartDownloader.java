@@ -39,9 +39,33 @@ public class MultiPartDownloader {
         public String md5;        // 校验码 (可选)
         public long size;         // 分卷大小
     }
+	
+	public interface ManifestCallback {
+        void onSuccess(Manifest manifest);
+        void onError(String err);
+    }
 
     public interface ProgressCallback {
         void onProgress(int percent, String msg);
+    }
+	
+	/**
+     * 仅获取云端清单信息 (用于版本检查)
+     */
+    public static void fetchManifest(String url, ManifestCallback callback) {
+        new Thread(() -> {
+            try {
+                String jsonStr = fetchString(url);
+                Json json = new Json();
+                json.setIgnoreUnknownFields(true);
+                Manifest m = json.fromJson(Manifest.class, jsonStr);
+
+                // 切回主线程
+                com.badlogic.gdx.Gdx.app.postRunnable(() -> callback.onSuccess(m));
+            } catch (Exception e) {
+                com.badlogic.gdx.Gdx.app.postRunnable(() -> callback.onError(e.getMessage()));
+            }
+        }).start();
     }
 
     /**

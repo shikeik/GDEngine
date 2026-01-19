@@ -2,6 +2,8 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
+更新update
+重拉
 - [ ] engine_docs下载缓存没清
 - [ ] BigDemo的assets/变成assets/assets了看看为什么
 

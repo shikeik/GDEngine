@@ -163,6 +163,9 @@ public class ProjectService {
 		if (!name.matches("[a-zA-Z0-9_]+")) return "Invalid project name.";
 		if (packageName == null || packageName.trim().isEmpty()) return "Package cannot be empty.";
 
+		// [新增] 包名校验
+		if (!isValidPackageName(packageName)) return "Invalid Package Name (e.g. com.mygame)";
+		
 		FileHandle targetDir = Gd.engineConfig.getProjectsDir().child(name);
 		if (targetDir.exists()) return "Project already exists!";
 
@@ -337,5 +340,21 @@ public class ProjectService {
 			projectDir.deleteDirectory();
 			Debug.logT("ProjectService", "Deleted project: " + projectDir.name());
 		}
+	}
+	
+	/**
+	 * 校验 Java 包名合法性
+	 */
+	public static boolean isValidPackageName(String pkg) {
+		if (pkg == null || pkg.isEmpty()) return false;
+		// 规则:
+		// 1. 必须以字母或下划线开头
+		// 2. 只能包含字母、数字、下划线、点
+		// 3. 点不能在开头或结尾，不能连续
+		// 4. (可选) 检查 Java 关键字 (如 int, class) 这里暂简化处理
+
+		// 简单正则：首字母[a-zA-Z_]，后续[a-zA-Z0-9_]，以点分隔
+		String regex = "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$";
+		return pkg.matches(regex);
 	}
 }

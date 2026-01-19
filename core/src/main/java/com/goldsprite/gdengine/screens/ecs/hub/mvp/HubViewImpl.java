@@ -37,6 +37,7 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 import com.goldsprite.gdengine.utils.MultiPartDownloader;
 import com.goldsprite.gdengine.screens.ecs.hub.OnlineTemplateDialog;
+import com.badlogic.gdx.scenes.scene2d.ui.Value;
 
 /**
  * Hub 视图的具体实现 (View Implementation)
@@ -135,21 +136,129 @@ public class HubViewImpl extends VisTable implements IHubView {
 		bottomBar.add(btnLog).pad(5).left();
 		add(bottomBar).growX().left();
 	}
+
+    // 定义常量
+    private static final String PREF_DOCS = "gd_docs_config";
+    private static final String KEY_DOC_TIME = "local_doc_updated_at";
+    private static final String DOC_MANIFEST_URL = "https://cdn.jsdelivr.net/gh/shikeik/GDEngine@main/dist/docs_manifest.json";
 	
 	private void openLocalDocs() {
         String activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getInstance().getActiveEngineRoot();
         if (activeRoot == null) activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getRecommendedRoot();
 
-        // 检查入口文件是否存在
-        FileHandle docEntry = Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
+        FileHandle docEntry = com.badlogic.gdx.Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
+        boolean localExists = docEntry.exists();
 
-        if (docEntry.exists()) {
-            // A. 存在：直接启动
-            launchDocServer();
-        } else {
-            // B. 不存在：启动分卷下载流程
-            startMultiPartDownload(activeRoot);
+        // 1. 如果本地完全没有，直接下载
+        if (!localExists) {
+            startDocsDownload(activeRoot, null); // null 表示强制下载
+            return;
         }
+
+        // 2. 如果本地有，先提示“正在检查更新...”，同时异步去取云端清单
+        ToastUI.inst().show("正在检查文档更新...");
+
+        String finalRoot = activeRoot;
+        com.goldsprite.gdengine.utils.MultiPartDownloader.fetchManifest(DOC_MANIFEST_URL, new com.goldsprite.gdengine.utils.MultiPartDownloader.ManifestCallback() {
+				@Override
+				public void onSuccess(com.goldsprite.gdengine.utils.MultiPartDownloader.Manifest cloudManifest) {
+					checkDocVersion(finalRoot, cloudManifest);
+				}
+
+				@Override
+				public void onError(String err) {
+					// 网络失败，但本地有文件，直接打开旧版
+					ToastUI.inst().show("无法连接更新服务器，打开本地缓存...");
+					launchDocServer();
+				}
+			});
+    }
+	
+	private void checkDocVersion(String rootPath, com.goldsprite.gdengine.utils.MultiPartDownloader.Manifest cloudManifest) {
+        com.badlogic.gdx.Preferences prefs = com.badlogic.gdx.Gdx.app.getPreferences(PREF_DOCS);
+        String localTime = prefs.getString(KEY_DOC_TIME, "");
+
+        // 对比时间戳
+        if (!localTime.equals(cloudManifest.updatedAt)) {
+            // 版本不一致 (有更新)
+            String sizeStr = String.format("%.2f MB", cloudManifest.totalSize / 1024f / 1024f);
+
+            new BaseDialog("文档更新") {
+                @Override
+                protected void result(Object object) {
+                    if ((boolean) object) {
+                        // 用户选择更新
+                        startDocsDownload(rootPath, cloudManifest.updatedAt);
+                    } else {
+                        // 用户选择跳过，打开旧版
+                        launchDocServer();
+                    }
+                }
+            }
+				.text("发现新版本文档 (" + cloudManifest.updatedAt + ")\n大小: " + sizeStr + "\n是否更新？")
+				.button("更新 (Update)", true)
+				.button("暂不 (Skip)", false)
+				.show(getStage());
+
+        } else {
+            // 版本一致，直接打开
+            ToastUI.inst().show("文档已是最新");
+            launchDocServer();
+        }
+    }
+	
+	// 复用下载逻辑，增加 updateTime 参数用于更新 Prefs
+    private void startDocsDownload(String rootPath, String newUpdateTime) {
+        String SAVE_DIR = rootPath; 
+
+        ToastUI.inst().show("开始下载文档...");
+
+        com.goldsprite.gdengine.utils.MultiPartDownloader.download(
+            DOC_MANIFEST_URL, 
+            SAVE_DIR,
+            (progress, msg) -> {
+			com.badlogic.gdx.Gdx.app.postRunnable(() -> {
+				if (progress < 0) showError("下载失败: " + msg);
+				else if (progress % 10 == 0) ToastUI.inst().show(msg);
+			});
+		},
+		() -> {
+			com.badlogic.gdx.Gdx.app.postRunnable(() -> {
+				ToastUI.inst().show("文档更新完毕！");
+
+				// [核心] 下载成功后，更新本地记录的时间戳
+				// 如果 newUpdateTime 为 null (首次下载)，我们需要从刚才下载的 manifest 里拿
+				// 但 MultiPartDownloader.download 内部没把 manifest 传出来。
+				// 简单做法：我们再从云端拿一次？不，这太蠢了。
+				// 优化做法：MultiPartDownloader.download 的 onFinish 回调如果能把 Manifest 传回来最好。
+				// 既然现在不想改 Downloader 接口，我们可以在这里偷个懒：
+				// 如果 newUpdateTime 是 null，说明是首次下载，我们假设它是最新的（或者可以在 download 内部存）。
+
+				// 为了严谨，建议修改一下 MultiPartDownloader.download 的 onFinish 签名
+				// 但为了不改动太大，我们这里如果是首次下载，就先不存 Prefs (下次打开会再次检查，然后存入)
+				// 或者，我们可以再次 fetch 一次 manifest (有缓存，很快)
+
+				if (newUpdateTime != null) {
+					com.badlogic.gdx.Preferences prefs = com.badlogic.gdx.Gdx.app.getPreferences(PREF_DOCS);
+					prefs.putString(KEY_DOC_TIME, newUpdateTime);
+					prefs.flush();
+				} else {
+					// 首次下载完，为了防止下次误报更新，我们应该保存。
+					// 这里再调一次 fetch 拿最新的时间存起来
+					com.goldsprite.gdengine.utils.MultiPartDownloader.fetchManifest(DOC_MANIFEST_URL, new com.goldsprite.gdengine.utils.MultiPartDownloader.ManifestCallback() {
+                            @Override public void onSuccess(com.goldsprite.gdengine.utils.MultiPartDownloader.Manifest m) {
+                                com.badlogic.gdx.Preferences prefs = com.badlogic.gdx.Gdx.app.getPreferences(PREF_DOCS);
+                                prefs.putString(KEY_DOC_TIME, m.updatedAt);
+                                prefs.flush();
+                            }
+                            @Override public void onError(String e) {}
+                        });
+				}
+
+				launchDocServer();
+			});
+		}
+        );
     }
 	
 	private void launchDocServer() {
@@ -398,6 +507,21 @@ public class HubViewImpl extends VisTable implements IHubView {
 			pkgRow.add(pkgField).growX();
 			content.add(pkgRow).growX().row();
 
+
+			// [新增] 实时监听包名输入
+			pkgField.addListener(new ChangeListener() {
+					@Override
+					public void changed(ChangeEvent event, Actor actor) {
+						String currentPkg = pkgField.getText();
+						if (!com.goldsprite.gdengine.core.project.ProjectService.isValidPackageName(currentPkg)) {
+							pkgField.setColor(Color.PINK); // 非法变红
+							errorLabel.setText("Invalid Java Package Name");
+						} else {
+							pkgField.setColor(Color.WHITE);
+							errorLabel.setText("");
+						}
+					}
+			});
 			nameField.addListener(new ChangeListener() {
 				@Override public void changed(ChangeEvent event, Actor actor) {
 					pkgField.setText("com." + nameField.getText().toLowerCase());
@@ -410,7 +534,7 @@ public class HubViewImpl extends VisTable implements IHubView {
 			errorLabel.setColor(Color.RED);
 			errorLabel.setWrap(true);
 			errorLabel.setAlignment(Align.center);
-			add(errorLabel).growX().padBottom(10).row();
+			content.add(errorLabel).minWidth(Value.percentWidth(0.8f)).growX().padBottom(10).row();
 
 			VisTextButton createBtn = new VisTextButton("Create Project");
 			createBtn.setColor(Color.GREEN);

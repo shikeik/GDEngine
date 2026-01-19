@@ -42,10 +42,6 @@ public class OnlineTemplateDialog extends BaseDialog {
 
         progressBar = new VisProgressBar(0, 100, 1, false);
         getContentTable().add(progressBar).growX().pad(5).row();
-
-        addCloseButton();
-        pack();
-        centerWindow();
     }
 
 	// [修改] 增加 String id 参数
