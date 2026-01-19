@@ -1,5 +1,5 @@
 {
-    "lastUpdated": "2026-01-20 00:00:01",
+    "lastUpdated": "2026-01-20 00:50:44",
     "groups": [
         {
             "id": "In Development",
@@ -12,6 +12,20 @@
                     "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
                     "isSnapshot": true,
                     "commits": [
+                        {
+                            "hash": "ff861411b76c8f228eb9eb73f10349fa5b765c6b",
+                            "date": "2026-01-20",
+                            "type": "fix",
+                            "summary": "\u7edf\u4e00url\u65f6\u95f4\u6233\u65b9\u6cd5",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e72776d9220d6a841680c0087615987cbbec923d",
+                            "date": "2026-01-20",
+                            "type": "fix",
+                            "summary": "\u518d\u6b21\u589e\u52a0\u968f\u673a\u65f6\u95f4\u6233",
+                            "details": ""
+                        },
                         {
                             "hash": "fefe99a37364208ce3d87461938f362244e96766",
                             "date": "2026-01-19",
