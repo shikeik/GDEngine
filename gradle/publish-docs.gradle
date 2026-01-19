@@ -36,7 +36,11 @@ tasks.register('buildDocsDist') {
 	group = 'gdengine-publish'
 	description = 'Step 2: Split zip and generate manifest.json'
 	dependsOn 'packageDocs'
-
+	
+	// [核心修复] 强制任务每次都执行，不使用缓存
+    // 这样才能保证 updatedAt 时间戳每次都是最新的
+    outputs.upToDateWhen { false }
+    
 	doLast {
 		def sourceZip = file("${BUILD_TMP}/docs_full.zip")
 		if (!sourceZip.exists()) throw new GradleException("Source zip missing!")
@@ -92,7 +96,8 @@ tasks.register('buildDocsDist') {
 			name: "engine_docs.zip",
 			totalSize: sourceZip.length(),
 			version: rootProject.version,
-			updatedAt: new Date().format("yyyy-MM-dd HH:mm:ss"),
+			// [修复] 强制使用北京时间 (Asia/Shanghai)
+			updatedAt: new Date().format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("Asia/Shanghai")),
 			parts: partsList
 		]
 

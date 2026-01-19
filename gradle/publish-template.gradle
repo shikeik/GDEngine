@@ -92,7 +92,7 @@ tasks.register('publishTemplate') {
 			name: "${targetName}.zip", // 合并后的文件名
 			totalSize: zipFile.length(),
 			version: "1.0",
-			updatedAt: new Date().format("yyyy-MM-dd HH:mm:ss"),
+			updatedAt: new Date().format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("Asia/Shanghai")),
 			parts: partsList
 		]
 

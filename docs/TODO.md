@@ -2,8 +2,18 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
-更新update
-bigdemo被删了
+1 看文档更新
+更新docs时updatedAt并没有及时更新还是之前的时间
+- 修改发布逻辑v
+- 修改fetch逻辑随机时间戳v
+- 再次发布检查本地/云端文件
+- 再次查看引擎内更新
+发布docs时发布模板里的bigdemo被删了
+用户项目升级按钮
+
+2 要让用户可以直接引用到引擎的核心，以及能直接看引擎源码，想个办法(不要发布javadocJar/souceJar的方式太麻烦了)
+
+
 - [ ] engine_docs下载缓存没清
 - [ ] BigDemo的assets/变成assets/assets了看看为什么
 

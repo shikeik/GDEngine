@@ -159,7 +159,12 @@ public class HubViewImpl extends VisTable implements IHubView {
         ToastUI.inst().show("正在检查文档更新...");
 
         String finalRoot = activeRoot;
-        com.goldsprite.gdengine.utils.MultiPartDownloader.fetchManifest(DOC_MANIFEST_URL, new com.goldsprite.gdengine.utils.MultiPartDownloader.ManifestCallback() {
+		
+		// [核心修复] 增加时间戳参数 (?t=xxx) 绕过 JsDelivr CDN 缓存
+        // 确保获取到的是 GitHub 上最新的 manifest.json
+        String noCacheUrl = DOC_MANIFEST_URL + "?t=" + System.currentTimeMillis();
+		
+        com.goldsprite.gdengine.utils.MultiPartDownloader.fetchManifest(noCacheUrl, new com.goldsprite.gdengine.utils.MultiPartDownloader.ManifestCallback() {
 				@Override
 				public void onSuccess(com.goldsprite.gdengine.utils.MultiPartDownloader.Manifest cloudManifest) {
 					checkDocVersion(finalRoot, cloudManifest);
