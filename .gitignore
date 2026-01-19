@@ -112,7 +112,7 @@ bin/
 /server/nbbuild/
 /shared/nbbuild/
 
-/dist/
+# /dist/ 需要dist
 /android/dist/
 /core/dist/
 /lwjgl2/dist/
