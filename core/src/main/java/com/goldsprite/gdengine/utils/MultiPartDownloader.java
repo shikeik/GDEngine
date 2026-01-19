@@ -1,15 +1,10 @@
 package com.goldsprite.gdengine.utils;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.utils.Json;
 import com.goldsprite.gdengine.log.Debug;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -25,59 +20,63 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 /**
- * 分卷下载器 (The "Evil Cult" Downloader)
- * 专为绕过 GitHub/CDN 单文件大小限制设计。
+ * 分卷下载器 (封装版)
+ * 自动处理 CDN 缓存穿透与分卷合并。
  */
 public class MultiPartDownloader {
 
-    // 数据模型：对应 manifest.json
     public static class Manifest {
-        public String name;       // 最终文件名
-        public long totalSize;    // 总大小
-        public String version;    // 版本校验
-        public String updatedAt;  // [新增] 补上这个缺失的字段！
+        public String name;
+        public long totalSize;
+        public String version;
+        public String updatedAt;
         public ArrayList<Part> parts;
     }
 
     public static class Part {
-        public int index;         // 顺序索引 (0, 1, 2...)
-        public String file;       // 分卷文件名 (e.g., "docs.zip.001")
-        public String md5;        // 校验码 (可选)
-        public long size;         // 分卷大小
-    }
-	
-	public interface ManifestCallback {
-        void onSuccess(Manifest manifest);
-        void onError(String err);
+        public int index;
+        public String file;
+        public String md5;
+        public long size;
     }
 
     public interface ProgressCallback {
         void onProgress(int percent, String msg);
     }
-	
-	/**
-     * 仅获取云端清单信息 (用于版本检查)
+
+    public interface ManifestCallback {
+        void onSuccess(Manifest manifest);
+        void onError(String err);
+    }
+
+    // ==========================================
+    // Public API
+    // ==========================================
+
+    /**
+     * 仅获取清单 (自动绕过缓存)
      */
     public static void fetchManifest(String url, ManifestCallback callback) {
         new Thread(() -> {
             try {
-                String jsonStr = fetchString(url);
+                // [封装] 自动添加随机时间戳，强制获取最新清单
+                String noCacheUrl = appendParam(url, "t", String.valueOf(System.currentTimeMillis()));
+
+                String jsonStr = fetchString(noCacheUrl);
+
                 Json json = new Json();
                 json.setIgnoreUnknownFields(true);
                 Manifest m = json.fromJson(Manifest.class, jsonStr);
 
-                // 切回主线程
-                com.badlogic.gdx.Gdx.app.postRunnable(() -> callback.onSuccess(m));
+                Gdx.app.postRunnable(() -> callback.onSuccess(m));
             } catch (Exception e) {
-                com.badlogic.gdx.Gdx.app.postRunnable(() -> callback.onError(e.getMessage()));
+                Gdx.app.postRunnable(() -> callback.onError(e.getMessage()));
             }
         }).start();
     }
 
     /**
-     * 启动下载任务
-     * @param manifestUrl 远端 manifest.json 的直链
-     * @param saveDir 本地保存/解压目录
+     * 执行完整下载流程 (自动绕过缓存 + 自动版本对齐)
      */
     public static void download(String manifestUrl, String saveDir, ProgressCallback callback, Runnable onFinish) {
         new Thread(() -> {
@@ -85,57 +84,58 @@ public class MultiPartDownloader {
             if (!workDir.exists()) workDir.mkdirs();
 
             try {
-                // 1. 获取清单
+                // 1. 获取清单 (强制刷新)
                 callback.onProgress(0, "正在获取清单...");
-                String jsonStr = fetchString(manifestUrl);
-                Debug.logT("Downloader", "Manifest: " + jsonStr);
-                
-                // [修复] 开启容错模式，防止未来加字段导致崩溃
+                String noCacheManifestUrl = appendParam(manifestUrl, "t", String.valueOf(System.currentTimeMillis()));
+                String jsonStr = fetchString(noCacheManifestUrl);
+
+                Debug.logT("Downloader", "Manifest fetched: " + jsonStr.substring(0, Math.min(50, jsonStr.length())) + "...");
+
                 Json json = new Json();
-                json.setIgnoreUnknownFields(true); 
+                json.setIgnoreUnknownFields(true);
                 Manifest manifest = json.fromJson(Manifest.class, jsonStr);
-				
-                // 2. 并发下载分卷
+
+                // 2. 准备分卷 URL 参数 (使用清单里的 updatedAt 作为版本号)
+                // 这样确保了下载的分卷版本与清单版本严格一致
+                String versionParam = "0";
+                try {
+                    if (manifest.updatedAt != null) {
+                        versionParam = URLEncoder.encode(manifest.updatedAt, StandardCharsets.UTF_8.name());
+                    }
+                } catch (Exception ignored) {}
+                final String finalVersionParam = versionParam;
+
+                // 3. 并发下载
                 int totalParts = manifest.parts.size();
-                ExecutorService executor = Executors.newFixedThreadPool(4); // 4线程并发
+                ExecutorService executor = Executors.newFixedThreadPool(4);
                 AtomicInteger downloadedCount = new AtomicInteger(0);
                 AtomicInteger globalError = new AtomicInteger(0);
 
-                // 提取 Base URL (移除 manifest.json，保留目录路径)
                 String baseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
 
-                // [核心修复] 准备缓存穿透参数 (使用 manifest 的更新时间)
-                // 这样既能利用 CDN (相同版本缓存)，又能保证更新后立即刷新
-                String cacheBuster;int k;
-                try {
-                    cacheBuster = "?t=" + System.currentTimeMillis();
-                    //cacheBuster = "?v=" + URLEncoder.encode(manifest.updatedAt, StandardCharsets.UTF_8.name());
-                } catch (Exception e) {
-                    cacheBuster = "?t=" + System.currentTimeMillis();
-                }
-                final String queryParam = cacheBuster;
-				
                 for (Part part : manifest.parts) {
                     executor.submit(() -> {
-                        if (globalError.get() != 0) return; // 熔断
+                        if (globalError.get() != 0) return;
 
-                        // [修复] 拼接参数，强制 CDN 吐出新文件
-                        String partUrl = baseUrl + part.file + queryParam;
+                        // [封装] 自动拼接版本参数
+                        String partUrl = baseUrl + part.file;
+                        partUrl = appendParam(partUrl, "v", finalVersionParam);
+
                         File partFile = new File(workDir, part.file);
 
                         try {
-                            // 断点续传检查 (简单版：只看大小)
-							// 开发阶段暂时注释掉这个本地跳过逻辑，确保每次都真下
-                            if (false && partFile.exists() && partFile.length() == part.size) {
-                                Debug.logT("Downloader", "Skip existing part: " + part.index);
-                            }
-							else {
-                                Debug.logT("Downloader", "Downloading part: " + part.index);
+                            // 简单断点续传: 如果大小一致且不用强制刷新，则跳过
+                            // 此时 partUrl 已经带了版本号，如果是新版本，URL 变了，理论上 CDN 会回源
+                            // 但本地文件可能重名。为了保险，我们检查大小。
+                            // 更保险的是检查 MD5，但比较耗时。这里信赖大小+版本号URL。
+                            if (partFile.exists() && partFile.length() == part.size) {
+                                // Skip
+                            } else {
                                 downloadFile(partUrl, partFile);
                             }
-                            
+
                             int current = downloadedCount.incrementAndGet();
-                            int percent = (int)((float)current / totalParts * 50); // 下载占 50% 进度
+                            int percent = (int)((float)current / totalParts * 50);
                             callback.onProgress(percent, "下载分卷: " + current + "/" + totalParts);
 
                         } catch (Exception e) {
@@ -147,28 +147,23 @@ public class MultiPartDownloader {
                 }
 
                 executor.shutdown();
-                // 等待所有任务完成 (最长 10 分钟)
                 if (!executor.awaitTermination(10, TimeUnit.MINUTES) || globalError.get() != 0) {
-                    throw new IOException("下载超时或出错");
+                    throw new IOException("下载过程中断");
                 }
 
-                // 3. 合并分卷
+                // 4. 合并
                 callback.onProgress(50, "正在合并分卷...");
                 File finalZip = new File(workDir, manifest.name);
                 mergeParts(workDir, manifest.parts, finalZip);
 
-                // 4. 解压
+                // 5. 解压
                 callback.onProgress(75, "正在解压资源...");
                 unzip(finalZip, new File(saveDir));
-				
-				// 5. 清理 (修复: 删除临时下载目录)
-				try {
-					deleteDir(workDir); // 需要一个辅助方法，或者简单的递归删除
-				} catch (Exception e) {
-					Debug.logT("Downloader", "Cache cleanup failed: " + e.getMessage());
-				}
 
-				callback.onProgress(100, "完成");
+                // 6. 清理
+                deleteDir(workDir);
+
+                callback.onProgress(100, "完成");
                 if (onFinish != null) onFinish.run();
 
             } catch (Exception e) {
@@ -178,24 +173,26 @@ public class MultiPartDownloader {
         }).start();
     }
 
-    // --- Helpers ---
+    // ==========================================
+    // Internal Helpers
+    // ==========================================
+
+    /** URL 参数拼接工具 */
+    private static String appendParam(String url, String key, String val) {
+        String separator = url.contains("?") ? "&" : "?";
+        return url + separator + key + "=" + val;
+    }
 
     private static String fetchString(String urlStr) throws IOException {
-        Debug.logT("Downloader", "Fetching Manifest: " + urlStr); // [新增] 打印 URL 方便调试
+        Debug.logT("Downloader", "GET: " + urlStr);
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-        // [修改] 增加超时时间到 15秒 (原5秒)
-        conn.setConnectTimeout(15000); 
-        conn.setReadTimeout(15000); // [新增] 读取也设超时
-
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(15000);
         conn.setRequestMethod("GET");
 
-        // [新增] 检查 HTTP 状态码
         int status = conn.getResponseCode();
-        if (status != 200) {
-            throw new IOException("Server returned " + status);
-        }
+        if (status != 200) throw new IOException("HTTP " + status);
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
             StringBuilder sb = new StringBuilder();
@@ -207,40 +204,31 @@ public class MultiPartDownloader {
 
     private static void downloadFile(String urlStr, File target) throws IOException {
         URL url = new URL(urlStr);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection(); // 强转一下设置超时
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(15000);
         conn.setReadTimeout(15000);
 
-        try (InputStream in = conn.getInputStream(); // 使用 conn.getInputStream() 而不是 url.openStream()
+        try (InputStream in = conn.getInputStream();
 		FileOutputStream out = new FileOutputStream(target)) {
             byte[] buf = new byte[4096];
             int n;
-            while ((n = in.read(buf)) > 0) {
-                out.write(buf, 0, n);
-            }
+            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
         }
     }
 
     private static void mergeParts(File workDir, List<Part> parts, File dest) throws IOException {
-        // 确保按 index 排序
         Collections.sort(parts, (a, b) -> Integer.compare(a.index, b.index));
-
         try (FileOutputStream fos = new FileOutputStream(dest);
-             BufferedOutputStream out = new BufferedOutputStream(fos)) {
-            
+		BufferedOutputStream out = new BufferedOutputStream(fos)) {
             byte[] buf = new byte[8192];
             for (Part part : parts) {
                 File partFile = new File(workDir, part.file);
                 if (!partFile.exists()) throw new IOException("Missing part: " + part.file);
-
                 try (FileInputStream fis = new FileInputStream(partFile)) {
                     int len;
-                    while ((len = fis.read(buf)) > 0) {
-                        out.write(buf, 0, len);
-                    }
+                    while ((len = fis.read(buf)) > 0) out.write(buf, 0, len);
                 }
-                // 合并完一个删一个，节省空间 (可选)
-                partFile.delete(); 
+                partFile.delete();
             }
         }
     }
@@ -263,13 +251,11 @@ public class MultiPartDownloader {
             }
         }
     }
-	
-	private static void deleteDir(File file) {
+
+    private static void deleteDir(File file) {
         if (file.isDirectory()) {
             File[] files = file.listFiles();
-            if (files != null) {
-                for (File f : files) deleteDir(f);
-            }
+            if (files != null) for (File f : files) deleteDir(f);
         }
         file.delete();
     }

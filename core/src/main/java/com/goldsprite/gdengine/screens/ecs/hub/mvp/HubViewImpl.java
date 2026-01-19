@@ -38,6 +38,8 @@ import com.kotcrab.vis.ui.widget.VisTextField;
 import com.goldsprite.gdengine.utils.MultiPartDownloader;
 import com.goldsprite.gdengine.screens.ecs.hub.OnlineTemplateDialog;
 import com.badlogic.gdx.scenes.scene2d.ui.Value;
+import com.goldsprite.gdengine.core.config.GDEngineConfig;
+import com.badlogic.gdx.Preferences;
 
 /**
  * Hub 视图的具体实现 (View Implementation)
@@ -146,7 +148,7 @@ public class HubViewImpl extends VisTable implements IHubView {
         String activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getInstance().getActiveEngineRoot();
         if (activeRoot == null) activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getRecommendedRoot();
 
-        FileHandle docEntry = com.badlogic.gdx.Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
+        FileHandle docEntry = Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
         boolean localExists = docEntry.exists();
 
         // 1. 如果本地完全没有，直接下载
@@ -159,14 +161,10 @@ public class HubViewImpl extends VisTable implements IHubView {
         ToastUI.inst().show("正在检查文档更新...");
 
         String finalRoot = activeRoot;
-		
-		// [核心修复] 增加时间戳参数 (?t=xxx) 绕过 JsDelivr CDN 缓存
-        // 确保获取到的是 GitHub 上最新的 manifest.json
-        String noCacheUrl = DOC_MANIFEST_URL + "?t=" + System.currentTimeMillis();
-		
-        com.goldsprite.gdengine.utils.MultiPartDownloader.fetchManifest(noCacheUrl, new com.goldsprite.gdengine.utils.MultiPartDownloader.ManifestCallback() {
+		// [修改] 直接传原始 URL，内部会自动处理缓存
+        MultiPartDownloader.fetchManifest(DOC_MANIFEST_URL, new MultiPartDownloader.ManifestCallback() {
 				@Override
-				public void onSuccess(com.goldsprite.gdengine.utils.MultiPartDownloader.Manifest cloudManifest) {
+				public void onSuccess(MultiPartDownloader.Manifest cloudManifest) {
 					checkDocVersion(finalRoot, cloudManifest);
 				}
 
@@ -179,8 +177,8 @@ public class HubViewImpl extends VisTable implements IHubView {
 			});
     }
 	
-	private void checkDocVersion(String rootPath, com.goldsprite.gdengine.utils.MultiPartDownloader.Manifest cloudManifest) {
-        com.badlogic.gdx.Preferences prefs = com.badlogic.gdx.Gdx.app.getPreferences(PREF_DOCS);
+	private void checkDocVersion(String rootPath, MultiPartDownloader.Manifest cloudManifest) {
+        Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
         String localTime = prefs.getString(KEY_DOC_TIME, "");
 
         // 对比时间戳
@@ -218,17 +216,17 @@ public class HubViewImpl extends VisTable implements IHubView {
 
         ToastUI.inst().show("开始下载文档...");
 
-        com.goldsprite.gdengine.utils.MultiPartDownloader.download(
+        MultiPartDownloader.download(
             DOC_MANIFEST_URL, 
             SAVE_DIR,
             (progress, msg) -> {
-			com.badlogic.gdx.Gdx.app.postRunnable(() -> {
+			Gdx.app.postRunnable(() -> {
 				if (progress < 0) showError("下载失败: " + msg);
 				else if (progress % 10 == 0) ToastUI.inst().show(msg);
 			});
 		},
 		() -> {
-			com.badlogic.gdx.Gdx.app.postRunnable(() -> {
+			Gdx.app.postRunnable(() -> {
 				ToastUI.inst().show("文档更新完毕！");
 
 				// [核心] 下载成功后，更新本地记录的时间戳
@@ -244,15 +242,15 @@ public class HubViewImpl extends VisTable implements IHubView {
 				// 或者，我们可以再次 fetch 一次 manifest (有缓存，很快)
 
 				if (newUpdateTime != null) {
-					com.badlogic.gdx.Preferences prefs = com.badlogic.gdx.Gdx.app.getPreferences(PREF_DOCS);
+					com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
 					prefs.putString(KEY_DOC_TIME, newUpdateTime);
 					prefs.flush();
 				} else {
 					// 首次下载完，为了防止下次误报更新，我们应该保存。
 					// 这里再调一次 fetch 拿最新的时间存起来
-					com.goldsprite.gdengine.utils.MultiPartDownloader.fetchManifest(DOC_MANIFEST_URL, new com.goldsprite.gdengine.utils.MultiPartDownloader.ManifestCallback() {
-                            @Override public void onSuccess(com.goldsprite.gdengine.utils.MultiPartDownloader.Manifest m) {
-                                com.badlogic.gdx.Preferences prefs = com.badlogic.gdx.Gdx.app.getPreferences(PREF_DOCS);
+					MultiPartDownloader.fetchManifest(DOC_MANIFEST_URL, new MultiPartDownloader.ManifestCallback() {
+                            @Override public void onSuccess(MultiPartDownloader.Manifest m) {
+                                com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
                                 prefs.putString(KEY_DOC_TIME, m.updatedAt);
                                 prefs.flush();
                             }
@@ -269,7 +267,7 @@ public class HubViewImpl extends VisTable implements IHubView {
 	private void launchDocServer() {
         try {
             com.goldsprite.gdengine.core.web.DocServer.startServer(
-                Gdx.files.absolute(com.goldsprite.gdengine.core.config.GDEngineConfig.getInstance().getActiveEngineRoot())
+                Gdx.files.absolute(GDEngineConfig.getInstance().getActiveEngineRoot())
 				.child("engine_docs").file().getAbsolutePath()
             );
 
@@ -282,36 +280,6 @@ public class HubViewImpl extends VisTable implements IHubView {
         } catch (Exception e) {
             showError("Server Start Failed: " + e.getMessage());
         }
-    }
-
-    private void startMultiPartDownload(String rootPath) {
-        // 定义云端清单地址 (假设我们稍后会上传到这里)
-        // 使用 JsDelivr 加速 GitHub
-        String MANIFEST_URL = "https://cdn.jsdelivr.net/gh/shikeik/GDEngine@main/dist/docs_manifest.json";
-        String SAVE_DIR = rootPath; // 下载到根目录，解压出 engine_docs
-
-        ToastUI.inst().show("未检测到本地文档，准备从云端获取...");
-
-        // 调用分卷下载器 (MultiPartDownloader)
-        // 注意：这里我们马上就要创建这个类
-       	MultiPartDownloader.download(
-            MANIFEST_URL, 
-            SAVE_DIR,
-            (progress, msg) -> {
-			// UI 线程回调
-			Gdx.app.postRunnable(() -> {
-				if (progress < 0) showError("下载失败: " + msg);
-				else if (progress % 10 == 0) ToastUI.inst().show(msg);
-			});
-		},
-		() -> {
-			// 完成回调
-			Gdx.app.postRunnable(() -> {
-				ToastUI.inst().show("文档下载解压完毕！");
-				launchDocServer();
-			});
-		}
-        );
     }
 
 	@Override
