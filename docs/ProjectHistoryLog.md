@@ -142,7 +142,7 @@
 
 ### `1.8.12.x` 模板系统
 - [x] 实现基于模板创建新项目
-- [x] 规范化 `InternalProjectTemplates` 与 `UserProjects` 目录结构
+- [x] 规范化 `InternalTemplates` 与 `UserProjects` 目录结构
 
 ### `1.8.11.x` Hub 交互
 - [x] Hub 界面增加右键菜单 (删除项目)

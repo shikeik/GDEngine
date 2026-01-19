@@ -9,7 +9,7 @@ import java.text.SimpleDateFormat // 新增
 
 ext {
 	CHUNK_SIZE = 18 * 1024 * 1024 // 18 MB
-	TEMPLATES_ROOT = file("GDEngine/InternalProjectTemplates")
+	TEMPLATES_ROOT = file("GDEngine/InternalTemplates")
 	BUILD_TMP = file("build/tmp_tpl_publish")
 	DIST_ROOT = file("dist/templates")
 }

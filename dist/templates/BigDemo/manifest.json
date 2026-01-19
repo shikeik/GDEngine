@@ -1,39 +1,40 @@
 {
     "id": "BigDemo",
     "name": "BigDemo.zip",
-    "totalSize": 76779637,
+    "totalSize": 92129463,
     "version": "1.0",
-    "updatedAt": "2026-01-19 11:25:09",
+    "buildId": "20260120_045615",
+    "updatedAt": "2026-01-20 04:56:21",
     "parts": [
         {
             "index": 0,
-            "file": "BigDemo.part000.zip",
-            "md5": "c8707bd2aecd16af445bce928b17a656",
+            "file": "BigDemo.20260120_045615.p0.zip",
+            "md5": "1e72e7515a229bb71530c012a4eba938",
             "size": 18874368
         },
         {
             "index": 1,
-            "file": "BigDemo.part001.zip",
-            "md5": "94d142e705bcff7c1f9d714a0cee6a2b",
+            "file": "BigDemo.20260120_045615.p1.zip",
+            "md5": "a85aab3ecde2ecf65190909e1d7e0d16",
             "size": 18874368
         },
         {
             "index": 2,
-            "file": "BigDemo.part002.zip",
-            "md5": "ce2a1a81fca5de371d38465a18178672",
+            "file": "BigDemo.20260120_045615.p2.zip",
+            "md5": "d11da39b28764e0336e7e856bf614964",
             "size": 18874368
         },
         {
             "index": 3,
-            "file": "BigDemo.part003.zip",
-            "md5": "dda9932dccb77c9ce5f77bc9e2d3feb8",
+            "file": "BigDemo.20260120_045615.p3.zip",
+            "md5": "5b06a298f0383140d45f8d61600db62f",
             "size": 18874368
         },
         {
             "index": 4,
-            "file": "BigDemo.part004.zip",
-            "md5": "250680ba8f27fe990dc34f1feca7b739",
-            "size": 1282165
+            "file": "BigDemo.20260120_045615.p4.zip",
+            "md5": "07f51c309d5ee06db13491aa3c6dcadc",
+            "size": 16631991
         }
     ]
 }
