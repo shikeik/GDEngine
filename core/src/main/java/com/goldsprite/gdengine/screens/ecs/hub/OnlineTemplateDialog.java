@@ -94,6 +94,7 @@ public class OnlineTemplateDialog extends BaseDialog {
 
         MultiPartDownloader.download(
             url,
+			null,      // 2. [新增参数] assetBaseUrl -> 传 null 触发回退逻辑 (使用 url 的父目录)
             saveDir,
             (percent, msg) -> {
             Gdx.app.postRunnable(() -> {

@@ -99,17 +99,20 @@ public class MultiPartDownloader {
 				} catch (Exception ignored) {}
 				final String finalVersionParam = versionParam;
 
-				// 3. 确定资源基准 URL
-				String finalBaseUrl;
+				// 3. 确定资源基准 URL (修复 final 问题)
+				String tempBaseUrl; // 使用临时变量处理逻辑
 				if (assetBaseUrl != null && !assetBaseUrl.isEmpty()) {
-					finalBaseUrl = assetBaseUrl;
+					tempBaseUrl = assetBaseUrl;
 					// 确保以 / 结尾
-					if (!finalBaseUrl.endsWith("/")) finalBaseUrl += "/";
+					if (!tempBaseUrl.endsWith("/")) tempBaseUrl += "/";
 				} else {
 					// 回退逻辑：使用 manifestUrl 的目录
-					finalBaseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
+					tempBaseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
 				}
-				Debug.logT("Downloader", "Asset Base URL: " + finalBaseUrl);
+				Debug.logT("Downloader", "Asset Base URL: " + tempBaseUrl);
+
+				// 【关键修复】定义一个不可变的 final 变量供下方的 Lambda 使用
+				final String finalBaseUrl = tempBaseUrl;
 
 				// 4. 并发下载
 				int totalParts = manifest.parts.size();
