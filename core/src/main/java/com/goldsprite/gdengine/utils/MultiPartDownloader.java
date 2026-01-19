@@ -60,7 +60,7 @@ public class MultiPartDownloader {
         new Thread(() -> {
             try {
                 // [封装] 自动添加随机时间戳，强制获取最新清单
-                String noCacheUrl = appendParam(url, "t", "1295"+String.valueOf(System.currentTimeMillis()));
+                String noCacheUrl = appendParam(url, "t", "1295"+ System.currentTimeMillis());
 
                 String jsonStr = fetchString(noCacheUrl);
 

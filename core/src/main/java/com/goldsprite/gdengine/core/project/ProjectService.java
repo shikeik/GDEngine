@@ -7,6 +7,7 @@ import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonWriter;
 import com.goldsprite.gdengine.BuildConfig;
 import com.goldsprite.gdengine.core.Gd;
+import com.goldsprite.gdengine.core.config.GDEngineConfig;
 import com.goldsprite.gdengine.core.project.model.TemplateInfo;
 import com.goldsprite.gdengine.log.Debug;
 
@@ -102,7 +103,7 @@ public class ProjectService {
 		if (Gd.engineConfig != null) {
 			String activeRoot = Gd.engineConfig.getActiveEngineRoot();
 			// 如果未初始化，尝试使用推荐路径作为兜底
-			if (activeRoot == null) activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getRecommendedRoot();
+			if (activeRoot == null) activeRoot = GDEngineConfig.getRecommendedRoot();
 
 			if (activeRoot != null) {
 				FileHandle localRoot = Gdx.files.absolute(activeRoot).child("LocalTemplates");
@@ -165,7 +166,7 @@ public class ProjectService {
 
 		// [新增] 包名校验
 		if (!isValidPackageName(packageName)) return "Invalid Package Name (e.g. com.mygame)";
-		
+
 		FileHandle targetDir = Gd.engineConfig.getProjectsDir().child(name);
 		if (targetDir.exists()) return "Project already exists!";
 
@@ -232,13 +233,13 @@ public class ProjectService {
 				processFile(file, targetDir.child(fileName), replacements);
 				continue;
 			}
-			
+
 			// 普通文件/目录：递归复制
             if (file.isDirectory()) {
                 // 递归暂不支持普通文件夹内的文本替换，直接拷贝
                 // [修复] 直接拷贝到 targetDir 下，LibGDX 会自动以 file.name() (即 "assets") 命名
                 // 这样避免了 "target/assets" 存在时变成 "target/assets/assets" 的问题
-                file.copyTo(targetDir); 
+                file.copyTo(targetDir);
             } else {
 				// 如果是文本文件，尝试替换；否则直接拷贝
 				// 这里假设模板里的根文件都是文本配置
@@ -341,7 +342,7 @@ public class ProjectService {
 			Debug.logT("ProjectService", "Deleted project: " + projectDir.name());
 		}
 	}
-	
+
 	/**
 	 * 校验 Java 包名合法性
 	 */

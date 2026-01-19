@@ -11,7 +11,7 @@ ignored: indentFix codeFormatFix
 发布docs时发布模板里的bigdemo被删了
 用户项目升级按钮
 
-2 要让用户可以直接引用到引擎的核心，以及能直接看引擎源码，想个办法(不要发布javadocJar/souceJar的方式太麻烦了)
+2 发布javadocJar改为sourceJar
 
 
 - [ ] engine_docs下载缓存没清

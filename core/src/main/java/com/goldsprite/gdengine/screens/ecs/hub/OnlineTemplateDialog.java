@@ -8,6 +8,7 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.goldsprite.gdengine.core.Gd;
+import com.goldsprite.gdengine.core.config.GDEngineConfig;
 import com.goldsprite.gdengine.log.Debug;
 import com.goldsprite.gdengine.ui.widget.BaseDialog;
 import com.goldsprite.gdengine.ui.widget.ToastUI;
@@ -67,7 +68,7 @@ public class OnlineTemplateDialog extends BaseDialog {
     // [修改] 核心下载路径修正
     private void startDownload(String name, String id, String url) {
         // 1. 获取引擎根目录 (例如 /sdcard/GDEngine)
-        String engineRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getInstance().getActiveEngineRoot();
+        String engineRoot = GDEngineConfig.getInstance().getActiveEngineRoot();
         if (engineRoot == null) {
             statusLabel.setText("Error: Engine not initialized");
             return;

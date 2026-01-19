@@ -89,7 +89,7 @@ public class HubViewImpl extends VisTable implements IHubView {
 				new CreateProjectDialog().show(getStage());
 			}
 		});
-		
+
 		VisTextButton btnStore = new VisTextButton("☁ Store");
         btnStore.setColor(Color.ORANGE);
         btnStore.addListener(new ClickListener() {
@@ -143,10 +143,10 @@ public class HubViewImpl extends VisTable implements IHubView {
     private static final String PREF_DOCS = "gd_docs_config";
     private static final String KEY_DOC_TIME = "local_doc_updated_at";
     private static final String DOC_MANIFEST_URL = "https://cdn.jsdelivr.net/gh/shikeik/GDEngine@main/dist/docs_manifest.json";
-	
+
 	private void openLocalDocs() {
-        String activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getInstance().getActiveEngineRoot();
-        if (activeRoot == null) activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getRecommendedRoot();
+        String activeRoot = GDEngineConfig.getInstance().getActiveEngineRoot();
+        if (activeRoot == null) activeRoot = GDEngineConfig.getRecommendedRoot();
 
         FileHandle docEntry = Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
         boolean localExists = docEntry.exists();
@@ -176,7 +176,7 @@ public class HubViewImpl extends VisTable implements IHubView {
 				}
 			});
     }
-	
+
 	private void checkDocVersion(String rootPath, MultiPartDownloader.Manifest cloudManifest) {
         Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
         String localTime = prefs.getString(KEY_DOC_TIME, "");
@@ -209,15 +209,15 @@ public class HubViewImpl extends VisTable implements IHubView {
             launchDocServer();
         }
     }
-	
+
 	// 复用下载逻辑，增加 updateTime 参数用于更新 Prefs
     private void startDocsDownload(String rootPath, String newUpdateTime) {
-        String SAVE_DIR = rootPath; 
+        String SAVE_DIR = rootPath;
 
         ToastUI.inst().show("开始下载文档...");
 
         MultiPartDownloader.download(
-            DOC_MANIFEST_URL, 
+            DOC_MANIFEST_URL,
             SAVE_DIR,
             (progress, msg) -> {
 			Gdx.app.postRunnable(() -> {
@@ -263,7 +263,7 @@ public class HubViewImpl extends VisTable implements IHubView {
 		}
         );
     }
-	
+
 	private void launchDocServer() {
         try {
             com.goldsprite.gdengine.core.web.DocServer.startServer(
