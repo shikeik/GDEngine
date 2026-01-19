@@ -107,12 +107,12 @@ public class HubViewImpl extends VisTable implements IHubView {
 
 		VisTextButton btnLog = new VisTextButton("📅 在线文档");
 		btnLog.setColor(Color.SKY);
-		btnLog.addListener(new ClickListener() {
+		btnLog.addListener(new ClickListener() {int k3;
 			@Override
 			public void clicked(InputEvent event, float x, float y) {
 				// [核心修改] 直接跳转 Cloudflare Pages
 				// Docsify 默认使用 Hash 路由，通过 query 参数传递版本号
-				String url = "https://gdengine.pages.dev/#/?v=" + BuildConfig.DEV_VERSION;
+				String url = "https://shikeik.fan/#/?v=" + BuildConfig.DEV_VERSION;
 
 				com.goldsprite.gdengine.log.Debug.logT("Hub", "Opening Docs: " + url);
 
