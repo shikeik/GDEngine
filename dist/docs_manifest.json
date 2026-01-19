@@ -1,14 +1,14 @@
 {
     "name": "engine_docs.zip",
-    "totalSize": 1138252,
+    "totalSize": 254065,
     "version": "unspecified",
-    "updatedAt": "2026-01-19 17:17:36",
+    "updatedAt": "2026-01-19 09:41:23",
     "parts": [
         {
             "index": 0,
             "file": "docs.part000.zip",
-            "md5": "836ed56d04bbb8aa81ccf6d9ba01a050",
-            "size": 1138252
+            "md5": "d1fc8fd1753283ac17823522c7b6a62b",
+            "size": 254065
         }
     ]
 }
