@@ -1,100 +1,20 @@
-import com.sun.net.httpserver.HttpServer
-import com.sun.net.httpserver.HttpHandler
-import com.sun.net.httpserver.HttpExchange
-import java.net.InetSocketAddress
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
+tasks.register('previewDocs', JavaExec) {
+    group = "gdengine"
+    description = "Start the DocServer using the main class from core"
 
-tasks.register('previewDocs') {
-	group = "gdengine"
-	description = "Start a local web server to preview documentation"
+    // 指定运行的类路径 (复用 core 模块的运行时环境)
+    classpath = project(':core').sourceSets.main.runtimeClasspath
+    
+    // 指定主类
+    mainClass = 'com.goldsprite.gdengine.core.web.DocServer'
 
-	doLast {
-		int port = 8899
-		String docRoot = "${rootProject.rootDir}/docs/engine_docs"
-
-		try {
-			// 1. 尝试绑定端口
-			HttpServer server = HttpServer.create(new InetSocketAddress(port), 0)
-
-			// 2. 配置路由 (保持不变)
-			server.createContext("/", new HttpHandler() {
-				@Override
-				public void handle(HttpExchange exchange) throws IOException {
-					String uri = exchange.getRequestURI().getPath()
-					if (uri.equals("/")) uri = "/index.html"
-					if (uri.contains("..")) { sendResponse(exchange, 403, "Forbidden"); return }
-
-					Path filePath = Paths.get(docRoot, uri)
-					File file = filePath.toFile()
-
-					if (file.exists() && !file.isDirectory()) {
-						byte[] bytes = Files.readAllBytes(filePath)
-						String mime = getMimeType(uri)
-						exchange.getResponseHeaders().set("Content-Type", mime)
-						exchange.sendResponseHeaders(200, bytes.length)
-						OutputStream os = exchange.getResponseBody()
-						os.write(bytes)
-						os.close()
-					} else {
-						sendResponse(exchange, 404, "404 Not Found: " + uri)
-					}
-				}
-			})
-
-			server.setExecutor(null)
-			server.start()
-
-			String url = "http://localhost:${port}/#/?v=${projectVersion}"
-
-			println ""
-			println "========================================================"
-			println "🟢 文档服务器已启动 (端口: $port)"
-			println "📂 根目录: $docRoot"
-			println "🔗 地址: $url"
-			println "========================================================"
-			println "⌨️  【按回车键】或【点击IDE停止按钮】关闭服务器..."
-			println "========================================================"
-
-			try {
-				java.awt.Desktop.getDesktop().browse(new URI(url))
-			} catch (Exception ignored) {}
-
-			// 3. 【核心修改】阻塞等待用户输入，而不是死锁
-			// 这样你在控制台按 Enter 就能优雅退出了
-			System.in.read()
-
-			println "🛑 正在停止服务器..."
-			server.stop(0)
-			println "✅ 服务器已关闭，端口释放。"
-
-		} catch (java.net.BindException e) {
-			println ""
-			println "🔴 启动失败：端口 $port 已被占用！"
-			println "   请先关闭正在运行的 previewDocs 任务，或者手动杀掉占用该端口的 Java 进程。"
-			println "   Windows命令: netstat -ano | findstr $port"
-			println ""
-		} catch (Exception e) {
-			e.printStackTrace()
-		}
-	}
-}
-
-def getMimeType(String uri) {
-	if (uri.endsWith(".html")) return "text/html; charset=utf-8"
-	if (uri.endsWith(".css")) return "text/css"
-	if (uri.endsWith(".js")) return "application/javascript; charset=utf-8"
-	if (uri.endsWith(".json")) return "application/json; charset=utf-8"
-	if (uri.endsWith(".png")) return "image/png"
-	if (uri.endsWith(".jpg")) return "image/jpeg"
-	return "application/octet-stream"
-}
-
-def sendResponse(HttpExchange exchange, int code, String msg) {
-	byte[] bytes = msg.getBytes("UTF-8")
-	exchange.sendResponseHeaders(code, bytes.length)
-	OutputStream os = exchange.getResponseBody()
-	os.write(bytes)
-	os.close()
+    // 传递参数 (文档根目录)
+    // 注意：这里指向项目根目录下的 docs/engine_docs
+    args = ["${rootProject.rootDir}/docs/engine_docs"]
+    
+    // 设置工作目录，防止相对路径出错
+    workingDir = rootProject.rootDir
+    
+    // 配置标准输入，以便我们按回车停止
+    standardInput = System.in
 }
