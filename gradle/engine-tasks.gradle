@@ -22,26 +22,6 @@ tasks.register('generateAssetList') {
 	}
 }
 
-// 任务2: 同步更新日志
-tasks.register('copyChangeLogToAssets') {
-	group = "gdengine"
-	doLast {
-		def sourceFile = rootProject.file('docs/ProjectHistoryLog.md')
-		def targetFile = rootProject.file('assets/docs/ProjectHistoryLog.md')
-
-		if (sourceFile.exists()) {
-			targetFile.parentFile.mkdirs()
-			copy {
-				from sourceFile
-				into targetFile.parentFile
-			}
-			println "✅ ProjectHistoryLog.md 已成功复制到 assets 目录"
-		} else {
-			println "❌ 源文件 docs/ProjectHistoryLog.md 不存在"
-		}
-	}
-}
-
 
 // 2. Core Project 任务 (编译与打包)
 // ============================================================
@@ -166,7 +146,6 @@ project(':core') {
 tasks.named('generateAssetList') {
 	dependsOn ':core:copyEngineLibs'
 	dependsOn ':core:packageEngineCore' // 依赖快速打包任务
-	dependsOn 'copyChangeLogToAssets'
 	// [修复] 确保在生成资源列表前，engine.index 已生成
 	dependsOn ':core:generateEngineIndex'
 }

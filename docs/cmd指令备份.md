@@ -7,3 +7,15 @@
 ```
 git log --graph --oneline --decorate --all
 ```
+
+删除tag包括远程
+```
+git tag -d 0.1.0
+git push origin --delete 0.1.0
+```
+紧接上面: 同步tag信息，
+将云端tag信息同步到本地，
+否则推送tags将再次推送已删除tag！！
+```
+git fetch origin --prune --prune-tags
+```
