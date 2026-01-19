@@ -20,7 +20,6 @@
 
 * API 参考
 	* [JavaDoc (API)](javadoc/index.html)
-	* [📅 (临时的)godot平台游戏-较大游戏测试-41mb](godot-first-game-web/GodotFirstGame_web.html)
 
 * 更新日志
 	* [版本历史](changelog/README.md)
