@@ -1,6 +1,28 @@
 {
-    "lastUpdated": "2026-01-19 15:19:44",
+    "lastUpdated": "2026-01-19 23:22:47",
     "groups": [
+        {
+            "id": "In Development",
+            "patches": [
+                {
+                    "tag": "HEAD",
+                    "fullVersion": "HEAD",
+                    "date": "2026-01-19",
+                    "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
+                    "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
+                    "isSnapshot": true,
+                    "commits": [
+                        {
+                            "hash": "00380e87ad2d759febf0a57714910b65f5979118",
+                            "date": "2026-01-19",
+                            "type": "fix",
+                            "summary": "changelog\u4efb\u52a1\u4e5f\u4fee\u6b63\u4e86\u65f6\u95f4\u6233",
+                            "details": ""
+                        }
+                    ]
+                }
+            ]
+        },
         {
             "id": "1.10.12",
             "patches": [
