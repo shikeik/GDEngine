@@ -33,7 +33,7 @@ public class OnlineTemplateDialog extends BaseDialog {
         listTable.top().left();
 
 		// [修改] 只传名字和ID，不再传 URL
-		addTemplateItem("BigDemo (70MB Test)", "BigDemo");
+		addTemplateItem("BigDemo (102MB Test)", "BigDemo");
 
         getContentTable().add(listTable).grow().width(500).height(300).pad(10).row();
 

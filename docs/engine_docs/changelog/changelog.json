@@ -1,17 +1,38 @@
 {
-    "lastUpdated": "2026-01-20 06:40:23",
+    "lastUpdated": "2026-01-20 06:47:34",
     "groups": [
         {
-            "id": "In Development",
+            "id": "1.10.12",
             "patches": [
                 {
-                    "tag": "HEAD",
-                    "fullVersion": "HEAD",
+                    "tag": "1.10.12.20",
+                    "fullVersion": "1.10.12.20",
                     "date": "2026-01-20",
-                    "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
-                    "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
-                    "isSnapshot": true,
+                    "tagSummary": "'chore: projectVersion=1.10.12.20, \u6587\u6863/\u6a21\u677f\u66f4\u65b0\u8fd9\u4e0b\u771f\u7684\u5b8c\u6210\u4e86(\u867d\u7136android/\u6a21\u677f\u90fd\u8fd8\u6ca1\u6d4b)",
+                    "tagDetails": "'",
+                    "isSnapshot": false,
                     "commits": [
+                        {
+                            "hash": "e13ffa8fe318916263d40b069c0412271e6ec828",
+                            "date": "2026-01-20",
+                            "type": "chore",
+                            "summary": "projectVersion=1.10.12.20, \u6587\u6863/\u6a21\u677f\u66f4\u65b0\u8fd9\u4e0b\u771f\u7684\u5b8c\u6210\u4e86(\u867d\u7136android/\u6a21\u677f\u90fd\u8fd8\u6ca1\u6d4b)",
+                            "details": ""
+                        },
+                        {
+                            "hash": "793d9110c121e14a58dc1fec18492bb4728d8ca9",
+                            "date": "2026-01-20",
+                            "type": "chore",
+                            "summary": "\u79fb\u9664\u7f51\u7ad9\u6d4b\u8bd5\u97f3\u9891",
+                            "details": ""
+                        },
+                        {
+                            "hash": "3549261c2fdd16c48cafae2942acc3fa7d723a8b",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "\u6d4b\u8bd51\u901a\u8fc7, \u6d4b\u8bd52\u5173\u68af\u5b50\u518d\u6d4b",
+                            "details": ""
+                        },
                         {
                             "hash": "7f198dc346e8f4cda9fe637a93afaef0f3996ed3",
                             "date": "2026-01-20",
@@ -41,12 +62,7 @@
                             "details": ""
                         }
                     ]
-                }
-            ]
-        },
-        {
-            "id": "1.10.12",
-            "patches": [
+                },
                 {
                     "tag": "1.10.12.19",
                     "fullVersion": "1.10.12.19",
