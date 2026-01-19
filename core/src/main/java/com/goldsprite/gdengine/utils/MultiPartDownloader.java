@@ -36,6 +36,11 @@ public class MultiPartDownloader {
 		public long size;
 	}
 
+	public interface ShaCallback {
+		void onSuccess(String sha);
+		void onError(String err);
+	}
+
 	public interface ProgressCallback {
 		void onProgress(int percent, String msg);
 	}
@@ -48,6 +53,46 @@ public class MultiPartDownloader {
 	// ==========================================
 	// Public API
 	// ==========================================
+
+	/**
+	 * [Step 1] 获取最新 Commit SHA (官方 API + Header 优化)
+	 */
+	public static void fetchLatestSha(ShaCallback callback) {
+		new Thread(() -> {
+			try {
+				// 1. 建立连接
+				URL url = new URL(com.goldsprite.gdengine.core.config.CloudConstants.API_LATEST_SHA);
+				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+				conn.setConnectTimeout(10000);
+				conn.setReadTimeout(10000);
+				conn.setRequestMethod("GET");
+
+				// [核心] 只要 SHA 字符串，不要 JSON
+				conn.setRequestProperty("Accept", "application/vnd.github.sha");
+				// 额外防止 API 缓存
+				conn.setRequestProperty("Cache-Control", "no-cache");
+
+				int status = conn.getResponseCode();
+				if (status != 200) throw new IOException("API HTTP " + status);
+
+				// 2. 直接读取 SHA 字符串
+				String sha;
+				try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+					sha = reader.readLine();
+				}
+
+				if (sha == null || sha.length() < 7) throw new IOException("Invalid SHA response");
+
+				final String finalSha = sha.trim();
+				Debug.logT("Downloader", "Got SHA: " + finalSha);
+
+				Gdx.app.postRunnable(() -> callback.onSuccess(finalSha));
+
+			} catch (Exception e) {
+				Gdx.app.postRunnable(() -> callback.onError(e.getMessage()));
+			}
+		}).start();
+	}
 
 	public static void fetchManifest(String url, ManifestCallback callback) {
 		new Thread(() -> {

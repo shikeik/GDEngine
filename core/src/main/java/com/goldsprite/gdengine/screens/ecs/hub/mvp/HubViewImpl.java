@@ -152,78 +152,100 @@ public class HubViewImpl extends VisTable implements IHubView {
 		String activeRoot = GDEngineConfig.getInstance().getActiveEngineRoot();
 		if (activeRoot == null) activeRoot = GDEngineConfig.getRecommendedRoot();
 
+		final String finalRoot = activeRoot;
 		FileHandle docEntry = Gdx.files.absolute(activeRoot).child("engine_docs/index.html");
-		boolean localExists = docEntry.exists();
 
-		if (!localExists) {
-			startDocsDownload(activeRoot, null);
+		// 1. 如果本地没有，直接开始下载流程
+		if (!docEntry.exists()) {
+			startDocsUpdateFlow(finalRoot, true); // true = 强制下载
 			return;
 		}
 
+		// 2. 如果有，检查更新
 		ToastUI.inst().show("正在检查文档更新...");
+		startDocsUpdateFlow(finalRoot, false);
+	}
 
-		String finalRoot = activeRoot;
-
-		// [修改] 使用 CloudConstants.getDocsManifestUrl() (走反代)
-		MultiPartDownloader.fetchManifest(CloudConstants.getDocsManifestUrl(), new MultiPartDownloader.ManifestCallback() {
+	// [重构] 统一的更新流程
+	private void startDocsUpdateFlow(String rootPath, boolean forceDownload) {
+		// Step 1: 获取 SHA
+		MultiPartDownloader.fetchLatestSha(new MultiPartDownloader.ShaCallback() {
 			@Override
-			public void onSuccess(MultiPartDownloader.Manifest cloudManifest) {
-				checkDocVersion(finalRoot, cloudManifest);
+			public void onSuccess(String sha) {
+				// Step 2: 组装 Proxy URL 获取清单
+				String manifestUrl = CloudConstants.getManifestUrl(sha, CloudConstants.PATH_DOCS_DIST + "docs_manifest.json");
+
+				MultiPartDownloader.fetchManifest(manifestUrl, new MultiPartDownloader.ManifestCallback() {
+					@Override
+					public void onSuccess(MultiPartDownloader.Manifest manifest) {
+						if (forceDownload) {
+							// 强制下载
+							performDocsDownload(rootPath, sha, manifest.updatedAt);
+						} else {
+							// 检查版本
+							checkDocVersion(rootPath, sha, manifest);
+						}
+					}
+
+					@Override
+					public void onError(String err) {
+						if (forceDownload) {
+							showError("清单获取失败: " + err);
+						} else {
+							ToastUI.inst().show("无法连接更新服务器，打开本地缓存...");
+							launchDocServer();
+						}
+					}
+				});
 			}
 
 			@Override
 			public void onError(String err) {
-				ToastUI.inst().show("无法连接更新服务器，打开本地缓存...");
-				launchDocServer();
+				if (forceDownload) {
+					showError("版本检查失败(API): " + err);
+				} else {
+					ToastUI.inst().show("离线模式: 无法获取版本信息");
+					launchDocServer();
+				}
 			}
 		});
 	}
 
-	private void checkDocVersion(String rootPath, MultiPartDownloader.Manifest cloudManifest) {
-        Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
-        String localTime = prefs.getString(KEY_DOC_TIME, "");
+	private void checkDocVersion(String rootPath, String sha, MultiPartDownloader.Manifest cloudManifest) {
+		Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
+		String localTime = prefs.getString(KEY_DOC_TIME, "");
 
-        // 对比时间戳
-        if (!localTime.equals(cloudManifest.updatedAt)) {
-            // 版本不一致 (有更新)
-            String sizeStr = String.format(Locale.CHINESE, "%.2f MB", cloudManifest.totalSize / 1024f / 1024f);
+		if (!localTime.equals(cloudManifest.updatedAt)) {
+			String sizeStr = String.format(Locale.CHINESE, "%.2f MB", cloudManifest.totalSize / 1024f / 1024f);
+			new BaseDialog("文档更新") {
+				@Override
+				protected void result(Object object) {
+					if ((boolean) object) {
+						performDocsDownload(rootPath, sha, cloudManifest.updatedAt);
+					} else {
+						launchDocServer();
+					}
+				}
+			}
+				.text("发现新版本 (" + cloudManifest.updatedAt + ")\n大小: " + sizeStr + "\n是否更新？")
+				.button("更新", true).button("暂不", false).show(getStage());
+		} else {
+			ToastUI.inst().show("文档已是最新");
+			launchDocServer();
+		}
+	}
 
-            new BaseDialog("文档更新") {
-                @Override
-                protected void result(Object object) {
-                    if ((boolean) object) {
-                        // 用户选择更新
-                        startDocsDownload(rootPath, cloudManifest.updatedAt);
-                    } else {
-                        // 用户选择跳过，打开旧版
-                        launchDocServer();
-                    }
-                }
-            }
-				.text("发现新版本文档 (" + cloudManifest.updatedAt + ")\n大小: " + sizeStr + "\n是否更新？")
-				.button("更新 (Update)", true)
-				.button("暂不 (Skip)", false)
-				.show(getStage());
-
-        } else {
-            // 版本一致，直接打开
-            ToastUI.inst().show("文档已是最新");
-            launchDocServer();
-        }
-    }
-
-	// 复用下载逻辑，增加 updateTime 参数用于更新 Prefs
-	private void startDocsDownload(String rootPath, String newUpdateTime) {
-		String SAVE_DIR = rootPath;
-
+	private void performDocsDownload(String rootPath, String sha, String updateTime) {
 		ToastUI.inst().show("开始下载文档...");
 
-		// [核心修改] 传入 Manifest URL (Proxy) 和 CDN Base URL (CDN)
-		// 实现了双通道下载：清单保鲜，分卷保速
+		// 组装 URL
+		String manifestUrl = CloudConstants.getManifestUrl(sha, CloudConstants.PATH_DOCS_DIST + "docs_manifest.json");
+		String cdnBaseUrl = CloudConstants.getAssetCdnBaseUrl(sha, CloudConstants.PATH_DOCS_DIST);
+
 		MultiPartDownloader.download(
-			CloudConstants.getDocsManifestUrl(),  // 参数1: 清单地址
-			CloudConstants.getDocsCdnBaseUrl(),   // 参数2: 资源基准地址
-			SAVE_DIR,
+			manifestUrl,
+			cdnBaseUrl,
+			rootPath,
 			(progress, msg) -> {
 				Gdx.app.postRunnable(() -> {
 					if (progress < 0) showError("下载失败: " + msg);
@@ -232,24 +254,11 @@ public class HubViewImpl extends VisTable implements IHubView {
 			},
 			() -> {
 				Gdx.app.postRunnable(() -> {
-					ToastUI.inst().show("文档更新完毕！");
-
-					// 保存时间戳逻辑
-					if (newUpdateTime != null) {
-						com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
-						prefs.putString(KEY_DOC_TIME, newUpdateTime);
-						prefs.flush();
-					} else {
-						// 首次下载，再拿一次清单存时间戳
-						MultiPartDownloader.fetchManifest(CloudConstants.getDocsManifestUrl(), new MultiPartDownloader.ManifestCallback() {
-							@Override public void onSuccess(MultiPartDownloader.Manifest m) {
-								com.badlogic.gdx.Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
-								prefs.putString(KEY_DOC_TIME, m.updatedAt);
-								prefs.flush();
-							}
-							@Override public void onError(String e) {}
-						});
-					}
+					ToastUI.inst().show("更新完毕！");
+					// 保存版本
+					Preferences prefs = Gdx.app.getPreferences(PREF_DOCS);
+					prefs.putString(KEY_DOC_TIME, updateTime);
+					prefs.flush();
 
 					launchDocServer();
 				});

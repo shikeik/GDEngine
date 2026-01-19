@@ -66,7 +66,7 @@ public class OnlineTemplateDialog extends BaseDialog {
 		listTable.add(row).growX().padBottom(5).row();
 	}
 
-	// [修改] 移除 url 参数，改由 ID 生成
+	// [重构] 下载逻辑
 	private void startDownload(String name, String id) {
 		String engineRoot = GDEngineConfig.getInstance().getActiveEngineRoot();
 		if (engineRoot == null) {
@@ -74,45 +74,62 @@ public class OnlineTemplateDialog extends BaseDialog {
 			return;
 		}
 
-		FileHandle targetDir = Gdx.files.absolute(engineRoot)
-			.child("LocalTemplates")
-			.child(id);
-
+		FileHandle targetDir = Gdx.files.absolute(engineRoot).child("LocalTemplates").child(id);
 		String saveDir = targetDir.file().getAbsolutePath();
 
-		statusLabel.setText("Initializing download...");
+		statusLabel.setText("Step 1: Checking Version...");
 		statusLabel.setColor(Color.YELLOW);
 
-		if (targetDir.exists()) {
-			targetDir.deleteDirectory();
-		}
+		if (targetDir.exists()) targetDir.deleteDirectory();
 		targetDir.mkdirs();
 
-		// [核心逻辑] 双通道下载
-		// 清单: 走反代 (Proxy) -> 确保版本最新
-		// 资源: 走 CDN (AssetBase) -> 确保下载最快
-		MultiPartDownloader.download(
-			CloudConstants.getTemplateManifestUrl(id), // Manifest URL
-			CloudConstants.getTemplateCdnBaseUrl(id),  // Asset Base URL
-			saveDir,
-			(percent, msg) -> {
+		// Step 1: 获取 SHA
+		MultiPartDownloader.fetchLatestSha(new MultiPartDownloader.ShaCallback() {
+			@Override
+			public void onSuccess(String sha) {
 				Gdx.app.postRunnable(() -> {
-					if (percent >= 0) {
-						progressBar.setValue(percent);
-						statusLabel.setText(msg);
-					} else {
-						statusLabel.setText("Error: " + msg);
-						statusLabel.setColor(Color.RED);
-					}
-				});
-			},
-			() -> {
-				Gdx.app.postRunnable(() -> {
-					statusLabel.setText("Completed!");
-					statusLabel.setColor(Color.GREEN);
-					ToastUI.inst().show("Template " + name + " installed!");
+					statusLabel.setText("Step 2: Downloading...");
+
+					// Step 2: 组装 URL 并下载
+					String manifestPath = CloudConstants.PATH_TEMPLATES_DIST + id + "/manifest.json";
+					String assetPath = CloudConstants.PATH_TEMPLATES_DIST + id + "/";
+
+					String manifestUrl = CloudConstants.getManifestUrl(sha, manifestPath);
+					String cdnBaseUrl = CloudConstants.getAssetCdnBaseUrl(sha, assetPath);
+
+					MultiPartDownloader.download(
+						manifestUrl,
+						cdnBaseUrl,
+						saveDir,
+						(percent, msg) -> {
+							Gdx.app.postRunnable(() -> {
+								if (percent >= 0) {
+									progressBar.setValue(percent);
+									statusLabel.setText(msg);
+								} else {
+									statusLabel.setText("Error: " + msg);
+									statusLabel.setColor(Color.RED);
+								}
+							});
+						},
+						() -> {
+							Gdx.app.postRunnable(() -> {
+								statusLabel.setText("Completed!");
+								statusLabel.setColor(Color.GREEN);
+								ToastUI.inst().show("Template " + name + " installed!");
+							});
+						}
+					);
 				});
 			}
-		);
+
+			@Override
+			public void onError(String err) {
+				Gdx.app.postRunnable(() -> {
+					statusLabel.setText("API Error: " + err);
+					statusLabel.setColor(Color.RED);
+				});
+			}
+		});
 	}
 }
