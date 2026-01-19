@@ -2,110 +2,80 @@
 import java.security.MessageDigest
 import groovy.json.JsonOutput
 
-// ============================================================
-// 文档发布流水线 (Production Pipeline)
-// 1. Zip -> 2. Split -> 3. Manifest -> 4. Dist
-// ============================================================
-
 ext {
-	CHUNK_SIZE = 18 * 1024 * 1024 // 18 MB (留2MB安全余量给JsDelivr)
-	DOCS_ROOT = file("docs")      // 源目录的父级
+	CHUNK_SIZE = 18 * 1024 * 1024
+	DOCS_ROOT = file("docs")
 	BUILD_TMP = file("build/tmp_publish")
-	DIST_DIR = file("dist")       // 最终产物目录 (需提交到Git)
+	DIST_DIR = file("dist")
+
+	// [核心] 定义 JsDelivr 的绝对路径前缀
+	// 格式: https://gcore.jsdelivr.net/gh/<User>/<Repo>@<Branch>/dist/
+	CDN_PREFIX = "https://gcore.jsdelivr.net/gh/shikeik/GDEngine@main/dist/"
 }
 
-// 步骤 1: 打包 (保留目录结构 engine_docs/...)
 tasks.register('packageDocs', Zip) {
 	group = 'gdengine-publish'
-	description = 'Step 1: Package engine_docs into a single zip'
-
-	// 从 docs 目录打包，包含 engine_docs 文件夹本身
 	from DOCS_ROOT
 	include 'engine_docs/**'
-
 	archiveFileName = 'docs_full.zip'
 	destinationDirectory = BUILD_TMP
-
-	doFirst {
-		BUILD_TMP.mkdirs()
-	}
+	doFirst { BUILD_TMP.mkdirs() }
 }
 
-// 步骤 2 & 3: 切分与生成清单
 tasks.register('buildDocsDist') {
 	group = 'gdengine-publish'
-	description = 'Step 2: Split zip and generate manifest.json'
 	dependsOn 'packageDocs'
-
-	// [核心修复] 强制任务每次都执行，不使用缓存
-    // 这样才能保证 updatedAt 时间戳每次都是最新的
-    outputs.upToDateWhen { false }
+	outputs.upToDateWhen { false } // 强制运行
 
 	doLast {
 		def sourceZip = file("${BUILD_TMP}/docs_full.zip")
 		if (!sourceZip.exists()) throw new GradleException("Source zip missing!")
 
-		// [修复] 使用 String.format 替代 .format() 方法
-		def sizeMb = sourceZip.length() / (1024.0 * 1024.0)
-		println "📦 Source Zip Size: ${String.format('%.2f', sizeMb)} MB"
-
-		// [修复] 智能清理：只删除文档相关文件，保留 templates 目录
-        if (!DIST_DIR.exists()) {
-            DIST_DIR.mkdirs()
-        } else {
-            DIST_DIR.listFiles().each { f ->
-                // 只删除 docs_manifest.json 和 docs.partX.zip
-                if (f.isFile() && (f.name == "docs_manifest.json" || f.name.startsWith("docs.part"))) {
-                    f.delete()
-                }
-            }
-        }
-		DIST_DIR.mkdirs()
+		// 1. 清理 dist 目录下的旧文档文件 (保留 templates)
+		if (!DIST_DIR.exists()) DIST_DIR.mkdirs()
+		DIST_DIR.listFiles().each { f ->
+			if (f.isFile() && (f.name == "docs_manifest.json" || f.name.startsWith("docs.part"))) {
+				f.delete()
+			}
+		}
 
 		def partsList = []
 		def buffer = new byte[CHUNK_SIZE]
 		int partIndex = 0
-		long totalBytesWritten = 0
 
-		// 二进制流切分
 		sourceZip.withInputStream { ins ->
 			while (true) {
 				int bytesRead = ins.read(buffer)
 				if (bytesRead <= 0) break
 
-				// 命名格式: docs.part000.zip
-				String partName = String.format("docs.part%03d.zip", partIndex)
-				File partFile = new File(DIST_DIR, partName)
+				// A. 先生成临时文件计算 MD5
+				File tempPart = new File(DIST_DIR, "temp_part_${partIndex}")
+				tempPart.withOutputStream { it.write(buffer, 0, bytesRead) }
+				String md5 = generateMD5(tempPart)
 
-				partFile.withOutputStream { outs ->
-					outs.write(buffer, 0, bytesRead)
-				}
+				// B. [核心] 重命名为带 Hash 的文件名
+				// 例如: docs.part000.a1b2c3d4.zip
+				String finalName = String.format("docs.part%03d.%s.zip", partIndex, md5.substring(0, 8))
+				File finalFile = new File(DIST_DIR, finalName)
+				tempPart.renameTo(finalFile)
 
-				// 计算 MD5
-				def md5 = generateMD5(partFile)
-
+				// C. [核心] 写入绝对 CDN 路径
 				partsList << [
 					index: partIndex,
-					file: partName,
+					file: CDN_PREFIX + finalName, // 这里写入了 gcore 的绝对路径
 					md5: md5,
-					size: partFile.length()
+					size: finalFile.length()
 				]
 
-				// [修复] 使用 String.format
-				def partSizeMb = partFile.length() / (1024.0 * 1024.0)
-				println "   -> Generated: ${partName} (${String.format('%.2f', partSizeMb)} MB)"
-
+				println "   -> Generated: ${finalName}"
 				partIndex++
-				totalBytesWritten += bytesRead
 			}
 		}
 
-		// 生成 Manifest
 		def manifest = [
 			name: "engine_docs.zip",
 			totalSize: sourceZip.length(),
-			version: rootProject.version,
-			// [修复] 强制使用北京时间 (Asia/Shanghai)
+			version: projectVersion,
 			updatedAt: new Date().format("yyyy-MM-dd HH:mm:ss", TimeZone.getTimeZone("Asia/Shanghai")),
 			parts: partsList
 		]
@@ -113,34 +83,16 @@ tasks.register('buildDocsDist') {
 		File jsonFile = new File(DIST_DIR, "docs_manifest.json")
 		jsonFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(manifest))
 
-		println "✅ Build Complete in: ${DIST_DIR}"
-		println "📜 Manifest created with ${partsList.size()} parts."
-		println "🚀 Action: Please Commit & Push 'dist/' folder to GitHub!"
-
-		// [新增] 提示用户手动刷新 CDN 的链接 (或者你可以尝试用代码自动请求)
-		def user = "shikeik"
-		def repo = "GDEngine"
-		def branch = "main"
-
-		// 构造刷新链接
-		def purgeUrl = "https://purge.jsdelivr.net/gh/${user}/${repo}@${branch}/dist/docs_manifest.json"
-
-		println ""
-		println "🔥 [重要提示] Push 到 GitHub 后，请点击下方链接强制刷新 CDN 缓存 (否则会下载到旧版):"
-		println "👉 ${purgeUrl}"
-		println ""
+		println "✅ Build Complete. Manifest uses CDN prefix: ${CDN_PREFIX}"
 	}
 }
 
-// 辅助: MD5 计算
 static def generateMD5(File file) {
 	MessageDigest digest = MessageDigest.getInstance("MD5")
 	file.withInputStream { is ->
 		byte[] buffer = new byte[8192]
 		int read
-		while ((read = is.read(buffer)) > 0) {
-			digest.update(buffer, 0, read)
-		}
+		while ((read = is.read(buffer)) > 0) digest.update(buffer, 0, read)
 	}
 	return digest.digest().encodeHex().toString()
 }

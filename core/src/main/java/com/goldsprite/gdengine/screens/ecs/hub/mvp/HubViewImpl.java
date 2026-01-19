@@ -144,7 +144,8 @@ public class HubViewImpl extends VisTable implements IHubView {
     // 定义常量
     private static final String PREF_DOCS = "gd_docs_config";
     private static final String KEY_DOC_TIME = "local_doc_updated_at";
-    private static final String DOC_MANIFEST_URL = "https://cdn.jsdelivr.net/gh/shikeik/GDEngine@main/dist/docs_manifest.json";
+	// [修改] 清单走镜像 (秒更)，文件走 CDN (在清单里写死了)
+	private static final String DOC_MANIFEST_URL = "https://mirror.ghproxy.com/https://raw.githubusercontent.com/shikeik/GDEngine/main/dist/docs_manifest.json";
 
 	private void openLocalDocs() {
         String activeRoot = GDEngineConfig.getInstance().getActiveEngineRoot();

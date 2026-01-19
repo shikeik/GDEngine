@@ -117,9 +117,16 @@ public class MultiPartDownloader {
                     executor.submit(() -> {
                         if (globalError.get() != 0) return;
 
-                        // [封装] 自动拼接版本参数
-                        String partUrl = baseUrl + part.file;
-                        partUrl = appendParam(partUrl, "v", finalVersionParam);
+						// [适配] 支持绝对路径
+						String partUrl;
+						if (part.file.startsWith("http")) {
+							partUrl = part.file; // 如果已经是绝对路径，直接用
+						} else {
+							partUrl = baseUrl + part.file; // 否则拼上 manifest 的目录
+						}
+
+						// 依然加上版本号参数，双重保险
+						partUrl = appendParam(partUrl, "v", finalVersionParam);
 
                         File partFile = new File(workDir, part.file);
 
