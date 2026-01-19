@@ -2,14 +2,20 @@ package com.goldsprite.gdengine.utils;
 
 import com.badlogic.gdx.utils.Json;
 import com.goldsprite.gdengine.log.Debug;
-
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.security.MessageDigest;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -98,18 +104,31 @@ public class MultiPartDownloader {
                 // 提取 Base URL (移除 manifest.json，保留目录路径)
                 String baseUrl = manifestUrl.substring(0, manifestUrl.lastIndexOf('/') + 1);
 
+                // [核心修复] 准备缓存穿透参数 (使用 manifest 的更新时间)
+                // 这样既能利用 CDN (相同版本缓存)，又能保证更新后立即刷新
+                String cacheBuster;
+                try {
+                    cacheBuster = "?v=" + URLEncoder.encode(manifest.updatedAt, StandardCharsets.UTF_8.name());
+                } catch (Exception e) {
+                    cacheBuster = "?t=" + System.currentTimeMillis();
+                }
+                final String queryParam = cacheBuster;
+				
                 for (Part part : manifest.parts) {
                     executor.submit(() -> {
                         if (globalError.get() != 0) return; // 熔断
 
-                        String partUrl = baseUrl + part.file;
+                        // [修复] 拼接参数，强制 CDN 吐出新文件
+                        String partUrl = baseUrl + part.file + queryParam;
                         File partFile = new File(workDir, part.file);
 
                         try {
                             // 断点续传检查 (简单版：只看大小)
-                            if (partFile.exists() && partFile.length() == part.size) {
+							// 开发阶段暂时注释掉这个本地跳过逻辑，确保每次都真下
+                            if (false && partFile.exists() && partFile.length() == part.size) {
                                 Debug.logT("Downloader", "Skip existing part: " + part.index);
-                            } else {
+                            }
+							else {
                                 Debug.logT("Downloader", "Downloading part: " + part.index);
                                 downloadFile(partUrl, partFile);
                             }
