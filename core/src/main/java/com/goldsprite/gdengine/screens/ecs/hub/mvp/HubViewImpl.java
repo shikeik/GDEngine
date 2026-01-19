@@ -36,6 +36,7 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import com.kotcrab.vis.ui.widget.VisTextButton;
 import com.kotcrab.vis.ui.widget.VisTextField;
 import com.goldsprite.gdengine.utils.MultiPartDownloader;
+import com.goldsprite.gdengine.screens.ecs.hub.OnlineTemplateDialog;
 
 /**
  * Hub 视图的具体实现 (View Implementation)
@@ -85,10 +86,19 @@ public class HubViewImpl extends VisTable implements IHubView {
 				new CreateProjectDialog().show(getStage());
 			}
 		});
+		
+		VisTextButton btnStore = new VisTextButton("☁ Store");
+        btnStore.setColor(Color.ORANGE);
+        btnStore.addListener(new ClickListener() {
+				@Override public void clicked(InputEvent event, float x, float y) {
+					new OnlineTemplateDialog().show(getStage());
+				}
+			});
 
-		topBar.add(titleLabel).expandX().left();
-		topBar.add(btnSettings).right().padRight(10).height(50);
-		topBar.add(btnCreate).right().height(50);
+        topBar.add(titleLabel).expandX().left();
+        topBar.add(btnSettings).right().padRight(10).height(50);
+        topBar.add(btnStore).right().padRight(10).height(50); // 新增
+        topBar.add(btnCreate).right().height(50);
 		add(topBar).growX().height(60).padBottom(10).row();
 
 		// 2. Project List

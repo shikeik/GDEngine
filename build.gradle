@@ -85,3 +85,4 @@ apply from: 'gradle/changelog-generator.gradle'
 apply from: 'gradle/docs-preview.gradle'
 
 apply from: 'gradle/publish-docs.gradle'
+apply from: 'gradle/publish-template.gradle'

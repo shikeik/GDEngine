@@ -1,0 +1,115 @@
+// 文件: gradle/publish-template.gradle
+import java.security.MessageDigest
+import groovy.json.JsonOutput
+
+// ============================================================
+// 模板发布流水线
+// 用法: gradlew publishTemplate -Ptarget=BigDemo
+// ============================================================
+
+ext {
+	CHUNK_SIZE = 18 * 1024 * 1024 // 18 MB
+	// 源位置：开发环境的模板目录
+	TEMPLATES_ROOT = file("GDEngine/InternalProjectTemplates")
+	BUILD_TMP = file("build/tmp_tpl_publish")
+	DIST_ROOT = file("dist/templates") // 产物存放: dist/templates/<TemplateName>/
+}
+
+tasks.register('publishTemplate') {
+	group = 'gdengine-publish'
+	description = 'Package, Split and Manifest a specific template. Usage: -Ptarget=TemplateName'
+
+	doLast {
+		// 1. 获取目标参数
+		if (!project.hasProperty('target')) {
+			throw new GradleException("请指定目标模板! 用法: gradlew publishTemplate -Ptarget=TemplateName")
+		}
+		String targetName = project.property('target')
+		File sourceDir = new File(TEMPLATES_ROOT, targetName)
+
+		if (!sourceDir.exists()) {
+			throw new GradleException("模板目录不存在: ${sourceDir.absolutePath}")
+		}
+
+		println "📦 正在处理模板: ${targetName}"
+
+		// 2. 准备目录
+		BUILD_TMP.deleteDir()
+		BUILD_TMP.mkdirs()
+
+		File targetDistDir = new File(DIST_ROOT, targetName)
+		if (targetDistDir.exists()) targetDistDir.deleteDir()
+		targetDistDir.mkdirs()
+
+		// 3. 打包 Zip
+		println "   -> 正在压缩..."
+		File zipFile = new File(BUILD_TMP, "${targetName}.zip")
+
+		ant.zip(destfile: zipFile, basedir: sourceDir)
+
+		// [修复] 使用 String.format 替代 BigDecimal.format()
+		def sizeMb = zipFile.length() / (1024.0 * 1024.0)
+		println "   -> 压缩完成: ${String.format('%.2f', sizeMb)} MB"
+
+		// 4. 切分
+		println "   -> 正在切分 (每卷 18MB)..."
+		def partsList = []
+		def buffer = new byte[CHUNK_SIZE]
+		int partIndex = 0
+
+		zipFile.withInputStream { ins ->
+			while (true) {
+				int bytesRead = ins.read(buffer)
+				if (bytesRead <= 0) break
+
+				// 命名: BigDemo.part000.zip (保留 .zip 后缀以适配 CDN)
+				String partName = String.format("${targetName}.part%03d.zip", partIndex)
+				File partFile = new File(targetDistDir, partName)
+
+				partFile.withOutputStream { outs ->
+					outs.write(buffer, 0, bytesRead)
+				}
+
+				// MD5
+				String md5 = generateMD5(partFile)
+
+				partsList << [
+					index: partIndex,
+					file: partName,
+					md5: md5,
+					size: partFile.length()
+				]
+
+				def partSize = partFile.length() / (1024.0 * 1024.0)
+				println "      Generated: ${partName} (${String.format('%.2f', partSize)} MB)"
+				partIndex++
+			}
+		}
+
+		// 5. 生成 Manifest
+		def manifest = [
+			id: targetName, // 模板ID
+			name: "${targetName}.zip", // 合并后的文件名
+			totalSize: zipFile.length(),
+			version: "1.0",
+			updatedAt: new Date().format("yyyy-MM-dd HH:mm:ss"),
+			parts: partsList
+		]
+
+		File jsonFile = new File(targetDistDir, "manifest.json")
+		jsonFile.text = JsonOutput.prettyPrint(JsonOutput.toJson(manifest))
+
+		println "✅ 发布完成！产物位于: ${targetDistDir}"
+		println "🚀 请将 dist/ 目录提交到 GitHub"
+	}
+}
+
+def generateMD5(File file) {
+	MessageDigest digest = MessageDigest.getInstance("MD5")
+	file.withInputStream { is ->
+		byte[] buffer = new byte[8192]
+		int read
+		while ((read = is.read(buffer)) > 0) digest.update(buffer, 0, read)
+	}
+	return digest.digest().encodeHex().toString()
+}

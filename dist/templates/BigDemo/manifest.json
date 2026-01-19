@@ -1,0 +1,39 @@
+{
+    "id": "BigDemo",
+    "name": "BigDemo.zip",
+    "totalSize": 76779637,
+    "version": "1.0",
+    "updatedAt": "2026-01-19 11:25:09",
+    "parts": [
+        {
+            "index": 0,
+            "file": "BigDemo.part000.zip",
+            "md5": "c8707bd2aecd16af445bce928b17a656",
+            "size": 18874368
+        },
+        {
+            "index": 1,
+            "file": "BigDemo.part001.zip",
+            "md5": "94d142e705bcff7c1f9d714a0cee6a2b",
+            "size": 18874368
+        },
+        {
+            "index": 2,
+            "file": "BigDemo.part002.zip",
+            "md5": "ce2a1a81fca5de371d38465a18178672",
+            "size": 18874368
+        },
+        {
+            "index": 3,
+            "file": "BigDemo.part003.zip",
+            "md5": "dda9932dccb77c9ce5f77bc9e2d3feb8",
+            "size": 18874368
+        },
+        {
+            "index": 4,
+            "file": "BigDemo.part004.zip",
+            "md5": "250680ba8f27fe990dc34f1feca7b739",
+            "size": 1282165
+        }
+    ]
+}
