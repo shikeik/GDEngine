@@ -29,8 +29,9 @@ public class OnlineTemplateDialog extends BaseDialog {
         // 1. 列表区
         listTable = new VisTable();
         listTable.top().left();
-        // 模拟数据：实际这里应该先去下 templates_index.json
-        addTemplateItem("BigDemo (70MB Test)", "https://cdn.jsdelivr.net/gh/shikeik/GDEngine@main/dist/templates/BigDemo/manifest.json");
+        // [修改] addTemplateItem 增加 id 参数 (BigDemo)
+        // 参数: 显示名称, 文件夹ID, Manifest URL
+        addTemplateItem("BigDemo (70MB Test)", "BigDemo", "https://cdn.jsdelivr.net/gh/shikeik/GDEngine@main/dist/templates/BigDemo/manifest.json");;
 
         getContentTable().add(listTable).grow().width(500).height(300).pad(10).row();
 
@@ -47,7 +48,8 @@ public class OnlineTemplateDialog extends BaseDialog {
         centerWindow();
     }
 
-    private void addTemplateItem(String name, String manifestUrl) {
+	// [修改] 增加 String id 参数
+    private void addTemplateItem(String name, String id, String manifestUrl) {
         VisTable row = new VisTable();
         row.setBackground("button");
         row.pad(10);
@@ -58,7 +60,7 @@ public class OnlineTemplateDialog extends BaseDialog {
         btnDownload.setColor(Color.CYAN);
         btnDownload.addListener(new ClickListener() {
 				@Override public void clicked(InputEvent event, float x, float y) {
-					startDownload(name, manifestUrl);
+					startDownload(name, id, manifestUrl); // 传递 ID
 				}
 			});
         row.add(btnDownload);
@@ -66,24 +68,38 @@ public class OnlineTemplateDialog extends BaseDialog {
         listTable.add(row).growX().padBottom(5).row();
     }
 
-    private void startDownload(String name, String url) {
-        // 目标：LocalTemplates 目录 (ProjectService 会扫描这里)
-        FileHandle localTemplates = Gd.files.local("LocalTemplates");
+    // [修改] 核心下载路径修正
+    private void startDownload(String name, String id, String url) {
+        // 1. 获取引擎根目录 (例如 /sdcard/GDEngine)
+        String engineRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getInstance().getActiveEngineRoot();
+        if (engineRoot == null) {
+            statusLabel.setText("Error: Engine not initialized");
+            return;
+        }
 
-        // 这里的 saveDir 应该是存放解压后文件夹的父目录
-        // MultiPartDownloader 会在里面创建 "download_cache"，合并完解压到 saveDir
-        // 我们的 zip 包结构是: BigDemo/project.json...
-        // 所以直接解压到 LocalTemplates 即可
-        String saveDir = localTemplates.file().getAbsolutePath();
+        // 2. 构建目标路径: <Root>/LocalTemplates/<ID>/
+        // 这样解压出来的 project.json 就会在 /LocalTemplates/BigDemo/project.json，结构就对了
+        FileHandle targetDir = Gdx.files.absolute(engineRoot)
+			.child("LocalTemplates")
+			.child(id); // 关键：建立子文件夹
+
+        // 这里的 saveDir 传给下载器，下载器会解压到这里
+        String saveDir = targetDir.file().getAbsolutePath();
 
         statusLabel.setText("Initializing download...");
         statusLabel.setColor(Color.YELLOW);
+
+        // 如果目录存在，建议先清理（可选），防止旧文件残留
+        if (targetDir.exists()) {
+            targetDir.deleteDirectory();
+        }
+        targetDir.mkdirs();
 
         MultiPartDownloader.download(
             url,
             saveDir,
             (percent, msg) -> {
-			Gdx.app.postRunnable(() -> {
+            Gdx.app.postRunnable(() -> {
 				if (percent >= 0) {
 					progressBar.setValue(percent);
 					statusLabel.setText(msg);
@@ -98,7 +114,6 @@ public class OnlineTemplateDialog extends BaseDialog {
 				statusLabel.setText("Completed!");
 				statusLabel.setColor(Color.GREEN);
 				ToastUI.inst().show("Template " + name + " installed!");
-				// 还可以通知 Hub 刷新创建项目的列表
 			});
 		}
         );

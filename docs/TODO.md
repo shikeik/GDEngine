@@ -2,6 +2,9 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
+- [ ] engine_docs下载缓存没清
+- [ ] BigDemo的assets/变成assets/assets了看看为什么
+
 - [ ] 引擎打包apk/exe还未实现
 
 - [ ] 文档/模板完全云端化
@@ -39,11 +42,8 @@ ignored: indentFix codeFormatFix
 
 - [ ] 自定义类型绘制: FsmComp啥也不显示，需要对其持有实例Fsm fsm标记[SerializedField]并自定义该类型绘制方式(这里我们有index文件之后非常方便去查有自定义绘制注解的类), 不过这里引申一个问题，自定义绘制的父子类关系绘制继承问题
 - [ ] 因为engine很多gradle任务资源需要保证同步, 所以要统一这块的log输出来便于调试验证是否每个流程正确执行了或是异常, 需要清晰的显示出来
-- [ ] 项目创建, 导出/更新, 流程需要标准化
-- - [ ] (标准化可以解决)assets/下gd_icon.png老是提示没有, 这块之后应该做一个公用的默认资源目录, 在创建脚本项目时自动复制到项目资源目录中, 或者就简单的复制一张gd_icon.png进去也行
 
 
-- [ ] 考虑编辑器新布局，收起式侧栏+多级菜单+单预览视图
 - [ ] android异常捕获界面增加复制按钮
 - [ ] 游戏内logUI文本增加长按复制功能
 - [ ] RenderComp增加contains默认实现为sprite大小矩形, 无宽高则默认50x

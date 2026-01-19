@@ -116,12 +116,15 @@ public class MultiPartDownloader {
                 // 4. 解压
                 callback.onProgress(75, "正在解压资源...");
                 unzip(finalZip, new File(saveDir));
+				
+				// 5. 清理 (修复: 删除临时下载目录)
+				try {
+					deleteDir(workDir); // 需要一个辅助方法，或者简单的递归删除
+				} catch (Exception e) {
+					Debug.logT("Downloader", "Cache cleanup failed: " + e.getMessage());
+				}
 
-                // 5. 清理
-                // finalZip.delete(); // 可选：保留zip备份或删除
-                // deleteDir(workDir); // 可选：清理分卷
-
-                callback.onProgress(100, "完成");
+				callback.onProgress(100, "完成");
                 if (onFinish != null) onFinish.run();
 
             } catch (Exception e) {
@@ -134,11 +137,22 @@ public class MultiPartDownloader {
     // --- Helpers ---
 
     private static String fetchString(String urlStr) throws IOException {
+        Debug.logT("Downloader", "Fetching Manifest: " + urlStr); // [新增] 打印 URL 方便调试
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        conn.setConnectTimeout(5000);
+
+        // [修改] 增加超时时间到 15秒 (原5秒)
+        conn.setConnectTimeout(15000); 
+        conn.setReadTimeout(15000); // [新增] 读取也设超时
+
         conn.setRequestMethod("GET");
-        
+
+        // [新增] 检查 HTTP 状态码
+        int status = conn.getResponseCode();
+        if (status != 200) {
+            throw new IOException("Server returned " + status);
+        }
+
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
             StringBuilder sb = new StringBuilder();
             String line;
@@ -149,8 +163,12 @@ public class MultiPartDownloader {
 
     private static void downloadFile(String urlStr, File target) throws IOException {
         URL url = new URL(urlStr);
-        try (InputStream in = url.openStream();
-             FileOutputStream out = new FileOutputStream(target)) {
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection(); // 强转一下设置超时
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(15000);
+
+        try (InputStream in = conn.getInputStream(); // 使用 conn.getInputStream() 而不是 url.openStream()
+		FileOutputStream out = new FileOutputStream(target)) {
             byte[] buf = new byte[4096];
             int n;
             while ((n = in.read(buf)) > 0) {
@@ -200,5 +218,15 @@ public class MultiPartDownloader {
                 }
             }
         }
+    }
+	
+	private static void deleteDir(File file) {
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            if (files != null) {
+                for (File f : files) deleteDir(f);
+            }
+        }
+        file.delete();
     }
 }

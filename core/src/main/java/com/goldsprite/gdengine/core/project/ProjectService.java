@@ -12,6 +12,7 @@ import com.goldsprite.gdengine.log.Debug;
 
 import java.util.HashMap;
 import java.util.Map;
+import com.badlogic.gdx.Gdx;
 
 /**
  * 项目管理服务 (Model 层核心)
@@ -83,24 +84,44 @@ public class ProjectService {
 	}
 
 	/**
-	 * 扫描引擎内置模板 (engine/templates)
+	 * 扫描所有可用模板 (内置 + 本地下载)
 	 */
 	public Array<TemplateInfo> listTemplates() {
 		Array<TemplateInfo> list = new Array<>();
 
-		// 尝试定位模板根目录 (兼容 Dev 和 Release 路径)
-		FileHandle templatesRoot = Gd.files.internal(TemplateRules.INTERNAL_TEMPLATES_ROOT);
-		if (!templatesRoot.exists()) {
-			// Fallback: assets/engine/templates
-			templatesRoot = Gd.files.internal("assets/" + TemplateRules.INTERNAL_TEMPLATES_ROOT);
+		// 1. 扫描内置模板 (Internal)
+		FileHandle internalRoot = Gd.files.internal(TemplateRules.INTERNAL_TEMPLATES_ROOT);
+		if (!internalRoot.exists()) {
+			// Fallback: 开发环境可能在 assets/ 下
+			internalRoot = Gd.files.internal("assets/" + TemplateRules.INTERNAL_TEMPLATES_ROOT);
+		}
+		scanTemplates(internalRoot, list);
+
+		// 2. [新增] 扫描本地下载模板 (Local)
+		// 路径: <EngineRoot>/LocalTemplates
+		if (Gd.engineConfig != null) {
+			String activeRoot = Gd.engineConfig.getActiveEngineRoot();
+			// 如果未初始化，尝试使用推荐路径作为兜底
+			if (activeRoot == null) activeRoot = com.goldsprite.gdengine.core.config.GDEngineConfig.getRecommendedRoot();
+
+			if (activeRoot != null) {
+				FileHandle localRoot = Gdx.files.absolute(activeRoot).child("LocalTemplates");
+				scanTemplates(localRoot, list);
+			}
 		}
 
-		if (!templatesRoot.exists()) {
-			Debug.logT("ProjectService", "❌ Templates root not found: " + templatesRoot.path());
-			return list;
-		}
+		return list;
+	}
 
-		for (FileHandle dir : templatesRoot.list()) {
+	/**
+	 * [新增] 通用扫描逻辑
+	 * @param root 模板根目录 (例如 engine/templates 或 LocalTemplates)
+	 * @param list 结果列表
+	 */
+	private void scanTemplates(FileHandle root, Array<TemplateInfo> list) {
+		if (root == null || !root.exists()) return;
+
+		for (FileHandle dir : root.list()) {
 			if (!dir.isDirectory()) continue;
 
 			TemplateInfo info = new TemplateInfo();
@@ -114,18 +135,19 @@ public class ProjectService {
 					TemplateInfo meta = json.fromJson(TemplateInfo.class, metaFile);
 					info.displayName = meta.displayName;
 					info.description = meta.description;
-					info.originEntry = meta.originEntry;
+					// info.originEntry 已废弃，不再读取
 					info.version = meta.version;
 					info.engineVersion = meta.engineVersion;
 				} catch (Exception e) {
 					info.displayName = info.id + " (Error)";
+					Debug.logT("ProjectService", "Template parse error: " + dir.path());
 				}
 			} else {
+				// 没有元数据时的兜底
 				info.displayName = info.id;
 			}
 			list.add(info);
 		}
-		return list;
 	}
 
 	// =========================================================================================
@@ -207,12 +229,14 @@ public class ProjectService {
 				processFile(file, targetDir.child(fileName), replacements);
 				continue;
 			}
-
+			
 			// 普通文件/目录：递归复制
-			if (file.isDirectory()) {
-				// 递归暂不支持普通文件夹内的文本替换，直接拷贝
-				file.copyTo(targetDir.child(fileName));
-			} else {
+            if (file.isDirectory()) {
+                // 递归暂不支持普通文件夹内的文本替换，直接拷贝
+                // [修复] 直接拷贝到 targetDir 下，LibGDX 会自动以 file.name() (即 "assets") 命名
+                // 这样避免了 "target/assets" 存在时变成 "target/assets/assets" 的问题
+                file.copyTo(targetDir); 
+            } else {
 				// 如果是文本文件，尝试替换；否则直接拷贝
 				// 这里假设模板里的根文件都是文本配置
 				processFile(file, targetDir.child(fileName), replacements);
