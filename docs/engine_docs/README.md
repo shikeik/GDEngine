@@ -14,8 +14,3 @@
 *   [💀 骨骼动画](manual/systems/neon_animation.md)
 *   [📚 API 参考](javadoc/index.html)
 *   [📅 更新日志](changelog/README.md)
-
-## 网络测试
-
-这是一个 19MB 的测试音频文件，用于测试下载速度。<br>
-<audio controls src="SFX_Ambience_Forest_Day_Loop.wav"></audio>
