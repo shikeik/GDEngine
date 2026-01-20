@@ -110,10 +110,31 @@ public class GameWorld {
 	// 世界相机 (用于 System 获取位置: culling / physics)
 	public static OrthographicCamera worldCamera;
 
+
 	// ==========================================
-	// [新增] 8. 脚本项目资源上下文
+	// 资源寻址核心 (Path Resolution), TODO: 后续应该会归属到核心的files职责里
 	// ==========================================
 
+	/**
+	 * 引擎资源根目录前缀
+	 * Editor 模式下: "" (空字符串，直接在 assets/ 根目录找)
+	 * Runtime(APK) 模式下: "engine_assets/" (打包时我们会把引擎资源塞到这个子目录)
+	 */
+	public static String engineAssetsPath = "";
+
+	/**
+	 * 获取引擎内置资源 (统一入口)
+	 * 替代 Gdx.files.internal() 直接调用
+	 * @param path 相对路径，例如 "sprites/icon.png"
+	 */
+	public static FileHandle getEngineAsset(String path) {
+		// 自动拼接前缀
+		return Gdx.files.internal(engineAssetsPath + path);
+	}
+
+	// ==========================================
+	// 脚本项目资源上下文
+	// ==========================================
 	/** 当前运行项目的 Assets 根目录 (由 Editor 注入) */
 	public static FileHandle projectAssetsRoot;
 
@@ -123,13 +144,20 @@ public class GameWorld {
 	 * @return 绝对 FileHandle
 	 */
 	public static FileHandle getAsset(String path) {
-		// 如果没有注入项目路径(比如引擎内部测试)，回退到 getInternalAssets
 		if (projectAssetsRoot == null || !projectAssetsRoot.exists()) {
-			return getInternalAssets(path);
+			// 如果没有用户项目上下文 (比如在看 demo)，回退到引擎资源?
+			// 或者抛错? 这里保持原样或根据需求调整
+			// 现阶段建议: 如果没项目，尝试在引擎资源里找找 (兼容旧逻辑)
+			return getEngineAsset(path);
 		}
 		return projectAssetsRoot.child(path);
 	}
 
+	/**
+	 * Gdx默认internal
+	 * @param path
+	 * @return
+	 */
 	public static FileHandle getInternalAssets(String path) {
 		return Gdx.files.internal(path);
 	}
@@ -250,7 +278,7 @@ public class GameWorld {
 			}
 		}
 	}
-	
+
 	// [新增] 模式控制 API
 	public void setMode(Mode mode) {
 		this.currentMode = mode;

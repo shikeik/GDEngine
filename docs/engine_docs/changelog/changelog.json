@@ -1,6 +1,49 @@
 {
-    "lastUpdated": "2026-01-20 06:47:34",
+    "lastUpdated": "2026-01-20 15:22:01",
     "groups": [
+        {
+            "id": "In Development",
+            "patches": [
+                {
+                    "tag": "HEAD",
+                    "fullVersion": "HEAD",
+                    "date": "2026-01-20",
+                    "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
+                    "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
+                    "isSnapshot": true,
+                    "commits": [
+                        {
+                            "hash": "c59c9231d5629ab191ba0a5e6d3753c250387ddf",
+                            "date": "2026-01-20",
+                            "type": "docs",
+                            "summary": "todo",
+                            "details": ""
+                        },
+                        {
+                            "hash": "6f47e8ba5a593d146409a103eea710e00f3d4829",
+                            "date": "2026-01-20",
+                            "type": "fix",
+                            "summary": "*\u4fee\u590dgitignore\u9519\u8bef\u5ffd\u7565",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ae34a230cba7e6999b26f16a42e8b9672f0e165c",
+                            "date": "2026-01-20",
+                            "type": "feat",
+                            "summary": "\u5c06javadocJar\u6362\u4e3a\u6e90\u7801sourceJar, \u91cd\u65b0\u52a0\u56deupgrade\u6309\u94ae(hub\u9879\u76ee\u6761\u76ee\u4e0a\u4e0b\u6587\u83dc\u5355\u6253\u5f00)",
+                            "details": ""
+                        },
+                        {
+                            "hash": "a0e439b570a30b5e5600cc11f5e4f5562c977655",
+                            "date": "2026-01-20",
+                            "type": "test",
+                            "summary": "android\u6d4b\u8bd5\u901a\u8fc7, \u63a5\u4e0b\u6765\u6a21\u677f\u9632\u7f13\u5b58\u8bd5\u8bd5",
+                            "details": ""
+                        }
+                    ]
+                }
+            ]
+        },
         {
             "id": "1.10.12",
             "patches": [
