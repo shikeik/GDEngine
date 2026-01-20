@@ -2,9 +2,6 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
-用户项目升级按钮
-发布javadocJar改为sourceJar
-
 
 - [ ] 引擎用户导出打包apk/exe还未实现
 - [ ] 用户的jar的支持
