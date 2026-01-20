@@ -2,6 +2,7 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
+bug: 用户没有自定义组件引擎组件就不加载了
 
 - [ ] 引擎用户导出打包apk/exe还未实现
 - [ ] 用户的jar的支持
