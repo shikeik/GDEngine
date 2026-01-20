@@ -23,31 +23,30 @@ idea {
 
 				// 2. 遍历 libs 目录下的所有 Jar
 				file('libs').eachFile { file ->
-					// 只处理普通 Jar，跳过 -javadoc.jar 和 -sources.jar
-					if (file.name.endsWith('.jar') && !file.name.endsWith('-javadoc.jar') && !file.name.endsWith('-sources.jar')) {
+					// 只处理普通 Jar
+					if (file.name.endsWith('.jar') && !file.name.endsWith('-sources.jar')) {
 
-						// 3. 检查是否存在对应的 Javadoc Jar
-						def javadocJar = new File(file.parent, file.name.replace('.jar', '-javadoc.jar'))
-						if (javadocJar.exists()) {
+						// 3. [修改] 检查是否存在对应的 Sources Jar
+						def sourcesJar = new File(file.parent, file.name.replace('.jar', '-sources.jar'))
+						if (sourcesJar.exists()) {
 
-							// 4. 在 .iml 中找到对应的 library 节点，并注入 javadoc 路径
-							// 这里的逻辑稍微有点 trick，因为 fileTree 依赖在 .iml 里通常是一个 module-library 节点
+							// 4. 在 .iml 中找到对应的 library 节点，并注入 sources 路径
 							orderEntries.each { entry ->
 								if (entry.@type == 'module-library') {
 									def libraryTable = entry.library
 									def classesRoot = libraryTable.CLASSES.root
-									// 如果这个 library 节点的 CLASSES 路径指向当前的 Jar
+
 									if (classesRoot && classesRoot.@url && classesRoot.@url.contains(file.name)) {
-										// [核心操作] 注入 JAVADOC 节点
-										def javadocNode = libraryTable.find { it.name() == 'JAVADOC' }
-										if (!javadocNode) {
-											javadocNode = libraryTable.appendNode('JAVADOC')
+										// [修改] 注入 SOURCES 节点 (原: JAVADOC)
+										def sourcesNode = libraryTable.find { it.name() == 'SOURCES' }
+										if (!sourcesNode) {
+											sourcesNode = libraryTable.appendNode('SOURCES')
 										}
-										// 添加 javadoc 路径 (格式: jar://$PROJECT_DIR$/libs/xxx-javadoc.jar!/)
-										def javadocUrl = "jar://\$PROJECT_DIR\$/libs/${javadocJar.name}!/"
-										// 避免重复添加
-										if (!javadocNode.root.find { it.@url == javadocUrl }) {
-											javadocNode.appendNode('root', [url: javadocUrl])
+										// 添加 sources 路径 (格式: jar://$PROJECT_DIR$/libs/xxx-sources.jar!/)
+										def sourcesUrl = "jar://\$PROJECT_DIR\$/libs/${sourcesJar.name}!/"
+
+										if (!sourcesNode.root.find { it.@url == sourcesUrl }) {
+											sourcesNode.appendNode('root', [url: sourcesUrl])
 										}
 									}
 								}

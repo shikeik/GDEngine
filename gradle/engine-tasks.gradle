@@ -52,7 +52,6 @@ project(':core') {
 
 		from sourceSets.main.java.classesDirectory
 		dependsOn compileJava
-		// [核心优化] 移除 javadocJar 依赖, 解决构建耗时问题
 
 		archiveFileName = "gdengine.jar"
 		destinationDirectory = assetsLibsDir
@@ -63,42 +62,28 @@ project(':core') {
 		}
 	}
 
-	// 任务F: 引擎文档生成与更新 (耗时, 手动触发)
-	tasks.register('updateEngineDocs') {
+	// 任务F: 引擎资源更新 (改为发布源码)
+	tasks.register('updateEngineLibSources') {
 		group = "gdengine"
-		description = "生成并发布引擎 Javadoc (Jar + HTML)"
+		description = "发布引擎源码 Jar 到 assets/engine/libs (供用户项目关联)"
 
-		// 依赖核心项目的 javadoc 任务
-		dependsOn tasks.named('javadoc')
-		dependsOn tasks.named('javadocJar')
+		// 依赖 sourcesJar 任务
+		dependsOn tasks.named('sourcesJar')
 
 		doLast {
-			// 1. 发布 Jar 包 (供 IDE 源码关联)
-			def javadocJarFile = tasks.javadocJar.archiveFile.get().asFile
+			// 1. 获取 sourcesJar 文件
+			def sourcesJarFile = tasks.sourcesJar.archiveFile.get().asFile
 			def libTargetDir = file("${rootProject.rootDir}/assets/engine/libs/")
 
 			copy {
-				from javadocJarFile
+				from sourcesJarFile
 				into libTargetDir
-				rename { "gdengine-javadoc.jar" }
+				// 重命名为标准格式，方便识别
+				rename { "gdengine-sources.jar" }
 			}
-			println "✅ [Engine] 文档库 (Javadoc) 已发布到 assets/engine/libs/gdengine-javadoc.jar"
+			println "✅ [Engine] 源码库 (Sources) 已发布到 assets/engine/libs/gdengine-sources.jar"
 
-			// 2. 发布 HTML 网页 (供在线文档)
-			def javadocSourceDir = tasks.javadoc.destinationDir
-			def webTargetDir = file("${rootProject.rootDir}/docs/engine_docs/javadoc/")
-
-			// 先清理旧文档，防止文件残留
-			if (webTargetDir.exists()) {
-				webTargetDir.deleteDir()
-			}
-			webTargetDir.mkdirs()
-
-			copy {
-				from javadocSourceDir
-				into webTargetDir
-			}
-			println "✅ [Engine] Javadoc HTML 已部署到 docs/engine_docs/javadoc/"
+			// (原 Javadoc HTML 生成逻辑已移除，专注于源码)
 		}
 	}
 

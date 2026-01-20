@@ -361,6 +361,29 @@ public class HubViewImpl extends VisTable implements IHubView {
 
 	private void showProjectMenu(FileHandle projDir, float x, float y) {
 		PopupMenu menu = new PopupMenu();
+		// [新增] 升级按钮
+		MenuItem itemUpgrade = new MenuItem("Upgrade Engine");
+		itemUpgrade.getLabel().setColor(Color.GOLD);
+		itemUpgrade.addListener(new ChangeListener() {
+			@Override
+			public void changed(ChangeEvent event, Actor actor) {
+				new BaseDialog("Upgrade Project") {
+					@Override protected void result(Object object) {
+						if ((boolean) object) {
+							presenter.onProjectUpgradeRequest(projDir);
+						}
+					}
+				}
+					.text("Update [" + projDir.name() + "] libs to v" + BuildConfig.DEV_VERSION + "?\n(This will overwrite jars in libs folder)")
+					.button("Upgrade", true)
+					.button("Cancel", false)
+					.show(getStage());
+			}
+		});
+		menu.addItem(itemUpgrade);
+
+		menu.addSeparator(); // 分隔线
+
 		MenuItem itemDelete = new MenuItem("Delete Project");
 		itemDelete.getLabel().setColor(Color.RED);
 		itemDelete.addListener(new ChangeListener() {
@@ -370,6 +393,7 @@ public class HubViewImpl extends VisTable implements IHubView {
 			}
 		});
 		menu.addItem(itemDelete);
+
 		menu.showMenu(getStage(), x, y);
 	}
 

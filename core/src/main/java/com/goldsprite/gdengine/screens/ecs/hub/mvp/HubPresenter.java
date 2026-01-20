@@ -65,6 +65,13 @@ public class HubPresenter {
 		refreshProjectList(); // 删完刷新界面
 	}
 
+	// [新增] 处理升级请求
+	public void onProjectUpgradeRequest(FileHandle project) {
+		service.upgradeProject(project);
+		view.showToast("Project Upgraded to " + com.goldsprite.gdengine.BuildConfig.DEV_VERSION);
+		refreshProjectList(); // 刷新列表以显示新版本号
+	}
+
 	public void onProjectCreateRequest(TemplateInfo tmpl, String name, String pkg) {
 		String error = service.createProject(tmpl, name, pkg);
 		if (error == null) {

@@ -272,6 +272,38 @@ public class ProjectService {
 	}
 
 	/**
+	 * [新增] 升级用户项目 (覆盖引擎库 + 更新版本号)
+	 */
+	public void upgradeProject(FileHandle projectDir) {
+		if (projectDir == null || !projectDir.exists()) return;
+
+		Debug.logT("ProjectService", "🚀 Upgrading project: " + projectDir.name());
+
+		// 1. 覆盖 libs (gdx.jar, gdengine.jar, sources.jar 等)
+		injectEngineLibs(projectDir);
+
+		// 2. 更新 project.json 中的引擎版本号
+		FileHandle configFile = projectDir.child("project.json");
+		if (configFile.exists()) {
+			try {
+				// 读取旧配置
+				com.goldsprite.gdengine.core.project.model.ProjectConfig cfg = json.fromJson(com.goldsprite.gdengine.core.project.model.ProjectConfig.class, configFile);
+
+				// 更新版本
+				String oldVer = cfg.engineVersion;
+				cfg.engineVersion = BuildConfig.DEV_VERSION;
+
+				// 写回
+				configFile.writeString(json.prettyPrint(cfg), false, "UTF-8");
+
+				Debug.logT("ProjectService", "Engine version updated: %s -> %s", oldVer, cfg.engineVersion);
+			} catch (Exception e) {
+				Debug.logT("ProjectService", "⚠️ Failed to update project.json version: " + e.getMessage());
+			}
+		}
+	}
+
+	/**
 	 * 注入引擎依赖库 (engine/libs -> project/libs)
 	 */
 	private void injectEngineLibs(FileHandle projectRoot) {

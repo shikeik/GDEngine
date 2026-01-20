@@ -2,35 +2,19 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
-1 看文档更新
-更新docs时updatedAt并没有及时更新还是之前的时间
-- 修改发布逻辑v
-- 修改fetch逻辑随机时间戳v
-- 再次发布检查本地/云端文件
-- 再次查看引擎内更新
-发布docs时发布模板里的bigdemo被删了
 用户项目升级按钮
+发布javadocJar改为sourceJar
 
-2 发布javadocJar改为sourceJar
 
-
-- [ ] engine_docs下载缓存没清
-- [ ] BigDemo的assets/变成assets/assets了看看为什么
-
-- [ ] 引擎打包apk/exe还未实现
-
-- [ ] 文档/模板完全云端化
-
+- [ ] 引擎用户导出打包apk/exe还未实现
 - [ ] 用户的jar的支持
-
-- [ ] 项目创建, 导出/更新, 流程需要标准化
-
 - [ ] 加mainCamera组件
-
 - [ ] gd项目开发者文档: 包括api手册和starter教程
   - 项目文档包括引擎内容总览, 和上面说的开发者文档, 以及版本(更新)文档
   - 这个也许可以用内置浏览器+github pages来托管, 做成md转html的方式来展示
 
+- [x] 文档/模板完全云端化
+- [x] 项目创建, 导出/更新, 流程需要标准化
 
 - `1.10.11` 追加修复
   - [x] ToastUI闪退bug

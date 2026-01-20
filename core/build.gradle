@@ -10,7 +10,8 @@ group = 'com.goldsprite.gdengine.core'
 version = '0.1.0'
 
 java {
-	withJavadocJar()
+	// [修改] 改为生成源码包 (原: withJavadocJar())
+	withSourcesJar()
 }
 
 dependencies {
