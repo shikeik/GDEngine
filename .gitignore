@@ -178,7 +178,7 @@ docs/tmp/
 #GDEngine/UserProjects/
 #GDEngine/engine_docs/
 #GDEngine/engine_config.json
-GDEngine/
+/GDEngine/
 assets/engine.index
 assets/engine/libs/
 assets/assets.txt
