@@ -1,0 +1,30 @@
+name: Release Binary
+
+on:
+  push:
+    tags:
+      # [修正] 匹配数字开头的 tag (如 1.10.12.21)，不再强制要求 v 开头
+      - "[0-9]*" 
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Create Release & Upload Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          # files 路径必须和 Gradle 脚本里的归档路径一致
+          files: |
+            dist/release/*.apk
+            dist/release/*.jar
+            dist/release/*.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,153 @@
+// ============================================================
+// 全自动发布流水线 (Auto Release Pipeline) - V3.1
+// [修正] Tag 不带 'v' 前缀，完全遵循语义化版本 (x.y.z)
+// ============================================================
+
+import java.nio.charset.StandardCharsets
+
+ext {
+    DIST_RELEASE_DIR = file("${rootProject.rootDir}/dist/release")
+    OUTPUTS_DIR = file("${rootProject.rootDir}/outputs")
+    RELEASE_NOTE_FILE = file("${rootProject.rootDir}/RELEASE_NOTE.md")
+    PROP_FILE = file("${rootProject.rootDir}/gradle.properties")
+}
+
+// --- [配置阶段版本注入] ---
+String targetVersion = null
+
+// 1. 优先检查命令行参数 -PtargetVer=...
+if (project.hasProperty("targetVer")) {
+    targetVersion = project.property("targetVer")
+    println "🎯 [配置] 检测到命令行参数版本: ${targetVersion}"
+} 
+// 2. 否则读取 RELEASE_NOTE.md
+else if (RELEASE_NOTE_FILE.exists()) {
+    def lines = RELEASE_NOTE_FILE.readLines("UTF-8")
+    if (!lines.isEmpty()) {
+        // 去掉可能存在的 # 号和空格
+        def rawVer = lines[0].replace("#", "").trim()
+        // 简单校验是否像个版本号
+        if (rawVer.matches(/\d+(\.\d+)+.*/)) {
+            targetVersion = rawVer
+            println "📝 [配置] 从发布文档读取版本: ${targetVersion}"
+        }
+    }
+}
+
+// 覆盖当前运行时的版本配置
+if (targetVersion != null) {
+    allprojects {
+        version = targetVersion
+        project.version = targetVersion
+    }
+    rootProject.ext.projectVersion = targetVersion
+}
+
+// ============================================================
+
+tasks.register('publishExecutables') {
+    group = 'gdengine-publish'
+    description = '一键发布：改版本->构建->归档->Git提交->推送'
+
+    // 1. 环境准备
+    doFirst {
+        if (targetVersion == null) {
+            throw new GradleException("❌ 无法确定发布版本！请确保 RELEASE_NOTE.md 第一行为版本号 (如 1.10.12.21)")
+        }
+        
+        println "🚀 [1/6] 开始发布流程: ${targetVersion}" // [修正] 去掉 V 前缀显示
+        
+        // 更新 gradle.properties (持久化)
+        updatePropertiesFile(targetVersion)
+        
+        // 清理发布目录
+        delete DIST_RELEASE_DIR
+        DIST_RELEASE_DIR.mkdirs()
+    }
+
+    // 2. 依赖构建
+    // 强制编译 Core 以更新 BuildConfig/README
+    dependsOn ":core:compileJava"
+    dependsOn rootProject.tasks.named('generateChangelog')
+    dependsOn ":core:copyEngineLibs"
+    dependsOn ":core:packageEngineCore"
+    dependsOn ":lwjgl3:jar"
+    dependsOn ":android:assembleRelease"
+
+    // 3. 归档与 Git 操作
+    doLast {
+        println "📦 [3/6] 归档产物..."
+        
+        // [修正] 文件名依然保留 V 前缀 (这是文件名规范，不仅是 Tag 规范)
+        // 例如: GDEngine_V1.10.12.21.apk
+        def expectedApk = "GDEngine_V${targetVersion}.apk"
+        def expectedJar = "GDEngine_V${targetVersion}.jar"
+
+        copy {
+            from OUTPUTS_DIR
+            into DIST_RELEASE_DIR
+            include expectedJar
+            include expectedApk
+            include "GDEngine_V${targetVersion}.exe"
+        }
+
+        File distApk = new File(DIST_RELEASE_DIR, expectedApk)
+        if (!distApk.exists()) throw new GradleException("❌ APK 产物未找到: ${expectedApk}")
+        
+        println "✅ 产物已就绪: dist/release/ (APK & JAR)"
+
+        // --- Git 自动化 ---
+        // 注意：Git Tag 不带 'v'
+        
+        println "🐙 [4/6] 执行 Git 提交..."
+        runCmd("git add .") 
+        runCmd("git commit -m \"chore: release ${targetVersion}\"")
+
+        println "🏷️ [5/6] 打 Tag..."
+        // 尝试删除本地同名 tag
+        try { runCmd("git tag -d ${targetVersion}") } catch(e){}
+        
+        // [修正] Tag 名称不带 v，直接用 targetVersion
+        // -F 读取 RELEASE_NOTE.md 作为 Tag 说明
+        runCmd("git tag -a ${targetVersion} -F RELEASE_NOTE.md")
+
+        println "🚀 [6/6] 推送到远程仓库..."
+        runCmd("git push origin main") 
+        // [修正] 推送不带 v 的 Tag
+        runCmd("git push origin ${targetVersion}")
+
+        println "\n🎉🎉🎉 发布完成！版本: ${targetVersion} 🎉🎉🎉"
+    }
+}
+
+// --- 辅助方法 (保持不变) ---
+def updatePropertiesFile(String newVer) {
+    if (!PROP_FILE.exists()) return
+    def lines = PROP_FILE.readLines("UTF-8")
+    def outLines = []
+    boolean updated = false
+    for (String line : lines) {
+        if (line.trim().startsWith("projectVersion")) {
+            outLines.add("projectVersion=${newVer}")
+            updated = true
+        } else {
+            outLines.add(line)
+        }
+    }
+    if (updated) {
+        PROP_FILE.withWriter("UTF-8") { writer -> outLines.forEach { writer.writeLine(it) } }
+        println "💾 gradle.properties 已更新为 ${newVer}"
+    }
+}
+
+def runCmd(String cmd) {
+    println "   > ${cmd}"
+    def isWin = System.getProperty("os.name").toLowerCase().contains("windows")
+    def proc = isWin ? ["cmd", "/c", cmd].execute(null, rootProject.rootDir) : ["bash", "-c", cmd].execute(null, rootProject.rootDir)
+    proc.waitFor()
+    if (proc.exitValue() != 0) {
+        println "❌ 命令执行失败: ${cmd}"
+        println proc.err.text
+        throw new GradleException("Git 操作失败")
+    }
+}
