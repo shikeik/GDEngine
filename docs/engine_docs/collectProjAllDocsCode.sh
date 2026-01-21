@@ -14,19 +14,19 @@
 # 例子 B: 想要所有文件 (慎用！会包含图片和二进制文件)
 # INCLUDE_PATTERN=".*"
 
-INCLUDE_PATTERN="\.java$"
+INCLUDE_PATTERN="\.*$"
 
 # ============================
 # 2. 设置排除的目录关键词 (使用正则表达式)
 # ============================
 # 这里的配置和之前一样：
 #   /build/  表示排除包含 /build/ 的路径
-EXCLUDE_PATTERN="/GDEngine/|/build/|/bin/|/\.git/|/target/|/\.idea/|/out/|/assets/|\.png$|\.jpg$"
+EXCLUDE_PATTERN="\.sh|Project.*\.txt$|/GDEngine/|/build/|/bin/|/\.git/|/target/|/\.idea/|/out/|/assets/|/javadoc/|\.png$|\.jpg$|changelog\.json$"
 
 # ============================
 # 3. 输出文件名
 # ============================
-OUTPUT_FILE="ProjectCode.txt"
+OUTPUT_FILE="ProjectDocsCode.txt"
 
 # ============================
 # 4. 执行逻辑
