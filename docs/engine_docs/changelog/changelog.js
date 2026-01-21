@@ -53,11 +53,9 @@
 	const Utils = {
 		cleanString: function(str) {
 			if (!str) return "";
-			let res = str;
-			if (res.startsWith("'") && res.endsWith("'")) res = res.substring(1, res.length - 1);
-			if (res.startsWith('"') && res.endsWith('"')) res = res.substring(1, res.length - 1);
-			res = res.replace(/\\"/g, '"');
-			return res.trim();
+			// [修改] 使用正则替换首尾的引号 (单引号或双引号)，无论是否成对
+			// 原逻辑: if (res.startsWith("'") && res.endsWith("'")) ...
+			return str.replace(/^['"]|['"]$/g, '').trim();
 		},
 		formatMarkdown: function(text) {
 			if (!text) return "";

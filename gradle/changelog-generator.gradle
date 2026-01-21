@@ -67,10 +67,11 @@ tasks.register('generateChangelog') {
 				def lines = rawTagMsg.readLines()
 				// 第一行是总结
 				if (!lines.isEmpty()) {
-					tagSummary = lines[0].trim()
+					// [修改] 增加 replaceAll 去除首尾引号
+					tagSummary = lines[0].trim().replaceAll(/^['"]|['"]$/, "")
 					// 剩余行是细节 (如果有的话)
 					if (lines.size() > 1) {
-						tagDetails = lines.subList(1, lines.size()).join("\n").trim()
+						tagDetails = lines.subList(1, lines.size()).join("\n").trim().replaceAll(/^['"]|['"]$/, "")
 					}
 				}
 			} else {

@@ -1,5 +1,5 @@
 {
-    "lastUpdated": "2026-01-22 03:34:30",
+    "lastUpdated": "2026-01-22 05:56:48",
     "groups": [
         {
             "id": "In Development",
@@ -12,6 +12,34 @@
                     "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
                     "isSnapshot": true,
                     "commits": [
+                        {
+                            "hash": "6bf0ad4ba84dcd3dfbce1138a9b1c42bb1fe0b64",
+                            "date": "2026-01-22",
+                            "type": "docs",
+                            "summary": "\u4fee\u6b63\u7edd\u5927\u90e8\u5206\u5f15\u64ce\u6587\u6863\u5e7b\u89c9\u95ee\u9898\uff0c\u4ee5\u53ca\u91cd\u8981\u7684: \u91cd\u5199\u5e76\u4f18\u5316\u6240\u6709\u6559\u7a0b\u6587\u6863",
+                            "details": ""
+                        },
+                        {
+                            "hash": "cf2cb0a4f620220c17c6f4e6fcb23ed9226697af",
+                            "date": "2026-01-22",
+                            "type": "docs",
+                            "summary": "\u4fee\u6b63GDEngine_\u9879\u76ee\u6982\u89c8\u62a5\u8868, \u4fee\u590d\u5e7b\u89c9\u90e8\u5206",
+                            "details": ""
+                        },
+                        {
+                            "hash": "fca9a284f4a74c12c0fb0ac2a0f0b2f190d2fb7b",
+                            "date": "2026-01-22",
+                            "type": "chore",
+                            "summary": "sh\u5de5\u5177\u811a\u672c\u66f4\u65b0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ebd1c3b25318f7ebcd1e676e0d8fe3f81220a448",
+                            "date": "2026-01-22",
+                            "type": "docs",
+                            "summary": "todo",
+                            "details": ""
+                        },
                         {
                             "hash": "75d6d318c351b39b85744cc111eaea5b04fbfbcd",
                             "date": "2026-01-22",
@@ -131,8 +159,8 @@
                     "tag": "1.10.12.20",
                     "fullVersion": "1.10.12.20",
                     "date": "2026-01-20",
-                    "tagSummary": "'chore: projectVersion=1.10.12.20, \u6587\u6863/\u6a21\u677f\u66f4\u65b0\u8fd9\u4e0b\u771f\u7684\u5b8c\u6210\u4e86(\u867d\u7136android/\u6a21\u677f\u90fd\u8fd8\u6ca1\u6d4b)",
-                    "tagDetails": "'",
+                    "tagSummary": "chore: projectVersion=1.10.12.20, \u6587\u6863/\u6a21\u677f\u66f4\u65b0\u8fd9\u4e0b\u771f\u7684\u5b8c\u6210\u4e86(\u867d\u7136android/\u6a21\u677f\u90fd\u8fd8\u6ca1\u6d4b)",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -190,8 +218,8 @@
                     "tag": "1.10.12.19",
                     "fullVersion": "1.10.12.19",
                     "date": "2026-01-20",
-                    "tagSummary": "'test: \u6d4b\u8bd52\u901a\u8fc7, \u4e91\u7aef\u4e0b\u8f7d\u529f\u80fd\u6536\u5b98",
-                    "tagDetails": "'",
+                    "tagSummary": "Release 1.10.12.19",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -235,8 +263,8 @@
                     "tag": "1.10.12.18",
                     "fullVersion": "1.10.12.18",
                     "date": "2026-01-20",
-                    "tagSummary": "'test: \u6d4b\u8bd53\u901a\u8fc7, \u7f13\u5b58\u95ee\u9898\u89e3\u51b3\u65b9\u6848\u786e\u5b9a, projectVersion=1.10.12.18",
-                    "tagDetails": "'",
+                    "tagSummary": "test: \u6d4b\u8bd53\u901a\u8fc7, \u7f13\u5b58\u95ee\u9898\u89e3\u51b3\u65b9\u6848\u786e\u5b9a, projectVersion=1.10.12.18",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -322,8 +350,8 @@
                     "tag": "1.10.12.17",
                     "fullVersion": "1.10.12.17",
                     "date": "2026-01-20",
-                    "tagSummary": "'fix: gradle\u589e\u52a0\u5237\u65b0CDN\u7f13\u5b58\u6309\u94ae",
-                    "tagDetails": "'",
+                    "tagSummary": "fix: gradle\u589e\u52a0\u5237\u65b0CDN\u7f13\u5b58\u6309\u94ae",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -395,8 +423,8 @@
                     "tag": "1.10.12.16",
                     "fullVersion": "1.10.12.16",
                     "date": "2026-01-19",
-                    "tagSummary": "'chore: \u65f6\u95f4\u6233\u66f4\u65b0",
-                    "tagDetails": "'",
+                    "tagSummary": "chore: \u65f6\u95f4\u6233\u66f4\u65b0",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -538,8 +566,8 @@
                     "tag": "1.10.12.14",
                     "fullVersion": "1.10.12.14",
                     "date": "2026-01-19",
-                    "tagSummary": "'docs: \u6d4b\u8bd5\u5927\u6e38\u620f(41mb)\u80fd\u5426\u8bbf\u95ee",
-                    "tagDetails": "'",
+                    "tagSummary": "docs: \u6d4b\u8bd5\u5927\u6e38\u620f(41mb)\u80fd\u5426\u8bbf\u95ee",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -632,8 +660,8 @@
                     "tag": "1.10.12.13",
                     "fullVersion": "1.10.12.13",
                     "date": "2026-01-19",
-                    "tagSummary": "'refactor: \u521b\u5efa\u9879\u76ee\u6d41\u7a0b\u91cd\u8bbe\u8ba1",
-                    "tagDetails": "'",
+                    "tagSummary": "refactor: \u521b\u5efa\u9879\u76ee\u6d41\u7a0b\u91cd\u8bbe\u8ba1",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -677,8 +705,8 @@
                     "tag": "1.10.12.11",
                     "fullVersion": "1.10.12.11",
                     "date": "2026-01-17",
-                    "tagSummary": "'chore: \u7248\u672c\u53f7\u66f4\u65b0",
-                    "tagDetails": "'",
+                    "tagSummary": "chore: \u7248\u672c\u53f7\u66f4\u65b0",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -701,8 +729,8 @@
                     "tag": "1.10.12.10",
                     "fullVersion": "1.10.12.10",
                     "date": "2026-01-17",
-                    "tagSummary": "'feat: \u589e\u52a0tag\u81ea\u52a8\u6253\u5305engine_docs\u4e3atag\u8d44\u6e90\u6587\u4ef6zip\u7684\u81ea\u52a8\u5de5\u4f5c\u6d41",
-                    "tagDetails": "'",
+                    "tagSummary": "feat: \u589e\u52a0tag\u81ea\u52a8\u6253\u5305engine_docs\u4e3atag\u8d44\u6e90\u6587\u4ef6zip\u7684\u81ea\u52a8\u5de5\u4f5c\u6d41",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -893,8 +921,8 @@
                     "tag": "1.10.12.0",
                     "fullVersion": "1.10.12.0",
                     "date": "2026-01-16",
-                    "tagSummary": "'\"# \u5236\u5b9a\u5f3a\u5236commit\u4fe1\u606f\u683c\u5f0f\u9650\u5236\"",
-                    "tagDetails": "- \u66f4\u65b0commit\u683c\u5f0f\u5f3a\u5236\u68c0\u67e5\n'",
+                    "tagSummary": "\"# \u5236\u5b9a\u5f3a\u5236commit\u4fe1\u606f\u683c\u5f0f\u9650\u5236",
+                    "tagDetails": "- \u66f4\u65b0commit\u683c\u5f0f\u5f3a\u5236\u68c0\u67e5\n",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -915,8 +943,8 @@
                     "tag": "1.10.11.18-endfix",
                     "fullVersion": "1.10.11.18-endfix",
                     "date": "2026-01-16",
-                    "tagSummary": "'\"# \u5f15\u64ce\u95ee\u9898\u4fee\u590d\u6539\u5584\"",
-                    "tagDetails": "\"### [\u4fee\u590d]\"\n- \u4fee\u590d\u4e00\u4e9bai\u6539\u574f\u7684\u4ee3\u7801\u548c\u529f\u80fd\n- \u4fee\u590d\u4e00\u4e9b\u6076\u884cbug\n\n\"### [\u6539\u826f]\"\n- \u4f18\u5316\u4e00\u4e9b\u7f16\u8f91\u5668\u4f53\u9a8c\u95ee\u9898\n\n\"### [\u65b0\u589e]\"\n- \u589e\u52a0\u8fd0\u884c\u65f6\u4e0e\u7f16\u8f91\u5668\u65f6\u6807\u8bb0\u6765\u5728\u7f16\u8f91\u5668\u65f6\u542f\u7528\u7ec4\u4ef6\u751f\u547d\u5468\u671f(\u540e\u9762\u4f1a\u589e\u5f3a\u4e3a\u66f4\u7ec6\u8282\u7684\u6ce8\u89e3\u5f62\u5f0f)\n- \u589e\u52a0\u6e38\u620f\u89c6\u56fe\u72ec\u5360\u6309\u94ae\u6765\u6539\u5584\u624b\u673a\u7aef\u5c4f\u5e55\u592a\u5c0f\u770b\u4e0d\u6e05\u7684\u95ee\u9898\n'",
+                    "tagSummary": "\"# \u5f15\u64ce\u95ee\u9898\u4fee\u590d\u6539\u5584",
+                    "tagDetails": "### [\u4fee\u590d]\"\n- \u4fee\u590d\u4e00\u4e9bai\u6539\u574f\u7684\u4ee3\u7801\u548c\u529f\u80fd\n- \u4fee\u590d\u4e00\u4e9b\u6076\u884cbug\n\n\"### [\u6539\u826f]\"\n- \u4f18\u5316\u4e00\u4e9b\u7f16\u8f91\u5668\u4f53\u9a8c\u95ee\u9898\n\n\"### [\u65b0\u589e]\"\n- \u589e\u52a0\u8fd0\u884c\u65f6\u4e0e\u7f16\u8f91\u5668\u65f6\u6807\u8bb0\u6765\u5728\u7f16\u8f91\u5668\u65f6\u542f\u7528\u7ec4\u4ef6\u751f\u547d\u5468\u671f(\u540e\u9762\u4f1a\u589e\u5f3a\u4e3a\u66f4\u7ec6\u8282\u7684\u6ce8\u89e3\u5f62\u5f0f)\n- \u589e\u52a0\u6e38\u620f\u89c6\u56fe\u72ec\u5360\u6309\u94ae\u6765\u6539\u5584\u624b\u673a\u7aef\u5c4f\u5e55\u592a\u5c0f\u770b\u4e0d\u6e05\u7684\u95ee\u9898\n",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -2127,8 +2155,8 @@
                     "tag": "1.8.14.1-fix-\u5f15\u64ce\u6a21\u677f\u5b8c\u5584",
                     "fullVersion": "1.8.14.1-fix-\u5f15\u64ce\u6a21\u677f\u5b8c\u5584",
                     "date": "2026-01-07",
-                    "tagSummary": "'1.8.14.1-fix \u589e\u52a0\u9879\u76ee\u5f15\u64ce\u7248\u672c\u66f4\u65b0\u529f\u80fd, \u5e76\u540c\u6b65\u66f4\u65b0\u663e\u793a",
-                    "tagDetails": "'",
+                    "tagSummary": "1.8.14.1-fix \u589e\u52a0\u9879\u76ee\u5f15\u64ce\u7248\u672c\u66f4\u65b0\u529f\u80fd, \u5e76\u540c\u6b65\u66f4\u65b0\u663e\u793a",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -2863,8 +2891,8 @@
                     "tag": "1.5.7.1-rc_\u5b8c\u6574\u9aa8\u9abc\u52a8\u753b\u7cfb\u7edf",
                     "fullVersion": "1.5.7.1-rc_\u5b8c\u6574\u9aa8\u9abc\u52a8\u753b\u7cfb\u7edf",
                     "date": "2026-01-01",
-                    "tagSummary": "'1.5.7.1-rc \u9aa8\u9abc\u7cfb\u7edf \u5bfc\u6f14\u5c0f\u4eba\u52a8\u753b \u7b2c\u4e00\u7248\u5bfc\u6f14\u52a8\u753b, \u8d3c\u62bd\u8c61",
-                    "tagDetails": "'",
+                    "tagSummary": "1.5.7.1-rc \u9aa8\u9abc\u7cfb\u7edf \u5bfc\u6f14\u5c0f\u4eba\u52a8\u753b \u7b2c\u4e00\u7248\u5bfc\u6f14\u52a8\u753b, \u8d3c\u62bd\u8c61",
+                    "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -2969,8 +2997,8 @@
                     "tag": "1.5.1-rc1-HappyNewYear2026",
                     "fullVersion": "1.5.1-rc1-HappyNewYear2026",
                     "date": "2026-01-01",
-                    "tagSummary": "'\"# HappyNewYear 2026 \u7279\u522b\u5b9a\u5236\u7248\"",
-                    "tagDetails": "\"### [\u6982\u62ec]\"\n- \u662f\u57282025\u6700\u540e\u4e00\u5929\u6700\u540e10\u5206\u949f\u7531shikeik\u4e0eGemini\u5408\u4f5c\u5b8c\u6210\u7684\u6e38\u620f\u6f14\u793a\u52a8\u753b\u5c0f\u5f69\u86cb\n- \u6253\u5f00\u6e38\u620f\u4f1a\u770b\u89c1\u5168\u5c4f\u70df\u706b\u4e0e\u9713\u8679\u6eda\u52a8\u7ea2\u65e5\u6f14\u51fa,\n- \u4e00\u5207\u90fd\u662f\u7a0b\u5e8f\u5316\u751f\u6210, \u5305\u62ec\u56fe\u5f62, \u7c92\u5b50, \u97f3\u6548, \u97f3\u4e50...\n'",
+                    "tagSummary": "\"# HappyNewYear 2026 \u7279\u522b\u5b9a\u5236\u7248",
+                    "tagDetails": "### [\u6982\u62ec]\"\n- \u662f\u57282025\u6700\u540e\u4e00\u5929\u6700\u540e10\u5206\u949f\u7531shikeik\u4e0eGemini\u5408\u4f5c\u5b8c\u6210\u7684\u6e38\u620f\u6f14\u793a\u52a8\u753b\u5c0f\u5f69\u86cb\n- \u6253\u5f00\u6e38\u620f\u4f1a\u770b\u89c1\u5168\u5c4f\u70df\u706b\u4e0e\u9713\u8679\u6eda\u52a8\u7ea2\u65e5\u6f14\u51fa,\n- \u4e00\u5207\u90fd\u662f\u7a0b\u5e8f\u5316\u751f\u6210, \u5305\u62ec\u56fe\u5f62, \u7c92\u5b50, \u97f3\u6548, \u97f3\u4e50...\n",
                     "isSnapshot": false,
                     "commits": [
                         {
@@ -3173,8 +3201,8 @@
                     "tag": "1.0.0-SoloFight-Final",
                     "fullVersion": "1.0.0-SoloFight-Final",
                     "date": "2025-12-29",
-                    "tagSummary": "'\"# SoloFight\u5f00\u53d1\u7ed3\u675f\"",
-                    "tagDetails": "\"### [\u6982\u62ec]\"\n- \u5b8c\u7ed3\u6240\u6709SoloFight\u5185\u5bb9\n- \u867d\u7136\u5230\u6700\u540e\u6e38\u620f\u4e5f\u6ca1\u505a\u597d, \u4ee3\u7801\u4f9d\u65e7\u4e00\u5768\n- \u4f46\u662f\u81f3\u5c11\u4ed6\u80fd\u73a9? :}\n- \u603b\u4e4b\u5c31\u662f\u5728\u8fd9\u6837\u7684\u505a\u4e86\u4e00\u5806\u8f6e\u5b50\u548c\u4e00\u4e2a\u539f\u578b\u6e38\u620f\u7684\u60c5\u51b5\u4e0b\u7ed3\u675f\u4e86\n- \u4e4b\u540e\u8f6c\u5411\u4e86\u5f15\u64ce\u7684\u5f00\u53d1\n'",
+                    "tagSummary": "\"# SoloFight\u5f00\u53d1\u7ed3\u675f",
+                    "tagDetails": "### [\u6982\u62ec]\"\n- \u5b8c\u7ed3\u6240\u6709SoloFight\u5185\u5bb9\n- \u867d\u7136\u5230\u6700\u540e\u6e38\u620f\u4e5f\u6ca1\u505a\u597d, \u4ee3\u7801\u4f9d\u65e7\u4e00\u5768\n- \u4f46\u662f\u81f3\u5c11\u4ed6\u80fd\u73a9? :}\n- \u603b\u4e4b\u5c31\u662f\u5728\u8fd9\u6837\u7684\u505a\u4e86\u4e00\u5806\u8f6e\u5b50\u548c\u4e00\u4e2a\u539f\u578b\u6e38\u620f\u7684\u60c5\u51b5\u4e0b\u7ed3\u675f\u4e86\n- \u4e4b\u540e\u8f6c\u5411\u4e86\u5f15\u64ce\u7684\u5f00\u53d1\n",
                     "isSnapshot": false,
                     "commits": [
                         {

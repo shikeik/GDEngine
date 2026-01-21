@@ -139,6 +139,7 @@
 	}
 
 	.p-summary {
+		background: #F0F0F0;
 		font-size: 1.1em;
 		color: #222;
 		margin: 8px 0;
@@ -148,6 +149,7 @@
 
 	/* Tag Details with Pre-Wrap */
 	.p-details {
+		/* [修改] 加深背景色，增加着重感 */
 		background: #F9F9F9;
 		padding: 10px 15px;
 		border-left: 3px solid var(--border-dark);
@@ -155,7 +157,8 @@
 		font-size: 0.95em;
 		margin-bottom: 15px;
 		white-space: pre-wrap; /* 关键：保留换行和缩进 */
-		font-family: Consolas, "Segoe UI", sans-serif;
+		/* [修改] 移除 Consolas 强制等宽字体，改回普通字体以提升阅读体验 */
+		font-family: "Segoe UI", "Inter", sans-serif;
 		line-height: 1.6;
 	}
 
