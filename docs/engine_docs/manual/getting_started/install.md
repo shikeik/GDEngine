@@ -11,8 +11,123 @@ GDEngine 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它�
 *   **IDE (可选但推荐):** IntelliJ IDEA 或 Android Studio。
 
 ## 获取引擎
-*   **GitHub Releases:** [下载当前版本Releases](https://github.com/shikeik/GDEngine/releases)
-*   **高速镜像:** [点击下载 (国内加速)](https://gdengine.pages.dev/download/mirror)
+
+<!-- 动态下载组件 -->
+<div id="download-widget" class="down-widget">
+    <div class="loading-text">正在获取版本列表...</div>
+</div>
+
+*   **GitHub Releases:** [下载最新 APK](https://github.com/shikeik/GDEngine/releases)
+*   **高速镜像:** [点击下载 (国内加速)](https://gh-proxy.com/https://github.com/shikeik/GDEngine/releases)
+
+<!-- 样式 -->
+<style>
+.down-widget {
+    border: 1px solid #09D2B8;
+    background: #f0fdfa;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+.ver-control {
+    margin-bottom: 12px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #333;
+}
+.ver-select {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-left: 10px;
+}
+.btn-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.dl-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none !important;
+    font-size: 14px;
+    font-weight: 600;
+    transition: opacity 0.2s;
+    color: white !important;
+}
+.dl-btn:hover { opacity: 0.85; }
+.btn-android { background: #3DDC84; }
+.btn-pc { background: #E76F00; }
+.btn-exe { background: #0078D7; }
+</style>
+
+<!-- 逻辑脚本 -->
+<script>
+(function() {
+    const REPO = "shikeik/GDEngine";
+    // 文件下载走 gcore CDN (极速)
+    const CDN_BASE = "https://gcore.jsdelivr.net/gh/" + REPO + "@";
+    
+    function renderWidget(versions) {
+        const container = document.getElementById('download-widget');
+        if(!container) return;
+
+        let options = '';
+        versions.forEach(v => { options += `<option value="${v}">${v}</option>`; });
+
+        const html = `
+            <div class="ver-control">
+                当前版本: <select id="ver-selector" class="ver-select">${options}</select>
+            </div>
+            <div class="btn-grid">
+                <a id="link-apk" class="dl-btn btn-android" target="_blank">🤖 Android APK</a>
+                <a id="link-jar" class="dl-btn btn-pc" target="_blank">☕ Desktop Jar</a>
+                <a id="link-exe" class="dl-btn btn-exe" target="_blank">🪟 Windows Exe</a>
+            </div>
+        `;
+        container.innerHTML = html;
+
+        const selector = document.getElementById('ver-selector');
+        selector.onchange = () => updateLinks(selector.value);
+        if(versions.length > 0) updateLinks(versions[0]);
+    }
+
+    function updateLinks(tag) {
+        // Tag: v1.10.12.21 -> Clean: 1.10.12.21
+        const cleanVer = tag.replace(/^v/, '');
+        
+        // 假设自动化构建会将产物放入仓库的 dist/ 目录 (支持 CDN 直接读取)
+        // 格式: https://gcore.jsdelivr.net/gh/user/repo@tag/dist/filename
+        const basePath = `${CDN_BASE}${tag}/dist/`;
+
+        document.getElementById('link-apk').href = basePath + `GDEngine_V${cleanVer}.apk`;
+        document.getElementById('link-jar').href = basePath + `GDEngine_V${cleanVer}.jar`;
+        document.getElementById('link-exe').href = basePath + `GDEngine_V${cleanVer}.exe`;
+    }
+
+    fetch('changelog/changelog.json')
+        .then(r => r.json())
+        .then(data => {
+            const versions = [];
+            if(data.groups) {
+                data.groups.forEach(g => {
+                    if(g.patches) {
+                        g.patches.forEach(p => {
+                            if(p.tag && p.tag !== "HEAD" && !p.isSnapshot) versions.push(p.tag);
+                        });
+                    }
+                });
+            }
+            if(versions.length === 0) versions.push("v1.0.0");
+            renderWidget(versions);
+        })
+        .catch(e => {
+            document.getElementById('download-widget').style.display = 'none';
+        });
+})();
+</script>
 
 ### 1. Android 用户 (推荐平板)
 下载并安装最新的 **APK**。
