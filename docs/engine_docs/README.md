@@ -14,3 +14,15 @@
 *   [💀 骨骼动画](manual/systems/neon_animation.md)
 *   [📚 API 参考](javadoc/index.html)
 *   [📅 更新日志](changelog/README.md)
+
+
+## 公告处
+
+### 文档当前基本为AI撰写, 幻觉问题请注意: 实际以代码为准
+
+---
+
+[当前最全的引擎概览(AI撰写)](manual/GDEngine_项目概览报表.md)
+
+### 当前bug罗列
+- 用户项目必须含有一个自定义组件继承任何Component及其子类否则AddCompDialog清单将不触发刷新，显示为空
