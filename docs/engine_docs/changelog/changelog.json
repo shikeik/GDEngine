@@ -1,5 +1,5 @@
 {
-    "lastUpdated": "2026-01-21 23:28:32",
+    "lastUpdated": "2026-01-22 01:12:30",
     "groups": [
         {
             "id": "In Development",
@@ -12,6 +12,20 @@
                     "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
                     "isSnapshot": true,
                     "commits": [
+                        {
+                            "hash": "91b37dc4c4f96de9a1650822bdb468decdc251ba",
+                            "date": "2026-01-22",
+                            "type": "fix",
+                            "summary": "\u4fee\u590d\u672a\u7f16\u8bd1\u524d\u7ec4\u4ef6\u6e05\u5355\u4e3a\u7a7a\u7684bug",
+                            "details": ""
+                        },
+                        {
+                            "hash": "666e1473570329433b39ce643d3c187bce8f7639",
+                            "date": "2026-01-21",
+                            "type": "chore",
+                            "summary": "changelog\u5237\u65b0\uff0c\u5f15\u64ce\u6587\u6863\u5237\u65b0",
+                            "details": ""
+                        },
                         {
                             "hash": "fd3b0599bef201a6f986c56fc514fead9bc4fd3c",
                             "date": "2026-01-21",
@@ -874,7 +888,1203 @@
                     "tagDetails": "\"### [\u4fee\u590d]\"\n- \u4fee\u590d\u4e00\u4e9bai\u6539\u574f\u7684\u4ee3\u7801\u548c\u529f\u80fd\n- \u4fee\u590d\u4e00\u4e9b\u6076\u884cbug\n\n\"### [\u6539\u826f]\"\n- \u4f18\u5316\u4e00\u4e9b\u7f16\u8f91\u5668\u4f53\u9a8c\u95ee\u9898\n\n\"### [\u65b0\u589e]\"\n- \u589e\u52a0\u8fd0\u884c\u65f6\u4e0e\u7f16\u8f91\u5668\u65f6\u6807\u8bb0\u6765\u5728\u7f16\u8f91\u5668\u65f6\u542f\u7528\u7ec4\u4ef6\u751f\u547d\u5468\u671f(\u540e\u9762\u4f1a\u589e\u5f3a\u4e3a\u66f4\u7ec6\u8282\u7684\u6ce8\u89e3\u5f62\u5f0f)\n- \u589e\u52a0\u6e38\u620f\u89c6\u56fe\u72ec\u5360\u6309\u94ae\u6765\u6539\u5584\u624b\u673a\u7aef\u5c4f\u5e55\u592a\u5c0f\u770b\u4e0d\u6e05\u7684\u95ee\u9898\n'",
                     "isSnapshot": false,
                     "commits": [
-                        
+                        {
+                            "hash": "b847ef223ccf79086173f5a1aae879f553d9a52f",
+                            "date": "2026-01-16",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590d\u68c0\u67e5\u5668\u53c2\u6570\u6ca1\u6709\u4ece\u6e38\u620f\u53cd\u5411\u66f4\u65b0\u5230\u9762\u677f\u6570\u636e\u7684\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "187f35339352317c3b5326f0abfdd87f61ec1b65",
+                            "date": "2026-01-16",
+                            "type": "legacy",
+                            "summary": "GameView\u589e\u52a0[ ]\u6309\u94ae\u5207\u6362\u72ec\u5360\u4e0e\u53d6\u6d88\u72b6\u6001, (\u9700\u8981\u9884\u5148\u5b9a\u4e49\u5404\u9762\u677f\u5206\u5272\u53c2\u6570\u6765\u91cd\u7f6e\u4e3a\u53d6\u6d88)",
+                            "details": ""
+                        },
+                        {
+                            "hash": "f5fd134717b168397eb216a101b93f9e5fa4b681",
+                            "date": "2026-01-16",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "7acd5d8295faccae18a98442baf1fa1360550a51",
+                            "date": "2026-01-16",
+                            "type": "legacy",
+                            "summary": "\u7edf\u4e00\u5f15\u64cegradle tools\u4efb\u52a1, \u62c6\u5206\u8017\u65f6\u7684javadoc\u4efb\u52a1\u4e3a\u624b\u52a8\u53d1\u5e03",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c260a0a0f3dd41f75f7a510c2591e97ec9cc3d0b",
+                            "date": "2026-01-16",
+                            "type": "legacy",
+                            "summary": "String\u8f93\u5165\u7684\u8f93\u5165\u680f\u592a\u957f, \u4eff\u7167Color\u8f93\u5165\u7684\u957f\u5ea6\u6765\u505a",
+                            "details": "\u521a\u521a\u4fee\u590d\u7684\u6e38\u620f\u89c6\u56fe\u89c6\u53e3\u8f93\u5165\u9694\u79bb\u5728expand\u89c6\u53e3\u7c7b\u578b\u4e0b\u4e0d\u9002\u7528\u56e0\u4e3a\u5b83\u5b9e\u9645\u7ed8\u5236\u662f\u8d85\u51fa\u7a97\u53e3\u7684\nGameObject\u7684Name\u8f93\u51651\u4e2a\u5b57\u7b26\u7126\u70b9\u5c31\u88ab\u53d6\u6d88\u4e86\u7684bug\n\u9012\u5f52\u7ed8\u5236\u7236\u7c7b\u8981\u5148\u753b(\u53ef\u80fd\u7684\u65b9\u6848\u662f\u5148\u6536\u96c6\u518d\u7ed8\u5236)\u5e76\u4e14\u8981\u505aseparator\u6765\u5206\u9694\u4e0b\nRenderComponent\u7684contains\u662f\u62bd\u8c61\u7684, \u6539\u4e3a\u9ed8\u8ba4\u81ea\u5e26\u5b9e\u73b0\u6765\u63d0\u9ad8\u7075\u6d3b\u6027"
+                        },
+                        {
+                            "hash": "344a568ae3e444ba9524196abd7fd359563cc7f9",
+                            "date": "2026-01-16",
+                            "type": "legacy",
+                            "summary": "\u518d\u6b21\u4fee\u590d\u7f16\u8bd1\u7f13\u5b58\u672a\u6e05\u7406\u5bfc\u81f4\u591a\u4e2a\u91cd\u590d\u7ec4\u4ef6\u6e05\u5355\u7684\u95ee\u9898, \u4ee5\u53ca\u6e38\u620f\u89c6\u56fe\u8f93\u5165\u505a\u4e86isInViewport\u5224\u65ad\u6765\u9694\u79bb\u5916\u90e8\u8bef\u64cd\u4f5c",
+                            "details": ""
+                        },
+                        {
+                            "hash": "13aad5ff78205f99d1f5ae264a8d62c7c903cf45",
+                            "date": "2026-01-16",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590d\u8f93\u5165\u6620\u5c04\u9519\u8bef\u95ee\u9898: \u8865\u56de\u6e38\u620f\u6838\u5fc3\u4ee3\u7406",
+                            "details": ""
+                        },
+                        {
+                            "hash": "99dfe2b4eaffae0f2340f4ec4de7eb4b2078000f",
+                            "date": "2026-01-16",
+                            "type": "legacy",
+                            "summary": "gameCam size\u4e3a0 bug: ai\u6539\u9519\u4e86\u6ca1\u521d\u59cb\u5316\u4e16\u754c\u5bbd\u9ad8",
+                            "details": ""
+                        },
+                        {
+                            "hash": "183fff2ebd6ce09bc6e83587cf579cbdaaa3a64a",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u4f7f\u7528neonStage \u7ed8\u5236 \u4eae\u6846, \u589e\u52a0logErr",
+                            "details": ""
+                        },
+                        {
+                            "hash": "b0c39b1028d87bbe91a60a514aa4815d312f73d6",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u8865\u4e01\u4fee\u590d \u52a0\u56de\u65e7\u4ee3\u7801\u7f16\u8f91\u5668\u573a\u666f, logUI",
+                            "details": ""
+                        },
+                        {
+                            "hash": "8aaf39688eb26ba010deccbfb98f246895cc91c8",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "1.10.11.6-hotfix \u8865\u4e01\u4fee\u590d",
+                            "details": "- [x] ToastUI\u95ea\u9000bug\n- [x] \u6539\u5168\u6a2a\u5c4f"
+                        },
+                        {
+                            "hash": "889680a5b5a841377cd51ecc80d45eef95c850c3",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "1.10.11.5-final \u6700\u7ec8\u4f18\u5316\u7248\uff0c\u6b64\u7248\u672c(\u95ed\u73af\u6574\u5408\u5f00\u53d1\u6d41\u7a0b)\u7ed3\u675f",
+                            "details": ""
+                        },
+                        {
+                            "hash": "a3f0ec970fc56e441e1bbbe55cbf46f17fb5eb50",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "1.  **FileTreeWidget**: \u52a0\u4e86 `ClickListener`\uff0c\u53cc\u51fb\u80fd\u7528\u4e86\u3002",
+                            "details": "2.  **ProjectPanel**: Item \u7684 `ContextListener` \u52a0\u4e86 `touchDown return true`\uff0c\u963b\u6b62\u4e86\u80cc\u666f\u83dc\u5355\u5f39\u51fa\u3002\n3.  **CodePanel**: PathLabel \u5bbd\u5ea6\u9650\u5236\u4e3a 50%\uff0c\u53f3\u4fa7\u52a0\u4e86 Save\uff0c\u5bf9\u9f50\u4fee\u6b63\u3002\n4.  **EditorController**: `toggleCodeMaximize` \u73b0\u5728\u53ea\u52a8\u5de6\u53f3 SplitPane\uff0c\u4e0d\u52a8\u5e95\u90e8\uff0c\u4e14\u903b\u8f91\u6b63\u786e\u3002"
+                        },
+                        {
+                            "hash": "b82737c25f8175f03d97b67ca09f527f0e4e60a3",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "1.10.11.3 \u4fee\u590dbug\u6539\u5584\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "75748ea30fc9b07321904c6f32107c0cd0abda83",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "1.10.11.2-beta \u5b8c\u6210 \u5165\u53e3\u811a\u672c\u751f\u547d\u5468\u671f, \u51c6\u5907\u5f00\u59cb\u5185\u6d4b\u6d4b\u8bd5",
+                            "details": ""
+                        },
+                        {
+                            "hash": "3b97e6e685b3bcd1615fcd7066115b7214076290",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "1.10.11 \u6700\u540e\u6b65\u9aa4:\u7f16\u8f91\u5668\u65f6\u4e0e\u8fd0\u884c\u65f6",
+                            "details": ""
+                        },
+                        {
+                            "hash": "aa19d941142fac43e054f6563ecfcd09b443182e",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "1.10.10-final \u6b64\u7248\u672c\u66f4\u65b0\u7ed3\u675f",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c8d0c58a3135785ff34d68c4c5dc5d338ed43020",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u66f4\u65b0\u573a\u666f\u9009\u62e9",
+                            "details": ""
+                        },
+                        {
+                            "hash": "28525fb36608d1ffb4465b036de97334131934ff",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u5185\u5d4c\u7f16\u8bd13",
+                            "details": ""
+                        },
+                        {
+                            "hash": "15182321902bdc9d40edee13f895c94f61f5ac7f",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u5185\u5d4c\u7f16\u8bd12",
+                            "details": ""
+                        },
+                        {
+                            "hash": "0268f4a4a84d3209ab17914affb047e8526c4630",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "3 \u5185\u5d4c\u7f16\u8bd1",
+                            "details": ""
+                        },
+                        {
+                            "hash": "d6aa8751e21ee1623d811189572b09ff6178c838",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u5de5\u4f5c\u6d412 \u6709\u4e9b\u5dee\u4f53\u9a8c\u95ee\u9898, \u4f46\u540e\u9762\u518d\u4fee",
+                            "details": ""
+                        },
+                        {
+                            "hash": "214ab644c642b6cd56a6d55ab01b9b43e526e53b",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u5f00\u59cb\u5f00\u53d1\u7b2c\u4e00\u5957\u6574\u5408\u5de5\u4f5c\u6d411",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1af6ded9bc83c866999f2ff5bda8ffaecf17488e",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "1.10.10",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ee2995de0f7b476ac4dbc7c9314beca0002e5b3c",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u628a\u6e32\u67d3\u7cfb\u7edf\u53d8\u4e3a\u5185\u7f6e\u7cfb\u7edf\uff0c\u4ee5\u4fee\u590d\u5185\u7f6e\u573a\u666f\u65e0\u6e32\u67d3\u753b\u9762\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "a0ff18c62bc74edec7d0cc2131cae7a79caa6bc8",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u811a\u672c\u9884\u89c8\u6587\u672c\u663e\u793a\u5668\u4f18\u53162",
+                            "details": ""
+                        },
+                        {
+                            "hash": "7a877709d192ee3bbeac622f851bab99d9d00ab5",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u811a\u672c\u9884\u89c8\u6587\u672c\u663e\u793a\u5668\u4f18\u53161",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e5c39b2d727736903dfc7bafdc1634a0e1b11fec",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "HierarchyPanel: \u7ed8\u5236\u5bf9\u9f50\u7ebf\u3002",
+                            "details": "FileTreeWidget: \u589e\u52a0\u4e86\u81ea\u52a8\u5c55\u5f00\nFileInspectorDrawer: \u5f00\u542f\u4e86\u53cc\u5411\u6eda\u52a8\uff0c\u5e76\u589e\u52a0\u4e86 Ctrl+\u6eda\u8f6e\u7f29\u653e\u5b57\u4f53\u7684\u529f\u80fd"
+                        },
+                        {
+                            "hash": "0bbfd6637c5907b9fe75813e499136e406e3ef30",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u5c01\u88c5\u81ea\u5b9a\u4e49TabbedPane\u7c7b(\u53ea\u662f\u7b80\u964b\u5c01\u88c5\u5c01\u95ed\u903b\u8f91)\u6765\u5bb9\u7eb3project/console\u9762\u677f, \u91cd\u8bbe\u8ba1\u4f18\u5316console\u9762\u677f, \u4ee5\u53ca\u4e00\u4e9b\u5176\u4ed6\u4f53\u9a8c\u4f18\u5316",
+                            "details": ""
+                        },
+                        {
+                            "hash": "fdc447b02e55899e50d5fcf6a2869e6960d88ae7",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "Vector2Drawer\u53f3\u8fb9\u5bf9\u4e0d\u9f50\u95ee\u9898\u89e3\u51b3",
+                            "details": ""
+                        },
+                        {
+                            "hash": "736fdc6c5da9d0891e45896a396b5657547efc71",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u624b\u611f\u4f18\u53162 \u89e3\u51b3\u7126\u70b9\u95ee\u9898, \u76f8\u673a\u4e0e\u6eda\u52a8\u89c6\u56fe",
+                            "details": ""
+                        },
+                        {
+                            "hash": "09cb453c5ecb3037de0f06e28a52d1b9deb41992",
+                            "date": "2026-01-15",
+                            "type": "legacy",
+                            "summary": "\u624b\u611f\u4f18\u53161",
+                            "details": ""
+                        },
+                        {
+                            "hash": "de7a7750b27bf1c341b4b06fef7374f7235daaf9",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "project/console\u589e\u52a0\u5b8c\u6210 \u89e3\u51b3tab\u6807\u9898\u7eb5\u5411\u6392\u5217\u7684\u95ee\u9898(\u539f\u56e0\u53ea\u662f\u56e0\u4e3a\u6ca1\u6709growX..\u6c57",
+                            "details": ""
+                        },
+                        {
+                            "hash": "eb2126de51f353bfe4b3fe77ff30d03d8380fbd7",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "tmp \u6d4b\u8bd5tabbedPane",
+                            "details": ""
+                        },
+                        {
+                            "hash": "3f17a35775f9f7072d4e74d7648f2c47067f0a35",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "project\u9762\u677f2",
+                            "details": ""
+                        },
+                        {
+                            "hash": "326cf5ee6c94aad9d5bf5a80d25e3e8cec568d25",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "project\u9762\u677f1",
+                            "details": ""
+                        },
+                        {
+                            "hash": "7297042f855e4ac5a84a244d27e86d0084dcd93b",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "1.10.9 \u7ec8\u4e8e\u5f00\u59cb\u505a\u6574\u5408\u7f16\u8f91\u5668\u4e86 \u4ee3\u7801\u8fc1\u79fb,\u90fd\u53bbcore,examples\u53ea\u5269\u6f14\u793a\u5c4f\u4e0e\u5165\u53e3",
+                            "details": ""
+                        },
+                        {
+                            "hash": "aa78cd66e093df96f17d6ae3542e78c2c45cf24e",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "editor mvp\u91cd\u6784 hierarchy bug\u4fee\u590d\uff0c\u73b0\u5728\u6ca1\u6709\u6076\u6027bug\u4e86\uff0c\u91cd\u6784\u9636\u6bb5\u7ed3\u675f",
+                            "details": ""
+                        },
+                        {
+                            "hash": "67e47bb7feeb326237443d5f0effc62dd2394c70",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "editor game/scene mvp\u91cd\u6784 \u5b8c\u6210!",
+                            "details": ""
+                        },
+                        {
+                            "hash": "18661b1e8e3ebf620e8df4ecd1626ea018bbe14a",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "editor game/scene mvp\u91cd\u67841",
+                            "details": ""
+                        },
+                        {
+                            "hash": "10714af45f28f8a7379ca8b399dd6d3005bd5559",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "editor mvp\u91cd\u6784\u5b8c\u6210",
+                            "details": ""
+                        },
+                        {
+                            "hash": "f031b5569b1afbea3c75efcbe4906646777973c7",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "editor mvp\u91cd\u67842",
+                            "details": ""
+                        },
+                        {
+                            "hash": "fa64ad5d965471085608abe22c95d3b1ad1165af",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "editor mvp\u91cd\u67841",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e1cb5214f729c3fe6e3c5008a242cda36915ab38",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "ContextListener.java\u518d\u4fee\u590d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "776d66c091281b1f13a931147d48600443c31707",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u6700\u540e\u7ec4\u88c5, \u5b8c\u6210hub\u7684mvp\u67b6\u6784\u91cd\u6784",
+                            "details": ""
+                        },
+                        {
+                            "hash": "104b04d4b3a4b1905cbefb076e102bad84901b3d",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u521b\u5efaview\u5b9e\u73b0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "5dbf69da31bdb6bb316f69b6eaa0a9ea07542b60",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u521b\u5efapresenter",
+                            "details": ""
+                        },
+                        {
+                            "hash": "148fcbc10f07ef78fcf126dcf39ca1d913ea0e4f",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u9002\u914d\u5230\u65b0ProjectService\u7c7b",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c2e7bf1f34a1a4b4eee5cdd2f64854c47f987eb4",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "1.10.8.0 \u5f00\u59cb\u7f16\u8f91\u5668\u67b6\u6784\u91cd\u6784\uff0c \u4f7f\u7528\u65b0MVP\u67b6\u6784",
+                            "details": ""
+                        },
+                        {
+                            "hash": "26ba943e47e738b9275d3c6110b8ad6ac3cb3732",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "bugfix \u73b0\u5728\u957f\u6309\u89e6\u53d1\u540e\u4e0d\u4f1a\u518d\u54cd\u5e94\u5355\u70b9\u4e86",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1f4410595d363920a262023d11c322c4676f32f7",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "1.10.7.16-hotfix",
+                            "details": ""
+                        },
+                        {
+                            "hash": "0634875f9d2c671a4171811fa0175c2621bb1747",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "projectVersion=1.10.7.15",
+                            "details": ""
+                        },
+                        {
+                            "hash": "d81576fc0b9f88f0d83b86f792c9c7265d46630c",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590d\u68c0\u67e5\u6846\u592a\u5c0f\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ad792f955c8877208f2305fa12f445700ab24c45",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590d\u684c\u9762\u7aef\u91cd\u590dindex\u6587\u4ef6\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1b7270a089a3a315880a948142e537aedb197d87",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590djson\u53cd\u5e8f\u5217\u5316\u4e0a\u4e0b\u6587",
+                            "details": ""
+                        },
+                        {
+                            "hash": "26ef68e9d9015cc2961e01d976ee2233aaa41126",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590d\u573a\u666f\u7f16\u8f91\u5668\u751f\u547d\u5468\u671f1",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1c3ad1a207add9365014012ed40890a7ad9c2ded",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u7ee7\u7eed\u9762\u677f\u6392\u7248\u4f18\u5316",
+                            "details": ""
+                        },
+                        {
+                            "hash": "0167415cccc17eecade0b2b8a1501745341e3102",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u7edf\u4e00\u53f3\u952e(PC)\u4e0e\u957f\u6309(Mobile)\u5524\u51fa\u4e0a\u4e0b\u6587\u83dc\u5355\u7684\u903b\u8f91",
+                            "details": ""
+                        },
+                        {
+                            "hash": "09e02654af5751f1dc30bc6879e554fd62836aed",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u68c0\u67e5\u5668\u9762\u677f\u7ed8\u5236\u5168\u9762\u4f18\u53163",
+                            "details": ""
+                        },
+                        {
+                            "hash": "d3e0f4506316718fda7d2e4883eb91cdd206d9ea",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u68c0\u67e5\u5668\u9762\u677f\u7ed8\u5236\u5168\u9762\u4f18\u53162",
+                            "details": ""
+                        },
+                        {
+                            "hash": "54dbed505e3d7a7d3f33c7649d2f3c8e398ebca9",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u68c0\u67e5\u5668\u9762\u677f\u7ed8\u5236\u5168\u9762\u4f18\u53161",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e324e3310451bb0ec08cfb4d6f3830ddc6f809ee",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "Hierarchy \u6811\u6539\u4e3a 30\u5e27/\u79d2 \u9650\u5236\u5237\u65b0\uff0c\u964d\u4f4e\u7a7a\u95f2\u5f00\u9500",
+                            "details": ""
+                        },
+                        {
+                            "hash": "89e27bca574c943e0e8b10867ac662332b709146",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u4e00\u4e9b\u4fee\u590d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "35f66949dbe7fbeff6f5cc64658de766c10f14b1",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590d\u4ece\u4e3b\u9875\u8fdb\u573a\u666f\u6ca1\u6709\u6e32\u67d3\u7cfb\u7edf\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "162be2ebd7cd40385b8e86f513e0794533f53c1a",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u5386\u53f2log\u81ea\u52a8\u590d\u5236\u4efb\u52a1",
+                            "details": ""
+                        },
+                        {
+                            "hash": "84cefe6571ea259671c55e7c78da3e9a029f0bca",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "1.10.7.3 \u5b8c\u6210\u5185\u7f6e\u7248\u672c\u65e5\u5fd7\u529f\u80fd",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1de71819560fd36dd586fba6b8ab7888a953f742",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "\u771f\u5b9emd\u6570\u636e\u89e3\u6790",
+                            "details": ""
+                        },
+                        {
+                            "hash": "836ea6868d00d81ae86b3b828453f28dd76c9c55",
+                            "date": "2026-01-14",
+                            "type": "legacy",
+                            "summary": "1.10.7.2 \u6811\u5f62\u5bfc\u822a\u680f",
+                            "details": ""
+                        },
+                        {
+                            "hash": "6725e147a3873d1db66197a0e57bd09850a8dea3",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.7.1 \u5e03\u5c40\u8c03\u6574",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e968d1be7f766d6f5e0d450f41dd19ad2341091e",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.7.0 \u6e38\u620f\u5185\u7248\u672c\u65e5\u5fd7",
+                            "details": ""
+                        },
+                        {
+                            "hash": "6d24391b8e634726b88b7ed2af7b787b05fcf81a",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.6.2-alpha \u6a21\u677f\u9002\u914d\u66f4\u65b0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "466dd2fac171b6668004e6c92a85768f41b2196e",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.6.1-alpha \u4f18\u5316\u7cfb\u7edf\u521d\u59cb\u5316log\u4fe1\u606f\u53ef\u8bfb\u6027",
+                            "details": ""
+                        },
+                        {
+                            "hash": "8803562c40ef762cd47ee8d3d316ffdef0c961f5",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.6.0-alpha \u66f4\u65b0\u7cfb\u7edf\u91cd\u8bbe\u8ba1\uff0c\u903b\u8f91/\u6e32\u67d3\u5206\u79bb\uff0c\u73b0\u5728\u811a\u672c\u5f00\u53d1\u8005\u53ef\u4ee5\u4f7f\u7528render()api\u8fdb\u884c\u56fe\u50cf\u7ed8\u5236\u5e76\u5728\u7f16\u8f91\u5668\u53ef\u89c6\u5316\u4e86",
+                            "details": ""
+                        },
+                        {
+                            "hash": "6f7eae6ccb686ed27249df1ce04fa9fbda1b8f39",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.5.3-bugfix \u4fee\u590d\u57fa\u7c7b\u611f\u5174\u8da3\u7ec4\u4ef6\u4e0d\u8bc6\u522b\u95ee\u9898, \u4e34\u65f6\u4fee\u590d\u65cb\u8f6c\u7ec4\u4ef6\u6e32\u67d3\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "0cb869bae3b0dd07a04e698bc4099a3c00589e35",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "bdab559b68a069982da6b43e7147ef11533747b8",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.5.0-dev \u5f00\u59cb\u91cd\u6784\u6e32\u67d3\u7cfb\u7edf\u4e0e\u6d41\u7a0b\u8bbe\u8ba1\uff0c\u4ee5\u53ca\u573a\u666f\u9009\u4e2d\u903b\u8f91\u4f7f\u7528\u5012\u5e8f\u6e32\u67d3\u987a\u5e8f\u4e0e\u7ec4\u4ef6\u81ea\u8eabcontains\u5305\u56f4\u76d2\u5b9e\u73b0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "bd85574ba6ead07df6904221db79575e936e4dbc",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590d\u4e86\u81ea\u7531\u76f8\u673a\u65e0\u6cd5\u6eda\u8f6e/\u53cc\u6307\u7f29\u653e\u7684\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "0a00a18d3dc51b7f1a619b83395e0086773be949",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.5.4-alpha \u4f53\u9a8c\u4fee\u6b63, \u73b0\u5728gizmo\u64cd\u4f5c\u6709\u4e00\u4e2a\u8f83\u597d\u7684\u4f53\u9a8c\u4e86",
+                            "details": ""
+                        },
+                        {
+                            "hash": "75ccd3c1d973ddfc430ba019d0b7825c1deba9f5",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.5.3 \u76f8\u673a\u63a7\u5236\u5668\u901a\u7528\u6027\u91cd\u6784, \u4e0e\u624b\u67c4\u7edf\u4e00\u52a8\u753b\u53cd\u9988",
+                            "details": ""
+                        },
+                        {
+                            "hash": "a1598d3db9497a0804c9820a93078b5d9ac15747",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.5.2 \u4f18\u5316\u62c9\u4f38\u624b\u67c4\u64cd\u4f5c\u4f53\u9a8c",
+                            "details": ""
+                        },
+                        {
+                            "hash": "f76b61446c2bd2cd5bbddc467ebb25de4e8e226a",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.5.1 \u62c9\u4f38\u624b\u67c4\u8865\u5168x, y, xy\u64cd\u4f5c",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1f34055acfc58a1eded54fa8f8b9432e209c3d71",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.5.0 \u4fee\u590dTransformComponent\u53d8\u6362\u95ee\u9898, final\u5bf9\u8c61\u65e0\u6cd5\u4fee\u6539\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ff8117e2124d8630ef66e6416d5288f88dca23a4",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "tmp \u6d4b\u8bd5tooltip",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1c379ecc9e9fdfda9c09cba751930262f55401b1",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "tmp visui-skin\u8d44\u6e90",
+                            "details": ""
+                        },
+                        {
+                            "hash": "50e8d17d4cda1274a546543a63420ae8646952e4",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "44d489b5838dbae7995ba47f41e28293fca46638",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.4.3 dist\u5728compileJava\u540e\u81ea\u52a8\u6267\u884c",
+                            "details": ""
+                        },
+                        {
+                            "hash": "98298478f5ec2e5ce491b049d744b65b50e006e0",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.4.2 \u4fee\u6b63\u6240\u6709SoloFight\u9057\u7559\u540d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ad759c76ecbef64001360d00c2a4a88d7073b68a",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.4.1 \u4fee\u6b63\u6d4b\u8bd5, \u4e0eFsm\u4fee\u6b63",
+                            "details": ""
+                        },
+                        {
+                            "hash": "25cb8bf7c499f1f7b20b4eb6bdd7a40ebf7426a5",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.4.0 \u4ece\u539fSoloFight\u72ec\u7acb\u51faGDEngine\u9879\u76ee, \u6b63\u5f0f\u8f6c\u4e3a\u5f15\u64ce\u5f00\u53d1 \u6e05\u7406\u6240\u6709SoloFight\u4ee3\u7801",
+                            "details": ""
+                        },
+                        {
+                            "hash": "de060911c16d49ca5bab31d7860e19087b23d9b8",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.3.3 \u6e05\u7406\u4ee3\u78012 \u6e05\u7406IconEditor\u6240\u6709\u4ee3\u7801(\u8fd9\u91cc\u6709\u6bd4\u8f83\u91cd\u8981\u7684\u53c2\u8003\u8d44\u6599\u4ee5\u540e\u53ef\u4ee5\u56de\u770b, \u4e0d\u8fc7\u770b\u4e5f\u662f\u770bIconEditor\u5dc5\u5cf0\u671f\u5427\u8fd9\u91cc\u5df2\u7ecf\u662f\u66ae\u5e74\u4e86\u90fd\u6539\u574f\u4e86)",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ee12fdd2ce6f0504872b7b5f1241a1467bcc724a",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.3.2 \u6e05\u7406\u4ee3\u78011 \u79fb\u9664\u6240\u6709SoloEditor\u9e21\u808b\u7c7b",
+                            "details": ""
+                        },
+                        {
+                            "hash": "33c9bded19775f0c747f19d2dfb252b6568b63f5",
+                            "date": "2026-01-13",
+                            "type": "legacy",
+                            "summary": "1.10.3.1-bugfix",
+                            "details": ""
+                        },
+                        {
+                            "hash": "4ef83225cd5f6dba612b3c15129efe201cac48cf",
+                            "date": "2026-01-12",
+                            "type": "legacy",
+                            "summary": "1.10.3.0-dev \u771f\u6b63\u7684TransformComponent-\u4f7f\u7528\u5168\u5957Affine2\u77e9\u9635\u53d8\u6362: \u5b8c\u6210\u529f\u80fd\u5f00\u53d1, \u5bf9\u63a5\u6240\u6709\u65e7\u4ee3\u7801\u9002\u914d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "867a87cf0b4329955f5572a2e28be49ee6fd967b",
+                            "date": "2026-01-12",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e3663c58ecef3a4a6ef70d2b097fc5ed6b198259",
+                            "date": "2026-01-12",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "72ffd7dfca70a6b367e74a819363c0cf5873189c",
+                            "date": "2026-01-12",
+                            "type": "legacy",
+                            "summary": "1.10.2.3-alpha \u89e3\u51b3AddCompDialog\u53ea\u663e\u793a\u7528\u6237\u7ec4\u4ef6\uff0c\u5185\u7f6e\u6ca1\u4e86\u7684\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "07d0b158fff0e2764ecef7e82d255778ba3fd0ef",
+                            "date": "2026-01-12",
+                            "type": "legacy",
+                            "summary": "1.10.1.0 \u5168\u65b0\u68c0\u67e5\u5668\u5c5e\u6027\u663e\u793a\u4e0e\u81ea\u5b9a\u4e49\u7ed8\u5236\u67b6\u6784",
+                            "details": ""
+                        },
+                        {
+                            "hash": "283f61401cd4da9aecb933c08c17fdfb8725b82c",
+                            "date": "2026-01-12",
+                            "type": "legacy",
+                            "summary": "1.10.0.2-dev index\u6587\u4ef6\u751f\u6210gradle\u4efb\u52a1\u66f4\u65b0, \u7f16\u8bd1\u5668\u66f4\u65b0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "4397460f733f4bef97f6ec708f3e4525ea5c04a4",
+                            "date": "2026-01-12",
+                            "type": "legacy",
+                            "summary": "1.10.0.1-dev \u5b9e\u73b0\u626b\u63cf\u5f0fAdd Component\u6309\u94ae\u4e0e\u641c\u7d22\u5f0fDialogMenu",
+                            "details": ""
+                        },
+                        {
+                            "hash": "13ca1e3af80b22e9205999a7be00c620c22f4388",
+                            "date": "2026-01-12",
+                            "type": "legacy",
+                            "summary": "1.10.0.0-dev \u589e\u52a0\u7c7b\u52a0\u8f7d\u5668\u7684\u81ea\u52a8\u66f4\u65b0, \u4fee\u590d\u5feb\u6377\u952e\u6620\u5c04\u62a5\u9519",
+                            "details": ""
+                        },
+                        {
+                            "hash": "f114537d935909660d077852250530be67ff1c54",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "md",
+                            "details": ""
+                        },
+                        {
+                            "hash": "f9b3942d7ecbd2aa321a174fa9aced5f62cd434d",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "tmp3 \u9636\u6bb5\u4e00\u5b8c\u6210",
+                            "details": ""
+                        },
+                        {
+                            "hash": "2106b2105dfb2800882a49959cc0f39a7b9a3323",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "tmp2",
+                            "details": ""
+                        },
+                        {
+                            "hash": "a025b4b37d785e62c74782da5a055d36cb76f2a4",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "7fb21b53981ca2dfb6b43944d6a16f63a4de9d45",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "indentFix",
+                            "details": ""
+                        },
+                        {
+                            "hash": "339906c51a360dd22ede857ce2cf0ba258d7a010",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "0851a5e2d7ca354c531a2a8eaa31a85dd61a0f79",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "\u89c6\u53e3\u5207\u6362\u4e0e\u76f8\u673a\u64cd\u4f5c",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ef6bde614ed9084f452301df2aa1efda73371e5d",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "\u5c42\u7ea7\u6811\u624b\u67c4\u8c03\u6574\u56de\u5f52",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e8041ab49ba91f242fefcce0058561033f8ee4d0",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "\u771f\u6b63\u7684\u52a8\u6001\u68c0\u67e5\u5668\u9762\u677f",
+                            "details": ""
+                        },
+                        {
+                            "hash": "21edd0ac9cdada07a8556ab64b15b3ab5e48f6a2",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "\u5feb\u6377\u952e\u64cd\u4f5c",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1640b0a0bf96e7953b0b717e0b31484fb8c933d2",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "Gizmo\u590d\u523b\u8fd8\u539f",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c2d7e1927a647ef0942af8cbe77bba8a7d2b61f3",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590d\u5c42\u7ea7\u9762\u677f\u5237\u65b0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "f8e3323d52c9069547161fb9de7980955ff1b23a",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "\u4fee\u590d\u7236\u5b50\u7ea7\u53d8\u6362",
+                            "details": ""
+                        },
+                        {
+                            "hash": "7d7e187902f724fc25addc1f85648df4c8ded44b",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "\u5e8f\u5217\u5316",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1bd97b0e38b6b034bb8b047b07508d33ac7e8a0b",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "\u5f7b\u5e95\u6448\u5f03\u5783\u573e\u9002\u914d\u5668",
+                            "details": ""
+                        },
+                        {
+                            "hash": "8375254b114b4ec78e8628577aa203d35e5a6758",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ebe608d11bc7f9964c728faf91e8a4ae45ed1f3f",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "bug fix",
+                            "details": ""
+                        },
+                        {
+                            "hash": "d3d4c33795cb589bd51760d7f063ec7d8c59be85",
+                            "date": "2026-01-11",
+                            "type": "legacy",
+                            "summary": "1.9.9.4-fix \u4fee\u590d\u4e00\u5806\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ab5abf54e8f2072f8ae3f17ec98746db93559b81",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "377a111b130e60945c9c51532f612faf2520aff1",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "57b7a6d1cabfe2d78c6b0354a0d203b180f3706f",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "b2ca318a9396d28ef7d40d8273dac63d6fb6507d",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "34696b603c95e998db9ef6c22cb54b2eeac2d33e",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "743087e8913b6c606d92825658f7ece6475f4d8a",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "1.9.10.3-dev \u7ee7\u7eed\u5b9e\u73b0\u5269\u4f59\u5185\u5bb9",
+                            "details": ""
+                        },
+                        {
+                            "hash": "a9c32bcf674e1b8b6f7bcb13d1fc3951c8e6d264",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "1.9.10.2-fix",
+                            "details": ""
+                        },
+                        {
+                            "hash": "3230fccb3fb950da58f5c6f8000b30b8773e6c6a",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "1.9.10.1 \u5b8c\u5168\u7248\u7684\u79fb\u690d, \u4e0d\u8fc7\u8fd8\u6ca1\u6d4b\u8bd5",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e8e6262aa8830ae86783a6654b858d278c1f4911",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "1.9.10.0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "a63a136c68a2371e4a66a51ad598fef784c6098a",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "1.9.9.3-alpha \u5b8c\u6210sceneView\u7684MRS<>\u64cd\u4f5c",
+                            "details": ""
+                        },
+                        {
+                            "hash": "16a20b2fa213ce7f6e0a1f077d64b13033f79fa9",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "1.9.9.2-fix \u4fee\u590d\u573a\u666f\u89c6\u56fe\u70b9\u51fb\u6ca1\u53cd\u5e94\u7684\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "93f57edb788a9a62e24abf05c158e478b328e457",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "1.9.9.1-fix \u4fee\u590d \u6e38\u620f\u89c6\u56fe\u73a9\u5bb6\u770b\u8d77\u6765\u4e0d\u52a8",
+                            "details": ""
+                        },
+                        {
+                            "hash": "ba4e52990c82b772c4bc0e0ae0291029aa248a5f",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "1.9.9.0 \u5b8c\u6210\u901a\u7528\u7f16\u8f91\u5668\u5bf9Ecs\u7cfb\u7edf\u7684\u9002\u914d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "62ce20e6a286e3e3675b975d36e971435273ca74",
+                            "date": "2026-01-10",
+                            "type": "legacy",
+                            "summary": "\u76ee\u5f55\u8fc1\u79fb",
+                            "details": ""
+                        },
+                        {
+                            "hash": "14aa30c348110cb969dcc4daa5a02d4aec8bf648",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "nextstep md",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c679690c08f8e9078b59ba0bcf66adfd10f44176",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "\u5c0f\u95ee\u9898\u4fee\u590d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "749caf5d1b3489b616f05d9e99b99c23620c33dc",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "d3388981474ec4a7d1a88bccf342d7ccefed4579",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "a794056b4da72d315cb117c5bae2bf45777ece29",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "3fdae339effae948ee75a75650982121dccbb44d",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "1.9.8.3",
+                            "details": ""
+                        },
+                        {
+                            "hash": "80228f1c661946651669cd058db6cb9cb3fb99db",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "- [x] \u79fb\u52a8\u64cd\u4f5c\u53ef\u4ee5\u6cbf\u5355\u8f74\u7ebf\u79fb\u52a8",
+                            "details": "- [x] \u4fdd\u5b58\u73b0\u5728\u6709toast\u4ee5\u53catoolbar\u6309\u94ae"
+                        },
+                        {
+                            "hash": "33caae7c2420acd2cb026b4b9819954a74a0714a",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "1.9.7.11-final \u6587\u4ef6\u6811\u64cd\u4f5c\u4e0e\u5168\u5185\u90e8\u7c7b\u72ec\u7acb\u5316\u5230\u6587\u4ef6\u7684\u91cd\u6784",
+                            "details": ""
+                        },
+                        {
+                            "hash": "472ee97cdd5e8461710e717d8bfca0168257f010",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "4af2b46eda4800223f7a89fb904d4230817824db",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "1.9.6.3-beta \u4f53\u9a8c\u4fee\u590d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c138e34ef3abd40696af1544330858cbc8263260",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "1.9.5.2-beta picking\u64cd\u4f5c",
+                            "details": ""
+                        },
+                        {
+                            "hash": "2909309c6f134853c72d1ea807e219d0ab73a22b",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "1.9.4.5-beta undo/redo",
+                            "details": ""
+                        },
+                        {
+                            "hash": "d21613302615d9f41f2a6c52eaf84f6285f39702",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "1.9.3.1-beta \u6e05\u7406\u4f18\u5316",
+                            "details": "- [x] \u6e05\u7406\u4ee3\u7801, \u4ee5\u53ca\u7ed3\u6784\u8bbe\u8ba1\u4e0e\u4f18\u5316\n  - [x] \u5220\u9664\u65f6\u4f1a\u95ea\u9000"
+                        },
+                        {
+                            "hash": "32aa6661f294edf8e463b8ad72385c7a851743f3",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "projectVersion=1.9.2.0-alpha",
+                            "details": ""
+                        },
+                        {
+                            "hash": "fbe225c528362c74b0d2717b34b4f249324624d2",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "1.9.2.0-alpha  - [x] \u4e86\u89e3\u989c\u8272\u88ab\u91cd\u7f6e\u539f\u56e0\u5e76\u4fee\u590dbug",
+                            "details": "- [x] \u987a\u5e8f\u8c03\u6574\u548c\u7236\u5b50\u7ea7\u8c03\u6574\u64cd\u4f5c\u6ca1\u6709\u865a\u62dfgizmo\u53cd\u9988, \u5bb9\u6613\u8bef\u64cd\u4f5c, \u987a\u5e8f\u8c03\u6574\u5e94\u8be5\u589e\u52a0\u865a\u62df\u8fb9\u7ebf\u8868\u793a, \u7236\u5b50\u7ea7\u8c03\u6574\u5e94\u8be5\u589e\u52a0\u7ebf\u6846\u8868\u793a\n- [x] \u6dfb\u52a0\u7269\u4f53\u65f6\u5982\u679c\u540c\u7ea7\u6709\u91cd\u540d\u81ea\u52a8\u8fed\u4ee3+1\n- [x] \u6ca1\u6709json\u89c6\u56fe, \u7ed9inspector\u53d8\u4e3a\u4e24\u4e2atab\u9875, \u7b2c\u4e8c\u9875\u662fjson\u89c6\u56fe, \u91cc\u9762\u663e\u793aBioCodeEditor\u7c7b\u578b\u7684\u6587\u672c\u7f16\u8f91\u5668, \u5e76\u6709\u5e94\u7528\u6309\u94ae\u5728\u4fee\u6539\u540e\u53ef\u4ee5\u5e94\u7528\u5230\u573a\u666f"
+                        },
+                        {
+                            "hash": "2fc53b7672ec9b257806ccf4815952421a0323a2",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "1.9.0.1-alpha - [x] \u8282\u70b9\u4e0d\u80fd\u6539\u540d, \u5e94\u8be5\u53f3\u8fb9name\u5904\u53ef\u4ee5\u6539\u540d",
+                            "details": "- [x] \u68c0\u67e5\u5668\u9762\u677f\u8fd8\u9700\u8981\u663e\u793a\u7269\u4f53\u5f62\u72b6\u7c7b\u578b, \u5e76\u53ef\u66f4\u6539\u5f62\u72b6\n- [x] \u73b0\u5728\u4e0d\u53ef\u8c03\u6574\u8282\u70b9\u6392\u5217\u987a\u5e8f"
+                        },
+                        {
+                            "hash": "5a2da4cc171dd7f736c15aadbdeeebbb9d5cbaef",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "1.9.0.0-alpha - [x] \u6dfb\u52a0\u5b50\u7cfb\u6539\u540d\u4e3a\u6dfb\u52a0\u5f62\u72b6, \u5e76\u53ef\u4ee5\u6dfb\u52a0\u6240\u6709\u7c7b\u578b(\u73b0\u5728\u53ea\u6709\u5706\u5f62\u548c\u77e9\u5f62)",
+                            "details": "- [x] \u62d6\u62fd\u624b\u67c4\u6ca1\u6709\u7edf\u4e00\u5728\u9762\u677f\u53f3\u5bf9\u9f50\n- [x] \u6dfb\u52a0\u64cd\u4f5c\u540ehierarchy\u9009\u4e2d\u72b6\u6001\u6ca1\u4e86"
+                        },
+                        {
+                            "hash": "c0ba4c8f5fb24c55eb8e17984d3fa04623a05763",
+                            "date": "2026-01-09",
+                            "type": "legacy",
+                            "summary": "ai7.2 \u5c42\u7ea7\u62d6\u62fd\u5220\u9664\uff0c\u6709bug",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c8e2fbcbf5d610db303128f0cdaa1a36a4a1c749",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai7-1 \u624b\u67c4\u64cd\u4f5c\u4fee\u590d",
+                            "details": ""
+                        },
+                        {
+                            "hash": "9e2241902158324d4900b4372698220bcb7f8c0f",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai7-0 \u65b0\u589eflatIcon\u8bbe\u8ba1\u5668\u573a\u666f",
+                            "details": ""
+                        },
+                        {
+                            "hash": "222aa24e61678261dad3d2f473e67872ca209286",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "dbcd8f163f60d0f773ff245c93ab779264253208",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai6-7 \u89e3\u51b3\u591a\u989c\u8272",
+                            "details": ""
+                        },
+                        {
+                            "hash": "207be13fa12f0bcee1e8508431ffa28d119cad6f",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai6-6 toast\u5706\u89d2\u80cc\u666f",
+                            "details": ""
+                        },
+                        {
+                            "hash": "30c7a410baaa601f31f3b78b7a6bd20b8403fe13",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai6-5 \u89e3\u51b3\u5b57\u4f53\u7cca\u7684\u95ee\u9898\u548c\u6539\u4e3a\u4e2d\u6587\u63cf\u8ff0",
+                            "details": ""
+                        },
+                        {
+                            "hash": "bd5f04c3e94cfa739f61ab6fb152209b4d83e85e",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai6-4 \u5b9e\u73b0\u81ea\u52a8\u5207\u56fe\u7684\u8d44\u6e90\u63cf\u8ff0\u6587\u4ef6",
+                            "details": ""
+                        },
+                        {
+                            "hash": "4d8f5e8b076e1e51e5d8f813777fd213421a0c1f",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai6-3 toast\u5c45\u4e2d, icon\u8d44\u6e90",
+                            "details": ""
+                        },
+                        {
+                            "hash": "fca71b7ea520ce1eb3bee00c25acefef1062ae0f",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai6-2 \u5bcc\u6587\u672c\u73b0\u5728\u53ef\u4ee5\u663e\u793a\u4e86",
+                            "details": ""
+                        },
+                        {
+                            "hash": "df8820207617a6ffddb615a7e368f475c7d2650c",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai6 \u5bcc\u6587\u672c",
+                            "details": ""
+                        },
+                        {
+                            "hash": "b8663bdbc71dfb7b5f8ec22ff381100983feb919",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "md",
+                            "details": ""
+                        },
+                        {
+                            "hash": "7afed1324efeafac4ad2d6fc761dab3caec61fe6",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "\u7a0d\u5fae\u89e3\u51b3\u4e0b\u5b57\u4f53\u6a21\u7cca\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "e9bcf5b0935165db8c45f8a3b4b7550190c502fd",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "9bf400c6b5cfde436a88692f7aa495282bffaf3d",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "tmp",
+                            "details": ""
+                        },
+                        {
+                            "hash": "7dc9db2c614a5774167694b95320947b84b2cb44",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai5-2 \u589e\u52a0javadocJar\u6253\u5305",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c89d0e4b4ee03593ed946bc1917f84f171148dad",
+                            "date": "2026-01-08",
+                            "type": "legacy",
+                            "summary": "ai5 \u589e\u52a0\u6587\u6863\u5f00\u53d1\u65b9\u6848\u4e0e\u8bd5\u70b9Gd\u6587\u6863",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c4baa8f32992cac33ac3702344af3742a6957f5b",
+                            "date": "2026-01-07",
+                            "type": "legacy",
+                            "summary": "ai4 EditorController\u91cd\u5199\u4e3aEcsWorld\u5e76\u79fb\u9664\u65e7\u6d4b\u8bd5GameWorld\u76f8\u5173",
+                            "details": ""
+                        },
+                        {
+                            "hash": "9c57f450210f648e49e68855cb93809fa54f32e1",
+                            "date": "2026-01-07",
+                            "type": "legacy",
+                            "summary": "ai3 screenCenterFix betaPassed",
+                            "details": ""
+                        },
+                        {
+                            "hash": "d93ce4a4f52c4eaf8b28ee6d82cfd3ace16522f7",
+                            "date": "2026-01-07",
+                            "type": "legacy",
+                            "summary": "a2 screenCenterFix dev1",
+                            "details": ""
+                        },
+                        {
+                            "hash": "00df6aca50f3caa243e92c5e87e530e47fbf23b1",
+                            "date": "2026-01-07",
+                            "type": "legacy",
+                            "summary": "ai1,tran refactor",
+                            "details": ""
+                        },
+                        {
+                            "hash": "09160f02c970e27d5edbd5371b9c3938cf34f181",
+                            "date": "2026-01-07",
+                            "type": "legacy",
+                            "summary": "\u573a\u666f\u9009\u62e9\u5173\u6ce8\u7126\u70b9\u8c03\u6574\u4e3a\u65b0\u5f15\u64ce\u7f16\u8f91\u5668",
+                            "details": ""
+                        }
                     ]
                 }
             ]

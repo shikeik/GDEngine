@@ -165,13 +165,13 @@ outputs/GDEngine.exe4j
 /outputs/error.log
 /outputs/shortcuts.json
 
-changes.diff
-changes.txt
-git_logs.txt
-ProjectCode.txt
-ProjectTree.txt
-saves/
-docs/tmp/
+/changes.diff
+/changes.txt
+/git_logs.txt
+/ProjectCode.txt
+/ProjectTree.txt
+/saves/
+/docs/tmp/
 
 # GDEngine Config (Local Preferences)
 #GDEngine/LocalTemplates/
@@ -179,12 +179,12 @@ docs/tmp/
 #GDEngine/engine_docs/
 #GDEngine/engine_config.json
 /GDEngine/
-assets/engine.index
-assets/engine/libs/
-assets/assets.txt
-assets/docs/ProjectHistoryLog.md
+/assets/engine.index
+/assets/engine/libs/
+/assets/assets.txt
+/assets/docs/ProjectHistoryLog.md
 
-.temp/
+/.temp/
 /ProjectGradle.txt
 /logs.txt
-# docs/engine_docs/changelog/changelog.json
+# /docs/engine_docs/changelog/changelog.json
