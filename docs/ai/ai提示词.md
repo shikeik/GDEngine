@@ -5,6 +5,7 @@
 代码设计原则:
 代码复用/逻辑统一性(避免重复代码), OCP原则, 做好封装内聚, 易于扩展
 ui架构使用MVP来灵活管理我们的大型ui编辑器结构
+engine_docs使用定制化Docsify搭建静态网站页面
 
 项目配置: java17, libgdx1.12.1, gdx-freetype, vis-ui_1.5.3
 平台: Android, Windows双端
@@ -17,6 +18,7 @@ ui架构使用MVP来灵活管理我们的大型ui编辑器结构
 如果项目中有类似功能且设计优秀，则尽量借鉴项目中优秀实现来完成
 尽量写出易于扩展和内聚良好的代码，以便给出代码时可以不用这里改一点那里改一点
 
+文件阅览顺序: GDEngine_项目概览报表 -> ProjectTree -> ProjectGradle -> ProjectCode -> ProjectDocsCode
 
 
 常用提示词  
