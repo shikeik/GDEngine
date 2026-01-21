@@ -186,5 +186,6 @@ outputs/GDEngine.exe4j
 
 /.temp/
 /ProjectGradle.txt
+Project*.txt
 /logs.txt
 # /docs/engine_docs/changelog/changelog.json

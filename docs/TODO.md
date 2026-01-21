@@ -2,6 +2,10 @@ ignored: indentFix codeFormatFix
 
 ## 待办
 
+优化ai提示词
+
+增加1个指令来合批执行任务，一键更新，一键发布...
+
 学习多子模块并运用
 
 做个单独的任务管理app用于todo管理
