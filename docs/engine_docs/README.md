@@ -25,4 +25,4 @@
 [当前最全的引擎概览(AI撰写)](manual/GDEngine_项目概览报表.md)
 
 ### 当前bug罗列
-- 用户项目必须含有一个自定义组件继承任何Component及其子类否则AddCompDialog清单将不触发刷新，显示为空
+- [已解决] ~~用户项目必须含有一个自定义组件继承任何Component及其子类否则AddCompDialog清单将不触发刷新，显示为空~~

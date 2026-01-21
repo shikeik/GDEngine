@@ -1,56 +1,50 @@
 # ECS 架构详解
 
-GDEngine 的 ECS (Entity-Component-System) 实现了数据与逻辑的分离，但保留了类似 Unity 的层级图（Scene Graph）易用性。
+GDEngine 实现了高性能的 ECS (Entity-Component-System) 架构，同时为了易用性，保留了类似 Unity 的 Scene Graph (场景图) 接口。
 
-## 1. Entity (实体)
-**对应类：** `com.goldsprite.gdengine.ecs.entity.GObject`
+## 核心三要素
 
-实体是场景中的基本单元。
-*   **强制组件：** 每个 `GObject` 在构造时会自动添加一个 `TransformComponent`，不可移除。
-*   **层级关系：** 支持父子嵌套 (`setParent`)。子物体的变换（位移/旋转/缩放）是相对于父物体的。
-*   **生命周期：** 由 `GameWorld` 的 `rootEntities` 列表管理顶层物体，子物体由父级递归驱动。
+### 1. Entity (实体)
+对应类：`com.goldsprite.gdengine.ecs.entity.GObject`
 
-## 2. Component (组件)
-**对应类：** `com.goldsprite.gdengine.ecs.component.Component`
+*   **Transform 绑定**：所有 `GObject` 天生拥有 `transform` (`TransformComponent`)，不可移除。
+*   **层级系统**：支持 `setParent(GObject parent)`。
+    *   子物体的 `worldPosition` = 父物体变换矩阵 * 子物体局部变换。
+    *   这使得你可以像传统引擎一样构建复杂的物体层级。
 
-组件是数据的载体，也可以包含针对单个物体的逻辑。
-*   **依赖注入：** 组件被添加时，会自动注入 `gobject` 和 `transform` 引用。
-*   **多态支持：** `getComponent(Class)` 支持查找子类组件。
-*   **核心组件：**
-	*   `TransformComponent`: 核心变换，维护 Local 和 World 两套矩阵。
-	*   `SpriteComponent`: 基础图片渲染。
-	*   `NeonAnimatorComponent`: 骨骼动画控制器。
+### 2. Component (组件)
+对应类：`com.goldsprite.gdengine.ecs.component.Component`
 
-## 3. System (系统)
-**对应类：** `com.goldsprite.gdengine.ecs.system.BaseSystem`
+*   **数据载体**：组件主要用于存储数据（如 `SpriteComponent` 存储图片路径和颜色）。
+*   **逻辑载体**：组件也可以包含逻辑 (`update`)，但这是为了方便。在纯粹 ECS 中，逻辑应由 System 处理。
+*   **自动注入**：组件实例化时，会自动获得 `gobject` 和 `transform` 的引用。
 
-系统负责处理特定类型的组件集合。
+### 3. System (系统)
+对应类：`com.goldsprite.gdengine.ecs.system.BaseSystem`
 
-### 注册与筛选
-系统在实例化时会自动注册到 `GameWorld`。系统必须通过注解声明它关心的组件：
+系统负责处理特定的逻辑。它通过筛选器（Filter）来获取它关心的实体。
+
+**示例：编写一个旋转系统**
 
 ```java
+// 声明：这是一个 UPDATE 类型的系统，且只关心持有 TransformComponent 的物体
 @GameSystemInfo(
     type = SystemType.UPDATE,
-    interestComponents = { SkeletonComponent.class }
+    interestComponents = { TransformComponent.class }
 )
-public class SkeletonSystem extends BaseSystem {
+public class RotateSystem extends BaseSystem {
+    
     @Override
     public void update(float delta) {
-        // 这里的 getInterestEntities() 会利用 ComponentManager 的缓存
-        // 仅返回持有 SkeletonComponent 的实体，O(1) 复杂度
+        // getInterestEntities() 利用缓存实现了 O(1) 获取
         List<GObject> targets = getInterestEntities();
+        
         for (GObject obj : targets) {
-            // ...
+            obj.transform.rotation += 90 * delta;
         }
     }
 }
 ```
-
-### 内置核心系统
-*   **SceneSystem:** 驱动所有 `GObject` 的 `update` 和生命周期（Start/Destroy）。
-*   **WorldRenderSystem:** 收集所有 `RenderComponent`，按 Layer 排序并绘制。
-
 
 ### 常用 API
 ```java
@@ -66,3 +60,13 @@ SpriteComponent sprite = player.addComponent(SpriteComponent.class);
 // 获取组件
 TransformComponent trans = player.getComponent(SpriteComponent.class);
 ```
+
+## 性能优化机制 (实证)
+
+根据 `ComponentManager.java` 源码：
+*   **BitSet 掩码**：每个实体都有一个 `BitSet` 签名，表示它拥有哪些组件。
+*   **查询缓存**：系统查询的结果会被缓存。当实体的组件发生增删时，管理器会进行**增量更新 (Incremental Update)**，而不是全量重新扫描。
+
+
+# 重要补充！
+当前GameWorld默认内置系统只有SceneSystem与WorldRenderSystem, 如需运行其他逻辑：例如动画更新，或任何自定义系统逻辑请在入口类处自行实例化系统(自动注册)
