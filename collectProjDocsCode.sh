@@ -24,9 +24,16 @@ INCLUDE_PATTERN="\.*$"
 EXCLUDE_PATTERN="\.sh|Project.*\.txt$|/GDEngine/|/build/|/bin/|/\.git/|/target/|/\.idea/|/out/|/assets/|/javadoc/|\.png$|\.jpg$|changelog\.json$"
 
 # ============================
+# 3.0. 执行源相对路径 ./ 为当前
+# ============================
+CHILD_DIR="docs/engine_docs/"
+
+# ============================
 # 3. 输出文件名
 # ============================
-OUTPUT_FILE="ProjectDocsCode.txt"
+# 使用 $(pwd) 锁定当前脚本所在的绝对路径
+# 这样无论后面 cd 到哪里，文件都会生成在脚本旁边，而不是子目录里
+OUTPUT_FILE="$(pwd)/ProjectDocsCode.txt"
 
 # ============================
 # 4. 执行逻辑
@@ -37,6 +44,9 @@ echo "排除规则: $EXCLUDE_PATTERN"
 
 # 获取当前脚本的文件名，用于排除自身
 SCRIPT_NAME=$(basename "$0")
+
+# cd到docs目录
+cd $CHILD_DIR
 
 # 逻辑解释：
 # 1. find ...             -> 找文件

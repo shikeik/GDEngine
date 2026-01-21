@@ -5,8 +5,11 @@
 
 # ================= 配置区域 =================
 
+# 执行源相对路径 ./ 为当前
+CHILD_DIR="docs/engine_docs/"
+
 # 1. 输出文件名
-OUTPUT_FILE="ProjectTree.txt"
+OUTPUT_FILE="$(pwd)/ProjectDocsTree.txt"
 
 # 2. 要排除的关键词 (用空格分隔的字符串，不要用括号)
 EXCLUDE_KEYWORDS="build .git .idea .gradle .run"
@@ -104,6 +107,7 @@ traverse_dir() {
 }
 
 # 主程序
+cd $CHILD_DIR
 (
     echo "项目目录结构: $(pwd)"
     echo ""
