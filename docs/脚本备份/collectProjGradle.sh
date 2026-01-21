@@ -14,7 +14,7 @@
 # 例子 B: 想要所有文件 (慎用！会包含图片和二进制文件)
 # INCLUDE_PATTERN=".*"
 
-INCLUDE_PATTERN="\.java$"
+INCLUDE_PATTERN="\.gradle$"
 
 # ============================
 # 2. 设置排除的目录关键词 (使用正则表达式)
@@ -26,7 +26,7 @@ EXCLUDE_PATTERN="/GDEngine/GDEngine/|/build/|/bin/|/\.git/|/target/|/\.idea/|/ou
 # ============================
 # 3. 输出文件名
 # ============================
-OUTPUT_FILE="ProjectCode.txt"
+OUTPUT_FILE="ProjectGradle.txt"
 
 # ============================
 # 4. 执行逻辑
