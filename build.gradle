@@ -86,3 +86,5 @@ apply from: 'gradle/docs-preview.gradle'
 
 apply from: 'gradle/publish-docs.gradle'
 apply from: 'gradle/publish-template.gradle'
+
+apply from: "gradle/publish-executables.gradle"

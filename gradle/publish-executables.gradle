@@ -1,6 +1,10 @@
 // ============================================================
-// 全自动发布流水线 (Auto Release Pipeline) - V3.1
-// [修正] Tag 不带 'v' 前缀，完全遵循语义化版本 (x.y.z)
+// 全自动发布流水线 (Auto Release Pipeline) - V4.0 (Final Fix)
+// 核心职责:
+// 1. 读取 RELEASE_NOTE.md 确定版本
+// 2. 强行同步 gradle.properties、BuildConfig、README
+// 3. 调用各模块构建
+// 4. 归档到 dist/release 并推送 Git
 // ============================================================
 
 import java.nio.charset.StandardCharsets
@@ -10,9 +14,13 @@ ext {
     OUTPUTS_DIR = file("${rootProject.rootDir}/outputs")
     RELEASE_NOTE_FILE = file("${rootProject.rootDir}/RELEASE_NOTE.md")
     PROP_FILE = file("${rootProject.rootDir}/gradle.properties")
+    
+    // 核心源码文件位置 (用于强行注入版本)
+    BUILD_CONFIG_FILE = file("${rootProject.rootDir}/core/src/main/java/com/goldsprite/gdengine/BuildConfig.java")
+    README_FILE = file("${rootProject.rootDir}/README.md")
 }
 
-// --- [配置阶段版本注入] ---
+// --- [第一步] 配置阶段：确定目标版本 ---
 String targetVersion = null
 
 // 1. 优先检查命令行参数 -PtargetVer=...
@@ -24,9 +32,7 @@ if (project.hasProperty("targetVer")) {
 else if (RELEASE_NOTE_FILE.exists()) {
     def lines = RELEASE_NOTE_FILE.readLines("UTF-8")
     if (!lines.isEmpty()) {
-        // 去掉可能存在的 # 号和空格
         def rawVer = lines[0].replace("#", "").trim()
-        // 简单校验是否像个版本号
         if (rawVer.matches(/\d+(\.\d+)+.*/)) {
             targetVersion = rawVer
             println "📝 [配置] 从发布文档读取版本: ${targetVersion}"
@@ -34,8 +40,11 @@ else if (RELEASE_NOTE_FILE.exists()) {
     }
 }
 
-// 覆盖当前运行时的版本配置
-if (targetVersion != null) {
+if (targetVersion == null) {
+    // 如果没找到版本，为了不让 Gradle 报错，给个占位符，但在执行任务时会拦截
+    targetVersion = "0.0.0.ERROR"
+} else {
+    // 覆盖内存中的版本，确保 APK 文件名生成正确
     allprojects {
         version = targetVersion
         project.version = targetVersion
@@ -47,80 +56,103 @@ if (targetVersion != null) {
 
 tasks.register('publishExecutables') {
     group = 'gdengine-publish'
-    description = '一键发布：改版本->构建->归档->Git提交->推送'
+    description = '一键发布：同步版本->构建->归档->Git提交'
 
-    // 1. 环境准备
+    // 0. 安全拦截
+    if (targetVersion.contains("ERROR")) {
+        throw new GradleException("❌ 无法确定发布版本！请确保 RELEASE_NOTE.md 第一行为版本号 (如 1.10.12.21)")
+    }
+
+    // 1. 建立任务依赖 (使用 project 引用，避免字符串路径解析错误)
+    // 注意：这里使用 evaluationDependsOn 确保子项目已配置
+    evaluationDependsOn(':core')
+    evaluationDependsOn(':lwjgl3')
+    evaluationDependsOn(':android')
+
+    dependsOn project(':core').tasks.getByName('compileJava') // 确保核心编译
+    dependsOn project(':core').tasks.getByName('copyEngineLibs')
+    dependsOn project(':core').tasks.getByName('packageEngineCore')
+    dependsOn project(':lwjgl3').tasks.getByName('jar')       // PC JAR
+    dependsOn project(':android').tasks.getByName('assembleRelease') // Android APK
+
+    // 2. [核心] 执行前的环境准备与文件修改
     doFirst {
-        if (targetVersion == null) {
-            throw new GradleException("❌ 无法确定发布版本！请确保 RELEASE_NOTE.md 第一行为版本号 (如 1.10.12.21)")
-        }
+        println "🚀 [1/5] 开始发布流程: ${targetVersion}"
         
-        println "🚀 [1/6] 开始发布流程: ${targetVersion}" // [修正] 去掉 V 前缀显示
-        
-        // 更新 gradle.properties (持久化)
+        // A. 物理更新 gradle.properties (持久化)
         updatePropertiesFile(targetVersion)
         
-        // 清理发布目录
+        // B. 强行更新 BuildConfig.java (解决 Core 模块配置阶段任务滞后的问题)
+        forceUpdateBuildConfig(targetVersion)
+        
+        // C. 强行更新 README.md
+        forceUpdateReadme(targetVersion)
+        
+        // D. 清理发布目录
+        println "🧹 [2/5] 清理发布目录 (dist/release)..."
         delete DIST_RELEASE_DIR
         DIST_RELEASE_DIR.mkdirs()
     }
 
-    // 2. 依赖构建
-    // 强制编译 Core 以更新 BuildConfig/README
-    dependsOn ":core:compileJava"
-    dependsOn rootProject.tasks.named('generateChangelog')
-    dependsOn ":core:copyEngineLibs"
-    dependsOn ":core:packageEngineCore"
-    dependsOn ":lwjgl3:jar"
-    dependsOn ":android:assembleRelease"
-
     // 3. 归档与 Git 操作
     doLast {
-        println "📦 [3/6] 归档产物..."
+        println "📦 [4/5] 归档产物..."
         
-        // [修正] 文件名依然保留 V 前缀 (这是文件名规范，不仅是 Tag 规范)
-        // 例如: GDEngine_V1.10.12.21.apk
         def expectedApk = "GDEngine_V${targetVersion}.apk"
         def expectedJar = "GDEngine_V${targetVersion}.jar"
 
+        // 执行搬运
         copy {
             from OUTPUTS_DIR
             into DIST_RELEASE_DIR
+            // 精确匹配，绝不含糊
             include expectedJar
             include expectedApk
+            // 预留 EXE
             include "GDEngine_V${targetVersion}.exe"
         }
 
+        // 校验产物
         File distApk = new File(DIST_RELEASE_DIR, expectedApk)
-        if (!distApk.exists()) throw new GradleException("❌ APK 产物未找到: ${expectedApk}")
+        if (!distApk.exists()) {
+            println "❌ [严重错误] APK 产物未找到: ${expectedApk}"
+            println "   请检查 Android 构建日志，确认 app-release.jks 签名是否配置正确。"
+            throw new GradleException("APK 构建失败")
+        }
         
         println "✅ 产物已就绪: dist/release/ (APK & JAR)"
 
         // --- Git 自动化 ---
-        // 注意：Git Tag 不带 'v'
+        println "🐙 [5/5] 执行 Git 自动化流程..."
         
-        println "🐙 [4/6] 执行 Git 提交..."
+        // 1. 添加所有变动 (包括 gradle.properties, BuildConfig, dist 里的二进制)
         runCmd("git add .") 
+        
+        // 2. 提交
         runCmd("git commit -m \"chore: release ${targetVersion}\"")
 
-        println "🏷️ [5/6] 打 Tag..."
-        // 尝试删除本地同名 tag
+        // 3. 处理 Tag
+        // 尝试删除本地同名 tag (防止重打报错)
         try { runCmd("git tag -d ${targetVersion}") } catch(e){}
         
-        // [修正] Tag 名称不带 v，直接用 targetVersion
-        // -F 读取 RELEASE_NOTE.md 作为 Tag 说明
+        // 使用 -F 读取 RELEASE_NOTE.md 作为 Tag 说明
         runCmd("git tag -a ${targetVersion} -F RELEASE_NOTE.md")
 
-        println "🚀 [6/6] 推送到远程仓库..."
+        // 4. 推送
+        println "🚀 正在推送到远程仓库 (代码 + Tag)..."
         runCmd("git push origin main") 
-        // [修正] 推送不带 v 的 Tag
         runCmd("git push origin ${targetVersion}")
 
-        println "\n🎉🎉🎉 发布完成！版本: ${targetVersion} 🎉🎉🎉"
+        println "\n🎉🎉🎉 发布流程全部完成！版本: ${targetVersion} 🎉🎉🎉"
+        println "👉 GitHub Actions 将会自动分发 release 附件。"
+        println "👉 引擎文档下载页将自动更新链接。"
     }
 }
 
-// --- 辅助方法 (保持不变) ---
+// ============================================================
+// 辅助方法区
+// ============================================================
+
 def updatePropertiesFile(String newVer) {
     if (!PROP_FILE.exists()) return
     def lines = PROP_FILE.readLines("UTF-8")
@@ -136,8 +168,30 @@ def updatePropertiesFile(String newVer) {
     }
     if (updated) {
         PROP_FILE.withWriter("UTF-8") { writer -> outLines.forEach { writer.writeLine(it) } }
-        println "💾 gradle.properties 已更新为 ${newVer}"
+        println "💾 已更新 gradle.properties -> ${newVer}"
     }
+}
+
+def forceUpdateBuildConfig(String newVer) {
+    if (!BUILD_CONFIG_FILE.exists()) {
+        println "⚠️ 未找到 BuildConfig.java，跳过更新"
+        return
+    }
+    def content = BUILD_CONFIG_FILE.getText("UTF-8")
+    // 使用正则替换 DEV_VERSION = "..."
+    def newContent = content.replaceAll(/DEV_VERSION = ".*?"/, "DEV_VERSION = \"${newVer}\"")
+    BUILD_CONFIG_FILE.write(newContent, "UTF-8")
+    println "💾 已强行更新 BuildConfig.java -> ${newVer}"
+}
+
+def forceUpdateReadme(String newVer) {
+    if (!README_FILE.exists()) return
+    def content = README_FILE.getText("UTF-8")
+    // 替换 # GDEngine ... Vxxx
+    // 假设 README 标题格式相对固定
+    def newContent = content.replaceFirst(/V\d+(\.\d+)+/, "V${newVer}")
+    README_FILE.write(newContent, "UTF-8")
+    println "💾 已更新 README.md 标题 -> V${newVer}"
 }
 
 def runCmd(String cmd) {
@@ -147,7 +201,7 @@ def runCmd(String cmd) {
     proc.waitFor()
     if (proc.exitValue() != 0) {
         println "❌ 命令执行失败: ${cmd}"
-        println proc.err.text
+        println "   错误信息: " + proc.err.text
         throw new GradleException("Git 操作失败")
     }
 }
