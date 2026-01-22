@@ -6,7 +6,11 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.util.TypedValue;
-import android.view.*;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -23,56 +27,103 @@ import com.goldsprite.gdengine.screens.ScreenManager;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Android 内嵌浏览器 (重构版)
+ * 特性：MVP 结构、动态网格菜单、分页支持、全屏沉浸
+ */
 public class AndroidWebBrowser implements IWebBrowser {
+
+	// --- Inner Models ---
+	private static class ToolAction {
+		String icon;
+		String label;
+		Runnable action;
+
+		public ToolAction(String icon, String label, Runnable action) {
+			this.icon = icon;
+			this.label = label;
+			this.action = action;
+		}
+	}
+
+	// --- Core State ---
 	private final Activity activity;
 	private Dialog webDialog;
 	private WebView webView;
-
-	// UI Components references for Theme update
-	private FrameLayout modalOverlay;
-	private LinearLayout menuPanel;
-	private LinearLayout bottomBar;
-	private final List<TextView> themeTextList = new ArrayList<>(); // 所有的文本/图标引用
-	private final List<View> themeBgList = new ArrayList<>();       // 需要改背景色的容器
-
 	private boolean isNightMode = false;
 
-	// [新增] UA 相关变量
+	// UA State
 	private String defaultUA;
 	private boolean isDesktopMode = false;
 	private static final String DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
+	// --- UI References ---
+	private FrameLayout modalOverlay;
+	private LinearLayout menuPanel;
+	private GridLayout menuGrid;
+	private LinearLayout paginationPanel;
+	private LinearLayout bottomBar;
+
+	// Theme Registry
+	private final List<View> bgViews = new ArrayList<>();
+	private final List<TextView> themeTextList = new ArrayList<>();
+
+	// --- Menu Data ---
+	private final List<ToolAction> tools = new ArrayList<>();
+	private int currentPage = 0;
+	private static final int PAGE_SIZE = 8; // 4x2
+
 	public AndroidWebBrowser(Activity activity) {
 		this.activity = activity;
+		initToolActions();
 	}
 
-	// [新增] 切换 UA 模式方法
-	private void toggleDesktopMode() {
-		if (webView == null) return;
+	// ============================================================
+	// 1. Logic Layer: Action Registry
+	// ============================================================
 
-		WebSettings settings = webView.getSettings();
-		// 第一次切换时保存原始 UA
-		if (defaultUA == null) defaultUA = settings.getUserAgentString();
+	private void initToolActions() {
+		tools.clear();
 
-		isDesktopMode = !isDesktopMode;
+		// Slot 1: 夜间模式
+		tools.add(new ToolAction("🌗", "夜间模式", () -> {
+			toggleNightMode();
+			toggleMenu();
+		}));
 
-		settings.setUserAgentString(isDesktopMode ? DESKTOP_UA : defaultUA);
-		settings.setLoadWithOverviewMode(true);
-		settings.setUseWideViewPort(true);
+		// Slot 2: 桌面/移动切换
+		tools.add(new ToolAction("🖥️", "桌面视图", () -> {
+			toggleDesktopMode();
+			toggleMenu();
+		}));
 
-		// 必须重载页面才能生效
-		webView.reload();
+		// Slot 3: 刷新
+		tools.add(new ToolAction("↻", "刷新页面", () -> {
+			if (webView != null) webView.reload();
+			toggleMenu();
+		}));
 
-		Toast.makeText(activity, isDesktopMode ? "桌面模式 (显示侧边栏)" : "移动模式", Toast.LENGTH_SHORT).show();
+		// Slot 4: 前进
+		tools.add(new ToolAction("→", "前进", () -> {
+			if (webView != null && webView.canGoForward()) webView.goForward();
+			toggleMenu();
+		}));
+
+		// Fillers for testing pagination (Slot 5-18)
+		for (int i = 5; i <= 18; i++) {
+			tools.add(new ToolAction("○", "预留 " + i, null));
+		}
 	}
+
+	// ============================================================
+	// 2. IWebBrowser Implementation
+	// ============================================================
 
 	@Override
 	public void openUrl(String url, String title) {
 		activity.runOnUiThread(() -> {
-			if (ScreenManager.getInstance() != null) {
-				ScreenManager.getInstance().setOrientation(ScreenManager.Orientation.Portrait);
-			}
-			showWebDialog(url, title);
+			forceOrientation(ScreenManager.Orientation.Portrait);
+			showDialog(url);
 		});
 	}
 
@@ -82,235 +133,266 @@ public class AndroidWebBrowser implements IWebBrowser {
 			if (webDialog != null && webDialog.isShowing()) {
 				webDialog.dismiss();
 			}
-			if (ScreenManager.getInstance() != null) {
-				ScreenManager.getInstance().setOrientation(ScreenManager.Orientation.Landscape);
-			}
+			forceOrientation(ScreenManager.Orientation.Landscape);
 		});
 	}
 
 	@Override
-	public boolean isEmbedded() {
-		return true;
-	}
+	public boolean isEmbedded() { return true; }
 
-	private void showWebDialog(String url, String title) {
-		if (webDialog == null) {
-			initDialog();
-		}
-		// Reset UI State
+	// ============================================================
+	// 3. View Building Layer (Initialization)
+	// ============================================================
+
+	private void showDialog(String url) {
+		if (webDialog == null) buildDialog();
+
+		// Reset State
 		if (modalOverlay != null) modalOverlay.setVisibility(View.GONE);
-
-		// 重置夜间模式状态
-		if (isNightMode) toggleNightMode();
+		if (isNightMode) toggleNightMode(); // Reset to Day
+		currentPage = 0;
 
 		webView.loadUrl(url);
-
-		// [回滚修复] 移除 focusable hack，回归最纯粹的显示逻辑
-		// 这能避免 Dialog 闪烁或露出底部 Activity
 		webDialog.show();
-
-		Window window = webDialog.getWindow();
-		if (window != null) {
-			// 再次确保全屏属性
-			window.getDecorView().setSystemUiVisibility(getImmersiveFlags());
-			window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-		}
+		applyWindowFlags(webDialog.getWindow());
 	}
 
-	private void initDialog() {
-		// 使用全屏 Theme
+	private void buildDialog() {
+		// A. Window Setup
 		webDialog = new Dialog(activity, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
 		webDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-		// [核心修复] 强制清除 Dialog 默认边距，确保铺满全屏 (覆盖顶部状态栏区域)
-		Window window = webDialog.getWindow();
-		if (window != null) {
-			window.getDecorView().setPadding(0, 0, 0, 0); // 关键：清除 Padding
-			WindowManager.LayoutParams lp = window.getAttributes();
-			lp.width = WindowManager.LayoutParams.MATCH_PARENT;
-			lp.height = WindowManager.LayoutParams.MATCH_PARENT;
-			// 适配刘海屏，允许内容延伸到刘海区域
-			if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+		Window win = webDialog.getWindow();
+		if (win != null) {
+			win.getDecorView().setPadding(0, 0, 0, 0); // No padding
+			win.setBackgroundDrawable(null);
+			win.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+				WindowManager.LayoutParams lp = win.getAttributes();
 				lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+				win.setAttributes(lp);
 			}
-			window.setAttributes(lp);
-			window.setBackgroundDrawable(null);
 		}
 
+		// B. Clear Theme Cache
+		bgViews.clear();
 		themeTextList.clear();
-		themeBgList.clear();
 
-		// --- Root ---
+		// C. Layout Construction
 		FrameLayout rootFrame = new FrameLayout(activity);
-		rootFrame.setBackgroundColor(Color.WHITE); // 确保不透明
+		rootFrame.setBackgroundColor(Color.WHITE);
 
-		// --- Content Layer (Vertical Linear) ---
-		LinearLayout contentLayout = new LinearLayout(activity);
-		contentLayout.setOrientation(LinearLayout.VERTICAL);
+		// Content Layer
+		LinearLayout contentCol = new LinearLayout(activity);
+		contentCol.setOrientation(LinearLayout.VERTICAL);
 
-		// WebView (Weight=1, 占据剩余空间)
+		setupWebView();
+		contentCol.addView(webView, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+		View toolbar = setupBottomToolbar();
+		contentCol.addView(toolbar);
+
+		rootFrame.addView(contentCol);
+
+		// Overlay Layer
+		setupMenuOverlay(rootFrame, dp2px(45)); // 45dp is toolbar height
+
+		// D. Finalize
+		webDialog.setContentView(rootFrame);
+		updateThemeColors(false);
+		setupBackKey();
+	}
+
+	private void setupWebView() {
 		webView = new WebView(activity);
-		WebSettings settings = webView.getSettings();
-		settings.setJavaScriptEnabled(true);
-		settings.setDomStorageEnabled(true);
-		settings.setUseWideViewPort(true);
-		settings.setLoadWithOverviewMode(true);
-		settings.setSupportZoom(true);
-		settings.setBuiltInZoomControls(true);
-		settings.setDisplayZoomControls(false);
+		WebSettings s = webView.getSettings();
+		s.setJavaScriptEnabled(true);
+		s.setDomStorageEnabled(true);
+		s.setUseWideViewPort(true);
+		s.setLoadWithOverviewMode(true);
+		s.setSupportZoom(true);
+		s.setBuiltInZoomControls(true);
+		s.setDisplayZoomControls(false);
 
 		webView.setWebViewClient(new WebViewClient() {
-			@Override
-			public boolean shouldOverrideUrlLoading(WebView view, String url) {
-				return !url.startsWith("http");
-			}
+			@Override public boolean shouldOverrideUrlLoading(WebView v, String u) { return !u.startsWith("http"); }
 		});
 		webView.setWebChromeClient(new WebChromeClient());
+	}
 
-		// WebView Params: width=MATCH, height=0, weight=1
-		contentLayout.addView(webView, new LinearLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
-
-		// Bottom Toolbar (Fixed Height)
+	private View setupBottomToolbar() {
 		bottomBar = new LinearLayout(activity);
 		bottomBar.setOrientation(LinearLayout.HORIZONTAL);
 		bottomBar.setElevation(10f);
-		themeBgList.add(bottomBar);
+		bgViews.add(bottomBar);
 
-		int barHeight = dp2px(45);
-		LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT, barHeight);
+		int h = dp2px(45);
+		LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(h, h);
 
-		// Buttons
-		TextView btnClose = createFlatButton("✕", 20, v -> close());
-		View spacer = new View(activity);
-		TextView btnBack = createFlatButton("←", 24, v -> {
-			if (webView.canGoBack()) webView.goBack();
-			else Toast.makeText(activity, "到底了", Toast.LENGTH_SHORT).show();
-		});
-		TextView btnMenu = createFlatButton("☰", 22, v -> toggleMenu());
+		bottomBar.addView(createIconBtn("✕", 20, v -> close()), params);
 
-		bottomBar.addView(btnClose, new LinearLayout.LayoutParams(barHeight, barHeight));
-		bottomBar.addView(spacer, new LinearLayout.LayoutParams(0, barHeight, 1.0f));
-		bottomBar.addView(btnBack, new LinearLayout.LayoutParams(barHeight, barHeight));
-		bottomBar.addView(btnMenu, new LinearLayout.LayoutParams(barHeight, barHeight));
+		View spacer = new View(activity); // Spacer
+		bottomBar.addView(spacer, new LinearLayout.LayoutParams(0, h, 1f));
 
-		contentLayout.addView(bottomBar, barParams);
+		bottomBar.addView(createIconBtn("←", 24, v -> goBack()), params);
+		bottomBar.addView(createIconBtn("☰", 22, v -> toggleMenu()), params);
 
-		// Add Content to Root
-		rootFrame.addView(contentLayout, new FrameLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-		// --- Menu Overlay Layer ---
-		createMenuOverlay(rootFrame, barHeight);
-
-		webDialog.setContentView(rootFrame);
-
-		// Apply Initial Theme
-		updateNativeTheme(false);
-
-		// Back Key Logic
-		webDialog.setOnKeyListener((dialog, keyCode, event) -> {
-			if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
-				if (modalOverlay.getVisibility() == View.VISIBLE) {
-					toggleMenu();
-					return true;
-				}
-				if (webView.canGoBack()) {
-					webView.goBack();
-					return true;
-				}
-				close();
-				return true;
-			}
-			return false;
-		});
+		return bottomBar;
 	}
 
-	private void createMenuOverlay(FrameLayout root, int bottomMargin) {
+	private void setupMenuOverlay(FrameLayout root, int bottomMargin) {
 		modalOverlay = new FrameLayout(activity);
 		modalOverlay.setBackgroundColor(Color.parseColor("#66000000"));
 		modalOverlay.setVisibility(View.GONE);
-		modalOverlay.setOnClickListener(v -> toggleMenu());
+		modalOverlay.setOnClickListener(v -> toggleMenu()); // Click outside to close
 
 		menuPanel = new LinearLayout(activity);
 		menuPanel.setOrientation(LinearLayout.VERTICAL);
-		menuPanel.setClickable(true);
+		menuPanel.setClickable(true); // Catch clicks
 
-		// Grid (4 cols x 2 rows)
-		GridLayout grid = new GridLayout(activity);
-		grid.setColumnCount(4);
-		grid.setRowCount(2);
-		int padding = dp2px(15);
-		grid.setPadding(padding, padding, padding, padding);
+		// Grid Container
+		menuGrid = new GridLayout(activity);
+		menuGrid.setColumnCount(4);
+		menuGrid.setRowCount(2);
+		int pad = dp2px(15);
+		menuGrid.setPadding(pad, pad, pad, pad);
 
-		// Item 1: Night Mode
-		addGridItem(grid, "🌗", "夜间模式", v -> {
-			toggleNightMode();
-			toggleMenu();
-		});
+		menuPanel.addView(menuGrid);
 
-		// [新增] Item 2: UA Switch (桌面/移动切换)
-		addGridItem(grid, "🖥️", "桌面视图", v -> {
-			toggleDesktopMode();
-			toggleMenu();
-		});
+		// Pagination Container
+		paginationPanel = new LinearLayout(activity);
+		paginationPanel.setOrientation(LinearLayout.HORIZONTAL);
+		paginationPanel.setGravity(Gravity.CENTER);
+		paginationPanel.setPadding(0, 0, 0, dp2px(10));
+		menuPanel.addView(paginationPanel);
 
-		// Items 3-8: Placeholders (循环次数改为 6)
-		for (int i = 0; i < 6; i++) {
-			addGridItem(grid, "○", "未定义", null);
-		}
+		// Position at bottom
+		FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		lp.gravity = Gravity.BOTTOM;
+		lp.bottomMargin = bottomMargin;
 
-		menuPanel.addView(grid);
-
-		FrameLayout.LayoutParams menuParams = new FrameLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-		menuParams.gravity = Gravity.BOTTOM;
-		menuParams.bottomMargin = bottomMargin;
-
-		modalOverlay.addView(menuPanel, menuParams);
-		root.addView(modalOverlay, new FrameLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+		modalOverlay.addView(menuPanel, lp);
+		root.addView(modalOverlay);
 	}
 
-	private void addGridItem(GridLayout grid, String icon, String label, View.OnClickListener action) {
+	// ============================================================
+	// 4. Logic Layer: Menu & Pagination
+	// ============================================================
+
+	private void toggleMenu() {
+		if (modalOverlay.getVisibility() == View.VISIBLE) {
+			modalOverlay.setVisibility(View.GONE);
+		} else {
+			modalOverlay.setVisibility(View.VISIBLE);
+			refreshMenuPage();
+			// Animation
+			menuPanel.setTranslationY(menuPanel.getHeight());
+			menuPanel.animate().translationY(0).setDuration(200).start();
+		}
+	}
+
+	private void refreshMenuPage() {
+		menuGrid.removeAllViews();
+
+		int start = currentPage * PAGE_SIZE;
+		int end = Math.min(start + PAGE_SIZE, tools.size());
+
+		// Render Items
+		for (int i = start; i < end; i++) {
+			addGridItem(tools.get(i));
+		}
+
+		// Fill empty slots to keep layout stable if last page
+		int emptySlots = PAGE_SIZE - (end - start);
+		for (int i = 0; i < emptySlots; i++) {
+			addGridItem(null);
+		}
+
+		// Render Pagination Dots
+		refreshPagination();
+
+		// Re-apply theme to new views
+		updateThemeColors(isNightMode);
+	}
+
+	private void refreshPagination() {
+		paginationPanel.removeAllViews();
+		int totalPages = (int) Math.ceil((double) tools.size() / PAGE_SIZE);
+
+		if (totalPages <= 1) {
+			paginationPanel.setVisibility(View.GONE);
+			return;
+		}
+		paginationPanel.setVisibility(View.VISIBLE);
+
+		for (int i = 0; i < totalPages; i++) {
+			TextView dot = new TextView(activity);
+			dot.setText("●");
+			dot.setTextSize(12);
+			dot.setPadding(10, 0, 10, 0);
+
+			// Highlight current
+			if (i == currentPage) {
+				dot.setAlpha(1.0f);
+				dot.setTextColor(isNightMode ? Color.CYAN : Color.parseColor("#0099FF"));
+			} else {
+				dot.setAlpha(0.3f);
+				dot.setTextColor(Color.GRAY);
+				final int p = i;
+				dot.setOnClickListener(v -> {
+					currentPage = p;
+					refreshMenuPage();
+				});
+			}
+			paginationPanel.addView(dot);
+		}
+	}
+
+	private void addGridItem(ToolAction tool) {
 		LinearLayout item = new LinearLayout(activity);
 		item.setOrientation(LinearLayout.VERTICAL);
 		item.setGravity(Gravity.CENTER);
 
-		TypedValue outValue = new TypedValue();
-		activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true);
-		item.setBackgroundResource(outValue.resourceId);
-
-		if(action != null) item.setOnClickListener(action);
-		else item.setAlpha(0.3f);
-
-		TextView iconTv = new TextView(activity);
-		iconTv.setText(icon);
-		iconTv.setTextSize(24);
-		iconTv.setGravity(Gravity.CENTER);
-		themeTextList.add(iconTv);
-
-		TextView labelTv = new TextView(activity);
-		labelTv.setText(label);
-		labelTv.setTextSize(10);
-		labelTv.setGravity(Gravity.CENTER);
-		themeTextList.add(labelTv);
-
-		item.addView(iconTv);
-		item.addView(labelTv);
-
-		// 使用 columnWeight 保证平分
 		GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-		params.width = 0;
+		// Weight 1 for equal width
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 			params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+			params.width = 0;
 		} else {
 			params.width = activity.getResources().getDisplayMetrics().widthPixels / 4 - dp2px(8);
 		}
 		params.height = dp2px(70);
 
-		grid.addView(item, params);
+		if (tool != null) {
+			applyRipple(item, true); // Borderless
+			item.setOnClickListener(v -> { if (tool.action != null) tool.action.run(); });
+
+			TextView icon = new TextView(activity);
+			icon.setText(tool.icon);
+			icon.setTextSize(24);
+			icon.setGravity(Gravity.CENTER);
+			themeTextList.add(icon);
+
+			TextView label = new TextView(activity);
+			label.setText(tool.label);
+			label.setTextSize(10);
+			label.setGravity(Gravity.CENTER);
+			themeTextList.add(label);
+
+			item.addView(icon);
+			item.addView(label);
+		}
+
+		menuGrid.addView(item, params);
+	}
+
+	// ============================================================
+	// 5. Feature Logic
+	// ============================================================
+
+	private void goBack() {
+		if (webView.canGoBack()) webView.goBack();
+		else Toast.makeText(activity, "到底了", Toast.LENGTH_SHORT).show();
 	}
 
 	private void toggleNightMode() {
@@ -319,59 +401,93 @@ public class AndroidWebBrowser implements IWebBrowser {
 			? "document.documentElement.style.filter='invert(1) hue-rotate(180deg)';"
 			: "document.documentElement.style.filter='';";
 		webView.evaluateJavascript(js, null);
-
-		updateNativeTheme(isNightMode);
-
-		Toast.makeText(activity, isNightMode ? "夜间模式: 开" : "夜间模式: 关", Toast.LENGTH_SHORT).show();
+		updateThemeColors(isNightMode);
+		Toast.makeText(activity, "夜间模式: " + (isNightMode ? "ON" : "OFF"), Toast.LENGTH_SHORT).show();
 	}
 
-	private void updateNativeTheme(boolean night) {
-		int bgColor = night ? Color.parseColor("#222222") : Color.parseColor("#F5F5F5");
-		int menuBgColor = night ? Color.parseColor("#333333") : Color.WHITE;
-		int textColor = night ? Color.parseColor("#DDDDDD") : Color.parseColor("#555555");
-		int subTextColor = night ? Color.parseColor("#AAAAAA") : Color.GRAY;
+	private void toggleDesktopMode() {
+		WebSettings s = webView.getSettings();
+		if (defaultUA == null) defaultUA = s.getUserAgentString();
 
-		for (View v : themeBgList) {
-			v.setBackgroundColor(bgColor);
-		}
+		isDesktopMode = !isDesktopMode;
+		s.setUserAgentString(isDesktopMode ? DESKTOP_UA : defaultUA);
+		s.setUseWideViewPort(true);
+		s.setLoadWithOverviewMode(true);
+		webView.reload();
 
+		Toast.makeText(activity, "UA: " + (isDesktopMode ? "Desktop" : "Mobile"), Toast.LENGTH_SHORT).show();
+	}
+
+	// ============================================================
+	// 6. Style & Helpers
+	// ============================================================
+
+	private void updateThemeColors(boolean night) {
+		int bg = night ? Color.parseColor("#222222") : Color.parseColor("#F5F5F5");
+		int menuBg = night ? Color.parseColor("#333333") : Color.WHITE;
+		int txtMain = night ? Color.parseColor("#DDDDDD") : Color.parseColor("#555555");
+		int txtSub = night ? Color.parseColor("#AAAAAA") : Color.GRAY;
+
+		// Backgrounds
+		for (View v : bgViews) v.setBackgroundColor(bg);
+
+		// Menu Panel Special Shape
 		GradientDrawable shape = new GradientDrawable();
-		shape.setColor(menuBgColor);
+		shape.setColor(menuBg);
 		shape.setCornerRadii(new float[]{30,30, 30,30, 0,0, 0,0});
 		menuPanel.setBackground(shape);
 
+		// Texts
 		for (TextView tv : themeTextList) {
-			// Simple heuristic: large text is icon
-			if (tv.getTextSize() / activity.getResources().getDisplayMetrics().scaledDensity > 15) {
-				tv.setTextColor(textColor);
-			} else {
-				tv.setTextColor(subTextColor);
-			}
+			float size = tv.getTextSize() / activity.getResources().getDisplayMetrics().scaledDensity;
+			tv.setTextColor(size > 15 ? txtMain : txtSub);
 		}
 	}
 
-	private TextView createFlatButton(String text, int textSize, View.OnClickListener click) {
+	private TextView createIconBtn(String text, int size, View.OnClickListener click) {
 		TextView btn = new TextView(activity);
 		btn.setText(text);
-		btn.setTextSize(textSize);
+		btn.setTextSize(size);
 		btn.setGravity(Gravity.CENTER);
 		btn.setOnClickListener(click);
-
-		TypedValue outValue = new TypedValue();
-		activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
-		btn.setBackgroundResource(outValue.resourceId);
-
+		applyRipple(btn, false);
 		themeTextList.add(btn);
 		return btn;
 	}
 
-	private void toggleMenu() {
-		if (modalOverlay.getVisibility() == View.VISIBLE) {
-			modalOverlay.setVisibility(View.GONE);
-		} else {
-			modalOverlay.setVisibility(View.VISIBLE);
-			menuPanel.setTranslationY(menuPanel.getHeight());
-			menuPanel.animate().translationY(0).setDuration(200).start();
+	private void applyRipple(View v, boolean borderless) {
+		TypedValue out = new TypedValue();
+		int attr = borderless ? android.R.attr.selectableItemBackgroundBorderless
+			: android.R.attr.selectableItemBackground;
+		activity.getTheme().resolveAttribute(attr, out, true);
+		v.setBackgroundResource(out.resourceId);
+	}
+
+	private void applyWindowFlags(Window window) {
+		if (window != null) {
+			window.getDecorView().setSystemUiVisibility(getImmersiveFlags());
+			window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+		}
+	}
+
+	private void setupBackKey() {
+		webDialog.setOnKeyListener((dialog, keyCode, event) -> {
+			if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == 0) {
+				if (modalOverlay.getVisibility() == View.VISIBLE) {
+					toggleMenu(); return true;
+				}
+				if (webView.canGoBack()) {
+					webView.goBack(); return true;
+				}
+				close(); return true;
+			}
+			return false;
+		});
+	}
+
+	private void forceOrientation(ScreenManager.Orientation o) {
+		if (ScreenManager.getInstance() != null) {
+			ScreenManager.getInstance().setOrientation(o);
 		}
 	}
 
