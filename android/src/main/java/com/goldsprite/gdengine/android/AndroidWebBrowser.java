@@ -3,27 +3,42 @@ package com.goldsprite.gdengine.android;
 import android.app.Activity;
 import android.app.Dialog;
 import android.graphics.Color;
-import android.util.Log;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.view.WindowManager;
 import android.webkit.WebChromeClient;
-import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.GridLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.goldsprite.gdengine.core.web.IWebBrowser;
-import com.goldsprite.gdengine.log.Debug;
-import com.goldsprite.gdengine.screens.ScreenManager; // [新增] 引入屏幕管理器
+import com.goldsprite.gdengine.screens.ScreenManager;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class AndroidWebBrowser implements IWebBrowser {
 	private final Activity activity;
 	private Dialog webDialog;
 	private WebView webView;
+
+	// UI Components references for Theme update
+	private FrameLayout modalOverlay;
+	private LinearLayout menuPanel;
+	private LinearLayout bottomBar;
+	private final List<TextView> themeTextList = new ArrayList<>(); // 所有的文本/图标引用
+	private final List<View> themeBgList = new ArrayList<>();       // 需要改背景色的容器
+
+	private boolean isNightMode = false;
 
 	public AndroidWebBrowser(Activity activity) {
 		this.activity = activity;
@@ -32,7 +47,6 @@ public class AndroidWebBrowser implements IWebBrowser {
 	@Override
 	public void openUrl(String url, String title) {
 		activity.runOnUiThread(() -> {
-			// [新增] 1. 强制切换为竖屏，适合阅读文档
 			if (ScreenManager.getInstance() != null) {
 				ScreenManager.getInstance().setOrientation(ScreenManager.Orientation.Portrait);
 			}
@@ -46,7 +60,6 @@ public class AndroidWebBrowser implements IWebBrowser {
 			if (webDialog != null && webDialog.isShowing()) {
 				webDialog.dismiss();
 			}
-			// [新增] 2. 关闭时恢复横屏 (游戏默认方向)
 			if (ScreenManager.getInstance() != null) {
 				ScreenManager.getInstance().setOrientation(ScreenManager.Orientation.Landscape);
 			}
@@ -62,132 +75,265 @@ public class AndroidWebBrowser implements IWebBrowser {
 		if (webDialog == null) {
 			initDialog();
 		}
+		// Reset UI State
+		if (modalOverlay != null) modalOverlay.setVisibility(View.GONE);
 
-		TextView titleView = webDialog.findViewById(101);
-		if (titleView != null) titleView.setText(title);
+		// 重置夜间模式状态
+		if (isNightMode) toggleNightMode();
 
 		webView.loadUrl(url);
 
+		// [回滚修复] 移除 focusable hack，回归最纯粹的显示逻辑
+		// 这能避免 Dialog 闪烁或露出底部 Activity
 		webDialog.show();
-		webDialog.getWindow().getDecorView().setSystemUiVisibility(getImmersiveFlags());
-	}
-
-	private void initDialog() {
-		webDialog = new Dialog(activity, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
-		webDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
 		Window window = webDialog.getWindow();
 		if (window != null) {
-			// 刘海屏适配
-			if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-				WindowManager.LayoutParams lp = window.getAttributes();
-				lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-				window.setAttributes(lp);
-			}
-
-			window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-			window.setBackgroundDrawable(null);
-
+			// 再次确保全屏属性
 			window.getDecorView().setSystemUiVisibility(getImmersiveFlags());
-
-			window.getDecorView().setOnSystemUiVisibilityChangeListener(visibility -> {
-				if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
-					window.getDecorView().setSystemUiVisibility(getImmersiveFlags());
-				}
-			});
+			window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 		}
+	}
 
-		LinearLayout root = new LinearLayout(activity);
-		root.setOrientation(LinearLayout.VERTICAL);
-		root.setBackgroundColor(Color.WHITE);
+	private void initDialog() {
+		// 使用全屏 Theme
+		webDialog = new Dialog(activity, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+		webDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-		// Toolbar
-		LinearLayout toolbar = new LinearLayout(activity);
-		toolbar.setOrientation(LinearLayout.HORIZONTAL);
-		toolbar.setBackgroundColor(Color.parseColor("#333333"));
-		toolbar.setPadding(20, 20, 20, 20);
+		themeTextList.clear();
+		themeBgList.clear();
 
-		TextView closeBtn = new TextView(activity);
-		closeBtn.setText("❌ 关闭");
-		closeBtn.setTextColor(Color.WHITE);
-		closeBtn.setTextSize(16);
-		closeBtn.setOnClickListener(v -> close());
+		// --- Root ---
+		FrameLayout rootFrame = new FrameLayout(activity);
+		rootFrame.setBackgroundColor(Color.WHITE); // 确保不透明
 
-		TextView titleView = new TextView(activity);
-		titleView.setId(101);
-		titleView.setText("Docs");
-		titleView.setTextColor(Color.CYAN);
-		titleView.setTextSize(16);
-		titleView.setPadding(40, 0, 0, 0);
+		// --- Content Layer (Vertical Linear) ---
+		LinearLayout contentLayout = new LinearLayout(activity);
+		contentLayout.setOrientation(LinearLayout.VERTICAL);
 
-		toolbar.addView(closeBtn);
-		toolbar.addView(titleView);
-
-		// WebView
+		// WebView (Weight=1, 占据剩余空间)
 		webView = new WebView(activity);
 		WebSettings settings = webView.getSettings();
 		settings.setJavaScriptEnabled(true);
 		settings.setDomStorageEnabled(true);
-		settings.setAllowFileAccess(true);
 		settings.setUseWideViewPort(true);
 		settings.setLoadWithOverviewMode(true);
+		settings.setSupportZoom(true);
+		settings.setBuiltInZoomControls(true);
+		settings.setDisplayZoomControls(false);
 
-		// [修复核心] 强力拦截所有非 HTTP 协议
 		webView.setWebViewClient(new WebViewClient() {
-			@Override
-			public boolean shouldOverrideUrlLoading(WebView view, String url) {
-				return handleUrl(url);
-			}
-
-			@Override
-			public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-				return handleUrl(request.getUrl().toString());
-			}
-
-			private boolean handleUrl(String url) {
-				if (url == null) return false;
-
-				// 1. 允许加载 http / https
-				if (url.startsWith("http://") || url.startsWith("https://")) {
-					return false; // 返回 false 让 WebView 自己加载
+				@Override
+				public boolean shouldOverrideUrlLoading(WebView view, String url) {
+					return !url.startsWith("http");
 				}
-
-				// 2. [修改] 遇到所有其他协议 (baiduboxapp:// 等)，直接返回 true (拦截)
-				// 不做任何处理，静默失败。这样就不会弹窗问用户了。
-				Log.d("WebBrowser", "拦截非Http/https协议: " + url);
-				return true;
-			}
-		});
-
+			});
 		webView.setWebChromeClient(new WebChromeClient());
 
-		LinearLayout.LayoutParams webParams = new LinearLayout.LayoutParams(
-			ViewGroup.LayoutParams.MATCH_PARENT,
-			ViewGroup.LayoutParams.MATCH_PARENT
-		);
+		// WebView Params: width=MATCH, height=0, weight=1
+		contentLayout.addView(webView, new LinearLayout.LayoutParams(
+								  ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
 
-		root.addView(toolbar);
-		root.addView(webView, webParams);
+		// Bottom Toolbar (Fixed Height)
+		bottomBar = new LinearLayout(activity);
+		bottomBar.setOrientation(LinearLayout.HORIZONTAL);
+		bottomBar.setElevation(10f);
+		themeBgList.add(bottomBar);
 
-		webDialog.setContentView(root);
+		int barHeight = dp2px(45);
+		LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT, barHeight);
 
-		// [修复] 使用 OnKeyListener 拦截物理按键
-		// 必须返回 true 才能阻止 Dialog 默认的关闭行为
+		// Buttons
+		TextView btnClose = createFlatButton("✕", 20, v -> close());
+		View spacer = new View(activity);
+		TextView btnBack = createFlatButton("←", 24, v -> {
+			if (webView.canGoBack()) webView.goBack();
+			else Toast.makeText(activity, "到底了", Toast.LENGTH_SHORT).show();
+		});
+		TextView btnMenu = createFlatButton("☰", 22, v -> toggleMenu());
+
+		bottomBar.addView(btnClose, new LinearLayout.LayoutParams(barHeight, barHeight));
+		bottomBar.addView(spacer, new LinearLayout.LayoutParams(0, barHeight, 1.0f));
+		bottomBar.addView(btnBack, new LinearLayout.LayoutParams(barHeight, barHeight));
+		bottomBar.addView(btnMenu, new LinearLayout.LayoutParams(barHeight, barHeight));
+
+		contentLayout.addView(bottomBar, barParams);
+
+		// Add Content to Root
+		rootFrame.addView(contentLayout, new FrameLayout.LayoutParams(
+							  ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+		// --- Menu Overlay Layer ---
+		createMenuOverlay(rootFrame, barHeight);
+
+		webDialog.setContentView(rootFrame);
+
+		// Apply Initial Theme
+		updateNativeTheme(false);
+
+		// Back Key Logic
 		webDialog.setOnKeyListener((dialog, keyCode, event) -> {
 			if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
-				if (webView.canGoBack()) {
-					webView.goBack(); // 网页回退
-					return true;      // 消费事件，Dialog 不关闭
+				if (modalOverlay.getVisibility() == View.VISIBLE) {
+					toggleMenu();
+					return true;
 				}
-				// 网页没法回退了，关闭 Dialog (并触发 close() 里的切横屏逻辑)
+				if (webView.canGoBack()) {
+					webView.goBack();
+					return true;
+				}
 				close();
 				return true;
 			}
 			return false;
 		});
+	}
 
-		// 移除旧的 OnCancelListener，防止冲突
-		webDialog.setOnCancelListener(null);
+	private void createMenuOverlay(FrameLayout root, int bottomMargin) {
+		modalOverlay = new FrameLayout(activity);
+		modalOverlay.setBackgroundColor(Color.parseColor("#66000000"));
+		modalOverlay.setVisibility(View.GONE);
+		modalOverlay.setOnClickListener(v -> toggleMenu());
+
+		menuPanel = new LinearLayout(activity);
+		menuPanel.setOrientation(LinearLayout.VERTICAL);
+		menuPanel.setClickable(true);
+
+		// Grid (4 cols x 2 rows)
+		GridLayout grid = new GridLayout(activity);
+		grid.setColumnCount(4);
+		grid.setRowCount(2);
+		int padding = dp2px(15);
+		grid.setPadding(padding, padding, padding, padding);
+
+		// Item 1: Night Mode
+		addGridItem(grid, "🌗", "夜间模式", v -> {
+			toggleNightMode();
+			toggleMenu();
+		});
+
+		// Items 2-8: Placeholders
+		for (int i = 0; i < 7; i++) {
+			addGridItem(grid, "○", "未定义", null);
+		}
+
+		menuPanel.addView(grid);
+
+		FrameLayout.LayoutParams menuParams = new FrameLayout.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		menuParams.gravity = Gravity.BOTTOM;
+		menuParams.bottomMargin = bottomMargin;
+
+		modalOverlay.addView(menuPanel, menuParams);
+		root.addView(modalOverlay, new FrameLayout.LayoutParams(
+						 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+	}
+
+	private void addGridItem(GridLayout grid, String icon, String label, View.OnClickListener action) {
+		LinearLayout item = new LinearLayout(activity);
+		item.setOrientation(LinearLayout.VERTICAL);
+		item.setGravity(Gravity.CENTER);
+
+		TypedValue outValue = new TypedValue();
+		activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true);
+		item.setBackgroundResource(outValue.resourceId);
+
+		if(action != null) item.setOnClickListener(action);
+		else item.setAlpha(0.3f);
+
+		TextView iconTv = new TextView(activity);
+		iconTv.setText(icon);
+		iconTv.setTextSize(24);
+		iconTv.setGravity(Gravity.CENTER);
+		themeTextList.add(iconTv);
+
+		TextView labelTv = new TextView(activity);
+		labelTv.setText(label);
+		labelTv.setTextSize(10);
+		labelTv.setGravity(Gravity.CENTER);
+		themeTextList.add(labelTv);
+
+		item.addView(iconTv);
+		item.addView(labelTv);
+
+		// 使用 columnWeight 保证平分
+		GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+		params.width = 0;
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+			params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+		} else {
+			params.width = activity.getResources().getDisplayMetrics().widthPixels / 4 - dp2px(8);
+		}
+		params.height = dp2px(70);
+
+		grid.addView(item, params);
+	}
+
+	private void toggleNightMode() {
+		isNightMode = !isNightMode;
+		String js = isNightMode 
+			? "document.documentElement.style.filter='invert(1) hue-rotate(180deg)';" 
+			: "document.documentElement.style.filter='';";
+		webView.evaluateJavascript(js, null);
+
+		updateNativeTheme(isNightMode);
+
+		Toast.makeText(activity, isNightMode ? "夜间模式: 开" : "夜间模式: 关", Toast.LENGTH_SHORT).show();
+	}
+
+	private void updateNativeTheme(boolean night) {
+		int bgColor = night ? Color.parseColor("#222222") : Color.parseColor("#F5F5F5");
+		int menuBgColor = night ? Color.parseColor("#333333") : Color.WHITE;
+		int textColor = night ? Color.parseColor("#DDDDDD") : Color.parseColor("#555555");
+		int subTextColor = night ? Color.parseColor("#AAAAAA") : Color.GRAY;
+
+		for (View v : themeBgList) {
+			v.setBackgroundColor(bgColor);
+		}
+
+		GradientDrawable shape = new GradientDrawable();
+		shape.setColor(menuBgColor);
+		shape.setCornerRadii(new float[]{30,30, 30,30, 0,0, 0,0});
+		menuPanel.setBackground(shape);
+
+		for (TextView tv : themeTextList) {
+			// Simple heuristic: large text is icon
+			if (tv.getTextSize() / activity.getResources().getDisplayMetrics().scaledDensity > 15) {
+				tv.setTextColor(textColor);
+			} else {
+				tv.setTextColor(subTextColor);
+			}
+		}
+	}
+
+	private TextView createFlatButton(String text, int textSize, View.OnClickListener click) {
+		TextView btn = new TextView(activity);
+		btn.setText(text);
+		btn.setTextSize(textSize);
+		btn.setGravity(Gravity.CENTER);
+		btn.setOnClickListener(click);
+
+		TypedValue outValue = new TypedValue();
+		activity.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+		btn.setBackgroundResource(outValue.resourceId);
+
+		themeTextList.add(btn);
+		return btn;
+	}
+
+	private void toggleMenu() {
+		if (modalOverlay.getVisibility() == View.VISIBLE) {
+			modalOverlay.setVisibility(View.GONE);
+		} else {
+			modalOverlay.setVisibility(View.VISIBLE);
+			menuPanel.setTranslationY(menuPanel.getHeight());
+			menuPanel.animate().translationY(0).setDuration(200).start();
+		}
+	}
+
+	private int dp2px(float dp) {
+		return (int) (dp * activity.getResources().getDisplayMetrics().density + 0.5f);
 	}
 
 	private int getImmersiveFlags() {
