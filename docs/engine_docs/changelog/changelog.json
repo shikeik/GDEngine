@@ -1,6 +1,56 @@
 {
-    "lastUpdated": "2026-01-22 12:42:30",
+    "lastUpdated": "2026-01-22 14:54:03",
     "groups": [
+        {
+            "id": "In Development",
+            "patches": [
+                {
+                    "tag": "HEAD",
+                    "fullVersion": "HEAD",
+                    "date": "2026-01-22",
+                    "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
+                    "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
+                    "isSnapshot": true,
+                    "commits": [
+                        {
+                            "hash": "881c11adb062e1d6c56d68d93f3e9893d51e6076",
+                            "date": "2026-01-22",
+                            "type": "refactor",
+                            "summary": "\u4f7f\u7528\u8bbe\u8ba1\u6a21\u5f0f\u91cd\u8bbe\u8ba1AndroidWebBrowser\u7c7b\u63d0\u9ad8\u7075\u6d3b\u6027",
+                            "details": ""
+                        },
+                        {
+                            "hash": "fcdc6aecf51b0fe7a69d307613536704622dd882",
+                            "date": "2026-01-22",
+                            "type": "feat",
+                            "summary": "`AndroidWebBrowser`\u5de5\u5177\u83dc\u5355\u589e\u52a0\u5207\u6362UA\u6807\u8bc6",
+                            "details": ""
+                        },
+                        {
+                            "hash": "9130373ecda9faf43d166164e49cefb2d5cbf092",
+                            "date": "2026-01-22",
+                            "type": "docs",
+                            "summary": "install.md\u4fee\u6b63\u5185\u5bb9",
+                            "details": ""
+                        },
+                        {
+                            "hash": "10e816b79a6f88f6d7ad5dd03c1bcb2da3f79a33",
+                            "date": "2026-01-22",
+                            "type": "fix",
+                            "summary": "\u91cd\u65b0\u4fee\u590d\u5218\u6d77\u5c4f\u95ee\u9898",
+                            "details": ""
+                        },
+                        {
+                            "hash": "31ca62f315110b3308a83db1cae10ca6b0e7d4d7",
+                            "date": "2026-01-22",
+                            "type": "feat",
+                            "summary": "AndroidWebBrowser\u4f53\u9a8c\u4f18\u53162",
+                            "details": ""
+                        }
+                    ]
+                }
+            ]
+        },
         {
             "id": "1.10.12",
             "patches": [
@@ -12,6 +62,13 @@
                     "tagDetails": "- [Fix] \u4fee\u590d\u4e86\u7f16\u8f91\u5668\u4e2d\u7684\u6e32\u67d3 Bug\n- [Docs] \u66f4\u65b0\u4e86\u5b89\u88c5\u6587\u6863\n\n\u672c\u6b21\u53d1\u5e03\u5305\u542b Android \u548c PC \u53cc\u7aef\u4ea7\u7269\u3002\n",
                     "isSnapshot": false,
                     "commits": [
+                        {
+                            "hash": "302aebf788e6cbdd8e03e56c19ade4dc275fe641",
+                            "date": "2026-01-22",
+                            "type": "chore",
+                            "summary": "release 1.10.12.22",
+                            "details": ""
+                        },
                         {
                             "hash": "0dcb492bafe4f64629673233b1c307e6f576b22f",
                             "date": "2026-01-22",
