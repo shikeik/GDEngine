@@ -17,8 +17,7 @@ GDEngine 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它�
     <div class="loading-text">正在获取版本列表...</div>
 </div>
 
-*   **GitHub Releases:** [下载最新 APK](https://github.com/shikeik/GDEngine/releases)
-*   **高速镜像:** [点击下载 (国内加速)](https://gh-proxy.com/https://github.com/shikeik/GDEngine/releases)
+*   **GitHub Releases:** [直达下载页](https://github.com/shikeik/GDEngine/releases)
 
 <!-- 样式 -->
 <style>
