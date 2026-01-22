@@ -1,17 +1,52 @@
 {
-    "lastUpdated": "2026-01-22 05:56:48",
+    "lastUpdated": "2026-01-22 11:36:27",
     "groups": [
         {
-            "id": "In Development",
+            "id": "1.10.12",
             "patches": [
                 {
-                    "tag": "HEAD",
-                    "fullVersion": "HEAD",
-                    "date": "2026-01-21",
-                    "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
-                    "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
-                    "isSnapshot": true,
+                    "tag": "1.10.12.22",
+                    "fullVersion": "1.10.12.22",
+                    "date": "2026-01-22",
+                    "tagSummary": "- [Feat] \u65b0\u589e\u4e86\u4e00\u952e\u53d1\u5e03\u81ea\u52a8\u5316\u811a\u672c",
+                    "tagDetails": "- [Fix] \u4fee\u590d\u4e86\u7f16\u8f91\u5668\u4e2d\u7684\u6e32\u67d3 Bug\n- [Docs] \u66f4\u65b0\u4e86\u5b89\u88c5\u6587\u6863\n\n\u672c\u6b21\u53d1\u5e03\u5305\u542b Android \u548c PC \u53cc\u7aef\u4ea7\u7269\u3002\n",
+                    "isSnapshot": false,
                     "commits": [
+                        {
+                            "hash": "2a183fbca95c0ba16f726d86e1244bb1117901c9",
+                            "date": "2026-01-22",
+                            "type": "chore",
+                            "summary": "release 1.10.12.22",
+                            "details": ""
+                        },
+                        {
+                            "hash": "2acaadbd2ad112863031aa7dfb4abf8e513c2334",
+                            "date": "2026-01-22",
+                            "type": "chore",
+                            "summary": "\u5e94\u7528\u4e00\u952e\u53d1\u5e03gradle\u63d2\u4ef6",
+                            "details": ""
+                        },
+                        {
+                            "hash": "c0aeba56c99030b3acda0efb7f067ed911a25b79",
+                            "date": "2026-01-22",
+                            "type": "chore",
+                            "summary": "\u589e\u52a0\u4e00\u952e\u5f0f\u6253\u5305\u53cc\u7aef\u53d1\u5e03\u5de5\u4f5c\u6d41",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1fdf32ef248b90825d7c5eb7c4ec1070254d5689",
+                            "date": "2026-01-22",
+                            "type": "docs",
+                            "summary": "\u8d77\u6b65\u6559\u7a0binstall.md\u589e\u52a0\u5f15\u64ce\u8fd0\u884c\u7a0b\u5e8f\u7684\u4e0b\u8f7d\u76f4\u8fbe\u94fe\u63a5",
+                            "details": ""
+                        },
+                        {
+                            "hash": "1389b1187ff1fd362604d567462f206254be0005",
+                            "date": "2026-01-22",
+                            "type": "fix",
+                            "summary": "tag-summary\u6392\u7248bug\u89e3\u51b3",
+                            "details": ""
+                        },
                         {
                             "hash": "6bf0ad4ba84dcd3dfbce1138a9b1c42bb1fe0b64",
                             "date": "2026-01-22",
@@ -55,17 +90,12 @@
                             "details": ""
                         }
                     ]
-                }
-            ]
-        },
-        {
-            "id": "1.10.12",
-            "patches": [
+                },
                 {
                     "tag": "1.10.12.21",
                     "fullVersion": "1.10.12.21",
                     "date": "2026-01-22",
-                    "tagSummary": "Release 1.10.12.21",
+                    "tagSummary": "feat: \u53d1\u5e031.10.12.21",
                     "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
@@ -218,7 +248,7 @@
                     "tag": "1.10.12.19",
                     "fullVersion": "1.10.12.19",
                     "date": "2026-01-20",
-                    "tagSummary": "Release 1.10.12.19",
+                    "tagSummary": "test: \u6d4b\u8bd52\u901a\u8fc7, \u4e91\u7aef\u4e0b\u8f7d\u529f\u80fd\u6536\u5b98",
                     "tagDetails": "",
                     "isSnapshot": false,
                     "commits": [
