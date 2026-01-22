@@ -6,10 +6,7 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.util.TypedValue;
-import android.view.Gravity;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.Window;
+import android.view.*;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -100,6 +97,21 @@ public class AndroidWebBrowser implements IWebBrowser {
 		webDialog = new Dialog(activity, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
 		webDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
+		// [核心修复] 强制清除 Dialog 默认边距，确保铺满全屏 (覆盖顶部状态栏区域)
+		Window window = webDialog.getWindow();
+		if (window != null) {
+			window.getDecorView().setPadding(0, 0, 0, 0); // 关键：清除 Padding
+			WindowManager.LayoutParams lp = window.getAttributes();
+			lp.width = WindowManager.LayoutParams.MATCH_PARENT;
+			lp.height = WindowManager.LayoutParams.MATCH_PARENT;
+			// 适配刘海屏，允许内容延伸到刘海区域
+			if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+				lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+			}
+			window.setAttributes(lp);
+			window.setBackgroundDrawable(null);
+		}
+
 		themeTextList.clear();
 		themeBgList.clear();
 
@@ -123,16 +135,16 @@ public class AndroidWebBrowser implements IWebBrowser {
 		settings.setDisplayZoomControls(false);
 
 		webView.setWebViewClient(new WebViewClient() {
-				@Override
-				public boolean shouldOverrideUrlLoading(WebView view, String url) {
-					return !url.startsWith("http");
-				}
-			});
+			@Override
+			public boolean shouldOverrideUrlLoading(WebView view, String url) {
+				return !url.startsWith("http");
+			}
+		});
 		webView.setWebChromeClient(new WebChromeClient());
 
 		// WebView Params: width=MATCH, height=0, weight=1
 		contentLayout.addView(webView, new LinearLayout.LayoutParams(
-								  ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
+			ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f));
 
 		// Bottom Toolbar (Fixed Height)
 		bottomBar = new LinearLayout(activity);
@@ -162,7 +174,7 @@ public class AndroidWebBrowser implements IWebBrowser {
 
 		// Add Content to Root
 		rootFrame.addView(contentLayout, new FrameLayout.LayoutParams(
-							  ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
 		// --- Menu Overlay Layer ---
 		createMenuOverlay(rootFrame, barHeight);
@@ -227,7 +239,7 @@ public class AndroidWebBrowser implements IWebBrowser {
 
 		modalOverlay.addView(menuPanel, menuParams);
 		root.addView(modalOverlay, new FrameLayout.LayoutParams(
-						 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+			ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 	}
 
 	private void addGridItem(GridLayout grid, String icon, String label, View.OnClickListener action) {
@@ -272,8 +284,8 @@ public class AndroidWebBrowser implements IWebBrowser {
 
 	private void toggleNightMode() {
 		isNightMode = !isNightMode;
-		String js = isNightMode 
-			? "document.documentElement.style.filter='invert(1) hue-rotate(180deg)';" 
+		String js = isNightMode
+			? "document.documentElement.style.filter='invert(1) hue-rotate(180deg)';"
 			: "document.documentElement.style.filter='';";
 		webView.evaluateJavascript(js, null);
 
