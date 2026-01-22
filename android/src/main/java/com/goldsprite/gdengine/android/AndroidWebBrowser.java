@@ -37,8 +37,33 @@ public class AndroidWebBrowser implements IWebBrowser {
 
 	private boolean isNightMode = false;
 
+	// [新增] UA 相关变量
+	private String defaultUA;
+	private boolean isDesktopMode = false;
+	private static final String DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
 	public AndroidWebBrowser(Activity activity) {
 		this.activity = activity;
+	}
+
+	// [新增] 切换 UA 模式方法
+	private void toggleDesktopMode() {
+		if (webView == null) return;
+
+		WebSettings settings = webView.getSettings();
+		// 第一次切换时保存原始 UA
+		if (defaultUA == null) defaultUA = settings.getUserAgentString();
+
+		isDesktopMode = !isDesktopMode;
+
+		settings.setUserAgentString(isDesktopMode ? DESKTOP_UA : defaultUA);
+		settings.setLoadWithOverviewMode(true);
+		settings.setUseWideViewPort(true);
+
+		// 必须重载页面才能生效
+		webView.reload();
+
+		Toast.makeText(activity, isDesktopMode ? "桌面模式 (显示侧边栏)" : "移动模式", Toast.LENGTH_SHORT).show();
 	}
 
 	@Override
@@ -225,8 +250,14 @@ public class AndroidWebBrowser implements IWebBrowser {
 			toggleMenu();
 		});
 
-		// Items 2-8: Placeholders
-		for (int i = 0; i < 7; i++) {
+		// [新增] Item 2: UA Switch (桌面/移动切换)
+		addGridItem(grid, "🖥️", "桌面视图", v -> {
+			toggleDesktopMode();
+			toggleMenu();
+		});
+
+		// Items 3-8: Placeholders (循环次数改为 6)
+		for (int i = 0; i < 6; i++) {
 			addGridItem(grid, "○", "未定义", null);
 		}
 
