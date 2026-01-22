@@ -1,4 +1,3 @@
-// 文件: ./core/src/main/java/com/goldsprite/gdengine/ecs/skeleton/SkeletonSystem.java
 package com.goldsprite.gdengine.ecs.system;
 
 import com.goldsprite.gdengine.ecs.GameSystemInfo;

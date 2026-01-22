@@ -1,4 +1,3 @@
-// 文件: ./tests/src/test/java/com/goldsprite/gdengine/tests/AnimatorUnitTest.java
 package com.goldsprite.gdengine.tests;
 
 import com.goldsprite.gdengine.ecs.GameWorld;

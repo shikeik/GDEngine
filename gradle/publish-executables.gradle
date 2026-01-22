@@ -137,7 +137,7 @@ tasks.register('publishExecutables') {
 
         // 3. 处理 Tag
         // 尝试删除本地同名 tag (防止重打报错)
-        try { runCmd("git tag -d ${targetVersion}") } catch(e){}
+        try { runCmd("git tag -d ${targetVersion}") } catch(ignored){}
 
         // 使用 -F 读取 RELEASE_NOTE.md 作为 Tag 说明
         runCmd("git tag -a ${targetVersion} -F RELEASE_NOTE.md")

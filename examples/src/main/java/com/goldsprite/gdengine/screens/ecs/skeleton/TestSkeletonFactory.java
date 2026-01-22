@@ -1,4 +1,3 @@
-// 文件: ./examples/src/main/java/com/goldsprite/gdengine/screens/ecs/tests/TestSkeletonFactory.java
 package com.goldsprite.gdengine.screens.ecs.skeleton;
 
 import com.badlogic.gdx.graphics.Color;

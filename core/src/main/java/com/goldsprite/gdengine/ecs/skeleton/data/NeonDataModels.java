@@ -1,4 +1,3 @@
-// 文件: ./core/src/main/java/com/goldsprite/gdengine/ecs/skeleton/data/NeonDataModels.java
 package com.goldsprite.gdengine.ecs.skeleton.data;
 
 import java.util.ArrayList;

@@ -1,4 +1,3 @@
-// 文件: ./core/src/main/java/com/goldsprite/gdengine/ecs/skeleton/animation/NeonAnimation.java
 package com.goldsprite.gdengine.ecs.skeleton.animation;
 
 import com.badlogic.gdx.utils.Array;

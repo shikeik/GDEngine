@@ -1,4 +1,3 @@
-// 文件: core/src/main/java/com/goldsprite/gdengine/screens/ecs/editor/inspector/InspectorBuilder.java
 package com.goldsprite.gdengine.screens.ecs.editor.inspector;
 
 import com.badlogic.gdx.graphics.Color;

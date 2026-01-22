@@ -1,4 +1,3 @@
-// 文件: core/src/main/java/com/goldsprite/gdengine/core/project/ProjectService.java
 package com.goldsprite.gdengine.core.project;
 
 import com.badlogic.gdx.files.FileHandle;
