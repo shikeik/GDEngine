@@ -74,6 +74,10 @@ tasks.register('publishExecutables') {
     dependsOn project(':core').tasks.getByName('packageEngineCore')
     dependsOn project(':lwjgl3').tasks.getByName('jar')       // PC JAR
     dependsOn project(':android').tasks.getByName('assembleRelease') // Android APK
+    
+    // [新增] 确保生成最新的 Changelog 和文档分发包
+    dependsOn rootProject.tasks.named('generateChangelog')
+    dependsOn rootProject.tasks.named('buildDocsDist')
 
     // 2. [核心] 执行前的环境准备与文件修改
     doFirst {

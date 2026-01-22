@@ -69,6 +69,8 @@ GDEngine 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它�
     const REPO = "shikeik/GDEngine";
     // 文件下载走 gcore CDN (极速)
     const CDN_BASE = "https://gcore.jsdelivr.net/gh/" + REPO + "@";
+    // 定义反代基准地址 (用于 APK/JAR 下载，避开 CDN 限制)
+    const PROXY_BASE = "https://gh-proxy.com/https://github.com/";
     
     function renderWidget(versions) {
         const container = document.getElementById('download-widget');
@@ -100,8 +102,12 @@ GDEngine 是一个基于 LibGDX 的轻量级、跨平台 2D 游戏引擎。它�
         
         // 假设自动化构建会将产物放入仓库的 dist/ 目录 (支持 CDN 直接读取)
         // 格式: https://gcore.jsdelivr.net/gh/user/repo@tag/dist/filename
-        const basePath = `${CDN_BASE}${tag}/dist/`;
-
+        //const basePath = `${CDN_BASE}${tag}/dist/`;
+        
+        // 构造反代链接
+        // 格式: https://gh-proxy.com/https://github.com/{user}/{repo}/releases/download/{tag}/{filename}
+        const basePath = `${PROXY_BASE}${REPO}/releases/download/${tag}/`;
+        
         document.getElementById('link-apk').href = basePath + `GDEngine_V${cleanVer}.apk`;
         document.getElementById('link-jar').href = basePath + `GDEngine_V${cleanVer}.jar`;
         document.getElementById('link-exe').href = basePath + `GDEngine_V${cleanVer}.exe`;
