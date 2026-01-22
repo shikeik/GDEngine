@@ -1,17 +1,24 @@
 {
-    "lastUpdated": "2026-01-22 12:32:45",
+    "lastUpdated": "2026-01-22 12:42:30",
     "groups": [
         {
-            "id": "In Development",
+            "id": "1.10.12",
             "patches": [
                 {
-                    "tag": "HEAD",
-                    "fullVersion": "HEAD",
+                    "tag": "1.10.12.22",
+                    "fullVersion": "1.10.12.22",
                     "date": "2026-01-22",
-                    "tagSummary": "\u6b63\u5728\u5f00\u53d1\u4e2d...",
-                    "tagDetails": "\u5305\u542b\u81ea\u4e0a\u4e2a\u7248\u672c\u4ee5\u6765\u7684\u6700\u65b0\u6539\u52a8\u3002",
-                    "isSnapshot": true,
+                    "tagSummary": "- [Feat] \u65b0\u589e\u4e86\u4e00\u952e\u53d1\u5e03\u81ea\u52a8\u5316\u811a\u672c",
+                    "tagDetails": "- [Fix] \u4fee\u590d\u4e86\u7f16\u8f91\u5668\u4e2d\u7684\u6e32\u67d3 Bug\n- [Docs] \u66f4\u65b0\u4e86\u5b89\u88c5\u6587\u6863\n\n\u672c\u6b21\u53d1\u5e03\u5305\u542b Android \u548c PC \u53cc\u7aef\u4ea7\u7269\u3002\n",
+                    "isSnapshot": false,
                     "commits": [
+                        {
+                            "hash": "0dcb492bafe4f64629673233b1c307e6f576b22f",
+                            "date": "2026-01-22",
+                            "type": "chore",
+                            "summary": "release 1.10.12.22",
+                            "details": ""
+                        },
                         {
                             "hash": "78c38a9821fc0cca454d4daba2d9f58430a05b84",
                             "date": "2026-01-22",
@@ -25,22 +32,7 @@
                             "type": "chore",
                             "summary": "\u624b\u52a8\u5237\u65b0changelog\u4e0edistDocs",
                             "details": ""
-                        }
-                    ]
-                }
-            ]
-        },
-        {
-            "id": "1.10.12",
-            "patches": [
-                {
-                    "tag": "1.10.12.22",
-                    "fullVersion": "1.10.12.22",
-                    "date": "2026-01-22",
-                    "tagSummary": "- [Feat] \u65b0\u589e\u4e86\u4e00\u952e\u53d1\u5e03\u81ea\u52a8\u5316\u811a\u672c",
-                    "tagDetails": "- [Fix] \u4fee\u590d\u4e86\u7f16\u8f91\u5668\u4e2d\u7684\u6e32\u67d3 Bug\n- [Docs] \u66f4\u65b0\u4e86\u5b89\u88c5\u6587\u6863\n\n\u672c\u6b21\u53d1\u5e03\u5305\u542b Android \u548c PC \u53cc\u7aef\u4ea7\u7269\u3002\n",
-                    "isSnapshot": false,
-                    "commits": [
+                        },
                         {
                             "hash": "2a183fbca95c0ba16f726d86e1244bb1117901c9",
                             "date": "2026-01-22",

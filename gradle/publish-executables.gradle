@@ -14,7 +14,7 @@ ext {
     OUTPUTS_DIR = file("${rootProject.rootDir}/outputs")
     RELEASE_NOTE_FILE = file("${rootProject.rootDir}/RELEASE_NOTE.md")
     PROP_FILE = file("${rootProject.rootDir}/gradle.properties")
-    
+
     // 核心源码文件位置 (用于强行注入版本)
     BUILD_CONFIG_FILE = file("${rootProject.rootDir}/core/src/main/java/com/goldsprite/gdengine/BuildConfig.java")
     README_FILE = file("${rootProject.rootDir}/README.md")
@@ -27,7 +27,7 @@ String targetVersion = null
 if (project.hasProperty("targetVer")) {
     targetVersion = project.property("targetVer")
     println "🎯 [配置] 检测到命令行参数版本: ${targetVersion}"
-} 
+}
 // 2. 否则读取 RELEASE_NOTE.md
 else if (RELEASE_NOTE_FILE.exists()) {
     def lines = RELEASE_NOTE_FILE.readLines("UTF-8")
@@ -74,7 +74,7 @@ tasks.register('publishExecutables') {
     dependsOn project(':core').tasks.getByName('packageEngineCore')
     dependsOn project(':lwjgl3').tasks.getByName('jar')       // PC JAR
     dependsOn project(':android').tasks.getByName('assembleRelease') // Android APK
-    
+
     // [新增] 确保生成最新的 Changelog 和文档分发包
     dependsOn rootProject.tasks.named('generateChangelog')
     dependsOn rootProject.tasks.named('buildDocsDist')
@@ -82,16 +82,16 @@ tasks.register('publishExecutables') {
     // 2. [核心] 执行前的环境准备与文件修改
     doFirst {
         println "🚀 [1/5] 开始发布流程: ${targetVersion}"
-        
+
         // A. 物理更新 gradle.properties (持久化)
         updatePropertiesFile(targetVersion)
-        
+
         // B. 强行更新 BuildConfig.java (解决 Core 模块配置阶段任务滞后的问题)
         forceUpdateBuildConfig(targetVersion)
-        
+
         // C. 强行更新 README.md
         forceUpdateReadme(targetVersion)
-        
+
         // D. 清理发布目录
         println "🧹 [2/5] 清理发布目录 (dist/release)..."
         delete DIST_RELEASE_DIR
@@ -101,7 +101,7 @@ tasks.register('publishExecutables') {
     // 3. 归档与 Git 操作
     doLast {
         println "📦 [4/5] 归档产物..."
-        
+
         def expectedApk = "GDEngine_V${targetVersion}.apk"
         def expectedJar = "GDEngine_V${targetVersion}.jar"
 
@@ -123,29 +123,30 @@ tasks.register('publishExecutables') {
             println "   请检查 Android 构建日志，确认 app-release.jks 签名是否配置正确。"
             throw new GradleException("APK 构建失败")
         }
-        
+
         println "✅ 产物已就绪: dist/release/ (APK & JAR)"
 
         // --- Git 自动化 ---
         println "🐙 [5/5] 执行 Git 自动化流程..."
-        
+
         // 1. 添加所有变动 (包括 gradle.properties, BuildConfig, dist 里的二进制)
-        runCmd("git add .") 
-        
+        runCmd("git add .")
+
         // 2. 提交
         runCmd("git commit -m \"chore: release ${targetVersion}\"")
 
         // 3. 处理 Tag
         // 尝试删除本地同名 tag (防止重打报错)
         try { runCmd("git tag -d ${targetVersion}") } catch(e){}
-        
+
         // 使用 -F 读取 RELEASE_NOTE.md 作为 Tag 说明
         runCmd("git tag -a ${targetVersion} -F RELEASE_NOTE.md")
 
         // 4. 推送
         println "🚀 正在推送到远程仓库 (代码 + Tag)..."
-        runCmd("git push origin main") 
-        runCmd("git push origin ${targetVersion}")
+        runCmd("git push origin main")
+				// [修改] 增加 --force 参数，强制覆盖远程已存在的同名 Tag
+				runCmd("git push origin ${targetVersion} --force")
 
         println "\n🎉🎉🎉 发布流程全部完成！版本: ${targetVersion} 🎉🎉🎉"
         println "👉 GitHub Actions 将会自动分发 release 附件。"
