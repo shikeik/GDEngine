@@ -234,12 +234,12 @@ public class ProjectService {
 			}
 
 			// 普通文件/目录：递归复制
-            if (file.isDirectory()) {
-                // 递归暂不支持普通文件夹内的文本替换，直接拷贝
-                // [修复] 直接拷贝到 targetDir 下，LibGDX 会自动以 file.name() (即 "assets") 命名
-                // 这样避免了 "target/assets" 存在时变成 "target/assets/assets" 的问题
-                file.copyTo(targetDir);
-            } else {
+			if (file.isDirectory()) {
+				// 递归暂不支持普通文件夹内的文本替换，直接拷贝
+				// [修复] 直接拷贝到 targetDir 下，LibGDX 会自动以 file.name() (即 "assets") 命名
+				// 这样避免了 "target/assets" 存在时变成 "target/assets/assets" 的问题
+				file.copyTo(targetDir);
+			} else {
 				// 如果是文本文件，尝试替换；否则直接拷贝
 				// 这里假设模板里的根文件都是文本配置
 				processFile(file, targetDir.child(fileName), replacements);

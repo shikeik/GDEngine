@@ -31,16 +31,16 @@ public abstract class BaseSystem extends EcsObject {
 		// 解析注解
 		GameSystemInfo info = this.getClass().getAnnotation(GameSystemInfo.class);
 		if (info != null) {
-            this.interestComponents = info.interestComponents();
-            this.systemTypeFlags = info.type();
-            // [修改] 使用 SystemType.toString 输出可读类型
-            Debug.logT("System", "Init %s: type=[%s]", 
-					   getClass().getSimpleName(), 
-					   SystemType.toString(systemTypeFlags));
-        } else {
-            this.systemTypeFlags = SystemType.UPDATE;
-            Debug.logT("System", "Init %s: No Annotation, default to [UPDATE]", getClass().getSimpleName());
-        }
+			this.interestComponents = info.interestComponents();
+			this.systemTypeFlags = info.type();
+			// [修改] 使用 SystemType.toString 输出可读类型
+			Debug.logT("System", "Init %s: type=[%s]", 
+						getClass().getSimpleName(), 
+						SystemType.toString(systemTypeFlags));
+		} else {
+			this.systemTypeFlags = SystemType.UPDATE;
+			Debug.logT("System", "Init %s: No Annotation, default to [UPDATE]", getClass().getSimpleName());
+		}
 
 		// 自动注册到世界 (构造即生效)
 		GameWorld.inst().registerSystem(this);

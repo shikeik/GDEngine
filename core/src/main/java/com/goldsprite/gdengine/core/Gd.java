@@ -73,10 +73,10 @@ public class Gd {
 	 * 动态脚本类加载器<br>
 	 * 默认是系统加载器。<br>
 	 * 当 GameRunner 启动或编辑器加载项目时，这会被替换为包含用户代码的加载器。<br>
-     * [修复] 默认使用加载当前 Gd 类的加载器 (Android下为 PathClassLoader)，确保能找到引擎内置组件。<br>
-     * 不要使用 getSystemClassLoader()，它在 Android 上看不到 APK 里的类。
+	 * [修复] 默认使用加载当前 Gd 类的加载器 (Android下为 PathClassLoader)，确保能找到引擎内置组件。<br>
+	 * 不要使用 getSystemClassLoader()，它在 Android 上看不到 APK 里的类。
 	 */
-    public static ClassLoader scriptClassLoader = Gd.class.getClassLoader();
+	public static ClassLoader scriptClassLoader = Gd.class.getClassLoader();
 
 	/** 全局浏览器服务 */
 	public static IWebBrowser browser; // [New]

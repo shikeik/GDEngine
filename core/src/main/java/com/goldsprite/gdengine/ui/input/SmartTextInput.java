@@ -9,17 +9,17 @@ import java.util.function.Consumer;
 
 public class SmartTextInput extends SmartInput<String> {
 
-    private final VisTextField textField;
+	private final VisTextField textField;
 
-    public SmartTextInput(String label, String initValue, Consumer<String> onChange) {
-        this(label, initValue, onChange, null);
-    }
+	public SmartTextInput(String label, String initValue, Consumer<String> onChange) {
+		this(label, initValue, onChange, null);
+	}
 
-    public SmartTextInput(String label, String initValue, Consumer<String> onChange, Consumer<String> onConfirm) {
-        super(label, initValue, onChange);
+	public SmartTextInput(String label, String initValue, Consumer<String> onChange, Consumer<String> onConfirm) {
+		super(label, initValue, onChange);
 
-        textField = new VisTextField(initValue);
-        textField.addListener(new ChangeListener() {
+		textField = new VisTextField(initValue);
+		textField.addListener(new ChangeListener() {
 				@Override
 				public void changed(ChangeEvent event, Actor actor) {
 					value = textField.getText();
@@ -27,8 +27,8 @@ public class SmartTextInput extends SmartInput<String> {
 				}
 			});
 
-        // 监听焦点丢失触发 Command (可选)
-        textField.addListener(new FocusListener() {
+		// 监听焦点丢失触发 Command (可选)
+		textField.addListener(new FocusListener() {
 				String startValue = initValue;
 				@Override
 				public void keyboardFocusChanged(FocusEvent event, Actor actor, boolean focused) {
@@ -45,20 +45,20 @@ public class SmartTextInput extends SmartInput<String> {
 		controls.add().growX(); // 弹簧占位符
 		controls.add(textField).width(180); // 固定宽度
 		addContent(controls);
-    }
+	}
 
-    @Override
-    public void setReadOnly(boolean readOnly) {
-        textField.setDisabled(readOnly);
-        // 如果只读，透明度降低一点
-        textField.setColor(1, 1, 1, readOnly ? 0.5f : 1f);
-    }
+	@Override
+	public void setReadOnly(boolean readOnly) {
+		textField.setDisabled(readOnly);
+		// 如果只读，透明度降低一点
+		textField.setColor(1, 1, 1, readOnly ? 0.5f : 1f);
+	}
 
-    @Override public void updateUI() {
-        if (!textField.getText().equals(value)) {
-            int cursorPosition = textField.getCursorPosition();
-            textField.setText(value);
-            textField.setCursorPosition(Math.min(cursorPosition, value.length()));
-        }
-    }
+	@Override public void updateUI() {
+		if (!textField.getText().equals(value)) {
+			int cursorPosition = textField.getCursorPosition();
+			textField.setText(value);
+			textField.setCursorPosition(Math.min(cursorPosition, value.length()));
+		}
+	}
 }

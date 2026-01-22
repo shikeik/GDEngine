@@ -40,22 +40,22 @@ public class SystemType {
 	}
 	
 	/** [新增] 将掩码转换为可读字符串 */
-    public static String toString(int type) {
-        if (type == NONE) return "NONE";
+	public static String toString(int type) {
+		if (type == NONE) return "NONE";
 
-        StringBuilder sb = new StringBuilder();
-        if (isUpdate(type)) sb.append("UPDATE");
+		StringBuilder sb = new StringBuilder();
+		if (isUpdate(type)) sb.append("UPDATE");
 
-        if (isFixed(type)) {
-            if (sb.length() > 0) sb.append("|");
-            sb.append("FIXED");
-        }
+		if (isFixed(type)) {
+			if (sb.length() > 0) sb.append("|");
+			sb.append("FIXED");
+		}
 
-        if (isRender(type)) {
-            if (sb.length() > 0) sb.append("|");
-            sb.append("RENDER");
-        }
+		if (isRender(type)) {
+			if (sb.length() > 0) sb.append("|");
+			sb.append("RENDER");
+		}
 
-        return sb.toString();
-    }
+		return sb.toString();
+	}
 }

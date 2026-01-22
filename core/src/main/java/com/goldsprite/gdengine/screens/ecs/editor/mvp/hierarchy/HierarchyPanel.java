@@ -23,41 +23,41 @@ import com.goldsprite.gdengine.ecs.GameWorld;
 
 public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 
-    private HierarchyPresenter presenter;
-    private VisTree<GObjectNode, GObject> tree;
-    private DragAndDrop dragAndDrop;
+	private HierarchyPresenter presenter;
+	private VisTree<GObjectNode, GObject> tree;
+	private DragAndDrop dragAndDrop;
 
-    // [修复] 缓存外部注册的 Targets (例如 SceneView)，防止刷新时丢失
-    private List<Target> externalTargets = new ArrayList<>();
+	// [修复] 缓存外部注册的 Targets (例如 SceneView)，防止刷新时丢失
+	private List<Target> externalTargets = new ArrayList<>();
 
 	// 1. 在 HierarchyPanel 类中定义一些常量，方便调整
 	private static final float INDENT_WIDTH = 20f; // 缩进宽度，必须与 tree.setIndentSpacing(20f) 一致
 	private static final float LINE_ALPHA = 0.3f;
 	private static final float LINE_OFFSET_X = 10f; // 线条相对于缩进格的偏移 (居中)
 
-    public HierarchyPanel() {
-        super("Hierarchy");
+	public HierarchyPanel() {
+		super("Hierarchy");
 //		debugAll();
 
-        dragAndDrop = new DragAndDrop();
+		dragAndDrop = new DragAndDrop();
 
-        tree = new VisTree<>();
+		tree = new VisTree<>();
 		//tree.debugAll();
-        tree.setIndentSpacing(20f);
-        tree.getSelection().setProgrammaticChangeEvents(false);
+		tree.setIndentSpacing(20f);
+		tree.getSelection().setProgrammaticChangeEvents(false);
 
-        VisScrollPane scrollPane = new VisScrollPane(tree);
-        scrollPane.setFadeScrollBars(false);
+		VisScrollPane scrollPane = new VisScrollPane(tree);
+		scrollPane.setFadeScrollBars(false);
 
-        // 背景右键菜单
-        scrollPane.addListener(new ContextListener() {
+		// 背景右键菜单
+		scrollPane.addListener(new ContextListener() {
 				@Override public void onShowMenu(float stageX, float stageY) {
 					if (tree.getOverNode() == null) showMenu(null, stageX, stageY);
 				}
 			});
 
-        addContent(scrollPane);
-    }
+		addContent(scrollPane);
+	}
 
 	// [新增] 实现接口：在树中查找并选中节点
 	@Override
@@ -93,89 +93,89 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 		}
 	}
 
-    @Override
-    public void setPresenter(HierarchyPresenter presenter) {
-        this.presenter = presenter;
-    }
+	@Override
+	public void setPresenter(HierarchyPresenter presenter) {
+		this.presenter = presenter;
+	}
 
-    // [修复] 驱动 Presenter 的 update 循环 (处理节流阀)
-    @Override
-    public void act(float delta) {
-        super.act(delta);
-        if (presenter != null) {
-            presenter.update(delta);
-        }
-    }
+	// [修复] 驱动 Presenter 的 update 循环 (处理节流阀)
+	@Override
+	public void act(float delta) {
+		super.act(delta);
+		if (presenter != null) {
+			presenter.update(delta);
+		}
+	}
 
-    @Override
-    public DragAndDrop getDragAndDrop() {
-        return dragAndDrop;
-    }
+	@Override
+	public DragAndDrop getDragAndDrop() {
+		return dragAndDrop;
+	}
 
-    // [修复] 专门用于添加不会被刷新的 Target (给 EditorController 用)
-    public void addSceneDropTarget(Target target) {
-        dragAndDrop.addTarget(target);
-        externalTargets.add(target);
-    }
+	// [修复] 专门用于添加不会被刷新的 Target (给 EditorController 用)
+	public void addSceneDropTarget(Target target) {
+		dragAndDrop.addTarget(target);
+		externalTargets.add(target);
+	}
 
-    @Override
-    public void showNodes(List<GObject> roots) {
-        // 1. 保存展开状态
-        Set<String> expanded = new HashSet<>();
-        saveExpansion(tree.getNodes(), expanded);
+	@Override
+	public void showNodes(List<GObject> roots) {
+		// 1. 保存展开状态
+		Set<String> expanded = new HashSet<>();
+		saveExpansion(tree.getNodes(), expanded);
 
-        // 2. 清理 UI
-        tree.clearChildren();
+		// 2. 清理 UI
+		tree.clearChildren();
 
-        // [关键修复] 清理旧的 Source/Target，但要把之前保存的外部 Target 加回来
-        dragAndDrop.clear();
+		// [关键修复] 清理旧的 Source/Target，但要把之前保存的外部 Target 加回来
+		dragAndDrop.clear();
 
-        for (Target t : externalTargets) {
-            dragAndDrop.addTarget(t);
-        }
+		for (Target t : externalTargets) {
+			dragAndDrop.addTarget(t);
+		}
 
-        // 3. 重建节点
-        for (GObject root : roots) {
-            buildNode(root, null);
-        }
+		// 3. 重建节点
+		for (GObject root : roots) {
+			buildNode(root, null);
+		}
 
-        // 4. 恢复展开
-        restoreExpansion(tree.getNodes(), expanded);
-    }
+		// 4. 恢复展开
+		restoreExpansion(tree.getNodes(), expanded);
+	}
 
-    private void buildNode(GObject obj, GObjectNode parent) {
-        GObjectNode node = new GObjectNode(obj);
-        if (parent == null) tree.add(node);
-        else parent.add(node);
+	private void buildNode(GObject obj, GObjectNode parent) {
+		GObjectNode node = new GObjectNode(obj);
+		if (parent == null) tree.add(node);
+		else parent.add(node);
 
-        for (GObject child : obj.getChildren()) {
-            buildNode(child, node);
-        }
-    }
+		for (GObject child : obj.getChildren()) {
+			buildNode(child, node);
+		}
+	}
 
-    // --- 内部类与辅助方法 ---
+	// --- 内部类与辅助方法 ---
 
-    enum DropState { NONE, INSERT_ABOVE, INSERT_BELOW, REPARENT }
+	enum DropState { NONE, INSERT_ABOVE, INSERT_BELOW, REPARENT }
 
-    class GObjectNode extends VisTree.Node<GObjectNode, GObject, VisTable> {
-        DropState dropState = DropState.NONE;
+	class GObjectNode extends VisTree.Node<GObjectNode, GObject, VisTable> {
+		DropState dropState = DropState.NONE;
 
-        public GObjectNode(GObject obj) {
-            super(new VisTable());
+		public GObjectNode(GObject obj) {
+			super(new VisTable());
 			//debugAll();
-            setValue(obj);
+			setValue(obj);
 
-            VisTable table = getActor();
-            table.setBackground("button");
+			VisTable table = getActor();
+			table.setBackground("button");
 
-            // 名字
-            VisLabel lbl = new VisLabel(obj.getName());
-            table.add(lbl).expandX().fillX().left().padLeft(5);
+			// 名字
+			VisLabel lbl = new VisLabel(obj.getName());
+			table.add(lbl).expandX().fillX().left().padLeft(5);
 
-            // 手柄
-            VisLabel handle = new VisLabel("::");
-            handle.setColor(Color.GRAY);
-            table.add(handle).right().padRight(10).width(20);
+			// 手柄
+			VisLabel handle = new VisLabel("::");
+			handle.setColor(Color.GRAY);
+			table.add(handle).right().padRight(10).width(20);
 
 			// [核心修复 Item 3] 给 Handle 增加一个无操作的 Touchable，防止事件穿透？
 			// 不，ContextListener 是加在 table 上的。handle 是 table 的子元素。
@@ -219,7 +219,7 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 				}
 			});
 
-            // 绘制插入线 (使用匿名子类)
+			// 绘制插入线 (使用匿名子类)
 			VisTable content = new VisTable() {
 				@Override
 				public void draw(Batch batch, float parentAlpha) {
@@ -283,17 +283,17 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 					}
 				}
 			};
-            setActor(content);
-            content.add(lbl).expandX().fillX().left().padLeft(5);
-            content.add(handle).right().padRight(10).width(20);
+			setActor(content);
+			content.add(lbl).expandX().fillX().left().padLeft(5);
+			content.add(handle).right().padRight(10).width(20);
 			// 重新绑定 Listener 到 content
 			content.addListener(table.getListeners().first());
 
 			setupDragAndDrop(handle, content, obj);
-        }
+		}
 
-        private void setupDragAndDrop(Actor handle, Actor targetActor, GObject obj) {
-            dragAndDrop.addSource(new DragAndDrop.Source(handle) {
+		private void setupDragAndDrop(Actor handle, Actor targetActor, GObject obj) {
+			dragAndDrop.addSource(new DragAndDrop.Source(handle) {
 					@Override
 					public DragAndDrop.Payload dragStart(InputEvent event, float x, float y, int pointer) {
 						DragAndDrop.Payload payload = new DragAndDrop.Payload();
@@ -305,7 +305,7 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 					}
 				});
 
-            dragAndDrop.addTarget(new DragAndDrop.Target(targetActor) {
+			dragAndDrop.addTarget(new DragAndDrop.Target(targetActor) {
 					@Override
 					public boolean drag(DragAndDrop.Source source, DragAndDrop.Payload payload, float x, float y, int pointer) {
 						GObject dragging = (GObject) payload.getObject();
@@ -335,61 +335,61 @@ public class HierarchyPanel extends EditorPanel implements IHierarchyView {
 						dropState = DropState.NONE;
 					}
 				});
-        }
+		}
 
-        private int getSiblingIndex(GObject t) {
-            List<GObject> list = (t.getParent() != null) ? t.getParent().getChildren() : GameWorld.inst().getRootEntities();
-            return list.indexOf(t);
-        }
-    }
+		private int getSiblingIndex(GObject t) {
+			List<GObject> list = (t.getParent() != null) ? t.getParent().getChildren() : GameWorld.inst().getRootEntities();
+			return list.indexOf(t);
+		}
+	}
 
-    private void drawDropLine(Batch batch, float x, float y, float w, float h, DropState state) {
-        Drawable white = VisUI.getSkin().getDrawable("white");
-        Color old = batch.getColor();
-        batch.setColor(Color.CYAN);
-        if (state == DropState.INSERT_ABOVE) {
-            white.draw(batch, x, y + h - 2, w, 2);
-        } else if (state == DropState.INSERT_BELOW) {
-            white.draw(batch, x, y, w, 2);
-        } else if (state == DropState.REPARENT) {
-            white.draw(batch, x, y, w, 2);
-            white.draw(batch, x, y + h - 2, w, 2);
-            white.draw(batch, x, y, 2, h);
-            white.draw(batch, x + w - 2, y, 2, h);
-        }
-        batch.setColor(old);
-    }
+	private void drawDropLine(Batch batch, float x, float y, float w, float h, DropState state) {
+		Drawable white = VisUI.getSkin().getDrawable("white");
+		Color old = batch.getColor();
+		batch.setColor(Color.CYAN);
+		if (state == DropState.INSERT_ABOVE) {
+			white.draw(batch, x, y + h - 2, w, 2);
+		} else if (state == DropState.INSERT_BELOW) {
+			white.draw(batch, x, y, w, 2);
+		} else if (state == DropState.REPARENT) {
+			white.draw(batch, x, y, w, 2);
+			white.draw(batch, x, y + h - 2, w, 2);
+			white.draw(batch, x, y, 2, h);
+			white.draw(batch, x + w - 2, y, 2, h);
+		}
+		batch.setColor(old);
+	}
 
-    private void showMenu(GObject target, float x, float y) {
-        PopupMenu menu = new PopupMenu();
-        if (target == null) {
-            menu.addItem(new MenuItem("Create Empty", new ChangeListener() {
+	private void showMenu(GObject target, float x, float y) {
+		PopupMenu menu = new PopupMenu();
+		if (target == null) {
+			menu.addItem(new MenuItem("Create Empty", new ChangeListener() {
 								 @Override public void changed(ChangeEvent event, Actor actor) { presenter.createObject(null); }
 							 }));
-        } else {
-            menu.addItem(new MenuItem("Create Child", new ChangeListener() {
+		} else {
+			menu.addItem(new MenuItem("Create Child", new ChangeListener() {
 								 @Override public void changed(ChangeEvent event, Actor actor) { presenter.createObject(target); }
 							 }));
-            MenuItem del = new MenuItem("Delete");
-            del.getLabel().setColor(Color.RED);
-            del.addListener(new ChangeListener() {
+			MenuItem del = new MenuItem("Delete");
+			del.getLabel().setColor(Color.RED);
+			del.addListener(new ChangeListener() {
 					@Override public void changed(ChangeEvent event, Actor actor) { presenter.deleteObject(target); }
 				});
-            menu.addItem(del);
-        }
-        menu.showMenu(getStage(), x, y);
-    }
+			menu.addItem(del);
+		}
+		menu.showMenu(getStage(), x, y);
+	}
 
-    private void saveExpansion(com.badlogic.gdx.utils.Array<GObjectNode> nodes, Set<String> paths) {
-        for(GObjectNode node : nodes) {
-            if(node.isExpanded()) paths.add(node.getValue().getName() + "_" + node.getValue().getGid());
-            if(node.getChildren().size > 0) saveExpansion(node.getChildren(), paths);
-        }
-    }
-    private void restoreExpansion(com.badlogic.gdx.utils.Array<GObjectNode> nodes, Set<String> paths) {
-        for(GObjectNode node : nodes) {
-            if(paths.contains(node.getValue().getName() + "_" + node.getValue().getGid())) node.setExpanded(true);
-            if(node.getChildren().size > 0) restoreExpansion(node.getChildren(), paths);
-        }
-    }
+	private void saveExpansion(com.badlogic.gdx.utils.Array<GObjectNode> nodes, Set<String> paths) {
+		for(GObjectNode node : nodes) {
+			if(node.isExpanded()) paths.add(node.getValue().getName() + "_" + node.getValue().getGid());
+			if(node.getChildren().size > 0) saveExpansion(node.getChildren(), paths);
+		}
+	}
+	private void restoreExpansion(com.badlogic.gdx.utils.Array<GObjectNode> nodes, Set<String> paths) {
+		for(GObjectNode node : nodes) {
+			if(paths.contains(node.getValue().getName() + "_" + node.getValue().getGid())) node.setExpanded(true);
+			if(node.getChildren().size > 0) restoreExpansion(node.getChildren(), paths);
+		}
+	}
 }

@@ -146,8 +146,8 @@ public class GameRunnerScreen extends GScreen {
 		ScriptResourceTracker.disposeAll();
 
 		// [核心修复] 注释掉这一行！
-        // 在编辑器模式下，我们需要保留这个 ClassLoader，
-        // 否则回到编辑器后，Inspector 就无法反射用户组件了。
-        // Gd.scriptClassLoader = ClassLoader.getSystemClassLoader();
+		// 在编辑器模式下，我们需要保留这个 ClassLoader，
+		// 否则回到编辑器后，Inspector 就无法反射用户组件了。
+		// Gd.scriptClassLoader = ClassLoader.getSystemClassLoader();
 	}
 }

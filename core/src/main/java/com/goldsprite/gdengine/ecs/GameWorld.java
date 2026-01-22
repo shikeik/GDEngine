@@ -225,11 +225,11 @@ public class GameWorld {
 			Debug.log("GameWorld: 逻辑循环已启动");
 
 			// [修改] 优化的系统统计日志
-            Debug.log("=== 系统苏醒完毕 (Total: %d) ===", systems.size());
-            logSystemList("Logic ", updateSystems);
-            logSystemList("Fixed ", fixedUpdateSystems);
-            logSystemList("Render", renderSystems);
-            Debug.log("===============================");
+			Debug.log("=== 系统苏醒完毕 (Total: %d) ===", systems.size());
+			logSystemList("Logic ", updateSystems);
+			logSystemList("Fixed ", fixedUpdateSystems);
+			logSystemList("Render", renderSystems);
+			Debug.log("===============================");
 
 			return; // 第一帧通常 delta 不稳定，跳过逻辑运行
 		}
@@ -301,11 +301,11 @@ public class GameWorld {
 	}
 
 
-    // [新增] 内部辅助方法：格式化输出系统列表
-    private void logSystemList(String tag, List<BaseSystem> list) {
-        String names = list.stream().map(BaseSystem::getSystemName).collect(Collectors.joining(", "));
-        Debug.log("[%s : %d] %s", tag, list.size(), names);
-    }
+	// [新增] 内部辅助方法：格式化输出系统列表
+	private void logSystemList(String tag, List<BaseSystem> list) {
+		String names = list.stream().map(BaseSystem::getSystemName).collect(Collectors.joining(", "));
+		Debug.log("[%s : %d] %s", tag, list.size(), names);
+	}
 
 	/** 将缓冲队列应用到主列表 */
 	private void flushEntities() {
@@ -391,18 +391,18 @@ public class GameWorld {
 		return (T) systemMap.get(type);
 	}
 
-    // [新增] 仅供测试或调试使用的只读访问器
-    public List<BaseSystem> getUpdateSystems() {
-        return new ArrayList<>(updateSystems);
-    }
+	// [新增] 仅供测试或调试使用的只读访问器
+	public List<BaseSystem> getUpdateSystems() {
+		return new ArrayList<>(updateSystems);
+	}
 
-    public List<BaseSystem> getFixedUpdateSystems() {
-        return new ArrayList<>(fixedUpdateSystems);
-    }
+	public List<BaseSystem> getFixedUpdateSystems() {
+		return new ArrayList<>(fixedUpdateSystems);
+	}
 
-    public List<BaseSystem> getRenderSystems() {
-        return new ArrayList<>(renderSystems);
-    }
+	public List<BaseSystem> getRenderSystems() {
+		return new ArrayList<>(renderSystems);
+	}
 
 	// ==========================================
 	// 静态工具 (Time)

@@ -94,17 +94,17 @@ public class HubViewImpl extends VisTable implements IHubView {
 		});
 
 		VisTextButton btnStore = new VisTextButton("☁ Store");
-        btnStore.setColor(Color.ORANGE);
-        btnStore.addListener(new ClickListener() {
+		btnStore.setColor(Color.ORANGE);
+		btnStore.addListener(new ClickListener() {
 				@Override public void clicked(InputEvent event, float x, float y) {
 					new OnlineTemplateDialog().show(getStage());
 				}
 			});
 
-        topBar.add(titleLabel).expandX().left();
-        topBar.add(btnSettings).right().padRight(10).height(50);
-        topBar.add(btnStore).right().padRight(10).height(50); // 新增
-        topBar.add(btnCreate).right().height(50);
+		topBar.add(titleLabel).expandX().left();
+		topBar.add(btnSettings).right().padRight(10).height(50);
+		topBar.add(btnStore).right().padRight(10).height(50); // 新增
+		topBar.add(btnCreate).right().height(50);
 		add(topBar).growX().height(60).padBottom(10).row();
 
 		// 2. Project List
@@ -142,9 +142,9 @@ public class HubViewImpl extends VisTable implements IHubView {
 		add(bottomBar).growX().left();
 	}
 
-    // 定义常量
-    private static final String PREF_DOCS = "gd_docs_config";
-    private static final String KEY_DOC_TIME = "local_doc_updated_at";
+	// 定义常量
+	private static final String PREF_DOCS = "gd_docs_config";
+	private static final String KEY_DOC_TIME = "local_doc_updated_at";
 	// [修改] 清单走镜像 (秒更)，文件走 CDN (在清单里写死了)
 	private static final String DOC_MANIFEST_URL = "https://gh-proxy.com/https://raw.githubusercontent.com/shikeik/GDEngine/refs/heads/main/dist/docs_manifest.json";
 
@@ -267,22 +267,22 @@ public class HubViewImpl extends VisTable implements IHubView {
 	}
 
 	private void launchDocServer() {
-        try {
-            com.goldsprite.gdengine.core.web.DocServer.startServer(
-                Gdx.files.absolute(GDEngineConfig.getInstance().getActiveEngineRoot())
+		try {
+			com.goldsprite.gdengine.core.web.DocServer.startServer(
+				Gdx.files.absolute(GDEngineConfig.getInstance().getActiveEngineRoot())
 				.child("engine_docs").file().getAbsolutePath()
-            );
+			);
 
-            String url = com.goldsprite.gdengine.core.web.DocServer.getIndexUrl() + "?v=" + BuildConfig.DEV_VERSION;
-            ToastUI.inst().show("文档服务已启动");
+			String url = com.goldsprite.gdengine.core.web.DocServer.getIndexUrl() + "?v=" + BuildConfig.DEV_VERSION;
+			ToastUI.inst().show("文档服务已启动");
 
-            if (Gd.browser != null) {
-                Gd.browser.openUrl(url, "GDEngine Docs");
-            }
-        } catch (Exception e) {
-            showError("Server Start Failed: " + e.getMessage());
-        }
-    }
+			if (Gd.browser != null) {
+				Gd.browser.openUrl(url, "GDEngine Docs");
+			}
+		} catch (Exception e) {
+			showError("Server Start Failed: " + e.getMessage());
+		}
+	}
 
 	@Override
 	public void showProjects(Array<FileHandle> projects) {

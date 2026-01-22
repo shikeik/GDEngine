@@ -21,74 +21,74 @@ import com.badlogic.gdx.scenes.scene2d.ui.Value;
  */
 public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle> {
 
-    private Consumer<FileHandle> onFileSelected;
-    private ContextMenuProvider contextMenuProvider;
+	private Consumer<FileHandle> onFileSelected;
+	private ContextMenuProvider contextMenuProvider;
 
-    private Consumer<FileHandle> onDoubleClicked; // [新增]
+	private Consumer<FileHandle> onDoubleClicked; // [新增]
 	
-    public interface ContextMenuProvider {
-        void showMenu(FileHandle file, float x, float y);
-    }
+	public interface ContextMenuProvider {
+		void showMenu(FileHandle file, float x, float y);
+	}
 
-    public FileTreeWidget() {
-        super();
+	public FileTreeWidget() {
+		super();
 		//debugAll();
-        getSelection().setProgrammaticChangeEvents(false);
-        setIndentSpacing(20f);
+		getSelection().setProgrammaticChangeEvents(false);
+		setIndentSpacing(20f);
 
-        // 监听选中
-        addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                FileNode selection = getSelection().first();
-                if (selection != null && onFileSelected != null) {
-                    onFileSelected.accept(selection.getValue());
-                }
-            }
-        });
-    }
+		// 监听选中
+		addListener(new ChangeListener() {
+			@Override
+			public void changed(ChangeEvent event, Actor actor) {
+				FileNode selection = getSelection().first();
+				if (selection != null && onFileSelected != null) {
+					onFileSelected.accept(selection.getValue());
+				}
+			}
+		});
+	}
 
-    // [修改] 扩展回调接口
-    public void setCallbacks(Consumer<FileHandle> onSelect, Consumer<FileHandle> onDoubleClick, ContextMenuProvider menuProvider) {
-        this.onFileSelected = onSelect;
-        this.onDoubleClicked = onDoubleClick; // [新增]
-        this.contextMenuProvider = menuProvider;
-    }
+	// [修改] 扩展回调接口
+	public void setCallbacks(Consumer<FileHandle> onSelect, Consumer<FileHandle> onDoubleClick, ContextMenuProvider menuProvider) {
+		this.onFileSelected = onSelect;
+		this.onDoubleClicked = onDoubleClick; // [新增]
+		this.contextMenuProvider = menuProvider;
+	}
 
-    public void build(FileHandle rootDir) {
-        clearChildren();
-        if (rootDir == null || !rootDir.exists()) return;
+	public void build(FileHandle rootDir) {
+		clearChildren();
+		if (rootDir == null || !rootDir.exists()) return;
 
-        FileNode rootNode = new FileNode(rootDir);
-        rootNode.setExpanded(true);
-        add(rootNode);
+		FileNode rootNode = new FileNode(rootDir);
+		rootNode.setExpanded(true);
+		add(rootNode);
 
-        recursiveAddNodes(rootNode, rootDir);
-    }
+		recursiveAddNodes(rootNode, rootDir);
+	}
 
-    private void recursiveAddNodes(FileNode parentNode, FileHandle dir) {
-        FileHandle[] files = dir.list();
-        // 排序: 文件夹在前
-        Arrays.sort(files, (a, b) -> {
-            if (a.isDirectory() && !b.isDirectory()) return -1;
-            if (!a.isDirectory() && b.isDirectory()) return 1;
-            return a.name().compareTo(b.name());
-        });
+	private void recursiveAddNodes(FileNode parentNode, FileHandle dir) {
+		FileHandle[] files = dir.list();
+		// 排序: 文件夹在前
+		Arrays.sort(files, (a, b) -> {
+			if (a.isDirectory() && !b.isDirectory()) return -1;
+			if (!a.isDirectory() && b.isDirectory()) return 1;
+			return a.name().compareTo(b.name());
+		});
 
-        for (FileHandle file : files) {
-            // 只显示文件夹 (Unity风格: 左侧只看树状结构，右侧看内容)
-            // 但为了方便，我们也显示文件，您可以根据喜好注释掉下面这行
-            // if (!file.isDirectory()) continue;
+		for (FileHandle file : files) {
+			// 只显示文件夹 (Unity风格: 左侧只看树状结构，右侧看内容)
+			// 但为了方便，我们也显示文件，您可以根据喜好注释掉下面这行
+			// if (!file.isDirectory()) continue;
 
-            // 过滤隐藏文件
-            if (file.name().startsWith(".")) continue;
+			// 过滤隐藏文件
+			if (file.name().startsWith(".")) continue;
 
-            FileNode node = new FileNode(file);
-            parentNode.add(node);
+			FileNode node = new FileNode(file);
+			parentNode.add(node);
 			
 			//这个办法无法整行触发
 			// 菜单与打开
-            node.getActor().addListener(new ContextListener() {
+			node.getActor().addListener(new ContextListener() {
 					@Override
 					public void onShowMenu(float stageX, float stageY) {
 						getSelection().choose(node);
@@ -112,10 +112,10 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
 					}
 				});
 
-            if (file.isDirectory()) {
-                recursiveAddNodes(node, file);
-            }
-        }
+			if (file.isDirectory()) {
+				recursiveAddNodes(node, file);
+			}
+		}
 
 		// [新增] 智能展开逻辑
 		// 条件：
@@ -129,32 +129,32 @@ public class FileTreeWidget extends VisTree<FileTreeWidget.FileNode, FileHandle>
 				childNode.setExpanded(true); // 自动展开
 			}
 		}
-    }
+	}
 
-    // --- Node ---
-    public static class FileNode extends VisTree.Node<FileNode, FileHandle, VisTable> {
-        public FileNode(FileHandle file) {
-            super(new VisTable());
-            setValue(file);
+	// --- Node ---
+	public static class FileNode extends VisTree.Node<FileNode, FileHandle, VisTable> {
+		public FileNode(FileHandle file) {
+			super(new VisTable());
+			setValue(file);
 
-            VisTable table = getActor();
+			VisTable table = getActor();
 			//table.debugAll();
-            table.setBackground("button");
+			table.setBackground("button");
 
-            // 名字
-            VisLabel lbl = new VisLabel(file.name());
+			// 名字
+			VisLabel lbl = new VisLabel(file.name());
 			lbl.setTouchable(Touchable.enabled);
-            table.add(lbl).growX().left().padLeft(5);
+			table.add(lbl).growX().left().padLeft(5);
 			
 			//节点类型染色
-            if (file.isDirectory()) {
-                lbl.setColor(Color.GOLD);
-            } else {
-                String ext = file.extension().toLowerCase();
-                if (ext.equals("java")) lbl.setColor(Color.CYAN);
-                else if (ext.equals("scene")) lbl.setColor(Color.ORANGE);
-                else lbl.setColor(Color.WHITE);
-            }
-        }
-    }
+			if (file.isDirectory()) {
+				lbl.setColor(Color.GOLD);
+			} else {
+				String ext = file.extension().toLowerCase();
+				if (ext.equals("java")) lbl.setColor(Color.CYAN);
+				else if (ext.equals("scene")) lbl.setColor(Color.ORANGE);
+				else lbl.setColor(Color.WHITE);
+			}
+		}
+	}
 }

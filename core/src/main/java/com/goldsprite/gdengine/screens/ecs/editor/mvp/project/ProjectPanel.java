@@ -76,13 +76,13 @@ public class ProjectPanel extends EditorPanel {
 	}
 
 	public void setPresenter(ProjectPresenter presenter) {
-        this.presenter = presenter;
-        fileTree.setCallbacks(
+		this.presenter = presenter;
+		fileTree.setCallbacks(
 			presenter::onTreeSelected,
 			presenter::onGridDoubleClicked, // [修改] 复用 Grid 的双击逻辑即可，逻辑是一样的
 			presenter::onShowContextMenu
-        );
-    }
+		);
+	}
 
 	public void refreshTree(FileHandle root) {
 		fileTree.build(root);
@@ -140,8 +140,8 @@ public class ProjectPanel extends EditorPanel {
 			}
 		});
 		
-        // [核心修复] 右键菜单：添加 event.stop() 防止冒泡到背景
-        btn.addListener(new ContextListener() {
+		// [核心修复] 右键菜单：添加 event.stop() 防止冒泡到背景
+		btn.addListener(new ContextListener() {
 				@Override public void onShowMenu(float stageX, float stageY) {
 					presenter.onGridSelected(file);
 					presenter.onShowContextMenu(file, stageX, stageY);

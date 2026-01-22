@@ -10,44 +10,44 @@ import com.kotcrab.vis.ui.widget.VisTable;
 import java.lang.reflect.Field;
 
 public class Vector2Drawer implements IPropertyDrawer {
-    @Override
-    public boolean accept(Class<?> type) {
-        return type == Vector2.class;
-    }
+	@Override
+	public boolean accept(Class<?> type) {
+		return type == Vector2.class;
+	}
 
-    @Override
-    public Actor draw(Object target, Field field, boolean isReadOnly) {
-        try {
-            Vector2 val = (Vector2) field.get(target);
+	@Override
+	public Actor draw(Object target, Field field, boolean isReadOnly) {
+		try {
+			Vector2 val = (Vector2) field.get(target);
 
-            // 外层容器
-            VisTable container = new VisTable();
+			// 外层容器
+			VisTable container = new VisTable();
 			VisLabel nameLbl = new VisLabel(field.getName() + ":");
-            container.add(nameLbl).minWidth(20).left().padRight(10);
+			container.add(nameLbl).minWidth(20).left().padRight(10);
 
-            // X 分量
-            SmartNumInput inputX = new SmartNumInput("X", val.x, 0.1f, v -> {
-               val.x = v;
-            });
-            inputX.bind(() -> val.x); // [New] Data Binding
-            inputX.setReadOnly(isReadOnly);
+			// X 分量
+			SmartNumInput inputX = new SmartNumInput("X", val.x, 0.1f, v -> {
+				val.x = v;
+			});
+			inputX.bind(() -> val.x); // [New] Data Binding
+			inputX.setReadOnly(isReadOnly);
 
-            // Y 分量
-            SmartNumInput inputY = new SmartNumInput("Y", val.y, 0.1f, v -> {
-               val.y = v;
-            });
-            inputY.bind(() -> val.y); // [New] Data Binding
-            inputY.setReadOnly(isReadOnly);
+			// Y 分量
+			SmartNumInput inputY = new SmartNumInput("Y", val.y, 0.1f, v -> {
+				val.y = v;
+			});
+			inputY.bind(() -> val.y); // [New] Data Binding
+			inputY.setReadOnly(isReadOnly);
 
-            // 布局：一行显示
-            Table row = new Table();
+			// 布局：一行显示
+			Table row = new Table();
 			row.add().growX();
-            row.add(inputX);
-            row.add(inputY).width(inputY.getPrefWidth());
+			row.add(inputX);
+			row.add(inputY).width(inputY.getPrefWidth());
 
-            container.add(row).growX();
-            return container;
+			container.add(row).growX();
+			return container;
 
-        } catch (Exception e) { return null; }
-    }
+		} catch (Exception e) { return null; }
+	}
 }

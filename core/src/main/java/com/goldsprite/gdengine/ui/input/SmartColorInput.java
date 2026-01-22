@@ -48,11 +48,11 @@ public class SmartColorInput extends SmartInput<Color> {
 		addContent(controls);
 	}
 
-    @Override
-    public void setReadOnly(boolean readOnly) {
-        previewBtn.setDisabled(readOnly);
-        previewBtn.setTouchable(readOnly ? Touchable.disabled : Touchable.enabled);
-    }
+	@Override
+	public void setReadOnly(boolean readOnly) {
+		previewBtn.setDisabled(readOnly);
+		previewBtn.setTouchable(readOnly ? Touchable.disabled : Touchable.enabled);
+	}
 
 	private void openPicker() {
 		if (sharedPicker == null) sharedPicker = new ColorPicker();
@@ -62,8 +62,8 @@ public class SmartColorInput extends SmartInput<Color> {
 				@Override public void changed(Color newColor) { notifyValueChanged(new Color(newColor)); }
 				@Override public void canceled(Color oldColor) { notifyValueChanged(restoreColor); }
 				@Override public void finished(Color newColor) {
-                    Color finalColor = new Color(newColor);
-                    notifyValueChanged(finalColor);
+					Color finalColor = new Color(newColor);
+					notifyValueChanged(finalColor);
 					notifyCommand(restoreColor, finalColor);
 				}
 			});

@@ -21,30 +21,30 @@ import com.kotcrab.vis.ui.widget.VisTextButton;
 
 public class OnlineTemplateDialog extends BaseDialog {
 
-    private final VisProgressBar progressBar;
-    private final VisLabel statusLabel;
-    private final VisTable listTable;
+	private final VisProgressBar progressBar;
+	private final VisLabel statusLabel;
+	private final VisTable listTable;
 
-    public OnlineTemplateDialog() {
-        super("Online Template Store");
+	public OnlineTemplateDialog() {
+		super("Online Template Store");
 
-        // 1. 列表区
-        listTable = new VisTable();
-        listTable.top().left();
+		// 1. 列表区
+		listTable = new VisTable();
+		listTable.top().left();
 
 		// [修改] 只传名字和ID，不再传 URL
 		addTemplateItem("BigDemo (102MB Test)", "BigDemo");
 
-        getContentTable().add(listTable).grow().width(500).height(300).pad(10).row();
+		getContentTable().add(listTable).grow().width(500).height(300).pad(10).row();
 
-        // 2. 状态区
-        statusLabel = new VisLabel("Ready");
-        statusLabel.setColor(Color.GRAY);
-        getContentTable().add(statusLabel).growX().pad(5).row();
+		// 2. 状态区
+		statusLabel = new VisLabel("Ready");
+		statusLabel.setColor(Color.GRAY);
+		getContentTable().add(statusLabel).growX().pad(5).row();
 
-        progressBar = new VisProgressBar(0, 100, 1, false);
-        getContentTable().add(progressBar).growX().pad(5).row();
-    }
+		progressBar = new VisProgressBar(0, 100, 1, false);
+		getContentTable().add(progressBar).growX().pad(5).row();
+	}
 
 	// [修改] 移除 manifestUrl 参数
 	private void addTemplateItem(String name, String id) {
